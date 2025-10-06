@@ -1,0 +1,18 @@
+{% extends "base.jinja" %}
+{% block title %}Verify Your Email{% endblock %}
+{% block header %}
+    <h1 style="margin: 0; font-size: 24px;">Welcome to "Annotation Software"</h1>
+{% endblock %}
+{% block content %}
+    <p style="font-size: 16px; line-height: 1.5;">
+        Thank you for registering! One more step remains to confirm your new account.
+        If you did not create an account, please ignore this email.
+    </p>
+    <a href="{{ verification_link }}" 
+       style="display: inline-block; margin: 30px 0; padding: 15px 30px; font-size: 16px; color: #ffffff; background-color: #2a9d8f; text-decoration: none; border-radius: 4px;">
+       Verify Email
+    </a>
+    <div style="margin-top: -25px; font-size: 13px; color: #9e9e9eff;">
+        Expires in {{ expiry_minutes }} minutes
+    </div>
+{% endblock %}

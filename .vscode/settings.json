@@ -1,0 +1,16 @@
+{
+  "files.exclude": {
+    "**/__pycache__": true
+  },
+  "python.analysis.extraPaths": [
+    "./backend/app"
+  ],
+  "explorer.fileNesting.enabled": true,
+  "explorer.fileNesting.patterns": {
+    "tsconfig.json": "tsconfig.*.json, env.d.ts",
+    "vite.config.*": "jsconfig*, vitest.config.*, cypress.config.*, playwright.config.*, vitest-setup.ts",
+    "package.json": "package-lock.json, pnpm*, .yarnrc*, yarn*, .eslint*, eslint*, .oxlint*, oxlint*, .prettier*, prettier*, .editorconfig",
+    "docker-compose*.yml": "docker*, Docker*",
+    ".env": ".env.*"
+  },
+}

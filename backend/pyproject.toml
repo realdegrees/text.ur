@@ -1,0 +1,31 @@
+[project]
+name = "Annotation-Software"
+version = "0.1.0"
+requires-python = ">=3.12"
+
+[tool.ruff]
+line-length = 80
+indent-width = 4
+include = ["app/**/*.py", "tests/**/*.py"]
+
+[tool.ruff.lint]
+select = ["E", "F", "RUF", "A", "B", "ISC", "UP", "ANN", "D", "I", "C", "S" ]
+ignore = ["E501", "B008", "D100", "D415", "D400", "D203", "D213", "S105", "S106", "S104", "F401"]
+fixable = ["ALL"]
+unfixable = []
+
+# Allow unused variables when underscore-prefixed.
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+[tool.ruff.lint.per-file-ignores]
+"app/models/**/*.py" = ["D101"] # No class docstring enforcement in models as models are expressive enough
+"app/api/*/routers/**/*.py" = ["D103"] # No function enforcement docstring in routers as routes are expressive enough
+"tests/**/*.py" = ["D103", "S101"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+docstring-code-format = true
+docstring-code-line-length = "dynamic"

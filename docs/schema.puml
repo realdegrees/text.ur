@@ -23,7 +23,7 @@ class User {
     ____
         **Relationships**
         # documents: list[Document]
-        # memberships: list[GroupMembership]
+        # memberships: list[Membership]
         # annotations: list[Annotation]
         # groups: list[Group]
 }
@@ -38,7 +38,7 @@ class Group {
         **Relationships**
         # owner: User
         # documents: list[Document]
-        # memberships: list[GroupMembership]
+        # memberships: list[Membership]
     ____
         **Column Properties**
         # member_count: int
@@ -65,7 +65,7 @@ enum ViewMode {
     public
 }
 
-class GroupMembership {
+class Membership {
     - user_id : int [PK, FK]
     - group_id : int [PK, FK]
     - permissions: set[Permission]
@@ -145,13 +145,13 @@ class Comment {
 ' ========== RELATIONSHIPS ==========
 
 User -d-> Document
-User -r-> GroupMembership
+User -r-> Membership
 
-Group -u-> GroupMembership
+Group -u-> Membership
 Group -l-> Document
 
 
-GroupMembership -[hidden]r-> Permission
+Membership -[hidden]r-> Permission
 
 Comment -[hidden]l-> Visibility
 Document -[hidden]l-> ViewMode

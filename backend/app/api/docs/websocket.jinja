@@ -1,0 +1,62 @@
+<div style="color: red; font-size: 0.9em; margin-bottom: 10px;"><strong>⚠️ Documentation Endpoint Only</strong><br/>This HTTP endpoint is for documentation purposes. Use the WebSocket connection at this same path for actual functionality using an external tool (OpenAPI does not support websocket interactivity).</div>
+
+<h3>WebSocket Event Stream: {{ channel }}</h3>
+<p>Establishes a live WebSocket connection for resource events on channel <code>{{ channel }}</code>.</p>
+
+<h4>Event Types & Operations:</h4>
+<ul>
+Refer to endpoint response schema for reference on event structure.
+
+<table style='border-collapse: collapse; width: 100%; margin: 10px 0;'>
+<thead>
+<tr style='background-color: #f5f5f5;'>
+<th style='border: 1px solid #ddd; padding: 8px; text-align: left;'>Event Type</th>
+<th style='border: 1px solid #ddd; padding: 8px; text-align: left;'>Incoming Payload</th>
+<th style='border: 1px solid #ddd; padding: 8px; text-align: left;'>Outgoing Payload</th>
+<th style='border: 1px solid #ddd; padding: 8px; text-align: left;'>Database Write</th>
+</tr>
+</thead>
+<tbody>
+{%- if create_model and read_model %}
+<tr>
+<td style='border: 1px solid #ddd; padding: 8px;'><code>create</code></td>
+<td style='border: 1px solid #ddd; padding: 8px;'><code>{{ create_model.__name__ }}</code></td>
+<td style='border: 1px solid #ddd; padding: 8px;'><code>{{ read_model.__name__ }}</code></td>
+<td style='border: 1px solid #ddd; padding: 8px;'>✅ Yes</td>
+</tr>
+{%- endif %}
+{%- if update_model and read_model %}
+<tr>
+<td style='border: 1px solid #ddd; padding: 8px;'><code>update</code></td>
+<td style='border: 1px solid #ddd; padding: 8px;'><code>{{ update_model.__name__ }}</code></td>
+<td style='border: 1px solid #ddd; padding: 8px;'><code>{{ read_model.__name__ }}</code></td>
+<td style='border: 1px solid #ddd; padding: 8px;'>✅ Yes</td>
+</tr>
+{%- endif %}
+{%- if delete_model %}
+<tr>
+<td style='border: 1px solid #ddd; padding: 8px;'><code>delete</code></td>
+<td style='border: 1px solid #ddd; padding: 8px;'><code>{{ delete_model.__name__ }}</code></td>
+<td style='border: 1px solid #ddd; padding: 8px;'><code>{{ delete_model.__name__ }}</code></td>
+<td style='border: 1px solid #ddd; padding: 8px;'>✅ Yes</td>
+</tr>
+{%- endif %}
+{%- if custom_model %}
+<tr>
+<td style='border: 1px solid #ddd; padding: 8px;'><code>custom</code></td>
+<td style='border: 1px solid #ddd; padding: 8px;'><code>{{ custom_model.__name__ }}</code></td>
+<td style='border: 1px solid #ddd; padding: 8px;'><code>{{ custom_model.__name__ }}</code></td>
+<td style='border: 1px solid #ddd; padding: 8px;'>❌ No</td>
+</tr>
+{%- endif %}
+</tbody>
+</table>
+</ul>
+
+<h4>Functionality:</h4>
+<ul>
+<li><strong>Send:</strong> Submit Event objects with appropriate payload models based on event type</li>
+<li><strong>Receive:</strong> Get real-time events from other connected clients with validated payloads</li>
+</ul>
+
+<p><strong>Channel:</strong> <code>{{ full_channel }}</code></p>
