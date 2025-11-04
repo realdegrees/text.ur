@@ -1,34 +1,28 @@
 @import 'tailwindcss';
 @plugin '@tailwindcss/forms';
 
-@custom-variant dark (&:where(.dark, .dark *));
-
-@layer palette {
-	:root {
-		--color-text: #332f2f;
-		--color-background: #faf8f8;
-		--color-primary: #b8c3fe;
-		--color-contrast: #212122;
-		--color-secondary: #a6dfc6;
-		--color-accent: #f4f4f5;
-	}
-	:root.dark {
-		--color-text: #d0cdcd;
-		--color-background: #0a0a0a;
-		--color-primary: #3546a4;
-		--color-contrast: #faf8f8;
-		--color-secondary: #4fc392;
-		--color-accent: #202022;
-	}
+@theme {
+	--color-text: var(--color-text);
+	--color-background: var(--color-background);
+	--color-contrast: var(--color-contrast);
+	--color-primary: var(--color-primary);
+	--color-secondary: var(--color-secondary);
+	--color-accent: var(--color-accent);
 }
 
-@theme {
-  /* Define your custom theme properties as CSS variables */
-    --color-text: 'var(--color-text)',
-    --color-background: 'var(--color-background)',
-    --color-contrast: 'var(--color-contrast)',
-    --color-primary: 'var(--color-primary)',
-    --color-secondary: 'var(--color-secondary)',
-    --color-accent: 'var(--color-accent)'
-  /* ... other theme variables */
+:root {
+	--color-text: #332f2f;
+	--color-background: #faf8f8;
+	--color-primary: #b8c3fe;
+	--color-contrast: #212122;
+	--color-secondary: #a6dfc6;
+	--color-accent: #f4f4f5;
+}
+:root.dark {
+	--color-text: #d0cdcd;
+	--color-background: #0a0a0a;
+	--color-primary: #3546a4;
+	--color-contrast: #faf8f8;
+	--color-secondary: #4fc392;
+	--color-accent: #202022;
 }
