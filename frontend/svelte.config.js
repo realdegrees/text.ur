@@ -14,6 +14,8 @@ const config = {
 		adapter: adapter(),
 		alias: {
 			'$api/*': './src/api/*',
+			'$types/*': './src/types/*',
+			'$i18n/*': './src/i18n/*',
 		}
 	},
 	extensions: ['.svelte', '.svx']

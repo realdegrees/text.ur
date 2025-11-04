@@ -4,7 +4,7 @@
 	"version": "0.0.1",
 	"type": "module",
 	"scripts": {
-    	"typegen": "export PYTHONPATH=\"${PYTHONPATH}:$(pwd)/../backend/app\" && pydantic2ts --module ../backend/app/models/__init__.py --output src/api/types.ts && pnpx ts-to-zod --config=api",
+		"typegen": "export PYTHONPATH=\"${PYTHONPATH}:$(pwd)/../backend/app\" && pydantic2ts --module ../backend/app/models/__init__.py --output src/api/types.ts && pnpx ts-to-zod --config=api",
 		"dev": "vite dev",
 		"build": "vite build",
 		"preview": "vite preview",
@@ -12,7 +12,8 @@
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
 		"format": "prettier --write .",
-		"lint": "prettier --check . && eslint ."
+		"lint": "prettier --check . && eslint .",
+		"typesafe-i18n": "typesafe-i18n"
 	},
 	"devDependencies": {
 		"@eslint/compat": "^1.4.0",
@@ -43,6 +44,7 @@
 	},
 	"dependencies": {
 		"jwt-decode": "^4.0.0",
+		"typesafe-i18n": "^5.26.2",
 		"zod": "^4.1.12"
 	}
 }

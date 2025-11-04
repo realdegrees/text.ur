@@ -155,6 +155,12 @@ export const membershipSchema = z.object({
     accepted: z.boolean().optional()
 });
 
+export const filterSchema = z.record(z.string(), z.unknown()).and(z.object({
+    field: z.string(),
+    operator: z.union([z.literal("=="), z.literal(">="), z.literal("<="), z.literal(">"), z.literal("<"), z.literal("ilike"), z.literal("like"), z.literal("exists"), z.literal("!=")]),
+    value: z.string()
+}));
+
 export const reactionCreateSchema = z.object({
     type: reactionTypeSchema
 });
@@ -227,6 +233,16 @@ export const userMembershipReadSchema = z.object({
     user_id: z.number()
 });
 
+export const userPrivateSchema = z.object({
+    created_at: z.string().optional(),
+    updated_at: z.string().optional(),
+    id: z.number(),
+    username: z.string(),
+    first_name: z.string().optional().nullable(),
+    last_name: z.string().optional().nullable(),
+    email: z.string()
+});
+
 export const userUpdateSchema = z.object({
     username: z.string().optional().nullable(),
     new_password: z.string().optional().nullable(),
@@ -247,3 +263,12 @@ export const commentReadSchema: z.ZodSchema<CommentRead> = z.lazy(() => z.object
     replies: z.array(commentReadSchema),
     reactions: z.array(reactionReadSchema)
 }));
+
+export const paginatedBaseSchema = z.object({
+    data: z.array(z.unknown()),
+    total: z.number(),
+    offset: z.number(),
+    limit: z.number(),
+    filters: z.array(filterSchema).optional(),
+    order_by: z.array(z.string()).optional()
+});

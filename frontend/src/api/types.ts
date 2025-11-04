@@ -200,6 +200,20 @@ export interface Membership {
   is_owner?: boolean;
   accepted?: boolean;
 }
+export interface PaginatedBase {
+  data: unknown[];
+  total: number;
+  offset: number;
+  limit: number;
+  filters?: Filter[];
+  order_by?: string[];
+}
+export interface Filter {
+  field: string;
+  operator: "==" | ">=" | "<=" | ">" | "<" | "ilike" | "like" | "exists" | "!=";
+  value: string;
+  [k: string]: unknown;
+}
 export interface ReactionCreate {
   type: ReactionType;
 }
@@ -267,6 +281,15 @@ export interface UserMembershipRead {
   is_owner: boolean;
   accepted: boolean;
   user_id: number;
+}
+export interface UserPrivate {
+  created_at?: string;
+  updated_at?: string;
+  id: number;
+  username: string;
+  first_name?: string | null;
+  last_name?: string | null;
+  email: string;
 }
 export interface UserUpdate {
   username?: string | null;
