@@ -12,7 +12,7 @@
 	<link rel="icon" href={favicon} />
 </svelte:head>
 
-<div class="flex flex-col items-center w-full min-h-screen mt-2 bg-background text-text">
+<div class="flex flex-col items-center w-full min-h-screen mt-2 bg-background text-text transition-all">
 	<Header />
 	<Notification />
 	<div
