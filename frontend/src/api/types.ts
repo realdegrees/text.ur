@@ -253,6 +253,14 @@ export interface UserFilter {
   first_name: string;
   last_name: string;
 }
+/**
+ * The inner payload of a JWT, signed with the user's secret.
+ */
+export interface UserJWTPayload {
+  sub: string;
+  exp?: string | null;
+  iat?: string | null;
+}
 export interface UserMembershipRead {
   permissions: Permission[];
   group: GroupRead;

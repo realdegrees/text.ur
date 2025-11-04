@@ -213,6 +213,12 @@ export const userFilterSchema = z.object({
     last_name: z.string()
 });
 
+export const userJwtPayloadSchema = z.object({
+    sub: z.string(),
+    exp: z.string().optional().nullable(),
+    iat: z.string().optional().nullable()
+});
+
 export const userMembershipReadSchema = z.object({
     permissions: z.array(permissionSchema),
     group: groupReadSchema,
