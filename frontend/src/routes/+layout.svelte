@@ -1,7 +1,7 @@
 <script lang="ts">
 	import '../app.css';
 	import favicon from '$lib/assets/favicon.svg';
-	import DarkMode from '$lib/darkMode.svelte';
+	import darkMode from '$lib/darkMode.svelte';
 
 	let { children } = $props();
 </script>
