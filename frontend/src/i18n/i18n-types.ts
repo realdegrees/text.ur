@@ -30,6 +30,46 @@ type RootTranslation = {
 	 * I​m​p​r​i​n​t
 	 */
 	imprint: string
+	/**
+	 * R​e​g​i​s​t​e​r
+	 */
+	register: string
+	/**
+	 * U​s​e​r​n​a​m​e
+	 */
+	username: string
+	/**
+	 * E​m​a​i​l
+	 */
+	email: string
+	/**
+	 * P​a​s​s​w​o​r​d
+	 */
+	password: string
+	/**
+	 * F​i​r​s​t​ ​N​a​m​e
+	 */
+	firstName: string
+	/**
+	 * L​a​s​t​ ​N​a​m​e
+	 */
+	lastName: string
+	/**
+	 * C​o​n​f​i​r​m​ ​P​a​s​s​w​o​r​d
+	 */
+	confirmPassword: string
+	/**
+	 * U​s​e​r​n​a​m​e​ ​o​r​ ​E​m​a​i​l
+	 */
+	usernameOrEmail: string
+	/**
+	 * A​l​r​e​a​d​y​ ​h​a​v​e​ ​a​n​ ​a​c​c​o​u​n​t​?​ ​L​o​g​i​n
+	 */
+	alreadyHaveAccount: string
+	/**
+	 * N​e​e​d​ ​a​n​ ​a​c​c​o​u​n​t​?​ ​R​e​g​i​s​t​e​r
+	 */
+	needAccount: string
 }
 
 export type TranslationFunctions = {
@@ -49,6 +89,46 @@ export type TranslationFunctions = {
 	 * Imprint
 	 */
 	imprint: () => LocalizedString
+	/**
+	 * Register
+	 */
+	register: () => LocalizedString
+	/**
+	 * Username
+	 */
+	username: () => LocalizedString
+	/**
+	 * Email
+	 */
+	email: () => LocalizedString
+	/**
+	 * Password
+	 */
+	password: () => LocalizedString
+	/**
+	 * First Name
+	 */
+	firstName: () => LocalizedString
+	/**
+	 * Last Name
+	 */
+	lastName: () => LocalizedString
+	/**
+	 * Confirm Password
+	 */
+	confirmPassword: () => LocalizedString
+	/**
+	 * Username or Email
+	 */
+	usernameOrEmail: () => LocalizedString
+	/**
+	 * Already have an account? Login
+	 */
+	alreadyHaveAccount: () => LocalizedString
+	/**
+	 * Need an account? Register
+	 */
+	needAccount: () => LocalizedString
 }
 
 export type Formatters = {}

@@ -4,6 +4,7 @@ import { jwtDecode } from 'jwt-decode';
 import { env } from '$env/dynamic/public';
 import { loadAllLocales } from '$i18n/i18n-util.sync';
 import { detectLocale } from '$i18n/i18n-util';
+import { forwardCookies } from '$lib/server/cookies';
 
 const baseUrl = env.PUBLIC_API_URL;
 const withBaseUrl = (request: Request, baseUrl: string): Request => {
@@ -48,9 +49,20 @@ export const handleFetch: HandleFetch = async ({
 	const refreshToken = cookies.get('refresh_token');
 
 	if (isTokenExpired(accessToken) && !isTokenExpired(refreshToken)) {
-		await fetch(`${baseUrl}/api/login/refresh`, {
-			method: 'POST'
-		});
+		try {
+			const refreshResponse = await fetch(`${baseUrl}/api/login/refresh`, {
+				method: 'POST',
+				headers: {
+					'Cookie': `refresh_token=${refreshToken}`
+				}
+			});
+
+			if (refreshResponse.ok) {
+				forwardCookies(refreshResponse, cookies);
+			}
+		} catch (e) {
+			console.log('Failed to refresh token:', e);
+		}
 	}
 
 	return fetch(request);

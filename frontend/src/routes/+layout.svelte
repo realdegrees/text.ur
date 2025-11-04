@@ -5,7 +5,7 @@
 	import Header from '$lib/components/header.svelte';
 	import Notification from '$lib/components/notifications.svelte';
 
-	let { children } = $props();
+	let { children, data } = $props();
 </script>
 
 <svelte:head>
@@ -13,7 +13,7 @@
 </svelte:head>
 
 <div class="flex flex-col items-center w-full min-h-screen mt-2 bg-background text-text transition-all">
-	<Header />
+	<Header user={data.sessionUser} />
 	<Notification />
 	<div
 		class="flex flex-col w-full mt-[4.15rem] grow overflow-auto items-center"

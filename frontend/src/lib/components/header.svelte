@@ -11,11 +11,7 @@
 	import ProfileImageFallback from '~icons/material-symbols/account-box';
 	import Login from './login.svelte';
 
-	interface Props {
-		user?: UserPrivate;
-	}
-
-	let { user }: Props = $props();
+	let { user }:  { user?: UserPrivate } = $props();
 </script>
 
 <div class="fixed top-0 h-2 left-0 right-0 z-50 bg-background"></div>

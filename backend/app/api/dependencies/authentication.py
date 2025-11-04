@@ -18,6 +18,7 @@ def Authenticate(
     *,
     endpoint: Literal["ws", "http"] = "http",
     strict: bool = True,
+    token_type: Literal["access", "refresh"] = "access",
 ) -> Depends:
     """Provide a dependency that checks if the user is authenticated and has the required roles.
 
@@ -42,8 +43,8 @@ def Authenticate(
             if strict:
                 raise AppException(status_code=401, detail="Unauthorized: No access token provided", error_code=AppErrorCode.NOT_AUTHENTICATED)
             return None
-        
-        user = parse_jwt(token, db, for_type="access", strict=strict)
+
+        user = parse_jwt(token, db, for_type=token_type, strict=strict)
         context_path_params: dict[str, Any] = context.path_params
         body_data: dict[str, Any] = {}
         
@@ -77,7 +78,7 @@ def Authenticate(
         ws: WebSocket,
         db: Database,
     ) -> User | None:
-        token: str | None = ws.cookies.get("access_token")
+        token: str | None = ws.cookies.get(f"{token_type}_token")
         return await dependency(db, ws, token)
 
     async def dependency_http(
@@ -85,7 +86,7 @@ def Authenticate(
         db: Database,
         token: Annotated[str | None, Depends(oauth2_scheme)],
     ) -> User | None:
-        token = token or request.cookies.get("access_token")
+        token = token or request.cookies.get(f"{token_type}_token")
         return await dependency(db, request, token)
 
     # TODO check if try: return dependency_http() except FastApiExceptionThatHappensWhenRequestDependencyIsUsedInWebSocketEndpoint: return dependency_ws() is possible to get rid of the parameter

@@ -1,8 +1,13 @@
 import core.config as cfg
 from api.dependencies.database import Database
 from api.dependencies.mail import Mail
-from core.auth import hash_password
+from core.auth import (
+    Token,
+    generate_token,
+    hash_password,
+)
 from fastapi import HTTPException, Request, Response
+from fastapi.responses import RedirectResponse
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 from models.tables import User
 from models.user import UserCreate
@@ -28,11 +33,13 @@ async def register(request: Request, db: Database, mail: Mail, user: UserCreate)
         db.commit()
         db.refresh(user)
     except IntegrityError as e:
-        raise HTTPException(status_code=400, detail="Username or email already exists") from e
+        raise HTTPException(
+            status_code=400, detail="Username or email already exists") from e
 
     # Send verification email
     try:
-        verification_link = mail.generate_verification_link(user.email, request.base_url, router, salt="email-verification", confirm_route="verify")
+        verification_link = mail.generate_verification_link(
+            user.email, request.base_url, router, salt="email-verification", confirm_route="verify")
         mail.send_email(user.email, subject="Email Verification", template="register.jinja", template_vars={
             "verification_link": verification_link,
             "expiry_minutes": cfg.EMAIL_PRESIGN_EXPIRY // 60
@@ -40,17 +47,20 @@ async def register(request: Request, db: Database, mail: Mail, user: UserCreate)
     except Exception as e:
         db.delete(user)
         db.commit()
-        raise HTTPException(status_code=500, detail="Failed to send verification email") from e
-
+        raise HTTPException(
+            status_code=500, detail="Failed to send verification email") from e
 
 
 @router.get("/verify/{token}")
-async def verify(token: str, db: Database) -> None:
+async def verify(token: str, db: Database) -> RedirectResponse:
     """Verify the user's email address."""
     try:
-        email = URLSafeTimedSerializer(cfg.EMAIL_PRESIGN_SECRET).loads(token, max_age=cfg.EMAIL_PRESIGN_EXPIRY, salt="email-verification")
+        email = URLSafeTimedSerializer(cfg.EMAIL_PRESIGN_SECRET).loads(
+            token, max_age=cfg.EMAIL_PRESIGN_EXPIRY, salt="email-verification"
+        )
     except (BadSignature, SignatureExpired) as e:
-        raise HTTPException(status_code=403, detail="Invalid or expired token") from e
+        raise HTTPException(
+            status_code=403, detail="Invalid or expired token") from e
 
     query = select(User).filter(User.email == email)
     user: User | None = db.exec(query).first()
@@ -59,4 +69,32 @@ async def verify(token: str, db: Database) -> None:
 
     user.verified = True
     db.commit()
-    return Response(status_code=204) # TODO: Redirect to the frontend login page with a success message and maybe even attach the Tokens to cookies already
+
+    # Generate tokens
+    auth_token = Token(
+        access_token=generate_token(user, "access"),
+        refresh_token=generate_token(user, "refresh"),
+        token_type="bearer",
+    )
+
+    # Create the redirect response
+    redirect_response = RedirectResponse(
+        url=cfg.FRONTEND_BASEURL, status_code=303)
+
+    # Set cookies on that response
+    redirect_response.set_cookie(
+        key="access_token",
+        value=auth_token.access_token,
+        httponly=True,
+        secure=cfg.COOKIE_SECURE,
+        samesite=cfg.COOKIE_SAMESITE,
+    )
+    redirect_response.set_cookie(
+        key="refresh_token",
+        value=auth_token.refresh_token,
+        httponly=True,
+        secure=cfg.COOKIE_SECURE,
+        samesite=cfg.COOKIE_SAMESITE,
+    )
+
+    return redirect_response
