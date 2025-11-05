@@ -1,5 +1,6 @@
 from typing import Annotated
 
+from api.dependencies.authentication import Authenticate, BasicAuthentication
 import core.config as cfg
 from api.dependencies.database import Database
 from api.dependencies.mail import Mail
@@ -50,9 +51,15 @@ async def login(
 
 
 @router.post("/refresh")
-async def refresh(token: Annotated[str, Depends(oauth2_scheme)], db: Database) -> Token:
+async def refresh(response: Response, user: User = Authenticate(token_type="refresh")) -> Token:
     """Refresh the access token given a valid refresh token."""
-    return refresh_token(token, db)
+    token = Token(
+        access_token=generate_token(user, "access"),
+        refresh_token=generate_token(user, "refresh"),
+        token_type="bearer",
+    )
+    response.set_cookie(key="access_token", value=token.access_token, httponly=True, secure=cfg.COOKIE_SECURE, samesite=cfg.COOKIE_SAMESITE)
+    return token
 
 
 @router.post("/reset")
@@ -74,7 +81,7 @@ async def reset_password(request: Request, db: Database, mail: Mail, email: str 
         raise HTTPException(status_code=500, detail="Failed to send reset email") from e
 
 @router.put("/reset/verify/{token}", response_class=RedirectResponse)
-async def verify(token: str, db: Database, password: str = Body(..., embed=True)) -> RedirectResponse:
+async def reset_verify(token: str, db: Database, password: str = Body(..., embed=True)) -> RedirectResponse:
     """Confirm password reset using the presigned URL and update the user's password."""
     try:
         email: str = URLSafeTimedSerializer(cfg.EMAIL_PRESIGN_SECRET).loads(token, max_age=cfg.EMAIL_PRESIGN_EXPIRY, salt="password-reset")

@@ -19,10 +19,7 @@ class UserRead(BaseModel):
 
 
 class UserPrivate(UserRead):
-    password: str
     email: str
-    first_name: str | None = None
-    last_name: str | None = None
 
 
 class UserUpdate(SQLModel):

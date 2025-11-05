@@ -13,4 +13,9 @@
     "docker-compose*.yml": "docker*, Docker*",
     ".env": ".env.*"
   },
+  "eslint.enable": true,
+  "eslint.validate": [
+    "typescript",
+    "svelte"
+  ]
 }

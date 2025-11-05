@@ -1,6 +1,6 @@
 """Exports all models and schemas that need to be either rebuilt on start OR included in the pydantic2ts scope for frontend model generation"""
 
-from models.auth import GlobalJWTPayload, Token
+from models.auth import GlobalJWTPayload, Token, UserJWTPayload
 from models.comment import (
     CommentCreate,
     CommentRead,
@@ -25,10 +25,11 @@ from models.group import (
     GroupUpdate,
     UserMembershipRead,
 )
+from models.pagination import PaginatedBase
 from models.reaction import ReactionCreate, ReactionRead
 from models.sharelink import ShareLinkCreate, ShareLinkRead, ShareLinkUpdate
 from models.tables import Comment, Document, Group, Membership, User
-from models.user import UserCreate, UserRead, UserUpdate
+from models.user import UserCreate, UserPrivate, UserRead, UserUpdate
 
 # ! Models that use TYPE_CHECKING for string type hints need to be imported and rebuilt here to avoid runtime errors
 
@@ -67,3 +68,4 @@ UserCreate.model_rebuild()
 UserRead.model_rebuild()
 UserUpdate.model_rebuild()
 UserFilter.model_rebuild()
+UserPrivate.model_rebuild()

@@ -3,16 +3,13 @@ from api.dependencies.database import Database
 from api.dependencies.resource import Resource
 from backend.app.api.dependencies.paginated.resources import PaginatedResource
 from core.auth import hash_password, validate_password
-from fastapi import Body, HTTPException, Path, Response
+from fastapi import Body, HTTPException, Response
 from models.filter import (
     UserFilter,
-    UserMembershipFilter,
 )
-from models.group import UserMembershipRead
 from models.pagination import Paginated
-from models.tables import Group, Membership, User
-from models.user import UserRead, UserUpdate
-from sqlmodel import select
+from models.tables import User
+from models.user import UserPrivate, UserRead, UserUpdate
 from util.api_router import APIRouter
 from util.queries import Guard
 
@@ -22,6 +19,14 @@ router = APIRouter(
 )
 
 # region Users
+
+@router.get("/me", response_model=UserPrivate)
+async def read_current_user(
+    user: User = Authenticate()
+) -> User:
+    """Get the currently authenticated user."""
+    return user
+
 
 @router.get("/", response_model=Paginated[UserRead])
 async def list_users(

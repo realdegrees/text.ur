@@ -1,21 +1,38 @@
 {
-    "version": "0.2.0",
-    "configurations": [
-        {
-            "name": "Backend",
-            "type": "debugpy",
-            "request": "launch",
-            "module": "uvicorn",
-            "python": "${workspaceFolder}/backend/.venv/bin/python",
-            "args": [
-                "backend.app.main:app",
-                "--host",
-                "0.0.0.0",
-                "--reload",
-                "--workers",
-                "1"
-            ],
-            "jinja": true
-        }
-    ]
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Backend",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "uvicorn",
+      "python": "${workspaceFolder}/backend/.venv/bin/python",
+      "args": [
+        "backend.app.main:app",
+        "--host",
+        "0.0.0.0",
+        "--reload",
+        "--workers",
+        "1"
+      ],
+      "jinja": true
+    },
+    {
+      "name": "Frontend",
+      "request": "launch",
+      "args": ["run-script", "dev"],
+      "runtimeExecutable": "pnpm",
+      "skipFiles": ["<node_internals>/**"],
+      "type": "node",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}/frontend",
+    },
+    {
+      "name": "Frontend: Browser",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://localhost:5173",
+      "webRoot": "${workspaceFolder}",
+    }
+  ]
 }

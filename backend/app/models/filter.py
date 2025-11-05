@@ -11,7 +11,9 @@ from sqlalchemy.orm import InstrumentedAttribute
 from sqlmodel import SQLModel, exists, select
 from sqlmodel.main import default_registry
 
+from models.enums import Visibility
 from models.tables import (
+    Comment,
     Document,
     Group,
     Membership,
@@ -27,6 +29,15 @@ OperatorMap = {
     "numeric": {"==", ">=", "<=", ">", "<", "!="},
     "exists": {"exists"},
 }
+
+
+class BaseFilterModel(SQLModel):
+    """Base class for filter models that provides filter metadata without serialization issues."""
+    
+    @classmethod
+    def get_filter_metadata(cls) -> dict[str, "FilterMeta"]:
+        """Return a mapping of field names to FilterMeta objects. Subclasses should override this method to define their filter metadata."""
+        return {}
 
 
 class Filter(SQLModel):
@@ -69,13 +80,18 @@ class FilterMeta:
     def from_filter(filter_model: SQLModel) -> list[FilterableField]:
         """Collect filterable fields from a filter model."""
         fields: list[FilterableField] = []
+        
+        # Get filter metadata from the model's get_filter_metadata method if available
+        filter_metadata_map: dict[str, FilterMeta] = {}
+        if hasattr(filter_model.__class__, "get_filter_metadata"):
+            filter_metadata_map = filter_model.__class__.get_filter_metadata()
+        
         for field_name, model_field in filter_model.model_fields.items():
-            if not model_field.json_schema_extra:
-                continue
-            filter_meta: FilterMeta = model_field.json_schema_extra.get("filter")
-
+            # Try to get filter metadata from the classmethod
+            filter_meta = filter_metadata_map.get(field_name)
+            
             if not filter_meta:
-                raise ValueError(f"Field '{field_name}' is missing 'filter' metadata.")
+                continue
 
             filterable_field = filter_meta.to_filterable_field(field_name, model_field)
             if filterable_field:
@@ -208,24 +224,36 @@ class FilterMeta:
 # ================================================================
 
 
-class GroupFilter(SQLModel):
+class GroupFilter(BaseFilterModel):
     """Declarative filter model for Group with filter metadata."""
 
-    name: str = Field(json_schema_extra={"filter": FilterMeta(field=Group.name)})
-    member_count: int = Field(json_schema_extra={"filter": FilterMeta(field=Group.member_count)})
+    name: str = Field()
+    member_count: int = Field()
+
+    @classmethod
+    def get_filter_metadata(cls) -> dict[str, FilterMeta]:
+        """Return filter metadata for GroupFilter fields."""
+        return {
+            "name": FilterMeta(field=Group.name),
+            "member_count": FilterMeta(field=Group.member_count),
+        }
 
 
 # ================================================================
 # ========================= DOCUMENT FILTER ======================
 # ================================================================
 
-class DocumentFilter(SQLModel):
-    size_bytes: int = Field(
-        json_schema_extra={"filter": FilterMeta(field=Document.size_bytes)},
-    )
-    group_id: int = Field(
-        json_schema_extra={"filter": FilterMeta(field=Document.group_id)},
-    )
+class DocumentFilter(BaseFilterModel):
+    size_bytes: int = Field()
+    group_id: int = Field()
+
+    @classmethod
+    def get_filter_metadata(cls) -> dict[str, FilterMeta]:
+        """Return filter metadata for DocumentFilter fields."""
+        return {
+            "size_bytes": FilterMeta(field=Document.size_bytes),
+            "group_id": FilterMeta(field=Document.group_id),
+        }
 
 
 # ================================================================
@@ -233,48 +261,73 @@ class DocumentFilter(SQLModel):
 # ================================================================
 
 
-class GroupMembershipFilter(SQLModel):
-    user_id: int = Field( # TODO should probably be user name instead
-        json_schema_extra={"filter": FilterMeta(field=Membership.user_id)},
-    )
+class GroupMembershipFilter(BaseFilterModel):
+    user_id: int = Field()
 
-class UserMembershipFilter(SQLModel):
-    group_id: int = Field( 
-        json_schema_extra={"filter": FilterMeta(field=Membership.group_id)},
-    )
+    @classmethod
+    def get_filter_metadata(cls) -> dict[str, FilterMeta]:
+        """Return filter metadata for GroupMembershipFilter fields."""
+        return {
+            "user_id": FilterMeta(field=Membership.user_id),
+        }
+
+
+class UserMembershipFilter(BaseFilterModel):
+    group_id: int = Field()
+
+    @classmethod
+    def get_filter_metadata(cls) -> dict[str, FilterMeta]:
+        """Return filter metadata for UserMembershipFilter fields."""
+        return {
+            "group_id": FilterMeta(field=Membership.group_id),
+        }
 
 # ================================================================
 # ========================= COMMENT FILTER ====================
 # ================================================================
 
 
-class CommentFilter(SQLModel):
-    pass
+class CommentFilter(BaseFilterModel):    
+    visibility: Visibility = Field()
+    
+    @classmethod
+    def get_filter_metadata(cls) -> dict[str, FilterMeta]:
+        """Return filter metadata for Comment fields."""
+        return {
+            "visibility": FilterMeta(field=Comment.visibility),
+        }
 
 # ================================================================
 # ========================= USER FILTER ==========================
 # ================================================================
 
 
-class UserFilter(SQLModel):
-    username: str = Field(json_schema_extra={
-        "filter": FilterMeta(field=User.username),
-    })
-    first_name: str = Field(
-        json_schema_extra={"filter": FilterMeta(field=User.first_name)},
-    )
-    last_name: str = Field(
-        json_schema_extra={"filter": FilterMeta(field=User.last_name)},
-    )
+class UserFilter(BaseFilterModel):
+    username: str = Field()
+    first_name: str = Field()
+    last_name: str = Field()
+
+    @classmethod
+    def get_filter_metadata(cls) -> dict[str, FilterMeta]:
+        """Return filter metadata for UserFilter fields."""
+        return {
+            "username": FilterMeta(field=User.username),
+            "first_name": FilterMeta(field=User.first_name),
+            "last_name": FilterMeta(field=User.last_name),
+        }
 
 # ================================================================
 # ========================= SHARELINK FILTER =====================
 # ================================================================
 
-class ShareLinkFilter(SQLModel):
-    label: str = Field(
-        json_schema_extra={"filter": FilterMeta(field=ShareLink.label)},
-    )
-    expires_at: datetime = Field(
-        json_schema_extra={"filter": FilterMeta(field=ShareLink.expires_at)},
-    )
+class ShareLinkFilter(BaseFilterModel):
+    label: str = Field()
+    expires_at: datetime = Field()
+
+    @classmethod
+    def get_filter_metadata(cls) -> dict[str, FilterMeta]:
+        """Return filter metadata for ShareLinkFilter fields."""
+        return {
+            "label": FilterMeta(field=ShareLink.label),
+            "expires_at": FilterMeta(field=ShareLink.expires_at),
+        }

@@ -91,9 +91,8 @@ def parse_jwt(token: str, db: Database, *, for_type: TokenType | None = None, st
             ) from e
         return None
 
-def refresh_token(token: str, db: Database) -> Token:
+def refresh_token(user: User, db: Database) -> Token:
     """Generate a new access token using a valid refresh token."""
-    user = parse_jwt(token, db, for_type="refresh")
     token = generate_token(user, "access")
     return Token(access_token=token, token_type="bearer")
 

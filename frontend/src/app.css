@@ -1,0 +1,43 @@
+@import 'tailwindcss';
+@plugin '@tailwindcss/forms';
+
+@theme {
+	--color-text: var(--color-text);
+	--color-background: var(--color-background);
+	--color-inset: var(--color-inset);
+	--color-primary: var(--color-primary);
+	--color-secondary: var(--color-secondary);
+	--color-accent: var(--color-accent);
+}
+
+@utility shadow-inner-sym-* {
+	--tw-shadow: inset 0 0 --value(integer) -2px var(--tw-shadow-color);
+	box-shadow: var(--tw-shadow);
+}
+@utility clickable {
+	cursor: pointer;
+	transition: transform 0.1s ease;
+	&:hover {
+		scale: 1.05;
+	}
+	&:active {
+		scale: 0.95;
+	}
+}
+
+:root {
+	--color-text: #111111;
+	--color-background: #f5f5f5;
+	--color-primary: #73564a;
+	--color-inset: #eeeeee;
+	--color-secondary: #dbcb9a;
+	--color-accent: #823837;
+}
+:root.dark {
+	--color-text: #f5f5f5;
+	--color-background: #1f1f1f;
+	--color-primary: #73564a;
+	--color-inset: #242424;
+	--color-secondary: #dbcb9a;
+	--color-accent: #823837;
+}

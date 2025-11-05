@@ -14,11 +14,13 @@ class Pagination(PydanticBaseModel):
     limit: int = Field(ge=0, le=100, default=25)
 
 
-class Paginated[Model: PydanticBaseModel](Pagination):
+class Paginated[Model: PydanticBaseModel](PydanticBaseModel):
     """Do not use this model directly. Use the `paginated_model` factory instead."""
 
     data: list[Model]
     total: int = Field(ge=0)
+    offset: int = Field(ge=0)
+    limit: int = Field(ge=0, le=100)
     filters: list[Filter] = Field(default=[])
     order_by: list[str] = Field(default=[])
 
