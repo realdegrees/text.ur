@@ -1,12 +1,13 @@
 <script lang="ts">
 	import AppLogoDark from '$lib/images/logo/logo_dark.svg';
 	import AppLogoLight from '$lib/images/logo/logo_light.svg';
-	import darkMode from '$lib/darkMode.svelte';
+	import darkMode from '$lib/stores/darkMode.svelte';
+	import { loadingBar } from '$lib/stores/loadingBar.svelte';
 
 	import Dark from '~icons/material-symbols/dark-mode-outline';
 	import Light from '~icons/iconamoon/mode-light';
-	import { slide } from 'svelte/transition';
-	import { quintInOut } from 'svelte/easing';
+	import { scale, slide } from 'svelte/transition';
+	import { cubicOut, quintInOut } from 'svelte/easing';
 	import type { UserPrivate } from '$api/types';
 	import ProfileImageFallback from '~icons/material-symbols/account-box';
 	import Login from './login.svelte';
@@ -66,6 +67,14 @@
 		</button>
 	</div>
 </header>
+
+{#if loadingBar.visible}
+	<div
+		class="fixed top-18 left-0 right-0 h-[3px] rounded-full bg-primary origin-left z-60"
+		style="width: {loadingBar.progress}%"
+		transition:scale={{ duration: 300, easing: cubicOut }}
+	></div>
+{/if}
 
 <style lang="postcss">
 	@reference '../../app.css';

@@ -22,10 +22,25 @@ router = APIRouter(
 
 
 @router.post("/")
-async def register(request: Request, db: Database, mail: Mail, user: UserCreate) -> None:
+async def register(request: Request, db: Database, mail: Mail, user_create: UserCreate) -> None:
     """Register a new user."""
-    user = User(**user.model_dump())
-    user.password = hash_password(user.password)
+    existing_user = db.exec(
+        select(User).where((User.email == user_create.email) | (User.username == user_create.username))
+    ).first()
+
+    if existing_user:
+        if not existing_user.verified:
+            db.delete(existing_user)
+            db.commit()
+        elif existing_user.username == user_create.username:
+            raise HTTPException(
+                status_code=400, detail="Username already registered")
+        else:
+            raise HTTPException(
+                status_code=400, detail="Email already registered")
+
+    user = User(**user_create.model_dump())
+    user.password = hash_password(user_create.password)
 
     # Attempt to create user
     try:
@@ -35,6 +50,7 @@ async def register(request: Request, db: Database, mail: Mail, user: UserCreate)
     except IntegrityError as e:
         raise HTTPException(
             status_code=400, detail="Username or email already exists") from e
+
 
     # Send verification email
     try:
@@ -79,7 +95,7 @@ async def verify(token: str, db: Database) -> RedirectResponse:
 
     # Create the redirect response
     redirect_response = RedirectResponse(
-        url=cfg.FRONTEND_BASEURL, status_code=303)
+        url=f"{cfg.FRONTEND_BASEURL}?verified=true", status_code=303)
 
     # Set cookies on that response
     redirect_response.set_cookie(

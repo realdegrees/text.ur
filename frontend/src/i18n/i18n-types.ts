@@ -70,6 +70,10 @@ type RootTranslation = {
 	 * N​e​e​d​ ​a​n​ ​a​c​c​o​u​n​t​?​ ​R​e​g​i​s​t​e​r
 	 */
 	needAccount: string
+	/**
+	 * E​m​a​i​l​ ​v​e​r​i​f​i​e​d​ ​s​u​c​c​e​s​s​f​u​l​l​y​!​ ​Y​o​u​r​ ​a​c​c​o​u​n​t​ ​i​s​ ​n​o​w​ ​a​c​t​i​v​a​t​e​d​.
+	 */
+	emailVerified: string
 }
 
 export type TranslationFunctions = {
@@ -129,6 +133,10 @@ export type TranslationFunctions = {
 	 * Need an account? Register
 	 */
 	needAccount: () => LocalizedString
+	/**
+	 * Email verified successfully! Your account is now activated.
+	 */
+	emailVerified: () => LocalizedString
 }
 
 export type Formatters = {}

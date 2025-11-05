@@ -4,7 +4,7 @@
 	import URLogoDark from '$lib/images/ur/ur-logo-dark.webp';
 	import URLogoLight from '$lib/images/ur/ur-logo-light.webp';
 
-	import darkMode from '$lib/darkMode.svelte';
+	import darkMode from '$lib/stores/darkMode.svelte';
 	import MailIcon from '~icons/fluent-color/mail-16';
 	import GithubIcon from '~icons/logos/github-icon';
 	import LL from '$i18n/i18n-svelte';

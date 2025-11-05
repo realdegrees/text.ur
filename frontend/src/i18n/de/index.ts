@@ -15,6 +15,7 @@ const de = {
     usernameOrEmail: "Benutzername oder E-Mail",
     alreadyHaveAccount: "Haben Sie bereits ein Konto? Anmelden",
     needAccount: "Haben Sie kein Konto? Registrieren",
+    emailVerified: "E-Mail erfolgreich bestätigt! Ihr Konto ist jetzt aktiviert.",
 } satisfies Translation;
 
 export default de;

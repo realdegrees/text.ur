@@ -15,6 +15,7 @@ const en = {
     usernameOrEmail: "Username or Email",
     alreadyHaveAccount: "Already have an account? Login",
     needAccount: "Need an account? Register",
+    emailVerified: "Email verified successfully! Your account is now activated.",
 } satisfies BaseTranslation;
 
 export default en;

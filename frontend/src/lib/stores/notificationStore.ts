@@ -11,6 +11,8 @@ export const notificationStore = writable<
 	{ id: number; message: string; Icon?: Component<SVGAttributes<SVGSVGElement>>; color: string }[]
 >([]);
 
+type NotificationType = 'success' | 'error' | 'warning' | 'info';
+
 let nextId = 1;
 
 /**
@@ -22,42 +24,44 @@ let nextId = 1;
  * @param duration - The duration to display the notification (in milliseconds). If undefined or 0, the notification will not auto-dismiss.
  */
 export function notification(
-	code: number,
+	notificationType: NotificationType,
 	message: string,
-	Icon?: Component<SVGAttributes<SVGSVGElement>>,
-	color?: string,
-	duration: number | undefined = 5000
+	config: {
+		Icon?: Component<SVGAttributes<SVGSVGElement>>,
+		color?: string,
+		duration: number | undefined
+	} = { duration: 5000 }
 ) {
 	const id = nextId++;
 
-	if (!Icon) {
-		if (code === 403 || code === 401) {
-			Icon = Locked;
-		} else if (code.toString().startsWith('2')) {
-			Icon = Success;
-		} else if (code.toString().startsWith('4')) {
-			Icon = Warning;
+	if (!config.Icon) {
+		if (notificationType === 'error') {
+			config.Icon = Locked;
+		} else if (notificationType === 'success') {
+			config.Icon = Success;
+		} else if (notificationType === 'warning') {
+			config.Icon = Warning;
 		} else {
-			Icon = Error;
+			config.Icon = Error;
 		}
 	}
 
-	color =
-		color ||
-		(code.toString().startsWith('2')
+	config.color =
+		config.color ||
+		(notificationType === 'success'
 			? 'green'
-			: code.toString().startsWith('4')
+			: notificationType === 'warning'
 				? 'orange'
 				: 'red');
 
-	notificationStore.update((notifications) => [...notifications, { id, message, Icon, color }]);
+	notificationStore.update((notifications) => [...notifications, { id, message, Icon: config.Icon, color: config.color! }]);
 	const notificationFn = () => {
 		notificationStore.update((notifications) =>
 			notifications.filter((notification) => notification.id !== id)
 		);
 	};
-	if (duration && duration > 0) {
-		setTimeout(notificationFn, duration);
+	if (config.duration && config.duration > 0) {
+		setTimeout(notificationFn, config.duration);
 	} else {
 		notificationFn();
 	}
