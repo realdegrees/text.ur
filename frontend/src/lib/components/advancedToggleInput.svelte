@@ -17,7 +17,7 @@
 </script>
 
 <button
-	class="flex justify-center items-center rounded-md w-6 h-6 p-px! card-black bg-accent"
+	class="card-black flex h-6 w-6 items-center justify-center rounded-md bg-accent p-px!"
 	type="button"
 	onclick={() => {
 		if (value === undefined || value === null) value = !invert;
@@ -28,11 +28,11 @@
 >
 	{#if value === (invert ? false : true)}
 		<div transition:slide={{ axis: 'y', duration: 120 }}>
-			<Enabled class="w-full h-full" />
+			<Enabled class="h-full w-full" />
 		</div>
 	{:else if value === (invert ? true : false)}
 		<div transition:slide={{ axis: 'y', duration: 120 }}>
-			<Disabled class="w-full h-full" />
+			<Disabled class="h-full w-full" />
 		</div>
 	{/if}
 </button>

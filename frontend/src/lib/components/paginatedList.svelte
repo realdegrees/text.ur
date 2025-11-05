@@ -35,7 +35,7 @@
 
 <!-- Item List -->
 <ul class="w-full">
-	{#each items as item}
+	{#each items as item (item)}
 		<li class="mt-1">
 			{@render itemSnippet(item as Item)}
 		</li>
@@ -43,8 +43,8 @@
 </ul>
 
 <!-- Page Controls -->
-<div class="flex flex-row items-stretch justify-start w-full">
-	<div class="flex flex-row justify-center w-full items-center">
+<div class="flex w-full flex-row items-stretch justify-start">
+	<div class="flex w-full flex-row items-center justify-center">
 		<button class:invisible={currentPage === 1} onclick={() => changePage(-1)}
 			><Arrow class="rotate-180" /></button
 		>
@@ -57,14 +57,14 @@
 		<label for="itemsPerPage" class="whitespace-nowrap">Entries per page:</label>
 		<select
 			id="itemsPerPage"
-			class="bg-background rounded py-0.5"
+			class="rounded bg-background py-0.5"
 			onchange={({ currentTarget: { value } }) => {
 				page.url.searchParams.set('limit', `${value}`);
 				page.url.searchParams.set('offset', `${0}`);
 				goto(page.url, { invalidateAll: true });
 			}}
 		>
-			{#each [10, 25, 50, 100] as option}
+			{#each [10, 25, 50, 100] as option (option)}
 				<option class="bg-background" value={option} selected={option === limit}>{option}</option>
 			{/each}
 		</select>

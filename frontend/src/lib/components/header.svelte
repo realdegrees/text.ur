@@ -12,34 +12,30 @@
 	import ProfileImageFallback from '~icons/material-symbols/account-box';
 	import Login from './login.svelte';
 
-	let { user }:  { user?: UserPrivate } = $props();
+	let { user }: { user?: UserPrivate } = $props();
 </script>
 
-<div class="fixed top-0 h-2 left-0 right-0 z-50 bg-background"></div>
+<div class="fixed top-0 right-0 left-0 z-50 h-2 bg-background"></div>
 <!--TODO Can potentially be used as a subtle loading bar-->
 <header
-	class="fixed top-2 left-0 right-0 h-16 z-50 overflow-hidden grid items-center grid-cols-3 center-content
-	bg-inset shadow-inner-sym-[10px] dark:shadow-inner-sym-10 shadow-black"
+	class="center-content shadow-inner-sym-[10px] fixed top-2 right-0 left-0 z-50 grid h-16 grid-cols-3 items-center
+	overflow-hidden bg-inset shadow-black dark:shadow-inner-sym-10"
 >
 	<a
 		href="/"
-		class="flex flex-row justify-self-start col-start-1 col-span-1 hover:pl-2 transition-all"
+		class="col-span-1 col-start-1 flex flex-row justify-self-start transition-all hover:pl-2"
 	>
-		<img
-			class="w-auto p-2"
-			src={darkMode.enabled ? AppLogoLight : AppLogoDark}
-			alt="Logo"
-		/>
-		<p class="ml-1 text-3xl self-center">text.ur</p>
+		<img class="w-auto p-2" src={darkMode.enabled ? AppLogoLight : AppLogoDark} alt="Logo" />
+		<p class="ml-1 self-center text-3xl">text.ur</p>
 	</a>
 
-	<div class="flex flex-row-reverse items-center mr-3 justify-self-end col-start-3 col-span-1">
+	<div class="col-span-1 col-start-3 mr-3 flex flex-row-reverse items-center justify-self-end">
 		{#if user?.id}
-			<a href="/users/{user.username}" class="w-full flex flex-row items-center">
+			<a href="/users/{user.username}" class="flex w-full flex-row items-center">
 				<ProfileImageFallback class="h-9 w-9" />
 				<!--TODO insert user profile image if that feature is added-->
 				<p class="ml-1 font-semibold">
-					{(user.first_name && user.last_name)
+					{user.first_name && user.last_name
 						? `${user.first_name} ${user.last_name}`
 						: user.username}
 				</p>
@@ -48,10 +44,10 @@
 			<Login />
 		{/if}
 
-		<hr class="rounded-full bg-text opacity-25 w-1 mx-4 h-9" />
+		<hr class="mx-4 h-9 w-1 rounded-full bg-text opacity-25" />
 
 		<button
-			class="h-full w-fit clickable flex flex-col justify-center items-center"
+			class="flex h-full w-fit clickable flex-col items-center justify-center"
 			onclick={() => (darkMode.enabled = !darkMode.enabled)}
 			title="Enable {darkMode.enabled ? 'Light' : 'Dark'} Mode"
 		>
@@ -70,7 +66,7 @@
 
 {#if loadingBar.visible}
 	<div
-		class="fixed top-18 left-0 right-0 h-[3px] rounded-full bg-primary origin-left z-60"
+		class="fixed top-18 right-0 left-0 z-60 h-[3px] origin-left rounded-full bg-primary"
 		style="width: {loadingBar.progress}%"
 		transition:scale={{ duration: 300, easing: cubicOut }}
 	></div>

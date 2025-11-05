@@ -13,34 +13,22 @@
 <footer class="center-content my-2 grid w-full items-start justify-center gap-x-28">
 	<!-- Generics -->
 	<section class="col-start-1">
-		<p class="text-xl! mb-2 font-semibold">Info</p>
+		<p class="mb-2 text-xl! font-semibold">Info</p>
 
-		<a
-			href="https://github.com/realdegrees/text.ur"
-			target="_blank"
-			rel="noreferrer noopener"
-		>
+		<a href="https://github.com/realdegrees/text.ur" target="_blank" rel="noreferrer noopener">
 			<GithubIcon />
 			<p class="ml-1">GitHub Repository</p>
 		</a>
 
-		<a
-			href="https://www.uni-regensburg.de/impressum"
-			target="_blank"
-			rel="noreferrer noopener"
-		>
-			<img
-				src={darkMode.enabled ? URLogoLight : URLogoDark}
-				alt="logo"
-				class="h-6 w-auto"
-			/>
+		<a href="https://www.uni-regensburg.de/impressum" target="_blank" rel="noreferrer noopener">
+			<img src={darkMode.enabled ? URLogoLight : URLogoDark} alt="logo" class="h-6 w-auto" />
 			<p class="ml-1">{$LL.imprint()}</p>
 		</a>
 	</section>
 
 	<!-- Contact -->
 	<section class="col-start-2">
-		<p class="text-xl! mb-2 font-semibold">{$LL.contact()}</p>
+		<p class="mb-2 text-xl! font-semibold">{$LL.contact()}</p>
 
 		<a
 			href="mailto:fabian.schebera@stud.uni-regensburg.de"
@@ -61,7 +49,7 @@
 		</a>
 	</section>
 
-	<p class="text-sm! col-span-2 row-start-2 mt-6 text-center opacity-60">
+	<p class="col-span-2 row-start-2 mt-6 text-center text-sm! opacity-60">
 		© {new Date().getFullYear()} Universität Regensburg. All rights reserved.
 	</p>
 </footer>

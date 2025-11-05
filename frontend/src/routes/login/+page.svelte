@@ -28,8 +28,8 @@
 </script>
 
 <div class="flex min-h-screen items-center justify-center p-4">
-	<div class="bg-inset w-full max-w-md rounded-lg p-8 shadow-lg">
-		<h1 class="text-text mb-6 text-center text-3xl font-bold">
+	<div class="w-full max-w-md rounded-lg bg-inset p-8 shadow-lg">
+		<h1 class="mb-6 text-center text-3xl font-bold text-text">
 			{isRegistering ? $LL.register() : $LL.login()}
 		</h1>
 
@@ -58,7 +58,7 @@
 		>
 			{#if isRegistering}
 				<div class="mb-4">
-					<label for="username" class="text-text mb-2 block font-medium">
+					<label for="username" class="mb-2 block font-medium text-text">
 						{$LL.username()} <span class="text-red-600 dark:text-red-400">*</span>
 					</label>
 					<input
@@ -68,12 +68,12 @@
 						required
 						disabled={isLoading}
 						autocomplete="username"
-						class="bg-background text-text focus:ring-primary w-full rounded border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 disabled:cursor-not-allowed disabled:bg-gray-100 dark:border-gray-600 dark:disabled:bg-gray-800"
+						class="w-full rounded border border-gray-300 bg-background px-3 py-2 text-text focus:border-transparent focus:ring-2 focus:ring-primary focus:outline-none disabled:cursor-not-allowed disabled:bg-gray-100 dark:border-gray-600 dark:disabled:bg-gray-800"
 					/>
 				</div>
 
 				<div class="mb-4">
-					<label for="email" class="text-text mb-2 block font-medium">
+					<label for="email" class="mb-2 block font-medium text-text">
 						{$LL.email()} <span class="text-red-600 dark:text-red-400">*</span>
 					</label>
 					<input
@@ -83,12 +83,12 @@
 						required
 						disabled={isLoading}
 						autocomplete="email"
-						class="bg-background text-text focus:ring-primary w-full rounded border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 disabled:cursor-not-allowed disabled:bg-gray-100 dark:border-gray-600 dark:disabled:bg-gray-800"
+						class="w-full rounded border border-gray-300 bg-background px-3 py-2 text-text focus:border-transparent focus:ring-2 focus:ring-primary focus:outline-none disabled:cursor-not-allowed disabled:bg-gray-100 dark:border-gray-600 dark:disabled:bg-gray-800"
 					/>
 				</div>
 
 				<div class="mb-4">
-					<label for="firstName" class="text-text mb-2 block font-medium">
+					<label for="firstName" class="mb-2 block font-medium text-text">
 						{$LL.firstName()}
 					</label>
 					<input
@@ -97,12 +97,12 @@
 						name="firstName"
 						disabled={isLoading}
 						autocomplete="given-name"
-						class="bg-background text-text focus:ring-primary w-full rounded border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 disabled:cursor-not-allowed disabled:bg-gray-100 dark:border-gray-600 dark:disabled:bg-gray-800"
+						class="w-full rounded border border-gray-300 bg-background px-3 py-2 text-text focus:border-transparent focus:ring-2 focus:ring-primary focus:outline-none disabled:cursor-not-allowed disabled:bg-gray-100 dark:border-gray-600 dark:disabled:bg-gray-800"
 					/>
 				</div>
 
 				<div class="mb-4">
-					<label for="lastName" class="text-text mb-2 block font-medium">
+					<label for="lastName" class="mb-2 block font-medium text-text">
 						{$LL.lastName()}
 					</label>
 					<input
@@ -111,12 +111,12 @@
 						name="lastName"
 						disabled={isLoading}
 						autocomplete="family-name"
-						class="bg-background text-text focus:ring-primary w-full rounded border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 disabled:cursor-not-allowed disabled:bg-gray-100 dark:border-gray-600 dark:disabled:bg-gray-800"
+						class="w-full rounded border border-gray-300 bg-background px-3 py-2 text-text focus:border-transparent focus:ring-2 focus:ring-primary focus:outline-none disabled:cursor-not-allowed disabled:bg-gray-100 dark:border-gray-600 dark:disabled:bg-gray-800"
 					/>
 				</div>
 
 				<div class="mb-4">
-					<label for="password" class="text-text mb-2 block font-medium">
+					<label for="password" class="mb-2 block font-medium text-text">
 						{$LL.password()} <span class="text-red-600 dark:text-red-400">*</span>
 					</label>
 					<input
@@ -126,12 +126,12 @@
 						required
 						disabled={isLoading}
 						autocomplete="new-password"
-						class="bg-background text-text focus:ring-primary w-full rounded border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 disabled:cursor-not-allowed disabled:bg-gray-100 dark:border-gray-600 dark:disabled:bg-gray-800"
+						class="w-full rounded border border-gray-300 bg-background px-3 py-2 text-text focus:border-transparent focus:ring-2 focus:ring-primary focus:outline-none disabled:cursor-not-allowed disabled:bg-gray-100 dark:border-gray-600 dark:disabled:bg-gray-800"
 					/>
 				</div>
 
 				<div class="mb-6">
-					<label for="confirmPassword" class="text-text mb-2 block font-medium">
+					<label for="confirmPassword" class="mb-2 block font-medium text-text">
 						{$LL.confirmPassword()} <span class="text-red-600 dark:text-red-400">*</span>
 					</label>
 					<input
@@ -141,12 +141,12 @@
 						required
 						disabled={isLoading}
 						autocomplete="new-password"
-						class="bg-background text-text focus:ring-primary w-full rounded border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 disabled:cursor-not-allowed disabled:bg-gray-100 dark:border-gray-600 dark:disabled:bg-gray-800"
+						class="w-full rounded border border-gray-300 bg-background px-3 py-2 text-text focus:border-transparent focus:ring-2 focus:ring-primary focus:outline-none disabled:cursor-not-allowed disabled:bg-gray-100 dark:border-gray-600 dark:disabled:bg-gray-800"
 					/>
 				</div>
 			{:else}
 				<div class="mb-4">
-					<label for="username" class="text-text mb-2 block font-medium">
+					<label for="username" class="mb-2 block font-medium text-text">
 						{$LL.usernameOrEmail()} <span class="text-red-600 dark:text-red-400">*</span>
 					</label>
 					<input
@@ -156,12 +156,12 @@
 						required
 						disabled={isLoading}
 						autocomplete="username"
-						class="bg-background text-text focus:ring-primary w-full rounded border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 disabled:cursor-not-allowed disabled:bg-gray-100 dark:border-gray-600 dark:disabled:bg-gray-800"
+						class="w-full rounded border border-gray-300 bg-background px-3 py-2 text-text focus:border-transparent focus:ring-2 focus:ring-primary focus:outline-none disabled:cursor-not-allowed disabled:bg-gray-100 dark:border-gray-600 dark:disabled:bg-gray-800"
 					/>
 				</div>
 
 				<div class="mb-6">
-					<label for="password" class="text-text mb-2 block font-medium">
+					<label for="password" class="mb-2 block font-medium text-text">
 						{$LL.password()} <span class="text-red-600 dark:text-red-400">*</span>
 					</label>
 					<input
@@ -171,14 +171,14 @@
 						required
 						disabled={isLoading}
 						autocomplete="current-password"
-						class="bg-background text-text focus:ring-primary w-full rounded border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 disabled:cursor-not-allowed disabled:bg-gray-100 dark:border-gray-600 dark:disabled:bg-gray-800"
+						class="w-full rounded border border-gray-300 bg-background px-3 py-2 text-text focus:border-transparent focus:ring-2 focus:ring-primary focus:outline-none disabled:cursor-not-allowed disabled:bg-gray-100 dark:border-gray-600 dark:disabled:bg-gray-800"
 					/>
 				</div>
 			{/if}
 
 			<button
 				type="submit"
-				class="bg-primary clickable w-full rounded px-4 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:bg-gray-400 dark:disabled:bg-gray-600"
+				class="w-full clickable rounded bg-primary px-4 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:bg-gray-400 dark:disabled:bg-gray-600"
 				disabled={isLoading}
 			>
 				{#if isLoading}
@@ -192,7 +192,7 @@
 		<div class="mt-4 text-center">
 			<button
 				type="button"
-				class="text-primary hover:text-secondary underline transition-colors disabled:cursor-not-allowed disabled:text-gray-400"
+				class="text-primary underline transition-colors hover:text-secondary disabled:cursor-not-allowed disabled:text-gray-400"
 				onclick={toggleMode}
 				disabled={isLoading}
 			>

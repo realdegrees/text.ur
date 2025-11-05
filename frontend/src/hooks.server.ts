@@ -53,7 +53,7 @@ export const handleFetch: HandleFetch = async ({
 			const refreshResponse = await fetch(`${baseUrl}/api/login/refresh`, {
 				method: 'POST',
 				headers: {
-					'Cookie': `refresh_token=${refreshToken}`
+					Cookie: `refresh_token=${refreshToken}`
 				}
 			});
 
@@ -86,7 +86,7 @@ const user: Handle = async ({ event, resolve }) => {
 		}
 	} catch (e) {
 		// Failed to fetch user, continue without user
-		console.log("Unable to fetch user:", e);
+		console.log('Unable to fetch user:', e);
 	}
 
 	return resolve(event);
@@ -109,7 +109,7 @@ const dark: Handle = ({ event, resolve }) => {
  */
 const translation: Handle = async ({ event, resolve }) => {
 	// Load translations (only once per process)
-	loadAllLocales();	
+	loadAllLocales();
 
 	// Determine locale: from cookie or via detection fallback
 	const locale = detectLocale(() => [event.cookies.get('locale') ?? '']);
@@ -120,14 +120,11 @@ const translation: Handle = async ({ event, resolve }) => {
 
 	// Continue with SSR rendering
 	const response = await resolve(event, {
-		transformPageChunk: ({ html }) =>
-			html.replace('%lang%', locale) // optional: inject lang attr if you use a placeholder in <html lang="%lang%">
+		transformPageChunk: ({ html }) => html.replace('%lang%', locale) // optional: inject lang attr if you use a placeholder in <html lang="%lang%">
 	});
 
 	return response;
 };
-
-
 
 /**
  * Proxies requests starting with '/api' to the backend API.

@@ -5,7 +5,7 @@ import Icons from 'unplugin-icons/vite';
 
 export default defineConfig({
 	plugins: [
-		tailwindcss(), 
+		tailwindcss(),
 		sveltekit(),
 		Icons({
 			compiler: 'svelte',

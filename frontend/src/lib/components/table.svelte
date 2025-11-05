@@ -34,7 +34,7 @@
 
 {#snippet Section(columns: Column[], rowItem: RowItem)}
 	<div class="flex items-center justify-center gap-2">
-		{#each columns.filter(({ contentCondition }) => !contentCondition || contentCondition(rowItem)) as column}
+		{#each columns.filter(({ contentCondition }) => !contentCondition || contentCondition(rowItem)) as column (column.label)}
 			<AdvancedButton
 				disabled={!column.onCellClick && !column.selectsRow}
 				onclick={() => {
@@ -53,9 +53,9 @@
 {/snippet}
 
 <ul class="w-full">
-	{#each rowItems as rowItem}
+	{#each rowItems as rowItem (rowItem.id)}
 		{@const isSelected = selected.find(({ id }) => id === rowItem.id)}
-		<li class="flex justify-between items-center p-2 bg-accent" class:opacity-30={isSelected}>
+		<li class="flex items-center justify-between bg-accent p-2" class:opacity-30={isSelected}>
 			{@render Section(
 				columns.filter(({ alignment }) => alignment === 'left'),
 				rowItem
@@ -74,7 +74,7 @@
 
 <style lang="postcss">
 	@reference '../../app.css';
-	
+
 	li:nth-child(even) {
 		@apply brightness-105;
 	}

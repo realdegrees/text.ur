@@ -26,9 +26,6 @@
 	}: {
 		debounceMs?: number;
 		fetchOptions?: (search: string) => Promise<Option[]>;
-		placeholder?: string;
-		noResultsHint?: string;
-		fullMatchHint?: string;
 		selected?: Option;
 		value?: string;
 		hideIcon?: boolean;
@@ -158,7 +155,7 @@
 </script>
 
 <svelte:window on:keydown={navigate} />
-<div class="text-md flex flex-row justify-start items-center w-full p-1! card-black bg-accent">
+<div class="text-md card-black flex w-full flex-row items-center justify-start bg-accent p-1!">
 	{#if !hideIcon}
 		<div class="mr-2">
 			{#if debouncing}
@@ -178,9 +175,9 @@
 		data-affix={prefix}
 		class:after:animate-pulse={!focused && options[selectedIndex]}
 		class:before:animate-pulse={!focused && options[selectedIndex]}
-		class="h-full w-full focus:outline-none whitespace-pre
-			after:content-[attr(data-suffix)] after:opacity-50 after:pointer-events-none
-			before:content-[attr(data-affix)] before:opacity-50 before:pointer-events-none"
+		class="h-full w-full whitespace-pre before:pointer-events-none
+			before:opacity-50 before:content-[attr(data-affix)] after:pointer-events-none
+			after:opacity-50 after:content-[attr(data-suffix)] focus:outline-none"
 		contenteditable="true"
 		bind:innerText={value}
 		bind:this={searchElement}

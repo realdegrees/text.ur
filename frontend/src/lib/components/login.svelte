@@ -6,7 +6,7 @@
 </script>
 
 <button
-	class="rounded bg-discord flex flex-row justify-between items-center p-1 group w-full h-full clickable"
+	class="bg-discord group flex h-full w-full clickable flex-row items-center justify-between rounded p-1"
 	onclick={() => goto('/login')}
 >
 	<LoginIcon />

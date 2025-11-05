@@ -13,7 +13,8 @@
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
 		"format": "prettier --write .",
 		"lint": "prettier --check . && eslint .",
-		"typesafe-i18n": "typesafe-i18n",
+		"lint:fix": "prettier --write . && eslint . --fix",
+		"i18n": "typesafe-i18n",
 		"test": "vitest run",
 		"test:coverage": "vitest run --coverage"
 	},

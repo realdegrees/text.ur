@@ -21,20 +21,20 @@
 	ondragover={(e) => {
 		e.preventDefault();
 	}}
-	class="w-full h-full rounded flex flex-row items-center justify-center
-    bg-accent bg-opacity-5 border-dashed hover:animate-pulse border-[.22rem] border-text
-    hover:border-solid group"
+	class="bg-opacity-5 group flex h-full w-full flex-row items-center
+    justify-center rounded border-[.22rem] border-dashed border-text bg-accent
+    hover:animate-pulse hover:border-solid"
 >
-	<label class="w-full h-full group-hover:cursor-pointer">
+	<label class="h-full w-full group-hover:cursor-pointer">
 		<div
-			class="flex flex-row group-hover:scale-[98%] transition-all h-full items-center justify-center gap-2"
+			class="flex h-full flex-row items-center justify-center gap-2 transition-all group-hover:scale-[98%]"
 		>
 			{@render children?.()}
 		</div>
 		<input
 			type="file"
 			multiple
-			class="absolute top-0 left-0 w-0 h-0 opacity-0"
+			class="absolute top-0 left-0 h-0 w-0 opacity-0"
 			onchange={({ currentTarget }) => {
 				const files: File[] = [];
 				if (!currentTarget.files?.length) return;

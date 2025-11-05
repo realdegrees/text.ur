@@ -29,17 +29,19 @@
 	<link rel="icon" href={favicon} />
 </svelte:head>
 
-<div class="flex flex-col items-center w-full min-h-screen mt-2 bg-background text-text transition-all">
+<div
+	class="mt-2 flex min-h-screen w-full flex-col items-center bg-background text-text transition-all"
+>
 	<Header user={data.sessionUser} />
 	<Notification />
 	<div
-		class="flex flex-col w-full mt-[4.15rem] grow overflow-auto items-center"
+		class="mt-[4.15rem] flex w-full grow flex-col items-center overflow-auto"
 		style="scrollbar-gutter: stable both-edges;"
 	>
-		<main class="grow w-full max-w-260 flex flex-col">
+		<main class="flex w-full max-w-260 grow flex-col">
 			{@render children?.()}
 		</main>
-		<div class="shadow-inner shadow-black min-h-2 mt-4 rounded w-[98%] mx-auto"></div>
+		<div class="mx-auto mt-4 min-h-2 w-[98%] rounded shadow-inner shadow-black"></div>
 		<Footer />
 	</div>
 </div>

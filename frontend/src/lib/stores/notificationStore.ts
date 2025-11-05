@@ -27,9 +27,9 @@ export function notification(
 	notificationType: NotificationType,
 	message: string,
 	config: {
-		Icon?: Component<SVGAttributes<SVGSVGElement>>,
-		color?: string,
-		duration: number | undefined
+		Icon?: Component<SVGAttributes<SVGSVGElement>>;
+		color?: string;
+		duration: number | undefined;
 	} = { duration: 5000 }
 ) {
 	const id = nextId++;
@@ -48,13 +48,12 @@ export function notification(
 
 	config.color =
 		config.color ||
-		(notificationType === 'success'
-			? 'green'
-			: notificationType === 'warning'
-				? 'orange'
-				: 'red');
+		(notificationType === 'success' ? 'green' : notificationType === 'warning' ? 'orange' : 'red');
 
-	notificationStore.update((notifications) => [...notifications, { id, message, Icon: config.Icon, color: config.color! }]);
+	notificationStore.update((notifications) => [
+		...notifications,
+		{ id, message, Icon: config.Icon, color: config.color! }
+	]);
 	const notificationFn = () => {
 		notificationStore.update((notifications) =>
 			notifications.filter((notification) => notification.id !== id)

@@ -4,7 +4,7 @@
 </script>
 
 <button
-	class="bg-primary card-black p-2! py-1! rounded-md flex items-center justify-center gap-2 mr-auto group hover:brightness-105"
+	class="card-black group mr-auto flex items-center justify-center gap-2 rounded-md bg-primary p-2! py-1! hover:brightness-105"
 	onclick={() => (expanded = !expanded)}
 >
 	{#if expanded}
@@ -13,7 +13,7 @@
 		<span>Show {label}</span>
 	{/if}
 	<Arrow
-		class="transition-all -rotate-180 {expanded &&
-			'-rotate-90!'} group-hover:scale-110 group-hover:animate-pulse h-full mt-px"
+		class="-rotate-180 transition-all {expanded &&
+			'-rotate-90!'} mt-px h-full group-hover:scale-110 group-hover:animate-pulse"
 	/>
 </button>
