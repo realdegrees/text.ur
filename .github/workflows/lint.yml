@@ -1,0 +1,63 @@
+name: Lint
+
+on:
+  pull_request:
+    branches:
+      - main
+      - develop
+    paths:
+      - "backend/app/**"
+      - "backend/tests/**"
+      - "frontend/src/**"
+  push:
+    branches:
+      - develop
+
+jobs:
+  ruff:
+    name: Ruff Linting
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install ruff
+        run: |
+          pip install --no-cache-dir ruff
+
+      - name: Run ruff
+        working-directory: ./backend
+        run: |
+          ruff check .
+
+  eslint:
+    name: ESLint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "latest"
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 8
+
+      - name: Install dependencies
+        working-directory: ./frontend
+        run: |
+          pnpm install
+
+      - name: Run eslint
+        working-directory: ./frontend
+        run: |
+          pnpm run lint
