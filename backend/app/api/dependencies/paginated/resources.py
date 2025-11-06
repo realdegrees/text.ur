@@ -40,7 +40,9 @@ def PaginatedResource(  # noqa: C901
     filterable_field_data = FilterMeta.from_filter(filter_model)
 
     def build_conditions(
-        filters: list[Filter], filterable_field_data: list[FilterableField] = filterable_field_data
+        filters: list[Filter], 
+        filterable_field_data: list[FilterableField] = filterable_field_data,
+        session_user: User | None = None,
     ) -> list[ColumnElement[bool]]:
         """Transform filters into joins, conditions, and options for build_query using join and clause from FilterableField."""
         conditions: list[ColumnElement[bool]] = []
@@ -51,7 +53,7 @@ def PaginatedResource(  # noqa: C901
             if field_data is None:
                 continue
 
-            conditions.append(field_data.clause(filter_item.operator, filter_item.value))
+            conditions.append(field_data.clause(filter_item.operator, filter_item.value, session_user))
 
         return conditions
 
@@ -101,7 +103,7 @@ def PaginatedResource(  # noqa: C901
         resolved_key_columns: list[ColumnElement] = key_columns if key_columns else [base_model.id]
 
         # Build filter conditions
-        filter_conditions = build_conditions(filters)
+        filter_conditions = build_conditions(filters, session_user=session_user)
 
         # Map Sort -> Column
         labeled_order_columns, order_expressions = build_order_expressions(sorts)

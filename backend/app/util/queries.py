@@ -90,7 +90,7 @@ class Guard:
         #                 Membership.user_id == user.id)
         #         ))
         #     ).exists()
-        
+
         def clause(user: User, params: dict[str, Any], query_params: QueryParams, multi: bool = False) -> ColumnElement[bool]:
             target_user_id = params.get("user_id", None)
             if not target_user_id and not multi:
@@ -101,8 +101,8 @@ class Guard:
                 # For multi-user queries (filtering Membership table directly)
                 return Membership.group_id.in_(
                     select(Membership.group_id).where(
-                    Membership.accepted.is_(True),
-                    Membership.user_id == user.id
+                        Membership.accepted.is_(True),
+                        Membership.user_id == user.id
                     )
                 )
             elif not multi:
@@ -110,15 +110,14 @@ class Guard:
                 return select(Membership).where(
                     (Membership.user_id == target_user_id) &
                     (Membership.group_id.in_(
-                    select(Membership.group_id).where(
-                        Membership.accepted.is_(True),
-                        Membership.user_id == user.id)
+                        select(Membership.group_id).where(
+                            Membership.accepted.is_(True),
+                            Membership.user_id == user.id)
                     ))
                 ).exists()
             else:
                 raise HTTPException(
                     status_code=500, detail="Endpoint Guard misconfiguration: invalid configuration for multi parameter")
-
 
         def predicate(membership: Membership, user: User, params: dict[str, Any], query_params: QueryParams) -> bool:
             return any(
@@ -135,7 +134,8 @@ class Guard:
         def clause(user: User, params: dict[str, Any], query_params: QueryParams, multi: bool = False) -> ColumnElement[bool]:
             if multi:
                 raise HTTPException(
-                    status_code=500, detail="Endpoint Guard misconfiguration: This Guard is not designed for use in PaginatedQueries!") # TODO: This should throw an internal error and print it to the logs
+                    # TODO: This should throw an internal error and print it to the logs
+                    status_code=500, detail="Endpoint Guard misconfiguration: This Guard is not designed for use in PaginatedQueries!")
             target_user_id = params.get("user_id", None)
             if not target_user_id:
                 raise HTTPException(
@@ -150,7 +150,7 @@ class Guard:
         return EndpointGuard(clause, predicate)
 
     @staticmethod
-    def document_access(require_permissions: set[Permission] | None = None) -> EndpointGuard[Document]: # noqa: C901
+    def document_access(require_permissions: set[Permission] | None = None) -> EndpointGuard[Document]:  # noqa: C901
         """User can access a document based on its visibility and the given required permissions:
 
         - VisibilityType.private: only the group owner and administrators.
@@ -282,7 +282,7 @@ class Guard:
         return EndpointGuard(clause, predicate)
 
     @staticmethod
-    def group_access(require_permissions: set[Permission] | None = None, only_owner: bool = False) -> EndpointGuard[Group]:
+    def group_access(require_permissions: set[Permission] | None = None, *, only_owner: bool = False) -> EndpointGuard[Group]:
         """User can access a group if they have at least min_role in it."""
 
         def clause(user: User, params: dict[str, Any], query_params: QueryParams, multi: bool = False) -> ColumnElement[bool]:
@@ -296,19 +296,19 @@ class Guard:
                 if only_owner:
                     return Membership.is_owner.is_(True)
                 else:
-                    return Membership.accepted.is_(True) & (
+                    return (
                         Membership.is_owner.is_(True) |
                         Membership.permissions.contains([Permission.ADMINISTRATOR.value]) |
                         (and_(*(Membership.permissions.contains([permission.value])
-                        for permission in require_permissions)) if require_permissions else true())
+                                for permission in require_permissions)) if require_permissions else true())
                     )
 
             if multi and group_id is None:
                 # For multi-group queries (filtering Group table directly)
                 return Group.id.in_(
                     select(Membership.group_id).where(
-                    Membership.user_id == user.id,
-                    build_permission_clause()
+                        Membership.user_id == user.id,
+                        build_permission_clause()
                     )
                 )
             elif not multi:
@@ -325,7 +325,7 @@ class Guard:
                 )
 
         def predicate(group: Group, user: User, params: dict[str, Any], query_params: QueryParams) -> bool:
-            return any((m.accepted and (m.user_id == user.id) and (m.is_owner if only_owner else True) and all(p in require_permissions for p in m.permissions)) for m in group.memberships)
+            return any(((m.user_id == user.id) and (m.is_owner if only_owner else True) and all(p in require_permissions for p in m.permissions)) for m in group.memberships)
 
         return EndpointGuard(clause, predicate)
 
@@ -365,8 +365,10 @@ class Guard:
                         or_(
                             Comment.user_id == user.id,
                             Membership.is_owner.is_(True),
-                            Membership.permissions.contains([Permission.ADMINISTRATOR.value]),
-                            and_(Membership.permissions.contains([permission.value]) for permission in require_permissions) if require_permissions else true()
+                            Membership.permissions.contains(
+                                [Permission.ADMINISTRATOR.value]),
+                            and_(Membership.permissions.contains(
+                                [permission.value]) for permission in require_permissions) if require_permissions else true()
                         ),
                     ),
                     # Restricted comments: owner, admins and member with VIEW_RESTRICTED_COMMENTS
@@ -382,9 +384,12 @@ class Guard:
                                         Membership.accepted.is_(True),
                                         or_(
                                             Membership.is_owner.is_(True),
-                                            Membership.permissions.contains([Permission.VIEW_RESTRICTED_COMMENTS.value]),
-                                            Membership.permissions.contains([Permission.ADMINISTRATOR.value]),
-                                            and_(Membership.permissions.contains([permission.value]) for permission in require_permissions) if require_permissions else true()
+                                            Membership.permissions.contains(
+                                                [Permission.VIEW_RESTRICTED_COMMENTS.value]),
+                                            Membership.permissions.contains(
+                                                [Permission.ADMINISTRATOR.value]),
+                                            and_(Membership.permissions.contains(
+                                                [permission.value]) for permission in require_permissions) if require_permissions else true()
                                         ),
                                     )
                                 ),
@@ -404,10 +409,12 @@ class Guard:
                                         Membership.accepted.is_(True),
                                         or_(
                                             Membership.is_owner.is_(True),
-                                            Membership.permissions.contains([Permission.VIEW_PUBLIC_COMMENTS.value]),
-                                            Membership.permissions.contains([Permission.ADMINISTRATOR.value]),
+                                            Membership.permissions.contains(
+                                                [Permission.VIEW_PUBLIC_COMMENTS.value]),
+                                            Membership.permissions.contains(
+                                                [Permission.ADMINISTRATOR.value]),
                                             (and_(*(Membership.permissions.contains([permission.value])
-                                                for permission in require_permissions)) if require_permissions else true())
+                                                    for permission in require_permissions)) if require_permissions else true())
                                         ),
                                     )
                                 )
@@ -426,7 +433,6 @@ class Guard:
                 ).exists()
             else:
                 return build_visibility_clause()
-
 
         def predicate(comment: Comment, user: User, params: dict[str, Any], query_params: QueryParams) -> bool:
             if only_owner:
@@ -475,15 +481,16 @@ class Guard:
 
             def build_clause(reaction_id_filter: ColumnElement[bool] | None = None) -> ColumnElement[bool]:
                 """Build the clause for reaction access."""
-                base_conditions = [reaction_id_filter] if reaction_id_filter is not None else []
+                base_conditions = [
+                    reaction_id_filter] if reaction_id_filter is not None else []
                 return and_(
                     *base_conditions,
                     Reaction.comment_id.in_(
-                    select(Comment.id).where(
-                        Guard.comment_access(None, only_owner=only_owner).clause(
-                        user, params, query_params, multi=True
-                        )
-                    ))
+                        select(Comment.id).where(
+                            Guard.comment_access(None, only_owner=only_owner).clause(
+                                user, params, query_params, multi=True
+                            )
+                        ))
                 )
 
             if multi and reaction_id is None:
@@ -507,7 +514,8 @@ class Guard:
             raise ValueError("op must be 'and' or 'or'")
 
         def clause(session_user: User, params: dict[str, Any], query_params: QueryParams) -> ColumnElement[bool]:
-            clauses = [guard.clause(session_user, params, query_params) for guard in guards]
+            clauses = [guard.clause(session_user, params, query_params)
+                       for guard in guards]
             if op == "and":
                 combined = clauses[0]
                 for c in clauses[1:]:

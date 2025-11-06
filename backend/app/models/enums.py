@@ -72,3 +72,4 @@ class AppErrorCode(str, Enum):
     NOT_AUTHORIZED = "not_authorized"  # use when user lacks necessary permissions
     INVALID_CREDENTIALS = "invalid_credentials"  # use when username/password is incorrect
     NOT_IN_GROUP = "not_in_group"  # use when user is not a member of the group they are trying to access
+    EMAIL_NOT_VERIFIED = "email_not_verified"  # use when user has not verified their email address
