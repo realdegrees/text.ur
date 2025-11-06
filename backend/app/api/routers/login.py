@@ -1,21 +1,21 @@
 from typing import Annotated
 
-from api.dependencies.authentication import Authenticate, BasicAuthentication
 import core.config as cfg
+from api.dependencies.authentication import Authenticate
 from api.dependencies.database import Database
 from api.dependencies.mail import Mail
+from core.app_exception import AppException
 from core.auth import (
     Token,
     generate_token,
     hash_password,
-    oauth2_scheme,
-    refresh_token,
     validate_password,
 )
 from fastapi import Body, Depends, HTTPException, Request, Response
 from fastapi.responses import RedirectResponse
 from fastapi.security import OAuth2PasswordRequestForm
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
+from models.enums import AppErrorCode
 from models.tables import User
 from sqlmodel import select
 from util.api_router import APIRouter
@@ -39,6 +39,9 @@ async def login(
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
+        
+    if not user.verified:
+        raise AppException(status_code=403, detail="Forbidden: Email not verified", error_code=AppErrorCode.EMAIL_NOT_VERIFIED)
         
     token = Token(
         access_token=generate_token(user, "access"),

@@ -27,14 +27,14 @@ router = APIRouter(
 
 # region Groups
 
-# TODO maybe if the group system becomes invite only then by default only return groups the user is a part of
 @router.get("/", response_model=Paginated[GroupRead])
 async def list_groups(
     _: BasicAuthentication,
     groups: Paginated[Group] = PaginatedResource(
-        Group, GroupFilter)
+        Group, GroupFilter, guards=[Guard.group_access()]
+    )
 ) -> Paginated[GroupRead]:
-    """Get all groups."""
+    """Get all groups the user is a member of."""
     return groups
 
 
@@ -68,10 +68,10 @@ async def create_group(
 # TODO maybe if the group system becomes invite only then by default only return if the user is a part of the group
 @router.get("/{group_id}", response_model=GroupRead)
 async def read_group(
-    _: BasicAuthentication,
+    _: User = Authenticate([Guard.group_access()]),
     group: Group = Resource(Group, param_alias="group_id")
 ) -> Group:
-    """Get a group by ID."""
+    """Get a group by ID. Reject if the user is not a member."""
     return group
 
 @router.put("/{group_id}", response_model=GroupRead)
