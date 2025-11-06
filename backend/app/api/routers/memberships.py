@@ -128,7 +128,7 @@ async def update_member_permissions(
 async def accept_membership(
     db: Database,
     session_user: User = Authenticate(
-        [Guard.group_access()],
+        [Guard.group_access(include_invited=True)],
     ),
     group: Group = Resource(Group, param_alias="group_id"),
 ) -> Response:
