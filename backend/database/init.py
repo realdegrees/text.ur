@@ -197,7 +197,7 @@ def main() -> None:
     drop_and_recreate_database(POSTGRES_DB)
     conn: PgConnection = get_connection()
     try:
-        print(f"Applying Alembic migrations up to version: {alembic_version or "head"} ...")
+        print(f"Applying Alembic migrations up to version: {alembic_version or 'head'} ...")
         run_alembic_commands(upgrade_to_version=alembic_version or "head")
         conn.commit()
         print("✅ Alembic migrations applied.")

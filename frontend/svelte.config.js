@@ -16,9 +16,12 @@ const config = {
 			'$api/*': './src/api/*',
 			'$types/*': './src/types/*',
 			'$i18n/*': './src/i18n/*'
+		},
+		env: {
+			dir: '..'
 		}
 	},
-	extensions: ['.svelte', '.svx']
+	extensions: ['.svelte', '.svx'],
 };
 
 export default config;

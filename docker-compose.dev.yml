@@ -1,11 +1,33 @@
-name: annotation-software-dev
+name: text.ur
 services:
 
-  # TODO add backend and frontend services
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: text.ur-backend
+    restart: always
+    ports:
+      - "8000:8000"
+    depends_on:
+      - pgbouncer
+      - minio
+      - redis
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: text.ur-frontend
+    restart: always
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
 
   postgres:
     image: postgres:18
-    container_name: ann-postgres
+    container_name: text.ur-postgres
     restart: always
     environment:
       - POSTGRES_USER=${POSTGRES_USER}
@@ -23,30 +45,28 @@ services:
       start_period: 30s
 
   pgbouncer:
-    image: edoburu/pgbouncer
-    container_name: ann-pgbouncer
+    image: edoburu/pgbouncer:v1.24.1-p0
+    container_name: text.ur-pgbouncer
     restart: always
     environment:
       DB_USER: ${POSTGRES_USER}
       DB_PASSWORD: ${POSTGRES_PASSWORD}
       DB_HOST: postgres
       DB_NAME: ${POSTGRES_DB}
-      AUTH_TYPE: scram-sha-256 # remove/comment this line if using postgres:13 and lower
+      AUTH_TYPE: scram-sha-256
       POOL_MODE: transaction
       ADMIN_USERS: postgres,dbuser
     depends_on:
       postgres:
         condition: service_healthy
-    volumes:
-      - ./docker-userlist.txt:/etc/pgbouncer/userlist.txt:ro
     ports:
       - "${PGBOUNCER_PORT}:5432"
     healthcheck:
       test: ['CMD', 'pg_isready', '-h', 'postgres']
 
-  s3:
-    image: minio/minio
-    container_name: ann-s3
+  minio:
+    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
+    container_name: text.ur-minio
     restart: always
     environment:
       - MINIO_ROOT_USER=${AWS_ACCESS_KEY}
@@ -70,8 +90,8 @@ services:
       "
 
   redis:
-    image: redis:latest
-    container_name: ann-redis
+    image: redis:8
+    container_name: text.ur-redis
     restart: always
     environment:
       - REDIS_PASSWORD=${REDIS_PASSWORD}
@@ -88,8 +108,8 @@ services:
       start_period: 10s
 
   redis-commander:
-    image: rediscommander/redis-commander
-    container_name: ann-redis-commander
+    image: rediscommander/redis-commander:snyk-fix-08c85f17c94a7f00df6fb21e8ea1d10d
+    container_name: text.ur-redis-commander
     restart: always
     environment:
       - REDIS_HOST=redis
@@ -102,8 +122,8 @@ services:
 
   # Only for development to mock actual emails
   mailhog:
-    image: mailhog/mailhog:latest
-    container_name: ann-mailhog
+    image: mailhog/mailhog:v1.0.1
+    container_name: text.ur-mailhog
     restart: always
     ports:
       - "${SMTP_PORT}:1025"   # SMTP port
