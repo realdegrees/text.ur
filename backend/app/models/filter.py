@@ -83,8 +83,8 @@ class FilterMeta:
         
         # Get filter metadata from the model's get_filter_metadata method if available
         filter_metadata_map: dict[str, FilterMeta] = {}
-        if hasattr(filter_model.__class__, "get_filter_metadata"):
-            filter_metadata_map = filter_model.__class__.get_filter_metadata()
+        if hasattr(filter_model, "get_filter_metadata"):
+            filter_metadata_map = filter_model.get_filter_metadata()
         
         for field_name, model_field in filter_model.model_fields.items():
             # Try to get filter metadata from the classmethod
