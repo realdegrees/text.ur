@@ -15,10 +15,10 @@ on:
 jobs:
   pytest:
     name: Python Tests
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     services:
       postgres:
-        image: postgres:15
+        image: postgres:16
         env:
           POSTGRES_DB: test
           POSTGRES_USER: test_user
@@ -47,10 +47,13 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Update repository
+        run: sudo apt-get update
+
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y postgresql-client build-essential
+          sudo apt-get install -y jq postgresql-client-14 build-essential
 
       - name: Create virtual environment
         working-directory: ./backend
@@ -78,7 +81,7 @@ jobs:
 
   vitest:
     name: Frontend Tests
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
