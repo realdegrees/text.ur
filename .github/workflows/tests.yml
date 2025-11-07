@@ -31,12 +31,26 @@ jobs:
           --health-timeout 5s
           --health-retries 5
 
+      minio:
+        image: minio/minio:RELEASE.2025-09-07T16-13-09Z
+        env:
+          MINIO_ROOT_USER: test_access_key
+          MINIO_ROOT_PASSWORD: test_secret_key
+          MINIO_REGION_NAME: us-east-1
+          S3_BUCKET: test_bucket
+
     env:
       POSTGRES_DB: test
       POSTGRES_USER: test_user
       POSTGRES_PASSWORD: test_password
       POSTGRES_PORT: 5432
       POSTGRES_HOST: postgres
+      AWS_ACCESS_KEY: test_access_key
+      AWS_SECRET_KEY: test_secret_key
+      AWS_REGION: us-east-1
+      AWS_ENDPOINT_URL: http://minio
+      AWS_ENDPOINT_PORT: 9000
+      S3_BUCKET: test_bucket
 
 
     steps:
@@ -59,12 +73,13 @@ jobs:
         run: |
           echo "JWT_SECRET=$(openssl rand -hex 32)" >> $GITHUB_ENV
 
-      - name: Initialize database
+      - name: Initialize database and s3
         working-directory: ./backend/database
         run: |
           . ../venv/bin/activate
           alembic stamp base
           alembic upgrade head
+          docker run -it --entrypoint=/bin/sh minio/mc mc alias set myminio http://minio:9000 test_access_key test_secret_key && mc mb myminio/test_bucket || true
 
       - name: Run pytest
         working-directory: ./backend

@@ -18,6 +18,7 @@ class S3Manager:
 
     def __init__(self) -> None:
         """Initialize the S3Manager with a boto3 client."""
+        print("Initializing S3Manager with endpoint:", AWS_ENDPOINT_URL)
         self._client = boto3.client(
             "s3",
             endpoint_url=AWS_ENDPOINT_URL,
