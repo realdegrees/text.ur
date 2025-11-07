@@ -62,6 +62,10 @@ jobs:
       - name: Validate migrations
         working-directory: ./backend/database
         run: |
+          until pg_isready -h localhost -p 5432; do
+            echo "Waiting for PostgreSQL to be ready..."
+            sleep 5
+          done
           alembic stamp base
           alembic upgrade head
           alembic revision --autogenerate -m "ci" --rev-id=generated
@@ -90,7 +94,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "18"
+          node-version: "25"
 
       - name: Install pnpm
         uses: pnpm/action-setup@v3
@@ -100,7 +104,7 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get install -y jq build-essential
-          
+
 
       - name: Install Python dependencies
         working-directory: ./backend
