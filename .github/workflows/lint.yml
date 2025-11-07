@@ -16,10 +16,10 @@ on:
 jobs:
   ruff:
     name: Ruff Linting
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v1
+        uses: actions/checkout@v4
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -37,15 +37,15 @@ jobs:
 
   eslint:
     name: ESLint
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v1
+        uses: actions/checkout@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "latest"
+          node-version: "25"
 
       - name: Install pnpm
         uses: pnpm/action-setup@v3

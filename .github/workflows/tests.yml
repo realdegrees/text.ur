@@ -15,8 +15,7 @@ on:
 jobs:
   pytest:
     name: Python Tests
-    runs-on: self-hosted
-    container: python:3.12
+    runs-on: ubuntu-latest
 
     services:
       postgres:
@@ -30,6 +29,8 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+        ports:
+          - 5432:5432
 
       minio:
         image: minio/minio:RELEASE.2025-09-07T16-13-09Z
@@ -38,29 +39,31 @@ jobs:
           MINIO_ROOT_PASSWORD: test_secret_key
           MINIO_REGION_NAME: us-east-1
           S3_BUCKET: test_bucket
+        ports:
+          - 9000:9000
 
     env:
       POSTGRES_DB: test
       POSTGRES_USER: test_user
       POSTGRES_PASSWORD: test_password
       POSTGRES_PORT: 5432
-      POSTGRES_HOST: postgres
+      POSTGRES_HOST: localhost
       AWS_ACCESS_KEY: test_access_key
       AWS_SECRET_KEY: test_secret_key
       AWS_REGION: us-east-1
-      AWS_ENDPOINT_URL: http://minio
+      AWS_ENDPOINT_URL: http://localhost
       AWS_ENDPOINT_PORT: 9000
       S3_BUCKET: test_bucket
 
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v1
+        uses: actions/checkout@v4
         
       - name: Install system dependencies
         run: |
-          apt-get update
-          apt-get install -y jq build-essential
+          sudo apt-get update
+          sudo apt-get install -y jq build-essential
 
       - name: Install Python dependencies
         working-directory: ./backend
@@ -96,10 +99,10 @@ jobs:
 
   vitest:
     name: Frontend Tests
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v1
+        uses: actions/checkout@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4

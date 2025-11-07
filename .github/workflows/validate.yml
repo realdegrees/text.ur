@@ -18,8 +18,7 @@ on:
 jobs:
   migrations:
     name: Validate Migrations
-    runs-on: self-hosted
-    container: python:3.12
+    runs-on: ubuntu-latest
 
     services:
       postgres:
@@ -33,22 +32,24 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+        ports:
+          - 5432:5432
 
     env:
       POSTGRES_DB: test
       POSTGRES_USER: test_user
       POSTGRES_PASSWORD: test_password
-      POSTGRES_HOST: postgres
+      POSTGRES_HOST: localhost
       POSTGRES_PORT: 5432
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v1
+        uses: actions/checkout@v4
 
       - name: Install system dependencies
         run: |
-          apt-get update
-          apt-get install -y jq build-essential
+          sudo apt-get update
+          sudo apt-get install -y jq build-essential
 
       - name: Install Python dependencies
         working-directory: ./backend
@@ -81,10 +82,10 @@ jobs:
 
   zod-types:
     name: Validate Zod Types
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v1
+        uses: actions/checkout@v4
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -103,8 +104,8 @@ jobs:
 
       - name: Install system dependencies
         run: |
-          apt-get update
-          apt-get install -y jq build-essential
+          sudo apt-get update
+          sudo apt-get install -y jq build-essential
 
 
       - name: Install Python dependencies
