@@ -19,7 +19,7 @@ jobs:
   migrations:
     name: Validate Migrations
     runs-on: self-hosted
-    container: node:20
+    container: node:25
 
     services:
       postgres:
@@ -47,7 +47,7 @@ jobs:
 
       - name: Install system dependencies
         run: |
-          sudo apt-get install -y jq build-essential
+          apt-get install -y jq build-essential
 
       - name: Install Python
         run: |
@@ -102,7 +102,7 @@ jobs:
 
       - name: Install system dependencies
         run: |
-          sudo apt-get install -y jq build-essential
+          apt-get install -y jq build-essential
 
 
       - name: Install Python dependencies
