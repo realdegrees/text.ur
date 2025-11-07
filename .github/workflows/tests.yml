@@ -50,11 +50,9 @@ jobs:
           sudo apt-get install -y jq build-essential
 
 
-      - name: Create virtual environment
+      - name: Install Python dependencies
         working-directory: ./backend
         run: |
-          python3 -m venv venv
-          source venv/bin/activate
           pip install -r requirements.txt
 
       - name: Generate JWT secret
@@ -62,9 +60,8 @@ jobs:
           echo "JWT_SECRET=$(openssl rand -hex 32)" >> $GITHUB_ENV
 
       - name: Initialize database
-        working-directory: ./backend
+        working-directory: ./backend/database
         run: |
-          source venv/bin/activate
           alembic stamp base
           alembic upgrade head
 

@@ -57,11 +57,15 @@ jobs:
         run: |
           pip install -r requirements.txt
 
-      - name: Validate migrations
+      - name: Initialize database
         working-directory: ./backend/database
         run: |
           alembic stamp base
           alembic upgrade head
+
+      - name: Validate migrations
+        working-directory: ./backend/database
+        run: |
           alembic revision --autogenerate -m "ci" --rev-id=generated
           REVISION="versions/generated_ci.py"
           if grep -q "op\." "$REVISION"; then
