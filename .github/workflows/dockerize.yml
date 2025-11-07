@@ -13,7 +13,7 @@ env:
 jobs:
   dockerize-backend:
     name: Dockerize Backend
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     permissions:
       contents: read
       packages: write
@@ -54,7 +54,7 @@ jobs:
 
   dockerize-frontend:
     name: Dockerize Frontend
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     permissions:
       contents: read
       packages: write
