@@ -52,7 +52,7 @@ jobs:
         working-directory: ./backend
         run: |
           python -m venv venv
-          source venv/bin/activate
+          . venv/bin/activate
           pip install -r requirements.txt
 
       - name: Generate JWT secret
@@ -62,14 +62,14 @@ jobs:
       - name: Initialize database
         working-directory: ./backend/database
         run: |
-          source ../venv/bin/activate
+          . ../venv/bin/activate
           alembic stamp base
           alembic upgrade head
 
       - name: Run pytest
         working-directory: ./backend
         run: |
-          source venv/bin/activate
+          . venv/bin/activate
           pytest --cov=app --cov-report=html:coverage --cov-report=term
 
       - name: Upload coverage artifacts

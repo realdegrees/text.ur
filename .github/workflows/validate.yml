@@ -54,20 +54,20 @@ jobs:
         working-directory: ./backend
         run: |
           python -m venv venv
-          source venv/bin/activate
+          . venv/bin/activate
           pip install -r requirements.txt
 
       - name: Initialize database
         working-directory: ./backend/database
         run: |
-          source ../venv/bin/activate
+          . ../venv/bin/activate
           alembic stamp base
           alembic upgrade head
 
       - name: Validate migrations
         working-directory: ./backend/database
         run: |
-          source ../venv/bin/activate
+          . ../venv/bin/activate
           alembic revision --autogenerate -m "ci" --rev-id=generated
           REVISION="versions/generated_ci.py"
           if grep -q "op\." "$REVISION"; then
