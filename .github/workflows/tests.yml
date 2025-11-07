@@ -99,7 +99,7 @@ jobs:
       - name: Install dependencies
         working-directory: ./frontend
         run: |
-          pnpm install
+          pnpm install --workspace-root
 
       - name: Run vitest
         working-directory: ./frontend
