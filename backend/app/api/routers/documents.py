@@ -10,7 +10,6 @@ from api.routers.events import (
     EventRouterConfig,
     get_events_router,
 )
-from backend.app.models.filter import DocumentFilter
 from core.app_exception import AppException
 from fastapi import (
     BackgroundTasks,
@@ -33,6 +32,7 @@ from models.document import (
     DocumentUpdate,
 )
 from models.enums import AppErrorCode, Permission
+from models.filter import DocumentFilter
 from models.pagination import Paginated
 from models.tables import Comment, Document, Group, Membership, User
 from sqlmodel import select

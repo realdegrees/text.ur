@@ -1,7 +1,7 @@
 from api.dependencies.authentication import Authenticate, BasicAuthentication
 from api.dependencies.database import Database
+from api.dependencies.paginated.resources import PaginatedResource
 from api.dependencies.resource import Resource
-from backend.app.api.dependencies.paginated.resources import PaginatedResource
 from core.auth import hash_password, validate_password
 from fastapi import Body, HTTPException, Response
 from models.filter import (
