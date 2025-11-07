@@ -1,0 +1,94 @@
+# ruff: noqa: D106, D101
+from datetime import UTC, datetime, timedelta
+from uuid import uuid4
+
+import factory
+from factories.base import BaseFactory
+from models.enums import Permission, ViewMode, Visibility
+from models.tables import (
+    Comment,
+    Document,
+    Group,
+    Membership,
+    Reaction,
+    ShareLink,
+    User,
+)
+
+
+class UserFactory(BaseFactory):
+    class Meta:
+        model = User
+
+    username = factory.Sequence(lambda n: f"user{n}")
+    first_name = factory.Faker("first_name")
+    last_name = factory.Faker("last_name")
+    email = factory.LazyAttribute(lambda o: f"{o.username}@example.com")
+    password = factory.Faker("password")
+    verified = False
+    secret = factory.LazyFunction(lambda: str(uuid4()))
+
+
+class GroupFactory(BaseFactory):
+    class Meta:
+        model = Group
+
+    name = factory.Sequence(lambda n: f"Group {n}")
+    secret = factory.LazyFunction(lambda: str(uuid4()))
+    default_permissions = factory.LazyFunction(lambda: [Permission.VIEW_PUBLIC_COMMENTS])
+
+
+class MembershipFactory(BaseFactory):
+    class Meta:
+        model = Membership
+
+    user = factory.SubFactory(UserFactory)
+    group = factory.SubFactory(GroupFactory)
+    permissions = factory.LazyFunction(lambda: [Permission.VIEW_PUBLIC_COMMENTS])
+    is_owner = False
+    accepted = True
+
+
+class DocumentFactory(BaseFactory):
+    class Meta:
+        model = Document
+
+    s3_key = factory.Sequence(lambda n: f"documents/doc_{n}.pdf")
+    size_bytes = factory.Faker("random_int", min=1000, max=1000000)
+    visibility = Visibility.PRIVATE
+    view_mode = ViewMode.PUBLIC
+    secret = factory.LazyFunction(uuid4)
+    group = factory.SubFactory(GroupFactory)
+
+
+class CommentFactory(BaseFactory):
+    class Meta:
+        model = Comment
+
+    visibility = Visibility.PUBLIC
+    document = factory.SubFactory(DocumentFactory)
+    user = factory.SubFactory(UserFactory)
+    parent = None
+    content = factory.Faker("paragraph")
+    annotation = factory.LazyFunction(dict)
+
+
+class ReactionFactory(BaseFactory):
+    class Meta:
+        model = Reaction
+
+    user = factory.SubFactory(UserFactory)
+    comment = factory.SubFactory(CommentFactory)
+    type = "like"
+
+
+class ShareLinkFactory(BaseFactory):
+    class Meta:
+        model = ShareLink
+
+    group = factory.SubFactory(GroupFactory)
+    created_by = factory.SubFactory(UserFactory)
+    permissions = factory.LazyFunction(lambda: [Permission.VIEW_PUBLIC_COMMENTS])
+    token = factory.LazyFunction(lambda: str(uuid4()))
+    expires_at = factory.LazyFunction(lambda: datetime.now(UTC) + timedelta(days=7))
+    label = factory.Faker("sentence")
