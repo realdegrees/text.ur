@@ -21,7 +21,7 @@ const config = {
 			dir: '..'
 		}
 	},
-	extensions: ['.svelte', '.svx'],
+	extensions: ['.svelte', '.svx']
 };
 
 export default config;
