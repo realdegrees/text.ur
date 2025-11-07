@@ -10,7 +10,10 @@ from core.config import (
     AWS_SECRET_KEY,
     S3_BUCKET,
 )
+from core.logger import get_logger
 from fastapi import Depends
+
+app_logger = get_logger("app")
 
 
 class S3Manager:
@@ -18,7 +21,11 @@ class S3Manager:
 
     def __init__(self) -> None:
         """Initialize the S3Manager with a boto3 client."""
-        print("Initializing S3Manager with endpoint:", AWS_ENDPOINT_URL)
+        self.enabled = all([AWS_ACCESS_KEY, AWS_SECRET_KEY, S3_BUCKET])
+        if not self.enabled:
+            app_logger.warning("⚠️ S3 is not fully configured. S3 operations are disabled.")
+            return
+            
         self._client = boto3.client(
             "s3",
             endpoint_url=AWS_ENDPOINT_URL,
