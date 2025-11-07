@@ -19,7 +19,7 @@ jobs:
   migrations:
     name: Validate Migrations
     runs-on: self-hosted
-    container: node:25
+    container: python:3.12
 
     services:
       postgres:
@@ -47,26 +47,27 @@ jobs:
 
       - name: Install system dependencies
         run: |
+          apt-get update
           apt-get install -y jq build-essential
-
-      - name: Install Python
-        run: |
-          apt-get update && apt-get install -y python3 python3-pip
 
       - name: Install Python dependencies
         working-directory: ./backend
         run: |
+          python -m venv venv
+          source venv/bin/activate
           pip install -r requirements.txt
 
       - name: Initialize database
         working-directory: ./backend/database
         run: |
+          source ../venv/bin/activate
           alembic stamp base
           alembic upgrade head
 
       - name: Validate migrations
         working-directory: ./backend/database
         run: |
+          source ../venv/bin/activate
           alembic revision --autogenerate -m "ci" --rev-id=generated
           REVISION="versions/generated_ci.py"
           if grep -q "op\." "$REVISION"; then
@@ -102,6 +103,7 @@ jobs:
 
       - name: Install system dependencies
         run: |
+          apt-get update
           apt-get install -y jq build-essential
 
 
