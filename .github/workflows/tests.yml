@@ -55,10 +55,6 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y jq build-essential
 
-      - name: Setup PostgreSQL
-        uses: tj-actions/install-postgresql@v3
-        with:
-          postgresql-version: 16
 
       - name: Create virtual environment
         working-directory: ./backend
@@ -70,6 +66,13 @@ jobs:
       - name: Generate JWT secret
         run: |
           echo "JWT_SECRET=$(openssl rand -hex 32)" >> $GITHUB_ENV
+
+      - name: Initialize database
+        working-directory: ./backend
+        run: |
+          source venv/bin/activate
+          alembic stamp base
+          alembic upgrade head
 
       - name: Run pytest
         working-directory: ./backend

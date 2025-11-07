@@ -55,11 +55,6 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y jq build-essential
 
-      - name: Setup PostgreSQL
-        uses: tj-actions/install-postgresql@v3
-        with:
-          postgresql-version: 16
-
       - name: Install Python dependencies
         working-directory: ./backend
         run: |
@@ -107,12 +102,6 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y jq build-essential
-
-      - name: Setup PostgreSQL
-        uses: tj-actions/install-postgresql@v3
-        with:
-          postgresql-version: 16
-
 
       - name: Install Python dependencies
         working-directory: ./backend
