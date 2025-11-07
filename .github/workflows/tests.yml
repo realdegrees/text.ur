@@ -47,12 +47,8 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Update repository
-        run: sudo apt-get update
-
       - name: Install system dependencies
         run: |
-          sudo apt-get update
           sudo apt-get install -y jq build-essential
 
 
