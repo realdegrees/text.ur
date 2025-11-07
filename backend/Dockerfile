@@ -5,7 +5,7 @@ WORKDIR /annotation-software
 COPY requirements.txt .
 
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends build-essential postgresql-client && \
+    apt-get install -y --no-install-recommends build-essential jq postgresql-client && \
     pip install --no-cache-dir -r requirements.txt && \
     apt-get purge -y --auto-remove build-essential && \
     apt-get clean && \

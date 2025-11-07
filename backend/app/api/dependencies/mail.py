@@ -5,7 +5,6 @@ from email.mime.text import MIMEText
 from typing import Annotated, Any
 
 from bs4 import BeautifulSoup
-from itsdangerous import URLSafeTimedSerializer
 from core.config import (
     EMAIL_PRESIGN_SECRET,
     JINJA_ENV,
@@ -17,8 +16,8 @@ from core.config import (
 )
 from core.logger import get_logger
 from fastapi import Depends, HTTPException
+from itsdangerous import URLSafeTimedSerializer
 from jinja2 import Environment, FileSystemLoader, select_autoescape
-
 from util.api_router import APIRouter
 
 app_logger = get_logger("app")
@@ -33,6 +32,7 @@ class EmailManager:
         self.enabled: bool = all([SMTP_SERVER, SMTP_PORT, SMTP_USER, SMTP_PASSWORD])
         if not self.enabled:
             app_logger.warning("⚠️ SMTP is not fully configured. Email sending is disabled. Emails will be printed to the mail logger only.")
+            return
                 
         with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
             try:

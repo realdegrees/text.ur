@@ -1,8 +1,8 @@
 from api.dependencies.authentication import Authenticate, BasicAuthentication
 from api.dependencies.database import Database
+from api.dependencies.paginated.resources import PaginatedResource
 from api.dependencies.resource import Resource
 from api.routers.reactions import router as ReactionRouter
-from backend.app.api.dependencies.paginated.resources import PaginatedResource
 from fastapi import Body, Response
 from models.comment import CommentCreate, CommentRead, CommentUpdate
 from models.enums import Permission

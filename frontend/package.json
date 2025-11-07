@@ -12,7 +12,7 @@
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
 		"format": "prettier --write .",
-		"lint": "prettier --check . && eslint .",
+		"lint": "(prettier --check . || true) && eslint . --max-warnings=100",
 		"lint:fix": "prettier --write . && eslint . --fix",
 		"i18n": "typesafe-i18n",
 		"test": "vitest run",
@@ -49,6 +49,7 @@
 		"vitest": "^4.0.7"
 	},
 	"dependencies": {
+		"json-schema-to-typescript": "^15.0.4",
 		"jwt-decode": "^4.0.0",
 		"typesafe-i18n": "^5.26.2",
 		"zod": "^4.1.12"

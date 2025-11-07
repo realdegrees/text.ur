@@ -47,7 +47,7 @@ class JSONFormatter(logging.Formatter):
         return json.dumps(log_dict)
 
 
-def get_logger(name: Literal["requests", "database", "app"]) -> logging.Logger:
+def get_logger(name: Literal["requests", "database", "app", "mails"]) -> logging.Logger:
     """Return a logger with the specified name."""
     logger = logging.getLogger(name)
     if logger.hasHandlers():

@@ -2,5 +2,5 @@
 
 <h1>Welcome to SvelteKit</h1>
 <p class="bg-background">
-	Visit <a href="https://svelte.dev/docs/kit">svelte.dev/docs/kit</a> to read the documentation
+	TBD: Homepage with concise presentation of the software <!--Maybe use a carousel to show case different annotation gifs or smth-->
 </p>

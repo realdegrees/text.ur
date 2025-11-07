@@ -6,7 +6,7 @@ import { loadAllLocales } from '$i18n/i18n-util.sync';
 import { detectLocale } from '$i18n/i18n-util';
 import { forwardCookies } from '$lib/server/cookies';
 
-const baseUrl = env.PUBLIC_API_URL;
+const baseUrl = env.PUBLIC_BACKEND_BASEURL;
 const withBaseUrl = (request: Request, baseUrl: string): Request => {
 	const url = new URL(request.url);
 	return new Request(`${baseUrl}${url.pathname}${url.search}`, request);

@@ -13,12 +13,12 @@ from util.queries import EndpointGuard
 
 logger = get_logger("app")
 
-def Authenticate(
+def Authenticate( # noqa: C901
     guards: Sequence[EndpointGuard] = (),
     *,
     endpoint: Literal["ws", "http"] = "http",
     strict: bool = True,
-    token_type: Literal["access", "refresh"] = "access",
+    token_type: Literal["access", "refresh"] = "access",  # noqa: S107
 ) -> Depends:
     """Provide a dependency that checks if the user is authenticated and has the required roles.
 
@@ -26,6 +26,7 @@ def Authenticate(
         guards: A sequence of EndpointGuard instances. A user.id == User.id guard is always appended for authentication.
         endpoint: The endpoint type ("ws" or "http").
         strict: Whether to enforce strict token validation. If validation fails, an exception is raised.
+        token_type: The type of token to validate ("access" or "refresh").
 
     Returns:
         A FastAPI dependency that returns the authenticated user.
@@ -45,6 +46,10 @@ def Authenticate(
             return None
 
         user = parse_jwt(token, db, for_type=token_type, strict=strict)
+        
+        if not user.verified:
+            raise AppException(status_code=403, detail="Forbidden: Email not verified", error_code=AppErrorCode.EMAIL_NOT_VERIFIED)
+
         context_path_params: dict[str, Any] = context.path_params
         body_data: dict[str, Any] = {}
         

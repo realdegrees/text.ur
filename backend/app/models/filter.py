@@ -58,10 +58,11 @@ class FilterableField:
 
     name: str
     field: ColumnElement
-    clause: Callable[[Operator, str], ColumnElement[bool]]
+    clause: Callable[[Operator, str, User | None], ColumnElement[bool]]
     allowed_operators: list[Operator]
     join: JoinInfo | None = None
     allow_sorting: bool = False
+    requires_user: bool = False
 
 
 @dataclass
@@ -75,6 +76,7 @@ class FilterMeta:
     join: JoinInfo | None = None
     condition: ColumnElement[bool] | None = None
     allow_sorting: bool = False
+    user_condition: Callable[[User | None], ColumnElement[bool]] | None = None
 
     @staticmethod
     def from_filter(filter_model: SQLModel) -> list[FilterableField]:
@@ -83,8 +85,8 @@ class FilterMeta:
         
         # Get filter metadata from the model's get_filter_metadata method if available
         filter_metadata_map: dict[str, FilterMeta] = {}
-        if hasattr(filter_model.__class__, "get_filter_metadata"):
-            filter_metadata_map = filter_model.__class__.get_filter_metadata()
+        if hasattr(filter_model, "get_filter_metadata"):
+            filter_metadata_map = filter_model.get_filter_metadata()
         
         for field_name, model_field in filter_model.model_fields.items():
             # Try to get filter metadata from the classmethod
@@ -140,12 +142,11 @@ class FilterMeta:
         inferred_type, filter_type = FilterMeta.infer_type(field_annotation)
         allowed_operators = self._allowed_operators(filter_type)
 
-        def validate_clause(operator: Operator, value: str) -> ColumnElement[bool]:
+        def validate_clause(operator: Operator, value: str, user: User | None = None) -> ColumnElement[bool]:
             if operator not in allowed_operators:
                 raise ValueError(f"Operator '{operator}' not allowed for field '{field_name}'. Allowed: {allowed_operators}")
-            return self._build_clause(operator, value, filter_type, inferred_type)
+            return self._build_clause(operator, value, filter_type, inferred_type, user)
 
-        # Only allow direct fields, no joins or recursion
         return FilterableField(
             name=field_name,
             field=self.field,
@@ -153,60 +154,64 @@ class FilterMeta:
             clause=validate_clause,
             allowed_operators=allowed_operators,
             allow_sorting=self.allow_sorting,
+            requires_user=self.user_condition is not None,
         )
 
-    def _build_clause(self, operator: Operator, value: Any, filter_type: str, inferred_type: type) -> ColumnElement[bool]:  # noqa: ANN401, C901
-        """Return a SQLAlchemy clause based on the filter type and value."""
-        # Convert value to the appropriate type based on inferred_type
+    def _convert_value(self, value: Any, inferred_type: type, operator: Operator) -> Any:  # noqa: ANN401
+        """Convert value to the appropriate type based on inferred_type."""
         try:
             if inferred_type is bool or operator == "exists":
-                # For 'exists' operator, value should be a string indicating truthiness
-                value = str(value).lower() in ("1", "true")
+                return str(value).lower() in ("1", "true")
             elif inferred_type is datetime:
-                value = datetime.fromisoformat(value)
+                return datetime.fromisoformat(value)
             else:
-                value = inferred_type(value)
+                return inferred_type(value)
         except Exception as e:
             raise ValueError(f"Invalid value '{value}' for type '{inferred_type.__name__}': {e}") from e
 
-        def get_where_clause(operator: Operator = operator, value: Any = value) -> ColumnElement[bool]:  # noqa: ANN401, C901
-            if operator == "==":
-                return self.field == value
-            if operator == "!=" and self.join is None:
-                return (self.field != value) | (self.field == None)  # noqa: E711
-            if operator == "!=" and self.join is not None:
-                return self.field == value
-            if operator == "ilike":
-                return self.field.ilike(f"%{value}%")
-            if operator == "like":
-                return self.field.like(f"%{value}%")
-            if operator == ">=":
-                return self.field >= value
-            if operator == "<=":
-                return self.field <= value
-            if operator == ">":
-                return self.field > value
-            if operator == "<":
-                return self.field < value
-            if operator == "exists":
-                exists_flag = str(value).lower() in ("1", "true", "yes", "on")
-                return self.field != None if exists_flag else self.field == None  # noqa: E711
-            raise ValueError(f"Unknown filter type or operator: {filter_type}, {operator}")
+    def _get_base_where_clause(self, operator: Operator, value: Any) -> ColumnElement[bool]:  # noqa: ANN401, C901
+        """Build base where clause for a given operator and value."""
+        if operator == "==":
+            return self.field == value
+        if operator == "!=" and self.join is None:
+            return (self.field != value) | (self.field == None)  # noqa: E711
+        if operator == "!=" and self.join is not None:
+            return self.field == value
+        if operator == "ilike":
+            return self.field.ilike(f"%{value}%")
+        if operator == "like":
+            return self.field.like(f"%{value}%")
+        if operator == ">=":
+            return self.field >= value
+        if operator == "<=":
+            return self.field <= value
+        if operator == ">":
+            return self.field > value
+        if operator == "<":
+            return self.field < value
+        if operator == "exists":
+            exists_flag = str(value).lower() in ("1", "true", "yes", "on")
+            return self.field != None if exists_flag else self.field == None  # noqa: E711
+        raise ValueError(f"Unknown operator: {operator}")
+
+    def _build_clause(self, operator: Operator, value: Any, filter_type: str, inferred_type: type, user: User | None = None) -> ColumnElement[bool]:  # noqa: ANN401
+        """Return a SQLAlchemy clause based on the filter type and value."""
+        converted_value = self._convert_value(value, inferred_type, operator)
+        base_where_clause = self._get_base_where_clause(operator, converted_value)
 
         if self.join:
-            # self.field is the linked column, e.g. AssetSetLink.asset_id
-            # self.join.target is the relationship attribute, e.g. AssetSet.asset_set_links
             rel_attr: InstrumentedAttribute = self.join.target
-
-            # get the target (child) entity class
             target_mapper = rel_attr.property.mapper.class_
-
-            # parent column (primary key) of the outer entity
             parent_col = rel_attr.property.primaryjoin.left
 
-            where_clause = get_where_clause()
+            where_clause = base_where_clause
+            
             if self.condition is not None:
                 where_clause = and_(where_clause, self.condition)
+            
+            if self.user_condition and user:
+                user_clause = self.user_condition(user)
+                where_clause = and_(where_clause, user_clause)
 
             clause = exists(
                 select(1)
@@ -217,7 +222,10 @@ class FilterMeta:
             )
             return ~clause if operator == "!=" else clause
         else:
-            return get_where_clause()
+            if self.user_condition and user:
+                user_clause = self.user_condition(user)
+                return and_(base_where_clause, user_clause)
+            return base_where_clause
 
 # ================================================================
 # ========================= GROUP FILTER =========================
@@ -229,6 +237,7 @@ class GroupFilter(BaseFilterModel):
 
     name: str = Field()
     member_count: int = Field()
+    accepted: bool = Field()
 
     @classmethod
     def get_filter_metadata(cls) -> dict[str, FilterMeta]:
@@ -236,6 +245,11 @@ class GroupFilter(BaseFilterModel):
         return {
             "name": FilterMeta(field=Group.name),
             "member_count": FilterMeta(field=Group.member_count),
+            "accepted": FilterMeta(
+                field=Membership.accepted,
+                join=JoinInfo(target=Group.memberships),
+                user_condition=lambda user: Membership.user_id == user.id if user else None,
+            ),
         }
 
 

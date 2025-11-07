@@ -1,0 +1,40 @@
+name: Build
+
+on:
+  pull_request:
+    branches:
+      - main
+      - develop
+    paths:
+      - "frontend/**"
+  push:
+    branches:
+      - develop
+
+jobs:
+  frontend:
+    name: Build Frontend
+    runs-on: self-hosted
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "25"
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 10
+
+      - name: Install dependencies
+        working-directory: ./frontend
+        run: |
+          pnpm install --workspace-root
+
+      - name: Build frontend
+        working-directory: ./frontend
+        run: |
+          pnpm run build

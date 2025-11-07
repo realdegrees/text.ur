@@ -178,26 +178,27 @@ def upload_s3_files(upload_dir: str) -> None:
 def main() -> None:
     """Initialize and optionally seed the database and upload S3 files."""
     args: argparse.Namespace = parse_args()
-    backup_dir = os.path.dirname(args.sql_dump) if args.sql_dump else os.getcwd()
+    backup_dir = os.getcwd()  # Default backup directory
     alembic_version: str | None = None
-    
+
     if args.sql_dump:
         alembic_version = get_alembic_version_from_dump(args.sql_dump)
         print(f"✅ Alembic version from dump: {alembic_version}")
-        if not args.no_backup:
-            try:
-                print("Backing up the current database ...")
-                backup_database(backup_dir, alembic_version or "head")
-                print("✅ Backup completed.")
-            except Exception as e:
-                print(f"Error during backup: {e}")
-                sys.exit(1)
+
+    if not args.no_backup:
+        try:
+            print("Backing up the current database ...")
+            backup_database(backup_dir, alembic_version or "head")
+            print("✅ Backup completed.")
+        except Exception as e:
+            print(f"Error during backup: {e}")
+            sys.exit(1)
 
     print("Dropping and recreating the database ...")
     drop_and_recreate_database(POSTGRES_DB)
     conn: PgConnection = get_connection()
     try:
-        print(f"Applying Alembic migrations up to version: {alembic_version or "head"} ...")
+        print(f"Applying Alembic migrations up to version: {alembic_version or 'head'} ...")
         run_alembic_commands(upgrade_to_version=alembic_version or "head")
         conn.commit()
         print("✅ Alembic migrations applied.")

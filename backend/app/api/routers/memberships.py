@@ -27,6 +27,7 @@ async def list_memberships(
     memberships: Paginated[Membership] = PaginatedResource(
         Membership, GroupMembershipFilter, guards=[Guard.group_access()], key_columns=[Membership.user_id, Membership.group_id]
     ),
+    group_id: int = Path(..., description="The ID of the group to list memberships for"),
 ) -> Paginated[GroupMembershipRead]:
     """Get all group memberships."""
     return memberships

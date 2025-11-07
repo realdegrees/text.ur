@@ -3,10 +3,12 @@ import os
 from dotenv import load_dotenv
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
-backend_path = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), "..", "..")
+root_path = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "..", "..")
 )
-dotenv_path = os.path.join(backend_path, ".env")
+backend_path = os.path.join(root_path, "backend")
+dotenv_path = os.path.join(root_path, ".env")
+print(f"Loading environment variables from: {dotenv_path}")
 load_dotenv(dotenv_path)
 
 DEBUG = os.getenv("DEBUG", "False").lower() == "true"
@@ -14,7 +16,7 @@ LOG_FILE_DIR = os.getenv("LOG_FILE_DIR", os.path.join(backend_path, "logs"))
 ENABLE_LOGGING = os.getenv("ENABLE_LOGGING", "False").lower() == "true"
 
 # DB
-PGBOUNCER_PORT: int | None = int(os.getenv("PGBOUNCER_PORT", None))
+PGBOUNCER_PORT: int | None = int(os.getenv("PGBOUNCER_PORT")) if os.getenv("PGBOUNCER_PORT") else None
 PGBOUNCER_ENABLE: bool = os.getenv("PGBOUNCER_ENABLE", "False").lower() == "true"
 
 POSTGRES_USER: str = os.getenv("POSTGRES_USER", "postgres")
@@ -52,7 +54,7 @@ EMAIL_PRESIGN_EXPIRY = int(os.getenv("EMAIL_PRESIGN_EXPIRY", 3600)) # seconds
 SMTP_USER = os.getenv("SMTP_USER")
 SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
 SMTP_SERVER = os.getenv("SMTP_SERVER")
-SMTP_PORT = int(os.getenv("SMTP_PORT"))
+SMTP_PORT = int(os.getenv("SMTP_PORT")) if os.getenv("SMTP_PORT") else None
 SMTP_TLS = os.getenv("SMTP_TLS", "False").lower() == "true"
 
 # APP

@@ -8,20 +8,40 @@ sys.path.insert(
 )
 # fmt: off
 
-from collections.abc import Generator
+import inspect
+from collections.abc import Callable, Generator
 
 import pytest
 from _pytest.fixtures import SubRequest
 from api.dependencies.database import SessionFactory
 from api.dependencies.events import EventManager
 from api.dependencies.s3 import S3Manager
+from core.auth import parse_jwt
 from core.logger import get_logger
+from factories import models as factory_models
 from fastapi.testclient import TestClient
 from main import app
+from models.tables import User
 from sqlmodel import Session
 
 logger = get_logger("database")
 
+
+# TODO maybe override the Authenticate dependency instead of the inner parse_jwt directly
+SessionUser = Callable[[factory_models.UserFactory], User]
+@pytest.fixture(scope="function")
+def override_session_user(db: Session) -> Generator[SessionUser]:
+    """Automatically create a user per test and override the auth dependency."""
+    def _create_user(user: User) -> User:
+        # Override auth dependency for this test
+        app.dependency_overrides[parse_jwt] = lambda: user
+        return user
+
+    yield _create_user
+
+    # Cleanup: remove dependency override after test
+    app.dependency_overrides.pop(parse_jwt, None)
+    
 
 @pytest.fixture(scope="function")
 def s3_client() -> Generator:
@@ -69,3 +89,19 @@ def db(request: SubRequest) -> Generator[Session]:
         yield _session
     finally:
         _session.close()
+
+@pytest.fixture(autouse=True) 
+def set_factory_session_auto(db: Session) -> Generator[None]:
+    """Automatically set session on all factories."""
+    set_session_on_all_factories(db)
+    yield
+    set_session_on_all_factories(None)
+    
+def set_session_on_all_factories(session: Session) -> None:
+    """Set session on all factory classes."""
+    # Get all factory classes
+    for _, obj in inspect.getmembers(factory_models):
+        if (inspect.isclass(obj) and 
+            hasattr(obj, '_meta') and 
+            hasattr(obj._meta, 'sqlalchemy_session')):
+            obj._meta.sqlalchemy_session = session
