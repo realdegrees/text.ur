@@ -16,7 +16,7 @@ print(f"Adding models path to sys.path: {APP_PATH}")
 sys.path.append(str(APP_PATH))
 import models  # type: ignore  # noqa: E402
 
-load_dotenv(APP_PATH.parent / ".env")
+load_dotenv(APP_PATH.parent.parent / ".env")
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
