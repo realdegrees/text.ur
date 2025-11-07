@@ -19,6 +19,8 @@ jobs:
   migrations:
     name: Validate Migrations
     runs-on: self-hosted
+    container: node:20
+
     services:
       postgres:
         image: postgres:16
@@ -26,8 +28,6 @@ jobs:
           POSTGRES_DB: test
           POSTGRES_USER: test_user
           POSTGRES_PASSWORD: test_password
-        ports:
-          - 5442:5432
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -38,21 +38,20 @@ jobs:
       POSTGRES_DB: test
       POSTGRES_USER: test_user
       POSTGRES_PASSWORD: test_password
-      POSTGRES_HOST: localhost
-      POSTGRES_PORT: 5442
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
       - name: Install system dependencies
         run: |
           sudo apt-get install -y jq build-essential
+
+      - name: Install Python
+        run: |
+          apt-get update && apt-get install -y python3 python3-pip
 
       - name: Install Python dependencies
         working-directory: ./backend
