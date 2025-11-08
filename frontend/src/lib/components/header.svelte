@@ -4,10 +4,8 @@
 	import darkMode from '$lib/stores/darkMode.svelte';
 	import { loadingBar } from '$lib/stores/loadingBar.svelte';
 
-	import Dark from '~icons/material-symbols/dark-mode-outline';
-	import Light from '~icons/iconamoon/mode-light';
-	import { scale, slide } from 'svelte/transition';
-	import { cubicOut, quintInOut } from 'svelte/easing';
+	import { scale } from 'svelte/transition';
+	import { cubicOut } from 'svelte/easing';
 	import type { UserPrivate } from '$api/types';
 	import ProfileImageFallback from '~icons/material-symbols/account-box';
 	import Login from './login.svelte';
@@ -15,12 +13,11 @@
 	let { user }: { user?: UserPrivate } = $props();
 </script>
 
-<div class="w-full h-18"></div>
-<header class="bg-background fixed left-0 right-0 top-0 z-50 h-fit w-full">
-	<!--TODO Can potentially be used as a subtle loading bar-->
+<div class="w-full h-16"></div>
+<header class="bg-background fixed left-0 right-0 top-0 z-50 h-16 w-full">
 	<div
-		class="center-content shadow-inner-sym-[10px] bg-inset dark:shadow-inner-sym-10 mt-2 grid h-16
-	grid-cols-3 items-center overflow-hidden shadow-black"
+		class="center-content shadow-inner-sym-[10px] bg-inset dark:shadow-inner-sym-10 grid h-full
+	grid-cols-3 items-center overflow-hidden shadow-black mt-1.5"
 	>
 		<a
 			href="/"
@@ -45,23 +42,6 @@
 				<Login />
 			{/if}
 
-			<hr class="bg-text mx-4 h-9 w-1 rounded-full opacity-25" />
-
-			<button
-				class="clickable flex h-full w-fit flex-col items-center justify-center"
-				onclick={() => (darkMode.enabled = !darkMode.enabled)}
-				title="Enable {darkMode.enabled ? 'Light' : 'Dark'} Mode"
-			>
-				{#if darkMode.enabled}
-					<div transition:slide={{ easing: quintInOut, duration: 500 }}>
-						<Dark class="h-full w-7" />
-					</div>
-				{:else}
-					<div transition:slide={{ easing: quintInOut, duration: 500 }}>
-						<Light class="h-full w-7" />
-					</div>
-				{/if}
-			</button>
 		</div>
 	</div>
 </header>
