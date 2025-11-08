@@ -133,7 +133,7 @@ async def accept_membership(
     ),
     group: Group = Resource(Group, param_alias="group_id"),
 ) -> Response:
-    """Change group membership."""    
+    """Accept group membership."""    
     membership: Membership = db.exec(
         select(Membership).where(
             Membership.group_id == group.id,
@@ -143,6 +143,26 @@ async def accept_membership(
 
     db.merge(membership)
     membership.accepted = True
+    db.commit()
+    return Response(status_code=204)
+
+@router.put("/reject")
+async def reject_membership(
+    db: Database,
+    session_user: User = Authenticate(
+        [Guard.group_access()],
+    ),
+    group: Group = Resource(Group, param_alias="group_id"),
+) -> Response:
+    """Reject group membership. Can be used to leave a group."""    
+    membership: Membership = db.exec(
+        select(Membership).where(
+            Membership.group_id == group.id,
+            Membership.user_id == session_user.id,
+        )
+    ).first()
+
+    db.delete(membership)
     db.commit()
     return Response(status_code=204)
 
