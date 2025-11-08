@@ -116,7 +116,12 @@ const translation: Handle = async ({ event, resolve }) => {
 
 	// Make it available in all load functions and hooks
 	event.locals.locale = locale;
-	event.cookies.set('locale', locale, { path: '/' });
+	event.cookies.set('locale', locale, { 
+		path: '/', 
+		httpOnly: false, // Allow client-side access for language switching
+		sameSite: 'lax',
+		maxAge: 60 * 60 * 24 * 365 // 1 year
+	});
 
 	// Continue with SSR rendering
 	const response = await resolve(event, {
