@@ -174,12 +174,12 @@
 
 <div>
 	{#if label}
-		<label for={name} class="text-text mb-2 block font-medium">
+		<label for={name} class="mb-2 block font-medium text-text">
 			{label} <span class="text-red-600 dark:text-red-400">{required ? '*' : ''}</span>
 		</label>
 	{/if}
 	<div
-		class="border-text/60 bg-background text-text focus-within:ring-primary flex w-full flex-row items-center gap-2 rounded-lg border px-2 py-2.5 text-sm focus-within:border-transparent focus-within:ring-2"
+		class="flex w-full flex-row items-center gap-2 rounded-lg border border-text/60 bg-background px-2 py-2.5 text-sm text-text focus-within:border-transparent focus-within:ring-2 focus-within:ring-primary"
 	>
 		{#if Icon}
 			<div class="text-muted">
@@ -244,7 +244,7 @@
 		{#if hidden}
 			<button
 				type="button"
-				class="text-muted hover:text-text flex items-center justify-center transition hover:cursor-pointer"
+				class="text-muted flex items-center justify-center transition hover:cursor-pointer hover:text-text"
 				onclick={() => (showPassword = !showPassword)}
 				aria-label={showPassword ? 'Hide password' : 'Show password'}
 			>
@@ -259,7 +259,7 @@
 		{#if showSubmitButton}
 			<button
 				type="button"
-				class="bg-primary text-primary-foreground ml-2 flex size-8 items-center justify-center rounded-md transition hover:opacity-90"
+				class="text-primary-foreground ml-2 flex size-8 items-center justify-center rounded-md bg-primary transition hover:opacity-90"
 				onclick={(e) => {
 					e.preventDefault();
 					onSubmit?.(value, selected);
