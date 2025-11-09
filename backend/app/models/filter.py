@@ -259,7 +259,7 @@ class GroupFilter(BaseFilterModel):
 
 class DocumentFilter(BaseFilterModel):
     size_bytes: int = Field()
-    group_id: int = Field()
+    group_id: str = Field()
 
     @classmethod
     def get_filter_metadata(cls) -> dict[str, FilterMeta]:
@@ -287,7 +287,7 @@ class GroupMembershipFilter(BaseFilterModel):
 
 
 class UserMembershipFilter(BaseFilterModel):
-    group_id: int = Field()
+    group_id: str = Field()
 
     @classmethod
     def get_filter_metadata(cls) -> dict[str, FilterMeta]:

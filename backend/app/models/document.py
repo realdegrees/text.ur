@@ -12,16 +12,16 @@ if TYPE_CHECKING:
 
 class DocumentCreate(SQLModel):
     visibility: Visibility
-    group_id: int
+    group_id: str
 
 class DocumentRead(BaseModel):
-    id: int
+    id: str
     s3_key: str
-    group_id: int
+    group_id: str
     visibility: Visibility
 
 class DocumentTransfer(SQLModel):
-    group_id: int
-    
+    group_id: str
+
 class DocumentUpdate(SQLModel):
     visibility: Visibility | None = None

@@ -44,7 +44,6 @@ def Resource(
     resource: type[ResourceModel],
     *,
     param_alias: str = DEFAULT_ID_ALIAS,
-    index_field_type: type = int,
     model_validator: Callable[[ResourceModel, User], ResourceModel] | None = None,
     raise_on_not_found: bool = True,
 ) -> Callable[..., ResourceModel] | Callable[..., ResourceModel | None]:
@@ -52,7 +51,7 @@ def Resource(
 
     def resource_dependency(
         db: Database,
-        resource_id: index_field_type = Path(alias=param_alias, description=f"{resource.__name__} identifier"),  # type: ignore[valid-type]
+        resource_id: int | str = Path(alias=param_alias, description=f"{resource.__name__} identifier"),  # type: ignore[valid-type]
     ) -> ResourceModel | None:
         """Load a single resource instance."""        
         queried_resource = db.get(resource, resource_id)  # type: ignore[operator]

@@ -128,6 +128,23 @@ class Guard:
         return EndpointGuard(clause, predicate)
 
     @staticmethod
+    def membership_in_group() -> EndpointGuard[Membership]:
+        """Filter memberships to only those belonging to the group specified in path params."""
+        
+        def clause(user: User, params: dict[str, Any], query_params: QueryParams, multi: bool = False) -> ColumnElement[bool]:
+            group_id = params.get("group_id", None)
+            if not group_id:
+                raise HTTPException(
+                    status_code=500, detail="Endpoint Guard misconfiguration: missing group_id parameter")
+            return Membership.group_id == group_id
+
+        def predicate(membership: Membership, user: User, params: dict[str, Any], query_params: QueryParams) -> bool:
+            group_id = params.get("group_id", None)
+            return membership.group_id == group_id
+
+        return EndpointGuard(clause, predicate)
+
+    @staticmethod
     def is_account_owner() -> EndpointGuard[User]:
         """User can only access their own account."""
 
@@ -308,6 +325,7 @@ class Guard:
                 return Group.id.in_(
                     select(Membership.group_id).where(
                         Membership.user_id == user.id,
+                        Membership.accepted.is_(True),
                         build_permission_clause()
                     )
                 )
@@ -316,16 +334,24 @@ class Guard:
                 return select(Membership).where(
                     (Membership.user_id == user.id) &
                     (Membership.group_id == group_id) &
+                    Membership.accepted.is_(True) &
                     build_permission_clause()
                 ).exists()
             else:
                 return (
                     (Membership.user_id == user.id) &
+                    Membership.accepted.is_(True) &
                     build_permission_clause()
                 )
 
         def predicate(group: Group, user: User, params: dict[str, Any], query_params: QueryParams) -> bool:
-            return any(((m.user_id == user.id) and (m.is_owner if only_owner else True) and all(p in require_permissions for p in m.permissions)) for m in group.memberships)
+            return any(
+                m.accepted and
+                (m.user_id == user.id) and
+                (m.is_owner if only_owner else True) and
+                all(p in require_permissions for p in m.permissions)
+                for m in group.memberships
+            )
 
         return EndpointGuard(clause, predicate)
 
@@ -513,8 +539,8 @@ class Guard:
         if op not in ("and", "or"):
             raise ValueError("op must be 'and' or 'or'")
 
-        def clause(session_user: User, params: dict[str, Any], query_params: QueryParams) -> ColumnElement[bool]:
-            clauses = [guard.clause(session_user, params, query_params)
+        def clause(session_user: User, params: dict[str, Any], query_params: QueryParams, multi: bool = False) -> ColumnElement[bool]:
+            clauses = [guard.clause(session_user, params, query_params, multi=multi)
                        for guard in guards]
             if op == "and":
                 combined = clauses[0]

@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import ClassVar, Optional
 from uuid import UUID, uuid4
 
+from nanoid import generate
 from sqlalchemy import Boolean, CheckConstraint, Column, String
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
@@ -9,7 +10,7 @@ from sqlalchemy.orm import column_property, declared_attr
 from sqlmodel import Field, Relationship, func, select
 
 from models.base import BaseModel
-from models.enums import Permission, ViewMode, Visibility
+from models.enums import Permission, ReactionType, ViewMode, Visibility
 
 
 # TABLES
@@ -45,6 +46,10 @@ class User(BaseModel, table=True):
         back_populates="user",
         sa_relationship_kwargs={"lazy": "noload"}
     )
+    share_links: list["ShareLink"] = Relationship(
+        back_populates="author",
+        sa_relationship_kwargs={"lazy": "noload"}
+    )
 
     def rotate_secret(self) -> None:
         """Rotate the user secret to invalidate existing tokens."""
@@ -57,7 +62,7 @@ class Membership(BaseModel, table=True):
 
     user_id: int = Field(foreign_key="user.id",
                          ondelete="CASCADE", primary_key=True)
-    group_id: int = Field(foreign_key="group.id",
+    group_id: str = Field(foreign_key="group.id",
                           ondelete="CASCADE", primary_key=True)
     permissions: list[Permission] = Field(default_factory=list, sa_column=Column(ARRAY(String)))
     is_owner: bool = Field(default=False)
@@ -69,7 +74,7 @@ class Membership(BaseModel, table=True):
 class Group(BaseModel, table=True):
     """Group entity for shared document management."""
 
-    id: int = Field(default=None, primary_key=True)
+    id: str = Field(default_factory=lambda: generate(size=10), primary_key=True, index=True)
     name: str = Field(index=True, unique=True)
     # For group signed URLs, JWT encryption etc.
     secret: str = Field(default_factory=func.gen_random_uuid)
@@ -89,19 +94,20 @@ class Group(BaseModel, table=True):
             .scalar_subquery()
         )
 
-    # ondelete behavior for the owner needs to programmatically implemented in routers.users.delete (transfer ownership)
-    @property
-    def owner(self) -> User | None:
-        """Get the owner user of the group."""
-        for membership in self.memberships:
-            if membership.is_owner:
-                return membership.user
-        return None
+    owner: Optional["User"] = Relationship(
+        sa_relationship_kwargs={
+            "secondary": "membership",
+            "primaryjoin": "Group.id == Membership.group_id",
+            "secondaryjoin": "and_(Membership.user_id == User.id, Membership.is_owner == True)",
+            "uselist": False,
+            "viewonly": True,
+        }
+    )
         
     documents: list["Document"] = Relationship(
         back_populates="group", sa_relationship_kwargs={"lazy": "noload"})
     memberships: list["Membership"] = Relationship(
-        back_populates="group", sa_relationship_kwargs={"lazy": "selectin"})
+        back_populates="group", sa_relationship_kwargs={"lazy": "noload"})
     share_links: list["ShareLink"] = Relationship(
         back_populates="group", sa_relationship_kwargs={"lazy": "noload"})
     
@@ -113,7 +119,7 @@ class Group(BaseModel, table=True):
 class Document(BaseModel, table=True):
     """Document entity representing uploaded files."""
 
-    id: int = Field(default=None, primary_key=True)
+    id: str = Field(default_factory=lambda: generate(size=10), primary_key=True, index=True)
     s3_key: str = Field(index=True, unique=True)
     size_bytes: int = Field(default=0)
     visibility: Visibility = Field(default=Visibility.PRIVATE, sa_column=Column(String, server_default=Visibility.PRIVATE.value))
@@ -123,7 +129,7 @@ class Document(BaseModel, table=True):
     )
     secret: UUID = Field(default_factory=func.gen_random_uuid, sa_column=Column(PGUUID(as_uuid=True)))
 
-    group_id: int = Field(
+    group_id: str = Field(
         foreign_key="group.id", nullable=True, ondelete="CASCADE")
 
     group: Group = Relationship(back_populates="documents")
@@ -131,19 +137,12 @@ class Document(BaseModel, table=True):
     comments: list["Comment"] = Relationship(
         back_populates="document", sa_relationship_kwargs={"lazy": "noload"})
 
-    __table_args__ = (
-        CheckConstraint(
-            "NOT (user_id IS NOT NULL AND group_id IS NOT NULL)",
-            name="owner_xor"
-        ),
-    )
-
 class Comment(BaseModel, table=True):
     """Comment entity for annotations and discussions."""
 
     id: int = Field(default=None, primary_key=True)
     visibility: Visibility = Field()
-    document_id: int = Field(foreign_key="document.id", ondelete="CASCADE")
+    document_id: str = Field(foreign_key="document.id", ondelete="CASCADE")
     user_id: int = Field(
         foreign_key="user.id")
     parent_id: int | None = Field(
@@ -174,7 +173,7 @@ class Reaction(BaseModel, table=True):
     
     user_id: int = Field(foreign_key="user.id", ondelete="CASCADE", primary_key=True)
     comment_id: int = Field(foreign_key="comment.id", ondelete="CASCADE", primary_key=True)
-    type: str = Field()  # e.g. "like", "heart", "laugh"
+    type: ReactionType = Field(sa_column=Column(String))
 
     user: "User" = Relationship(back_populates="reactions")
     comment: "Comment" = Relationship(back_populates="reactions")
@@ -183,8 +182,8 @@ class ShareLink(BaseModel, table=True):
     """A link granting access to a group with specified permissions."""
 
     id: int = Field(default=None, primary_key=True)
-    group_id: int = Field(foreign_key="group.id", ondelete="CASCADE")
-    created_by_id: int = Field(foreign_key="user.id", ondelete="SET NULL", nullable=True)
+    group_id: str = Field(foreign_key="group.id", ondelete="CASCADE")
+    author_id: int | None = Field(foreign_key="user.id", ondelete="SET NULL", nullable=True)
     permissions: list[Permission] = Field(
         default_factory=list,
         sa_column=Column(ARRAY(String))
@@ -199,7 +198,7 @@ class ShareLink(BaseModel, table=True):
     label: str | None = Field(default=None, nullable=True)  # e.g. "Link for review team"
 
     group: "Group" = Relationship(back_populates="share_links")
-    created_by: Optional["User"] = Relationship(sa_relationship_kwargs={"lazy": "noload"})
+    author: Optional["User"] = Relationship(back_populates="share_links")
 
     def rotate_token(self) -> None:
         """Invalidate this share link by rotating its token."""
