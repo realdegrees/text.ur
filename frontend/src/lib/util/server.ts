@@ -17,7 +17,7 @@ export async function paginatedEndpointQuery(
 
 	const response = await fetch(`${path}?${searchParams}`);
 	if (!response.ok) {
-		console.error(response);		
+		console.error(response);
 		error(response.status);
 	}
 	const data = await response.json();

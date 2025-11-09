@@ -1,4 +1,3 @@
-<div class="flex flex-col justify-center items-center w-full h-full stretch">
-	<p class="w-fit h-fit shrink">Select a group</p>
-	
+<div class="stretch flex h-full w-full flex-col items-center justify-center">
+	<p class="h-fit w-fit shrink">Select a group</p>
 </div>

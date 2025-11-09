@@ -1,11 +1,11 @@
 <script lang="ts">
-	import SaveIcon from "~icons/material-symbols/save-outline";
+	import SaveIcon from '~icons/material-symbols/save-outline';
 
 	let { data } = $props();
 	let group = $derived(data.selectedGroup);
-	
-	let groupName: string = $state("");
-	
+
+	let groupName: string = $state('');
+
 	$effect(() => {
 		if (group) {
 			groupName = group.name;
@@ -13,7 +13,7 @@
 	});
 
 	async function handleSave(): Promise<void> {
-		console.log("Saving settings:", { groupName });
+		console.log('Saving settings:', { groupName });
 	}
 </script>
 
@@ -39,7 +39,7 @@
 				type="text"
 				value={group?.id}
 				readonly
-				class="rounded-md border border-text/20 bg-text/10 px-4 py-2 font-mono text-sm text-text/70 cursor-not-allowed"
+				class="cursor-not-allowed rounded-md border border-text/20 bg-text/10 px-4 py-2 font-mono text-sm text-text/70"
 			/>
 		</div>
 
@@ -49,9 +49,9 @@
 			<input
 				id="owner"
 				type="text"
-				value={group?.owner?.username || "Unknown"}
+				value={group?.owner?.username || 'Unknown'}
 				readonly
-				class="rounded-md border border-text/20 bg-text/10 px-4 py-2 text-text/70 cursor-not-allowed"
+				class="cursor-not-allowed rounded-md border border-text/20 bg-text/10 px-4 py-2 text-text/70"
 			/>
 		</div>
 

@@ -17,7 +17,7 @@
 			<h2 class="w-full text-left text-2xl">{$LL.myGroups()}</h2>
 			<a
 				href="/dashboard/groups/create"
-				class="bg-primary text-background hover:bg-primary/80 flex flex-row items-center gap-1 rounded-md px-3 py-1 text-sm transition-all"
+				class="flex flex-row items-center gap-1 rounded-md bg-primary px-3 py-1 text-sm text-background transition-all hover:bg-primary/80"
 				title="Create new group"
 			>
 				<AddIcon class="h-4 w-4" />
@@ -36,9 +36,12 @@
 		>
 			{#snippet itemSnippet(group: GroupRead)}
 				<div
-					class="hover:shadow-inner-sym-[5px] flex w-full flex-row items-center justify-start rounded p-2 shadow-black transition-shadow"
+					class="flex w-full flex-row items-center justify-start rounded p-2 shadow-black transition-shadow hover:shadow-inner-sym-[5px]"
 				>
-					<div class:bg-primary={group.id === data.selectedGroup?.id} class="mr-4 h-full rounded-sm">
+					<div
+						class:bg-primary={group.id === data.selectedGroup?.id}
+						class="mr-4 h-full rounded-sm"
+					>
 						<ChevronDown class="h-6 w-6 -rotate-90" />
 					</div>
 					<div class="flex w-full flex-col gap-1">

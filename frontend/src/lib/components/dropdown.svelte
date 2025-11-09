@@ -98,7 +98,7 @@
 
 	{#if show}
 		<div
-			class="bg-surface border-text/50 bg-background absolute z-50 min-w-max rounded-sm border shadow-lg"
+			class="bg-surface absolute z-50 min-w-max rounded-sm border border-text/50 bg-background shadow-lg"
 			style:left="{getArrowPosition().left}px"
 			style:top={position.includes('top') ? 'auto' : '100%'}
 			style:bottom={position.includes('top') ? '100%' : 'auto'}
@@ -107,7 +107,7 @@
 		>
 			{#each items.filter((item) => item !== currentItem) as item (item)}
 				<button
-					class="hover:bg-primary block w-full whitespace-nowrap"
+					class="block w-full whitespace-nowrap hover:bg-primary"
 					onclick={() => handleItemSelect(item)}
 				>
 					{@render itemSnippet(item)}

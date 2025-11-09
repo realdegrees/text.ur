@@ -1,14 +1,14 @@
 <script lang="ts">
-	import type { DocumentRead } from "$api/types";
-	import LL from "$i18n/i18n-svelte";
-	import PaginatedList from "$lib/components/paginatedList.svelte";
-	import DocumentIcon from "~icons/material-symbols/description-outline";
+	import type { DocumentRead } from '$api/types';
+	import LL from '$i18n/i18n-svelte';
+	import PaginatedList from '$lib/components/paginatedList.svelte';
+	import DocumentIcon from '~icons/material-symbols/description-outline';
 
 	let { data } = $props();
 	let documents = $derived(data.documents);
 
 	function formatDate(dateString?: string): string {
-		if (!dateString) return "N/A";
+		if (!dateString) return 'N/A';
 		return new Date(dateString).toLocaleDateString();
 	}
 </script>
@@ -24,7 +24,9 @@
 		{:else}
 			<PaginatedList data={documents}>
 				{#snippet itemSnippet(document: DocumentRead)}
-					<div class="flex flex-row items-center justify-between rounded-md bg-text/5 p-3 transition-all hover:bg-text/10">
+					<div
+						class="flex flex-row items-center justify-between rounded-md bg-text/5 p-3 transition-all hover:bg-text/10"
+					>
 						<div class="flex flex-row items-center gap-3">
 							<DocumentIcon class="h-5 w-5" />
 							<div class="flex flex-col gap-0.5">

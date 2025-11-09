@@ -11,11 +11,11 @@
 	let { user }: { user?: UserPrivate } = $props();
 </script>
 
-<div class="w-full h-15.5"></div>
-<header class="bg-background fixed left-0 right-0 top-0 z-50 h-15.5 w-full">
+<div class="h-15.5 w-full"></div>
+<header class="fixed top-0 right-0 left-0 z-50 h-15.5 w-full bg-background">
 	<div
-		class="center-content shadow-inner-sym-[10px] bg-inset dark:shadow-inner-sym-10 grid h-full
-	grid-cols-3 items-center overflow-hidden shadow-black mt-1"
+		class="center-content dark:shadow-inner-sym-10 mt-1 grid h-full grid-cols-3
+	items-center overflow-hidden bg-inset shadow-inner-sym-[10px] shadow-black"
 	>
 		<a
 			href="/"
@@ -39,13 +39,12 @@
 			{:else}
 				<Login />
 			{/if}
-
 		</div>
 	</div>
 </header>
 {#if loadingBar.visible}
 	<div
-		class="top-0 z-60 bg-primary fixed left-0 right-0 h-1 rounded-full transition-transform duration-500 ease-out"
+		class="fixed top-0 right-0 left-0 z-60 h-1 rounded-full bg-primary transition-transform duration-500 ease-out"
 		class:origin-right={loadingBar.shrinking}
 		class:origin-left={!loadingBar.shrinking}
 		class:scale-x-0={loadingBar.shrinking}

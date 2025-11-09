@@ -1,4 +1,4 @@
-import type { Filter } from "$api/types";
+import type { Filter } from '$api/types';
 
 export const filterToSearchParams = (...filters: Filter[]): URLSearchParams => {
 	const searchParams = new URLSearchParams();

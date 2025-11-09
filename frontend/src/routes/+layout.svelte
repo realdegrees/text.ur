@@ -30,14 +30,12 @@
 </svelte:head>
 
 <div
-	class="flex h-screen w-full flex-col items-center bg-background text-text transition-all overflow-hidden custom-scrollbar"
+	class="flex h-screen custom-scrollbar w-full flex-col items-center overflow-hidden bg-background text-text transition-all"
 >
 	<Header user={data.sessionUser} />
 	<Notification />
-	<div
-		class="flex-1 flex-col items-center w-full min-h-0"
-	>
-		<main class="flex w-full flex-1 h-full">
+	<div class="min-h-0 w-full flex-1 flex-col items-center">
+		<main class="flex h-full w-full flex-1">
 			{@render children?.()}
 		</main>
 	</div>

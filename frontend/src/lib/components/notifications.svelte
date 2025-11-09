@@ -36,7 +36,7 @@
 				aria-hidden="true"
 			></div>
 			<div
-				class="max-w-200 overflow-hidden rounded-l bg-inset p-3 pr-48 text-ellipsis shadow-inner-sym-2"
+				class="shadow-inner-sym-2 max-w-200 overflow-hidden rounded-l bg-inset p-3 pr-48 text-ellipsis"
 			>
 				<div class="flex items-center">
 					<notification.Icon class="aspect-square h-auto w-6 {textClass} mr-2" />

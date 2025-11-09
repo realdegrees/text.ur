@@ -21,20 +21,20 @@ const createLanguage = () => {
 		get locale(): Locales {
 			return currentLocale;
 		},
-		
+
 		get availableLocales(): Locales[] {
 			return locales;
 		},
-		
+
 		setLocale(locale: Locales) {
 			if (!browser || !isLocale(locale)) return;
 
 			currentLocale = locale;
-			
+
 			// Set the locale cookie (same pattern as darkMode)
 			document.cookie = `locale=${locale}; path=/; max-age=${60 * 60 * 24 * 365}`;
 		},
-		
+
 		clearLocale() {
 			if (!browser) return;
 

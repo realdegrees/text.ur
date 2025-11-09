@@ -1,17 +1,17 @@
 <script lang="ts">
-	import type { GroupRead, DocumentRead } from "$api/types";
-	import LL from "$i18n/i18n-svelte";
-	import PaginatedList from "$lib/components/paginatedList.svelte";
-	import SettingsIcon from "~icons/material-symbols/settings-outline";
-	import PeopleIcon from "~icons/material-symbols/group-outline";
-	import DocumentIcon from "~icons/material-symbols/description-outline";
+	import type { GroupRead, DocumentRead } from '$api/types';
+	import LL from '$i18n/i18n-svelte';
+	import PaginatedList from '$lib/components/paginatedList.svelte';
+	import SettingsIcon from '~icons/material-symbols/settings-outline';
+	import PeopleIcon from '~icons/material-symbols/group-outline';
+	import DocumentIcon from '~icons/material-symbols/description-outline';
 
 	let { data } = $props();
 	let group: GroupRead = $derived(data.group!);
 	let documents = $derived(data.documents);
 
 	function formatDate(dateString?: string): string {
-		if (!dateString) return "N/A";
+		if (!dateString) return 'N/A';
 		return new Date(dateString).toLocaleDateString();
 	}
 </script>
@@ -22,7 +22,10 @@
 		<div class="flex flex-col gap-2">
 			<h1 class="text-3xl font-bold">{group.name}</h1>
 			<div class="flex flex-col gap-1 text-sm text-text/70">
-				<span>{$LL.groupOwnerLabel()}: <span class="font-semibold">{group.owner?.username || "Unknown"}</span></span>
+				<span
+					>{$LL.groupOwnerLabel()}:
+					<span class="font-semibold">{group.owner?.username || 'Unknown'}</span></span
+				>
 				<span>Created: {formatDate(group.created_at)}</span>
 				{#if group.updated_at && group.updated_at !== group.created_at}
 					<span>Last updated: {formatDate(group.updated_at)}</span>
@@ -65,7 +68,7 @@
 			</div>
 			<div class="flex flex-col gap-1">
 				<span class="text-sm font-semibold text-text/70">Owner</span>
-				<span>{group.owner?.username || "Unknown"}</span>
+				<span>{group.owner?.username || 'Unknown'}</span>
 			</div>
 			<div class="flex flex-col gap-1">
 				<span class="text-sm font-semibold text-text/70">Created At</span>
@@ -82,7 +85,7 @@
 			<DocumentIcon class="h-6 w-6" />
 			<h2 class="text-xl font-semibold">Documents</h2>
 		</div>
-		
+
 		{#if documents.total === 0}
 			<div class="flex flex-col items-center justify-center gap-2 rounded-md bg-text/5 p-8">
 				<DocumentIcon class="h-12 w-12 text-text/30" />
@@ -91,7 +94,9 @@
 		{:else}
 			<PaginatedList data={documents}>
 				{#snippet itemSnippet(document: DocumentRead)}
-					<div class="flex flex-row items-center justify-between rounded-md bg-text/5 p-3 transition-all hover:bg-text/10">
+					<div
+						class="flex flex-row items-center justify-between rounded-md bg-text/5 p-3 transition-all hover:bg-text/10"
+					>
 						<div class="flex flex-row items-center gap-3">
 							<DocumentIcon class="h-5 w-5" />
 							<div class="flex flex-col gap-0.5">

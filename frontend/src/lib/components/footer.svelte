@@ -29,15 +29,15 @@
 	}
 </script>
 
-<div class="w-full h-11"></div>
-<div class="fixed left-0 bottom-10 min-h-1 w-full shadow-inner shadow-black/80 bg-background"></div>
+<div class="h-11 w-full"></div>
+<div class="fixed bottom-10 left-0 min-h-1 w-full bg-background shadow-inner shadow-black/80"></div>
 <footer
-	class="bg-inset fixed bottom-0 left-0 flex h-10 w-full flex-row items-center justify-between p-1 text-sm"
+	class="fixed bottom-0 left-0 flex h-10 w-full flex-row items-center justify-between bg-inset p-1 text-sm"
 >
 	<!-- Controls -->
-	<section class="flex flex-row gap-2 items-center ml-2">
+	<section class="ml-2 flex flex-row items-center gap-2">
 		<button
-			class="clickable flex h-full w-fit flex-col items-center justify-center"
+			class="flex h-full w-fit clickable flex-col items-center justify-center"
 			onclick={() => (darkMode.enabled = !darkMode.enabled)}
 			title="Enable {darkMode.enabled ? 'Light' : 'Dark'} Mode"
 		>
@@ -71,7 +71,7 @@
 	</section>
 
 	<!-- Links -->
-	<section class="flex flex-row gap-1 items-center">
+	<section class="flex flex-row items-center gap-1">
 		<a
 			href="https://github.com/realdegrees/text.ur"
 			target="_blank"
@@ -89,7 +89,13 @@
 			<MailIcon />
 		</a>
 
-		<a href={language.locale === 'de' ? "https://www.uni-regensburg.de/impressum" : "https://www.uni-regensburg.de/en/legal-notice"} target="_blank" rel="noreferrer noopener">
+		<a
+			href={language.locale === 'de'
+				? 'https://www.uni-regensburg.de/impressum'
+				: 'https://www.uni-regensburg.de/en/legal-notice'}
+			target="_blank"
+			rel="noreferrer noopener"
+		>
 			<p class="ml-1">{$LL.imprint()}</p>
 		</a>
 		<p class="col-span-2 row-start-2 text-center opacity-60">

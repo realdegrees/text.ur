@@ -1,27 +1,32 @@
 <script lang="ts">
-	import type { Permission } from "$api/types";
-	import { permissionSchema } from "$api/schemas";
-	import { goto } from "$app/navigation";
-	import LL from "$i18n/i18n-svelte";
-	import AddIcon from "~icons/material-symbols/add-circle-outline";
-	import GroupIcon from "~icons/material-symbols/group-outline";
-	import Loading from "~icons/svg-spinners/90-ring-with-bg";
+	import type { Permission } from '$api/types';
+	import { permissionSchema } from '$api/schemas';
+	import { goto } from '$app/navigation';
+	import LL from '$i18n/i18n-svelte';
+	import AddIcon from '~icons/material-symbols/add-circle-outline';
+	import GroupIcon from '~icons/material-symbols/group-outline';
+	import Loading from '~icons/svg-spinners/90-ring-with-bg';
 
-	let groupName: string = $state("");
+	let groupName: string = $state('');
 	let selectedPermissions: Permission[] = $state([]);
 	let isLoading: boolean = $state(false);
-	let errorMessage: string = $state("");
-	let successMessage: string = $state("");
+	let errorMessage: string = $state('');
+	let successMessage: string = $state('');
 
 	const allPermissions: Permission[] = permissionSchema.options.map((option) => option.value);
 
 	const permissionGroups: Record<string, Permission[]> = {
-		administration: ["administrator"],
-		comments: ["add_comments", "remove_comments", "view_public_comments", "view_restricted_comments"],
-		documents: ["upload_documents", "view_restricted_documents", "delete_documents"],
-		members: ["add_members", "remove_members", "manage_permissions"],
-		reactions: ["add_reactions", "remove_reactions"],
-		shareLinks: ["manage_share_links"]
+		administration: ['administrator'],
+		comments: [
+			'add_comments',
+			'remove_comments',
+			'view_public_comments',
+			'view_restricted_comments'
+		],
+		documents: ['upload_documents', 'view_restricted_documents', 'delete_documents'],
+		members: ['add_members', 'remove_members', 'manage_permissions'],
+		reactions: ['add_reactions', 'remove_reactions'],
+		shareLinks: ['manage_share_links']
 	};
 
 	function togglePermission(permission: Permission): void {
@@ -50,34 +55,37 @@
 	}
 
 	function clearGroup(groupPermissions: Permission[]): void {
-		selectedPermissions = selectedPermissions.filter(p => !groupPermissions.includes(p));
+		selectedPermissions = selectedPermissions.filter((p) => !groupPermissions.includes(p));
 	}
 
 	function isGroupFullySelected(groupPermissions: Permission[]): boolean {
-		return groupPermissions.every(p => selectedPermissions.includes(p));
+		return groupPermissions.every((p) => selectedPermissions.includes(p));
 	}
 
 	function isGroupPartiallySelected(groupPermissions: Permission[]): boolean {
-		return groupPermissions.some(p => selectedPermissions.includes(p)) && !isGroupFullySelected(groupPermissions);
+		return (
+			groupPermissions.some((p) => selectedPermissions.includes(p)) &&
+			!isGroupFullySelected(groupPermissions)
+		);
 	}
 
 	async function handleSubmit(event: Event): Promise<void> {
 		event.preventDefault();
-		errorMessage = "";
-		successMessage = "";
+		errorMessage = '';
+		successMessage = '';
 
 		if (!groupName.trim()) {
-			errorMessage = "Group name is required";
+			errorMessage = 'Group name is required';
 			return;
 		}
 
 		isLoading = true;
 
 		try {
-			const response = await fetch("/groups/create", {
-				method: "POST",
+			const response = await fetch('/groups/create', {
+				method: 'POST',
 				headers: {
-					"Content-Type": "application/json"
+					'Content-Type': 'application/json'
 				},
 				body: JSON.stringify({
 					name: groupName.trim(),
@@ -86,19 +94,19 @@
 			});
 
 			if (!response.ok) {
-				const error = await response.json().catch(() => ({ detail: "Failed to create group" }));
-				throw new Error(error.detail || "Failed to create group");
+				const error = await response.json().catch(() => ({ detail: 'Failed to create group' }));
+				throw new Error(error.detail || 'Failed to create group');
 			}
 
 			const data = await response.json();
-			successMessage = "Group created successfully!";
-			
+			successMessage = 'Group created successfully!';
+
 			// Redirect to the new group page after a short delay
 			setTimeout(() => {
 				goto(`/dashboard/groups/${data.id}`);
 			}, 1000);
 		} catch (err) {
-			errorMessage = err instanceof Error ? err.message : "An error occurred";
+			errorMessage = err instanceof Error ? err.message : 'An error occurred';
 		} finally {
 			isLoading = false;
 		}
@@ -141,7 +149,7 @@
 				<GroupIcon class="h-6 w-6" />
 				<h2 class="text-xl font-semibold">Group Details</h2>
 			</div>
-			
+
 			<label for="groupName" class="text-sm font-semibold text-text/70">Group Name *</label>
 			<input
 				id="groupName"
@@ -189,7 +197,9 @@
 				{#each Object.entries(permissionGroups) as [groupKey, groupPermissions] (groupKey)}
 					<div class="flex flex-col gap-2">
 						<div class="flex flex-row items-center justify-between">
-							<h3 class="text-sm font-semibold text-text/80">{$LL.permissionGroups[groupKey as keyof typeof $LL.permissionGroups]()}</h3>
+							<h3 class="text-sm font-semibold text-text/80">
+								{$LL.permissionGroups[groupKey as keyof typeof $LL.permissionGroups]()}
+							</h3>
 							<div class="flex flex-row gap-2">
 								{#if isGroupFullySelected(groupPermissions)}
 									<button
@@ -217,7 +227,7 @@
 								{@const isSelected = selectedPermissions.includes(permission)}
 								<label
 									class="flex cursor-pointer flex-row items-center gap-2 bg-inset p-2 transition-all hover:bg-text/10"
-									style={isSelected ? "background-color: rgba(var(--primary-rgb), 0.1);" : ""}
+									style={isSelected ? 'background-color: rgba(var(--primary-rgb), 0.1);' : ''}
 								>
 									<input
 										type="checkbox"
@@ -239,10 +249,7 @@
 
 		<!-- Submit Button -->
 		<div class="flex flex-row justify-end gap-2">
-			<a
-				href="/dashboard"
-				class="rounded-md bg-text/10 px-6 py-2 transition-all hover:bg-text/20"
-			>
+			<a href="/dashboard" class="rounded-md bg-text/10 px-6 py-2 transition-all hover:bg-text/20">
 				Cancel
 			</a>
 			<button

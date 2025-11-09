@@ -43,8 +43,8 @@
 </ul>
 
 <!-- Page Controls -->
-<div class="flex flex-row items-stretch justify-start w-full">
-	<div class="flex flex-row justify-center w-full items-center">
+<div class="flex w-full flex-row items-stretch justify-start">
+	<div class="flex w-full flex-row items-center justify-center">
 		<button class:invisible={currentPage === 1} onclick={() => changePage(-1)}
 			><Arrow class="rotate-180" /></button
 		>
@@ -57,7 +57,7 @@
 		<label for="itemsPerPage" class="whitespace-nowrap">Entries per page:</label>
 		<select
 			id="itemsPerPage"
-			class="bg-background rounded py-0.5"
+			class="rounded bg-background py-0.5"
 			onchange={({ currentTarget: { value } }) => {
 				page.url.searchParams.set('limit', `${value}`);
 				page.url.searchParams.set('offset', `${0}`);
