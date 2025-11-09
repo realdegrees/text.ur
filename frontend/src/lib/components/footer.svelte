@@ -29,7 +29,8 @@
 	}
 </script>
 
-<div class="fixed left-0 bottom-10 min-h-1 w-full shadow-inner shadow-black bg-background"></div>
+<div class="w-full h-11"></div>
+<div class="fixed left-0 bottom-10 min-h-1 w-full shadow-inner shadow-black/80 bg-background"></div>
 <footer
 	class="bg-inset fixed bottom-0 left-0 flex h-10 w-full flex-row items-center justify-between p-1 text-sm"
 >
@@ -72,7 +73,7 @@
 	<!-- Links -->
 	<section class="flex flex-row gap-1 items-center">
 		<a
-			href="https://github.com/realdegrees/text.ur/issues/new"
+			href="https://github.com/realdegrees/text.ur"
 			target="_blank"
 			rel="noreferrer noopener"
 			class="h-full"
@@ -88,11 +89,11 @@
 			<MailIcon />
 		</a>
 
-		<a href="https://www.uni-regensburg.de/impressum" target="_blank" rel="noreferrer noopener">
+		<a href={language.locale === 'de' ? "https://www.uni-regensburg.de/impressum" : "https://www.uni-regensburg.de/en/legal-notice"} target="_blank" rel="noreferrer noopener">
 			<p class="ml-1">{$LL.imprint()}</p>
 		</a>
 		<p class="col-span-2 row-start-2 text-center opacity-60">
-			© {new Date().getFullYear()} Universität Regensburg. All rights reserved.
+			© {new Date().getFullYear()} Universität Regensburg
 		</p>
 	</section>
 </footer>

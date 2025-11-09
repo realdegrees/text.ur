@@ -4,8 +4,6 @@
 	import darkMode from '$lib/stores/darkMode.svelte';
 	import { loadingBar } from '$lib/stores/loadingBar.svelte';
 
-	import { scale } from 'svelte/transition';
-	import { cubicOut } from 'svelte/easing';
 	import type { UserPrivate } from '$api/types';
 	import ProfileImageFallback from '~icons/material-symbols/account-box';
 	import Login from './login.svelte';
@@ -13,18 +11,18 @@
 	let { user }: { user?: UserPrivate } = $props();
 </script>
 
-<div class="w-full h-16"></div>
-<header class="bg-background fixed left-0 right-0 top-0 z-50 h-16 w-full">
+<div class="w-full h-15.5"></div>
+<header class="bg-background fixed left-0 right-0 top-0 z-50 h-15.5 w-full">
 	<div
 		class="center-content shadow-inner-sym-[10px] bg-inset dark:shadow-inner-sym-10 grid h-full
-	grid-cols-3 items-center overflow-hidden shadow-black mt-1.5"
+	grid-cols-3 items-center overflow-hidden shadow-black mt-1"
 	>
 		<a
 			href="/"
-			class="col-span-1 col-start-1 flex flex-row justify-self-start transition-all hover:pl-2"
+			class="col-span-1 col-start-1 flex flex-row justify-self-start transition-all hover:pl-0.5"
 		>
 			<img class="w-auto p-2" src={darkMode.enabled ? AppLogoLight : AppLogoDark} alt="Logo" />
-			<p class="ml-1 self-center text-3xl">text.ur</p>
+			<p class="ml-1 self-center text-3xl"></p>
 		</a>
 
 		<div class="col-span-1 col-start-3 mr-3 flex flex-row-reverse items-center justify-self-end">
@@ -47,9 +45,12 @@
 </header>
 {#if loadingBar.visible}
 	<div
-		class="top-18 z-60 bg-primary fixed left-0 right-0 h-[3px] origin-left rounded-full"
+		class="top-0 z-60 bg-primary fixed left-0 right-0 h-1 rounded-full transition-transform duration-500 ease-out"
+		class:origin-right={loadingBar.shrinking}
+		class:origin-left={!loadingBar.shrinking}
+		class:scale-x-0={loadingBar.shrinking}
+		class:scale-x-100={!loadingBar.shrinking}
 		style="width: {loadingBar.progress}%"
-		transition:scale={{ duration: 300, easing: cubicOut }}
 	></div>
 {/if}
 

@@ -30,17 +30,16 @@
 </svelte:head>
 
 <div
-	class="flex min-h-screen w-full flex-col items-center bg-background text-text transition-all"
+	class="flex h-screen w-full flex-col items-center bg-background text-text transition-all overflow-hidden custom-scrollbar"
 >
 	<Header user={data.sessionUser} />
 	<Notification />
 	<div
-		class="grow flex-col items-center w-full"
+		class="flex-1 flex-col items-center w-full min-h-0"
 	>
-		<main class="flex w-full grow flex-col">
+		<main class="flex w-full flex-1 h-full">
 			{@render children?.()}
 		</main>
-		<div class="mx-auto mt-4 min-h-2 w-[99%] rounded shadow-inner shadow-black"></div>
-		<Footer />
 	</div>
+	<Footer />
 </div>
