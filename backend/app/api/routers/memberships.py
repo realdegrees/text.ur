@@ -26,7 +26,7 @@ router = APIRouter(
 async def list_memberships(
     _: User = Authenticate([Guard.group_access()]),
     memberships: Paginated[Membership] = PaginatedResource(
-        Membership, GroupMembershipFilter, guards=[Guard.combine(op="and", guards=[Guard.membership_in_group()])], key_columns=[Membership.user_id, Membership.group_id]
+        Membership, GroupMembershipFilter, guards=[Guard.membership_in_group()], key_columns=[Membership.user_id, Membership.group_id]
     ),
     group_id: str = Path(...,
                          description="The ID of the group to list memberships for"),

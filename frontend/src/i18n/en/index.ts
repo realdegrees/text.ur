@@ -17,10 +17,17 @@ const en = {
 	needAccount: 'Need an account? Register',
 	emailVerified: 'Email verified successfully! Your account is now activated.',
 	myGroups: 'My Groups',
-	groupOwnerLabel: 'Owner',
-	groupDocuments: 'Documents',
-	groupMembers: 'Members',
-	groupSettings: 'Settings',
+	group: {
+		documents: 'Documents',
+		members: 'Members',
+		settings: 'Settings',
+		memberships: {
+			owner: 'Owner',
+			label: 'Memberships',
+			accepted: 'Accepted',
+			invited: 'Invited',
+		}
+	},
 	permissionGroups: {
 		administration: 'Administration',
 		comments: 'Comments',
@@ -30,6 +37,7 @@ const en = {
 		shareLinks: 'Share Links'
 	},
 	permissions: {
+		label: 'Permissions',
 		administrator: 'Full administrative access',
 		add_comments: 'Add comments',
 		remove_comments: 'Remove comments',
@@ -44,7 +52,11 @@ const en = {
 		remove_reactions: 'Remove reactions',
 		add_reactions: 'Add reactions',
 		manage_share_links: 'Manage share links'
-	}
+	},
+	user: 'User',
+	status: 'Status',
+	add: 'Add',
+	remove: 'Remove',
 } satisfies BaseTranslation;
 
 export default en;

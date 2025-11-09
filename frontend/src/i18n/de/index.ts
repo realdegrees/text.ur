@@ -17,10 +17,17 @@ const de = {
 	needAccount: 'Haben Sie kein Konto? Registrieren',
 	emailVerified: 'E-Mail erfolgreich bestätigt! Ihr Konto ist jetzt aktiviert.',
 	myGroups: 'Meine Gruppen',
-	groupOwnerLabel: 'Ersteller',
-	groupDocuments: 'Dokumente',
-	groupMembers: 'Mitglieder',
-	groupSettings: 'Einstellungen',
+	group: {
+		documents: 'Dokumente',
+		members: 'Mitglieder',
+		settings: 'Einstellungen',
+		memberships: {
+			owner: 'Ersteller',
+			label: 'Mitgliedschaften',
+			accepted: 'Akzeptiert',
+			invited: 'Eingeladen',
+		}
+	},
 	permissionGroups: {
 		administration: 'Administration',
 		comments: 'Kommentare',
@@ -30,6 +37,7 @@ const de = {
 		shareLinks: 'Freigabelinks'
 	},
 	permissions: {
+		label: 'Berechtigungen',
 		administrator: 'Voller Administratorzugriff',
 		add_comments: 'Kommentare hinzufügen',
 		remove_comments: 'Kommentare entfernen',
@@ -44,7 +52,11 @@ const de = {
 		remove_reactions: 'Reaktionen entfernen',
 		add_reactions: 'Reaktionen hinzufügen',
 		manage_share_links: 'Freigabelinks verwalten'
-	}
+	},
+	user: 'Benutzer',
+	status: 'Status',
+	add: 'Hinzufügen',
+	remove: 'Entfernen',
 } satisfies Translation;
 
 export default de;

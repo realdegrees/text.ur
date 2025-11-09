@@ -47,7 +47,7 @@
 					<div class="flex w-full flex-col gap-1">
 						<h3 class=" text-left font-semibold">{group.name}</h3>
 						<div class="flex flex-row gap-4 text-sm">
-							<span>{$LL.groupOwnerLabel()}: {group.owner?.username}</span>
+							<span>{$LL.group.memberships.owner()}: {group.owner?.username}</span>
 						</div>
 					</div>
 				</div>

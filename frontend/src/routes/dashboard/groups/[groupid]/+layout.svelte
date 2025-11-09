@@ -17,9 +17,9 @@
 	};
 
 	const menuItems: MenuItem[] = [
-		{ path: '', i18nKey: $LL.groupDocuments, icon: DocumentIcon },
-		{ path: '/memberships', i18nKey: $LL.groupMembers, icon: PeopleIcon },
-		{ path: '/settings', i18nKey: $LL.groupSettings, icon: SettingsIcon }
+		{ path: '', i18nKey: $LL.group.documents, icon: DocumentIcon },
+		{ path: '/memberships', i18nKey: $LL.group.members, icon: PeopleIcon },
+		{ path: '/settings', i18nKey: $LL.group.settings, icon: SettingsIcon }
 	];
 
 	function isActive(itemPath: string): boolean {

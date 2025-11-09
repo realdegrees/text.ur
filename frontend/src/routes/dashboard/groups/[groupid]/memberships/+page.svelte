@@ -1,71 +1,134 @@
 <script lang="ts">
-	import type { GroupMembershipRead } from '$api/types';
-	import InfiniteScrollList from '$lib/components/infiniteScrollList.svelte';
+	import InfiniteTable from '$lib/components/infiniteScrollTable.svelte';
+	import type { GroupMembershipRead, Permission } from '$api/types';
 	import OwnerIcon from '~icons/material-symbols/admin-panel-settings-outline';
 	import PendingIcon from '~icons/material-symbols/pending-outline';
-	import PeopleIcon from '~icons/material-symbols/group-outline';
+	import AcceptedIcon from '~icons/material-symbols/check-circle-outline';
+	import { permissionSchema } from '$api/schemas';
+	import LL from '$i18n/i18n-svelte.js';
 
 	let { data } = $props();
 	let memberships = $derived(data.memberships);
 	let group = $derived(data.selectedGroup!);
+
+	let selected = $state<GroupMembershipRead[]>([]);
+
+	// Handle selection changes
+	function handleSelectionChange(memberships: GroupMembershipRead[]) {
+		selected = memberships;
+		console.log('Selected memberships:', memberships.length);
+	}
+
+	// Available permissions for adding
+	const availablePermissions = permissionSchema.options.map((p) => p.value);
 </script>
 
-<div class="flex h-full w-full flex-col gap-4">
-	<!-- Members List -->
-	<div class="flex flex-col gap-2">
-		<div class="flex flex-row items-center justify-end">
-			<span class="text-sm text-text/70">Total: {memberships.total}</span>
-		</div>
+<div class="h-screen p-4">
+	<h1 class="mb-4 text-2xl font-bold">Member Management</h1>
 
-		{#if memberships.total === 0}
-			<div class="flex flex-col items-center justify-center gap-2 rounded-md bg-text/5 p-8">
-				<PeopleIcon class="h-12 w-12 text-text/30" />
-				<p class="text-text/70">No members in this group yet</p>
-			</div>
-		{:else}
-			<InfiniteScrollList data={memberships} url={`/groups/${group.id}/memberships`} step={10}>
-				{#snippet itemSnippet(membership: GroupMembershipRead)}
-					<div
-						class="flex flex-row items-center justify-between rounded-md bg-text/5 p-2 transition-all hover:bg-text/10"
-					>
-						<div class="flex flex-col gap-2">
-							<div class="flex flex-row items-center gap-2">
-								<span class="text-sm font-semibold">{membership.user.username}</span>
-								{#if membership.user.first_name || membership.user.last_name}
-									<span class="my-auto text-sm text-text/70"
-										>({membership.user.first_name} {membership.user.last_name})</span
-									>
-								{/if}
-								{#if membership.is_owner}
-									<div
-										class="flex flex-row items-center gap-1 rounded-full bg-primary/20 px-2 py-0.5 text-xs"
-									>
-										<OwnerIcon class="h-3 w-3" />
-										<span>Owner</span>
-									</div>
-								{/if}
-								{#if !membership.accepted}
-									<div
-										class="flex flex-row items-center gap-1 rounded-full bg-text/20 px-2 py-0.5 text-xs"
-									>
-										<PendingIcon class="h-3 w-3" />
-										<span>Pending</span>
-									</div>
-								{/if}
-							</div>
-							{#if membership.permissions.length > 0}
-								<div class="flex flex-row flex-wrap gap-1">
-									{#each membership.permissions as permission (permission)}
-										<span class="rounded bg-text/10 px-2 py-0.5 font-mono text-xs text-text/70">
-											{permission}
-										</span>
-									{/each}
-								</div>
-							{/if}
-						</div>
-					</div>
-				{/snippet}
-			</InfiniteScrollList>
+	{#if selected.length > 0}
+		<div class="mb-4 rounded bg-blue-50 p-3">
+			<p class="text-sm font-medium">
+				{selected.length} member{selected.length === 1 ? '' : 's'} selected
+			</p>
+		</div>
+	{/if}
+
+	<InfiniteTable
+		columns={[
+			{
+				label: $LL.user(),
+				width: '1fr',
+				snippet: usernameSnippet
+			},
+			{
+				label: $LL.status(),
+				width: '1fr',
+				snippet: badgeSnippet
+			},
+			{
+				label: $LL.permissions.label(),
+				width: '5fr',
+				snippet: permissionsSnippet
+			}
+		]}
+		data={memberships}
+		url={`/groups/${group.id}/memberships`}
+		step={20}
+		selectable={true}
+		onSelectionChange={handleSelectionChange}
+		rowBgClass="bg-inset/90"
+	/>
+</div>
+
+{#snippet usernameSnippet(membership: GroupMembershipRead)}
+	<div class="text-text flex flex-row items-center">
+		<p class="font-medium">{membership.user.username || 'Unknown User'}</p>
+		{#if membership.user.first_name || membership.user.last_name}
+			<p class="ml-1 text-text/70">
+				({membership.user.first_name || ''}
+				{membership.user.last_name || ''})
+			</p>
 		{/if}
 	</div>
-</div>
+{/snippet}
+
+{#snippet badgeSnippet(membership: GroupMembershipRead)}
+	<span
+		class="flex flex-row rounded-full px-2 py-1 text-xs font-semibold uppercase w-fit"
+		class:bg-blue-100={membership.is_owner}
+		class:text-blue-800={membership.is_owner}
+		class:bg-green-100={membership.accepted}
+		class:text-green-800={membership.accepted}
+		class:bg-yellow-100={!membership.accepted}
+		class:text-yellow-800={!membership.accepted}
+	>
+		{#if membership.is_owner}
+			<OwnerIcon class="mr-1 inline h-4 w-4 align-text-bottom" />
+			{$LL.group.memberships.owner()}
+		{:else if membership.accepted}
+			<AcceptedIcon class="mr-1 inline h-4 w-4 align-text-bottom" />
+			{$LL.group.memberships.accepted()}
+		{:else}
+			<PendingIcon class="mr-1 inline h-4 w-4 align-text-bottom" />
+			{$LL.group.memberships.invited()}
+		{/if}
+	</span>
+{/snippet}
+
+{#snippet permissionsSnippet(membership: GroupMembershipRead)}
+	<div class="flex flex-wrap items-center gap-1">
+		{#each membership.permissions as perm (perm)}
+			<span
+				class="inline-flex items-center gap-1 rounded bg-gray-100 px-2 py-1 text-xs text-gray-700"
+			>
+				{perm}
+				<button
+					onclick={() => {
+						// TODO remove permission via API call
+					}}
+					class="font-bold text-red-600 hover:text-red-800"
+					aria-label="Remove {perm} permission"
+				>
+					x
+				</button>
+			</span>
+		{/each}
+
+		<select
+			class="cursor-pointer rounded border border-gray-300 bg-white px-2 py-1 text-xs hover:bg-gray-50"
+			onchange={(e) => {
+				const newPerm = e.currentTarget.value as Permission;
+				if (newPerm && !membership.permissions.includes(newPerm)) {
+					// TODO add permission via API call
+				}
+				e.currentTarget.value = '';
+			}}
+		>
+			<option value="">+ {$LL.add()}</option>
+			{#each availablePermissions.filter((p) => !membership.permissions.includes(p)) as perm (perm)}
+				<option value={perm}>{perm}</option>
+			{/each}
+		</select>
+	</div>
+{/snippet}

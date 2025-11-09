@@ -78,22 +78,38 @@ type RootTranslation = {
 	 * M​y​ ​G​r​o​u​p​s
 	 */
 	myGroups: string
-	/**
-	 * O​w​n​e​r
-	 */
-	groupOwnerLabel: string
-	/**
-	 * D​o​c​u​m​e​n​t​s
-	 */
-	groupDocuments: string
-	/**
-	 * M​e​m​b​e​r​s
-	 */
-	groupMembers: string
-	/**
-	 * S​e​t​t​i​n​g​s
-	 */
-	groupSettings: string
+	group: {
+		/**
+		 * D​o​c​u​m​e​n​t​s
+		 */
+		documents: string
+		/**
+		 * M​e​m​b​e​r​s
+		 */
+		members: string
+		/**
+		 * S​e​t​t​i​n​g​s
+		 */
+		settings: string
+		memberships: {
+			/**
+			 * O​w​n​e​r
+			 */
+			owner: string
+			/**
+			 * M​e​m​b​e​r​s​h​i​p​s
+			 */
+			label: string
+			/**
+			 * A​c​c​e​p​t​e​d
+			 */
+			accepted: string
+			/**
+			 * I​n​v​i​t​e​d
+			 */
+			invited: string
+		}
+	}
 	permissionGroups: {
 		/**
 		 * A​d​m​i​n​i​s​t​r​a​t​i​o​n
@@ -121,6 +137,10 @@ type RootTranslation = {
 		shareLinks: string
 	}
 	permissions: {
+		/**
+		 * P​e​r​m​i​s​s​i​o​n​s
+		 */
+		label: string
 		/**
 		 * F​u​l​l​ ​a​d​m​i​n​i​s​t​r​a​t​i​v​e​ ​a​c​c​e​s​s
 		 */
@@ -178,6 +198,22 @@ type RootTranslation = {
 		 */
 		manage_share_links: string
 	}
+	/**
+	 * U​s​e​r
+	 */
+	user: string
+	/**
+	 * S​t​a​t​u​s
+	 */
+	status: string
+	/**
+	 * A​d​d
+	 */
+	add: string
+	/**
+	 * R​e​m​o​v​e
+	 */
+	remove: string
 }
 
 export type TranslationFunctions = {
@@ -245,22 +281,38 @@ export type TranslationFunctions = {
 	 * My Groups
 	 */
 	myGroups: () => LocalizedString
-	/**
-	 * Owner
-	 */
-	groupOwnerLabel: () => LocalizedString
-	/**
-	 * Documents
-	 */
-	groupDocuments: () => LocalizedString
-	/**
-	 * Members
-	 */
-	groupMembers: () => LocalizedString
-	/**
-	 * Settings
-	 */
-	groupSettings: () => LocalizedString
+	group: {
+		/**
+		 * Documents
+		 */
+		documents: () => LocalizedString
+		/**
+		 * Members
+		 */
+		members: () => LocalizedString
+		/**
+		 * Settings
+		 */
+		settings: () => LocalizedString
+		memberships: {
+			/**
+			 * Owner
+			 */
+			owner: () => LocalizedString
+			/**
+			 * Memberships
+			 */
+			label: () => LocalizedString
+			/**
+			 * Accepted
+			 */
+			accepted: () => LocalizedString
+			/**
+			 * Invited
+			 */
+			invited: () => LocalizedString
+		}
+	}
 	permissionGroups: {
 		/**
 		 * Administration
@@ -288,6 +340,10 @@ export type TranslationFunctions = {
 		shareLinks: () => LocalizedString
 	}
 	permissions: {
+		/**
+		 * Permissions
+		 */
+		label: () => LocalizedString
 		/**
 		 * Full administrative access
 		 */
@@ -345,6 +401,22 @@ export type TranslationFunctions = {
 		 */
 		manage_share_links: () => LocalizedString
 	}
+	/**
+	 * User
+	 */
+	user: () => LocalizedString
+	/**
+	 * Status
+	 */
+	status: () => LocalizedString
+	/**
+	 * Add
+	 */
+	add: () => LocalizedString
+	/**
+	 * Remove
+	 */
+	remove: () => LocalizedString
 }
 
 export type Formatters = {}
