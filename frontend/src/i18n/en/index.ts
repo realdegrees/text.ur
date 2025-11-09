@@ -15,7 +15,36 @@ const en = {
 	usernameOrEmail: 'Username or Email',
 	alreadyHaveAccount: 'Already have an account? Login',
 	needAccount: 'Need an account? Register',
-	emailVerified: 'Email verified successfully! Your account is now activated.'
+	emailVerified: 'Email verified successfully! Your account is now activated.',
+	myGroups: 'My Groups',
+	groupOwnerLabel: 'Owner',
+	groupDocuments: 'Documents',
+	groupMembers: 'Members',
+	groupSettings: 'Settings',
+	permissionGroups: {
+		administration: 'Administration',
+		comments: 'Comments',
+		documents: 'Documents',
+		members: 'Members',
+		reactions: 'Reactions',
+		shareLinks: 'Share Links'
+	},
+	permissions: {
+		administrator: 'Full administrative access',
+		add_comments: 'Add comments',
+		remove_comments: 'Remove comments',
+		view_public_comments: 'View public comments',
+		view_restricted_comments: 'View restricted comments',
+		add_members: 'Add members',
+		remove_members: 'Remove members',
+		manage_permissions: 'Manage permissions',
+		upload_documents: 'Upload documents',
+		view_restricted_documents: 'View restricted documents',
+		delete_documents: 'Delete documents',
+		remove_reactions: 'Remove reactions',
+		add_reactions: 'Add reactions',
+		manage_share_links: 'Manage share links'
+	}
 } satisfies BaseTranslation;
 
 export default en;

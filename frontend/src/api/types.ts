@@ -48,7 +48,7 @@ export interface Comment {
   updated_at?: string;
   id?: number;
   visibility: Visibility;
-  document_id: number;
+  document_id: string;
   user_id: number;
   parent_id?: number | null;
   content?: string | null;
@@ -58,7 +58,7 @@ export interface Comment {
 }
 export interface CommentCreate {
   visibility: Visibility;
-  document_id: number;
+  document_id: string;
   parent_id?: number | null;
   content?: string | null;
   annotation?: {
@@ -107,32 +107,32 @@ export interface CommentUpdate {
 export interface Document {
   created_at?: string;
   updated_at?: string;
-  id?: number;
+  id?: string;
   s3_key: string;
   size_bytes?: number;
   visibility?: Visibility1;
   view_mode?: ViewMode;
   secret?: string;
-  group_id: number;
+  group_id: string;
 }
 export interface DocumentCreate {
   visibility: Visibility;
-  group_id: number;
+  group_id: string;
 }
 export interface DocumentFilter {
   size_bytes: number;
-  group_id: number;
+  group_id: string;
 }
 export interface DocumentRead {
   created_at?: string;
   updated_at?: string;
-  id: number;
+  id: string;
   s3_key: string;
-  group_id: number;
+  group_id: string;
   visibility: Visibility;
 }
 export interface DocumentTransfer {
-  group_id: number;
+  group_id: string;
 }
 /**
  * The payload of a client facing JWT, signed with the global secret.
@@ -150,7 +150,7 @@ export interface GlobalJWTPayload {
 export interface Group {
   created_at?: string;
   updated_at?: string;
-  id?: number;
+  id?: string;
   name: string;
   secret?: string;
   default_permissions?: Permission[];
@@ -165,6 +165,7 @@ export interface GroupCreate {
 export interface GroupFilter {
   name: string;
   member_count: number;
+  accepted: boolean;
 }
 export interface GroupMembershipFilter {
   user_id: number;
@@ -174,12 +175,12 @@ export interface GroupMembershipRead {
   user: UserRead;
   is_owner: boolean;
   accepted: boolean;
-  group_id: number;
+  group_id: string;
 }
 export interface GroupRead {
   created_at?: string;
   updated_at?: string;
-  id: number;
+  id: string;
   name: string;
   member_count: number;
   owner: UserRead | null;
@@ -195,7 +196,7 @@ export interface Membership {
   created_at?: string;
   updated_at?: string;
   user_id: number;
-  group_id: number;
+  group_id: string;
   permissions?: Permission[];
   is_owner?: boolean;
   accepted?: boolean;
@@ -228,6 +229,8 @@ export interface ShareLinkRead {
   expires_at?: string | null;
   label?: string | null;
   token: string;
+  author: UserRead;
+  group_id: string;
 }
 export interface ShareLinkUpdate {
   permissions?: Permission[] | null;

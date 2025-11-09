@@ -4,17 +4,17 @@
 @theme {
 	--color-text: #111111;
 	--color-background: #f5f5f5;
-	--color-primary: #73564a;
+	--color-primary: #916d5e;
 	--color-inset: #eeeeee;
-	--color-secondary: #dbcb9a;
-	--color-accent: #823837;
+	--color-secondary: #e2d19e;
+	--color-accent: #913f3e;
 }
 
 @custom-variant dark (&:where(.dark, .dark *));
 @layer base {
   @variant dark {
 	--color-text: #f5f5f5;
-	--color-background: #1f1f1f;
+	--color-background: #191919;
 	--color-primary: #73564a;
 	--color-inset: #242424;
 	--color-secondary: #dbcb9a;
@@ -30,6 +30,29 @@
 	}
 	&:active {
 		scale: 0.95;
+	}
+}
+
+@utility custom-scrollbar {
+	scrollbar-width: thin;
+	scrollbar-color: color-mix(in srgb, var(--color-text) 20%, transparent) transparent;
+	
+	&::-webkit-scrollbar {
+		width: 8px;
+	}
+	
+	&::-webkit-scrollbar-track {
+		background: transparent;
+	}
+	
+	&::-webkit-scrollbar-thumb {
+		background: color-mix(in srgb, var(--color-text) 30%, transparent);
+		border-radius: 4px;
+		transition: background 0.2s ease;
+	}
+	
+	&::-webkit-scrollbar-thumb:hover {
+		background: color-mix(in srgb, var(--color-text) 40%, transparent);
 	}
 }
 

@@ -74,6 +74,110 @@ type RootTranslation = {
 	 * E​m​a​i​l​ ​v​e​r​i​f​i​e​d​ ​s​u​c​c​e​s​s​f​u​l​l​y​!​ ​Y​o​u​r​ ​a​c​c​o​u​n​t​ ​i​s​ ​n​o​w​ ​a​c​t​i​v​a​t​e​d​.
 	 */
 	emailVerified: string
+	/**
+	 * M​y​ ​G​r​o​u​p​s
+	 */
+	myGroups: string
+	/**
+	 * O​w​n​e​r
+	 */
+	groupOwnerLabel: string
+	/**
+	 * D​o​c​u​m​e​n​t​s
+	 */
+	groupDocuments: string
+	/**
+	 * M​e​m​b​e​r​s
+	 */
+	groupMembers: string
+	/**
+	 * S​e​t​t​i​n​g​s
+	 */
+	groupSettings: string
+	permissionGroups: {
+		/**
+		 * A​d​m​i​n​i​s​t​r​a​t​i​o​n
+		 */
+		administration: string
+		/**
+		 * C​o​m​m​e​n​t​s
+		 */
+		comments: string
+		/**
+		 * D​o​c​u​m​e​n​t​s
+		 */
+		documents: string
+		/**
+		 * M​e​m​b​e​r​s
+		 */
+		members: string
+		/**
+		 * R​e​a​c​t​i​o​n​s
+		 */
+		reactions: string
+		/**
+		 * S​h​a​r​e​ ​L​i​n​k​s
+		 */
+		shareLinks: string
+	}
+	permissions: {
+		/**
+		 * F​u​l​l​ ​a​d​m​i​n​i​s​t​r​a​t​i​v​e​ ​a​c​c​e​s​s
+		 */
+		administrator: string
+		/**
+		 * A​d​d​ ​c​o​m​m​e​n​t​s
+		 */
+		add_comments: string
+		/**
+		 * R​e​m​o​v​e​ ​c​o​m​m​e​n​t​s
+		 */
+		remove_comments: string
+		/**
+		 * V​i​e​w​ ​p​u​b​l​i​c​ ​c​o​m​m​e​n​t​s
+		 */
+		view_public_comments: string
+		/**
+		 * V​i​e​w​ ​r​e​s​t​r​i​c​t​e​d​ ​c​o​m​m​e​n​t​s
+		 */
+		view_restricted_comments: string
+		/**
+		 * A​d​d​ ​m​e​m​b​e​r​s
+		 */
+		add_members: string
+		/**
+		 * R​e​m​o​v​e​ ​m​e​m​b​e​r​s
+		 */
+		remove_members: string
+		/**
+		 * M​a​n​a​g​e​ ​p​e​r​m​i​s​s​i​o​n​s
+		 */
+		manage_permissions: string
+		/**
+		 * U​p​l​o​a​d​ ​d​o​c​u​m​e​n​t​s
+		 */
+		upload_documents: string
+		/**
+		 * V​i​e​w​ ​r​e​s​t​r​i​c​t​e​d​ ​d​o​c​u​m​e​n​t​s
+		 */
+		view_restricted_documents: string
+		/**
+		 * D​e​l​e​t​e​ ​d​o​c​u​m​e​n​t​s
+		 */
+		delete_documents: string
+		/**
+		 * R​e​m​o​v​e​ ​r​e​a​c​t​i​o​n​s
+		 */
+		remove_reactions: string
+		/**
+		 * A​d​d​ ​r​e​a​c​t​i​o​n​s
+		 */
+		add_reactions: string
+		/**
+		 * M​a​n​a​g​e​ ​s​h​a​r​e​ ​l​i​n​k​s
+		 */
+		manage_share_links: string
+	}
 }
 
 export type TranslationFunctions = {
@@ -137,6 +241,110 @@ export type TranslationFunctions = {
 	 * Email verified successfully! Your account is now activated.
 	 */
 	emailVerified: () => LocalizedString
+	/**
+	 * My Groups
+	 */
+	myGroups: () => LocalizedString
+	/**
+	 * Owner
+	 */
+	groupOwnerLabel: () => LocalizedString
+	/**
+	 * Documents
+	 */
+	groupDocuments: () => LocalizedString
+	/**
+	 * Members
+	 */
+	groupMembers: () => LocalizedString
+	/**
+	 * Settings
+	 */
+	groupSettings: () => LocalizedString
+	permissionGroups: {
+		/**
+		 * Administration
+		 */
+		administration: () => LocalizedString
+		/**
+		 * Comments
+		 */
+		comments: () => LocalizedString
+		/**
+		 * Documents
+		 */
+		documents: () => LocalizedString
+		/**
+		 * Members
+		 */
+		members: () => LocalizedString
+		/**
+		 * Reactions
+		 */
+		reactions: () => LocalizedString
+		/**
+		 * Share Links
+		 */
+		shareLinks: () => LocalizedString
+	}
+	permissions: {
+		/**
+		 * Full administrative access
+		 */
+		administrator: () => LocalizedString
+		/**
+		 * Add comments
+		 */
+		add_comments: () => LocalizedString
+		/**
+		 * Remove comments
+		 */
+		remove_comments: () => LocalizedString
+		/**
+		 * View public comments
+		 */
+		view_public_comments: () => LocalizedString
+		/**
+		 * View restricted comments
+		 */
+		view_restricted_comments: () => LocalizedString
+		/**
+		 * Add members
+		 */
+		add_members: () => LocalizedString
+		/**
+		 * Remove members
+		 */
+		remove_members: () => LocalizedString
+		/**
+		 * Manage permissions
+		 */
+		manage_permissions: () => LocalizedString
+		/**
+		 * Upload documents
+		 */
+		upload_documents: () => LocalizedString
+		/**
+		 * View restricted documents
+		 */
+		view_restricted_documents: () => LocalizedString
+		/**
+		 * Delete documents
+		 */
+		delete_documents: () => LocalizedString
+		/**
+		 * Remove reactions
+		 */
+		remove_reactions: () => LocalizedString
+		/**
+		 * Add reactions
+		 */
+		add_reactions: () => LocalizedString
+		/**
+		 * Manage share links
+		 */
+		manage_share_links: () => LocalizedString
+	}
 }
 
 export type Formatters = {}

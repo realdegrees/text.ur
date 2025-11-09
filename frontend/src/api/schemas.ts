@@ -17,7 +17,7 @@ export const commentSchema = z.object({
     updated_at: z.string().optional(),
     id: z.number().optional(),
     visibility: visibilitySchema,
-    document_id: z.number(),
+    document_id: z.string(),
     user_id: z.number(),
     parent_id: z.number().optional().nullable(),
     content: z.string().optional().nullable(),
@@ -26,7 +26,7 @@ export const commentSchema = z.object({
 
 export const commentCreateSchema = z.object({
     visibility: visibilitySchema,
-    document_id: z.number(),
+    document_id: z.string(),
     parent_id: z.number().optional().nullable(),
     content: z.string().optional().nullable(),
     annotation: z.record(z.string(), z.unknown()).optional().nullable()
@@ -60,36 +60,36 @@ export const commentUpdateSchema = z.object({
 export const documentSchema = z.object({
     created_at: z.string().optional(),
     updated_at: z.string().optional(),
-    id: z.number().optional(),
+    id: z.string().optional(),
     s3_key: z.string(),
     size_bytes: z.number().optional(),
     visibility: visibility1Schema.optional(),
     view_mode: viewModeSchema.optional(),
     secret: z.string().optional(),
-    group_id: z.number()
+    group_id: z.string()
 });
 
 export const documentCreateSchema = z.object({
     visibility: visibilitySchema,
-    group_id: z.number()
+    group_id: z.string()
 });
 
 export const documentFilterSchema = z.object({
     size_bytes: z.number(),
-    group_id: z.number()
+    group_id: z.string()
 });
 
 export const documentReadSchema = z.object({
     created_at: z.string().optional(),
     updated_at: z.string().optional(),
-    id: z.number(),
+    id: z.string(),
     s3_key: z.string(),
-    group_id: z.number(),
+    group_id: z.string(),
     visibility: visibilitySchema
 });
 
 export const documentTransferSchema = z.object({
-    group_id: z.number()
+    group_id: z.string()
 });
 
 export const globalJwtPayloadSchema = z.object({
@@ -103,7 +103,7 @@ export const globalJwtPayloadSchema = z.object({
 export const groupSchema = z.object({
     created_at: z.string().optional(),
     updated_at: z.string().optional(),
-    id: z.number().optional(),
+    id: z.string().optional(),
     name: z.string(),
     secret: z.string().optional(),
     default_permissions: z.array(permissionSchema).optional()
@@ -116,7 +116,8 @@ export const groupCreateSchema = z.object({
 
 export const groupFilterSchema = z.object({
     name: z.string(),
-    member_count: z.number()
+    member_count: z.number(),
+    accepted: z.boolean()
 });
 
 export const groupMembershipFilterSchema = z.object({
@@ -128,13 +129,13 @@ export const groupMembershipReadSchema = z.object({
     user: userReadSchema,
     is_owner: z.boolean(),
     accepted: z.boolean(),
-    group_id: z.number()
+    group_id: z.string()
 });
 
 export const groupReadSchema = z.object({
     created_at: z.string().optional(),
     updated_at: z.string().optional(),
-    id: z.number(),
+    id: z.string(),
     name: z.string(),
     member_count: z.number(),
     owner: userReadSchema.nullable()
@@ -149,7 +150,7 @@ export const membershipSchema = z.object({
     created_at: z.string().optional(),
     updated_at: z.string().optional(),
     user_id: z.number(),
-    group_id: z.number(),
+    group_id: z.string(),
     permissions: z.array(permissionSchema).optional(),
     is_owner: z.boolean().optional(),
     accepted: z.boolean().optional()
@@ -176,7 +177,9 @@ export const shareLinkReadSchema = z.object({
     permissions: z.array(permissionSchema),
     expires_at: z.string().optional().nullable(),
     label: z.string().optional().nullable(),
-    token: z.string()
+    token: z.string(),
+    author: userReadSchema,
+    group_id: z.string()
 });
 
 export const shareLinkUpdateSchema = z.object({
