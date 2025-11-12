@@ -1,11 +1,12 @@
 <script lang="ts">
-	import type { Permission } from '$api/types';
+	import type { GroupCreate, GroupRead, Permission } from '$api/types';
 	import { permissionSchema } from '$api/schemas';
 	import { goto } from '$app/navigation';
 	import LL from '$i18n/i18n-svelte';
 	import AddIcon from '~icons/material-symbols/add-circle-outline';
 	import GroupIcon from '~icons/material-symbols/group-outline';
 	import Loading from '~icons/svg-spinners/90-ring-with-bg';
+	import { api } from '$api/client';
 
 	let groupName: string = $state('');
 	let selectedPermissions: Permission[] = $state([]);
@@ -82,7 +83,7 @@
 		isLoading = true;
 
 		try {
-			const response = await fetch('/groups/create', {
+			const group = await api.fetch<GroupRead>('/groups', {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json'
@@ -90,21 +91,11 @@
 				body: JSON.stringify({
 					name: groupName.trim(),
 					default_permissions: selectedPermissions
-				})
+				} satisfies GroupCreate)
 			});
 
-			if (!response.ok) {
-				const error = await response.json().catch(() => ({ detail: 'Failed to create group' }));
-				throw new Error(error.detail || 'Failed to create group');
-			}
-
-			const data = await response.json();
 			successMessage = 'Group created successfully!';
-
-			// Redirect to the new group page after a short delay
-			setTimeout(() => {
-				goto(`/dashboard/groups/${data.id}`);
-			}, 1000);
+			goto(`/dashboard/groups/${group.id}`);
 		} catch (err) {
 			errorMessage = err instanceof Error ? err.message : 'An error occurred';
 		} finally {

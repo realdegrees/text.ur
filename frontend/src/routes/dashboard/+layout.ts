@@ -1,3 +1,4 @@
+import { api } from '$api/client';
 import type { Paginated } from '$api/pagination';
 import type { Filter, GroupRead } from '$api/types';
 import { filterToSearchParams } from '$lib/util/filters';
@@ -13,19 +14,11 @@ export const load: LayoutLoad = async ({ fetch, parent, params, url }) => {
 		)
 	});
 
-	const groupsResponse = await fetch('/groups?' + searchParams);
-	const group_data: Paginated<GroupRead> = groupsResponse.ok ? await groupsResponse.json() : [];
+	const group_data = await api.fetch<Paginated<GroupRead>>('/groups?' + searchParams, { fetch });
 	let selectedGroup: GroupRead | undefined = group_data.data.find((g) => g.id === params.groupid);
 
-	if (!selectedGroup) {
-		const groupResponse = await fetch(`/groups/${params.groupid}`);
-		if (!groupResponse.ok) {
-			return {
-				...(await parent()),
-				groups: group_data
-			};
-		}
-		selectedGroup = await groupResponse.json();
+	if (!selectedGroup && params.groupid) {
+		selectedGroup = await api.fetch(`/groups/${params.groupid}`, { fetch });
 	}
 
 	return {

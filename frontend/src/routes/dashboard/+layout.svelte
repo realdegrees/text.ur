@@ -1,13 +1,14 @@
 <script lang="ts">
-	import type { GroupRead } from '$api/types';
+	import type { Filter, GroupRead } from '$api/types';
 	import { goto } from '$app/navigation';
 	import LL from '$i18n/i18n-svelte';
 	import InfiniteScrollList from '$lib/components/infiniteScrollList.svelte';
 	import ChevronDown from '~icons/material-symbols/keyboard-arrow-down';
 	import AddIcon from '~icons/material-symbols/add-circle-outline';
+	import { api } from '$api/client.js';
+	import { filterToSearchParams } from '$lib/util/filters.js';
 
 	let { data, children } = $props();
-	console.log(data);
 </script>
 
 <div class="flex w-full grow">
@@ -27,9 +28,20 @@
 		<hr class="border-text/50" />
 		<InfiniteScrollList
 			data={data.groups}
-			url="/groups"
+			loadMore={(offset, limit) => {
+				const searchParams = filterToSearchParams({
+					field: 'accepted',
+					operator: '==',
+					value: 'true'
+				} satisfies Filter);
+				searchParams.append('offset', offset.toString());
+				searchParams.append('limit', limit.toString());
+
+				console.log('a');
+
+				return api.fetch(`/groups?${searchParams}`);
+			}}
 			step={2}
-			filters={[{ field: 'accepted', operator: '==', value: 'true' }]}
 			onSelect={(group) => {
 				goto(`/dashboard/groups/${group.id}`);
 			}}

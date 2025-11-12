@@ -6,6 +6,7 @@
 	import AcceptedIcon from '~icons/material-symbols/check-circle-outline';
 	import { permissionSchema } from '$api/schemas';
 	import LL from '$i18n/i18n-svelte.js';
+	import { api } from '$api/client.js';
 
 	let { data } = $props();
 	let memberships = $derived(data.memberships);
@@ -53,7 +54,8 @@
 			}
 		]}
 		data={memberships}
-		url={`/groups/${group.id}/memberships`}
+		loadMore={(offset, limit) =>
+			api.fetch(`/groups/${group?.id}/memberships?offset=${offset}&limit=${limit}`)}
 		step={20}
 		selectable={true}
 		onSelectionChange={handleSelectionChange}
@@ -62,7 +64,7 @@
 </div>
 
 {#snippet usernameSnippet(membership: GroupMembershipRead)}
-	<div class="text-text flex flex-row items-center">
+	<div class="flex flex-row items-center text-text">
 		<p class="font-medium">{membership.user.username || 'Unknown User'}</p>
 		{#if membership.user.first_name || membership.user.last_name}
 			<p class="ml-1 text-text/70">
@@ -75,7 +77,7 @@
 
 {#snippet badgeSnippet(membership: GroupMembershipRead)}
 	<span
-		class="flex flex-row rounded-full px-2 py-1 text-xs font-semibold uppercase w-fit"
+		class="flex w-fit flex-row rounded-full px-2 py-1 text-xs font-semibold uppercase"
 		class:bg-blue-100={membership.is_owner}
 		class:text-blue-800={membership.is_owner}
 		class:bg-green-100={membership.accepted}

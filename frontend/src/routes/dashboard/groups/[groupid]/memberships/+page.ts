@@ -1,10 +1,12 @@
+import { api } from '$api/client';
+import type { Paginated } from '$api/pagination';
+import type { GroupMembershipRead } from '$api/types';
 import type { PageLoad } from './$types';
-import { error } from '@sveltejs/kit';
 
-export const load: PageLoad = async ({ params, fetch, url }) => {
-	const membersRes = await fetch(`/groups/${params.groupid}/memberships?${url.searchParams}`);
-	if (!membersRes.ok) throw error(membersRes.status, 'Failed to load memberships');
-	const memberships = await membersRes.json();
-
+export const load: PageLoad = async ({ fetch, params, url }) => {
+	const memberships = await api.fetch<Paginated<GroupMembershipRead>>(
+		`/groups/${params.groupid}/memberships?${url.searchParams}`,
+		{ fetch }
+	);
 	return { memberships };
 };

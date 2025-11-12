@@ -1,6 +1,5 @@
 <script lang="ts" generics="Item extends Record<string, any>">
 	import type { Paginated } from '$api/pagination';
-	import type { Filter } from '$api/types';
 	import type { Snippet } from 'svelte';
 	import ChevronDown from '~icons/material-symbols/keyboard-arrow-down';
 	import { infiniteScroll } from '$lib/util/infiniteScroll.svelte';
@@ -14,30 +13,26 @@
 	let {
 		data: initialData,
 		columns,
-		url,
+		loadMore,
 		step = 20,
-		filters = [],
 		autoLoad = true,
 		selectable = false,
 		onSelectionChange,
 		headerBgClass = '',
-		rowBgClass = '',
-		rowHoverClass = ''
+		rowBgClass = ''
 	}: {
 		columns: ColumnConfig<Item>[];
 		data: Paginated<Item>;
-		url: string;
+		loadMore: (offset: number, limit: number) => Promise<Paginated<Item>>;
 		step?: number;
-		filters?: Filter[];
 		autoLoad?: boolean;
 		selectable?: boolean;
 		onSelectionChange?: (selectedItems: Item[]) => void;
 		headerBgClass?: string;
 		rowBgClass?: string;
-		rowHoverClass?: string;
 	} = $props();
 
-	const scroll = infiniteScroll(initialData, url, step, filters, autoLoad);
+	const scroll = infiniteScroll(initialData, loadMore, step, autoLoad);
 
 	// Convert simple string array to column configs
 	const columnConfigs = $derived.by(() => {
@@ -83,7 +78,7 @@
 	<!-- Fixed Table Header -->
 	<div class="sticky top-0 z-10 shadow-sm {headerBgClass}">
 		<div
-			class="grid items-center gap-3 border-b border-gray-300 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-gray-600"
+			class="grid items-center gap-3 border-b border-gray-300 px-4 py-2 text-xs font-semibold tracking-wide text-gray-600 uppercase"
 			style="grid-template-columns: {selectable ? '30px ' : ''}{columnConfigs
 				.map((c) => c.width)
 				.join(' ')};"
@@ -110,7 +105,9 @@
 		<div>
 			{#each scroll.items as item, index (item)}
 				<div
-					class="grid items-center gap-3 px-4 py-2 transition-colors {index % 2 === 0 ? rowBgClass : 'color-mix(rowBgClass, bg-inset)'}"
+					class="grid items-center gap-3 px-4 py-2 transition-colors {index % 2 === 0
+						? rowBgClass
+						: 'color-mix(rowBgClass, bg-inset)'}"
 					style="grid-template-columns: {selectable ? '30px ' : ''}{columnConfigs
 						.map((c) => c.width)
 						.join(' ')};"

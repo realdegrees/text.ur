@@ -1,22 +1,22 @@
 <script lang="ts">
-	import type { Snippet } from "svelte";
-	import { onMount } from "svelte";
+	import type { Snippet } from 'svelte';
+	import { onMount } from 'svelte';
 
 	interface Props {
 		speed?: number;
-		direction?: "left" | "right";
-		mode?: "infinite" | "bounce";
-		bounceDirection?: "left" | "right";
+		direction?: 'left' | 'right';
+		mode?: 'infinite' | 'bounce';
+		bounceDirection?: 'left' | 'right';
 		componentClass?: string;
 		children?: Snippet<[]>;
 	}
 
 	let {
 		speed = 50,
-		direction = "left",
-		mode = "infinite",
-		bounceDirection = "left",
-		componentClass = "",
+		direction = 'left',
+		mode = 'infinite',
+		bounceDirection = 'left',
+		componentClass = '',
 		children
 	}: Props = $props();
 
@@ -52,12 +52,12 @@
 		contentWidth = contentRef.offsetWidth;
 		containerWidth = containerRef.offsetWidth;
 
-		if (mode === "infinite" && contentWidth > 0) {
+		if (mode === 'infinite' && contentWidth > 0) {
 			copiesNeeded = Math.max(Math.ceil(containerWidth / contentWidth) + 1, 2);
 		}
 
-		if (mode === "infinite") {
-			currentPosition = direction === "left" ? 0 : -contentWidth;
+		if (mode === 'infinite') {
+			currentPosition = direction === 'left' ? 0 : -contentWidth;
 		} else {
 			currentPosition = 0;
 		}
@@ -71,7 +71,7 @@
 			const delta = timestamp - lastTimestamp;
 			lastTimestamp = timestamp;
 
-			if (mode === "infinite") {
+			if (mode === 'infinite') {
 				animateInfinite(delta);
 			} else {
 				animateBounce(delta);
@@ -86,7 +86,7 @@
 	function animateInfinite(delta: number): void {
 		const distance = (speed * delta) / 1000;
 
-		if (direction === "left") {
+		if (direction === 'left') {
 			currentPosition -= distance;
 			if (currentPosition <= -contentWidth) {
 				currentPosition += contentWidth;
@@ -103,17 +103,17 @@
 		const distance = (speed * delta) / 1000;
 		const maxOffset = Math.max(contentWidth - containerWidth, 0);
 
-		if (currentDirection === "left") {
+		if (currentDirection === 'left') {
 			currentPosition -= distance;
 			if (currentPosition <= -maxOffset) {
 				currentPosition = -maxOffset;
-				currentDirection = "right";
+				currentDirection = 'right';
 			}
 		} else {
 			currentPosition += distance;
 			if (currentPosition >= 0) {
 				currentPosition = 0;
-				currentDirection = "left";
+				currentDirection = 'left';
 			}
 		}
 	}
@@ -136,10 +136,14 @@
 
 <div bind:this={containerRef} class="relative w-fit overflow-hidden {componentClass}">
 	<div class="inline-flex whitespace-nowrap">
-		<div bind:this={contentRef} class="inline-flex" style="transform: translateX({currentPosition}px);">
+		<div
+			bind:this={contentRef}
+			class="inline-flex"
+			style="transform: translateX({currentPosition}px);"
+		>
 			{@render children?.()}
 		</div>
-		{#if mode === "infinite"}
+		{#if mode === 'infinite'}
 			{#each Array.from({ length: copiesNeeded }, (_, i) => i) as i (i)}
 				<div class="inline-flex" style="transform: translateX({currentPosition}px);">
 					{@render children?.()}

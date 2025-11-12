@@ -1,6 +1,6 @@
 import { redirect, fail, type Actions } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
-import { forwardCookies } from '$lib/server/cookies';
+import { api } from '$api/client';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	if (locals.sessionUser) {
@@ -9,7 +9,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 };
 
 export const actions: Actions = {
-	login: async ({ request, fetch, cookies }) => {
+	login: async ({ fetch, request }) => {
 		const formData = await request.formData();
 		const username = formData.get('username')?.toString();
 		const password = formData.get('password')?.toString();
@@ -22,25 +22,19 @@ export const actions: Actions = {
 		loginFormData.append('username', username);
 		loginFormData.append('password', password);
 
-		const response = await fetch('/api/login', {
+		await api.fetch('/login', {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/x-www-form-urlencoded'
 			},
-			body: loginFormData.toString()
+			body: loginFormData.toString(),
+			fetch
 		});
-
-		if (!response.ok) {
-			const error = await response.json().catch(() => ({ detail: 'Login failed' }));
-			return fail(response.status, { error: error.detail || 'Invalid credentials' });
-		}
-
-		forwardCookies(response, cookies);
 
 		throw redirect(303, '/');
 	},
 
-	register: async ({ request, fetch }) => {
+	register: async ({ fetch, request }) => {
 		const formData = await request.formData();
 		const username = formData.get('username')?.toString();
 		const email = formData.get('email')?.toString();
@@ -57,7 +51,7 @@ export const actions: Actions = {
 			return fail(400, { error: 'Passwords do not match' });
 		}
 
-		const response = await fetch('/api/register', {
+		await api.fetch('/register', {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json'
@@ -68,13 +62,9 @@ export const actions: Actions = {
 				password,
 				first_name: firstName || undefined,
 				last_name: lastName || undefined
-			})
+			}),
+			fetch
 		});
-
-		if (!response.ok) {
-			const error = await response.json().catch(() => ({ detail: 'Registration failed' }));
-			return fail(response.status, { error: error.detail || 'Registration failed' });
-		}
 
 		return {
 			success: true,

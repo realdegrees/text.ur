@@ -1,6 +1,5 @@
 <script lang="ts" generics="Item extends Record<string, any>">
 	import type { Paginated } from '$api/pagination';
-	import type { Filter } from '$api/types';
 	import type { Snippet } from 'svelte';
 	import ChevronDown from '~icons/material-symbols/keyboard-arrow-down';
 	import { infiniteScroll } from '$lib/util/infiniteScroll.svelte';
@@ -8,22 +7,20 @@
 	let {
 		itemSnippet,
 		data: initialData,
-		url,
+		loadMore,
 		step = 20,
-		filters = [],
 		autoLoad = true,
 		onSelect
 	}: {
 		itemSnippet: Snippet<[Item]>;
 		data: Paginated<Item>;
-		url: string;
+		loadMore: (offset: number, limit: number) => Promise<Paginated<Item>>;
 		step?: number;
-		filters?: Filter[];
 		autoLoad?: boolean;
 		onSelect?: (item: Item) => void;
 	} = $props();
 
-	const scroll = infiniteScroll(initialData, url, step, filters, autoLoad);
+	const scroll = infiniteScroll(initialData, loadMore, step, autoLoad);
 </script>
 
 <!-- Scrollable Container -->

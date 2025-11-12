@@ -1,13 +1,10 @@
 import type { Paginated } from '$api/pagination';
-import type { Filter } from '$api/types';
-import { filterToSearchParams } from '$lib/util/filters';
 import { onMount } from 'svelte';
 
 export function infiniteScroll<T>(
 	initialData: Paginated<T>,
-	url: string,
+	loadMore: (offset: number, limit: number) => Promise<Paginated<T>>,
 	step: number,
-	filters: Filter[],
 	autoLoad: boolean
 ) {
 	let data = $state(initialData);
@@ -17,13 +14,6 @@ export function infiniteScroll<T>(
 
 	const items = $derived(data.data);
 	const hasMore = $derived(data.data.length < data.total);
-	const previousFilters = $state<Filter[]>(filters);
-
-	$effect.pre(() => {
-		if (JSON.stringify(previousFilters) !== JSON.stringify(filters)) {
-			handleLoadMore(true);
-		}
-	});
 
 	async function handleLoadMore(reset = false) {
 		if (loadingMore || (!reset && !hasMore)) return;
@@ -39,11 +29,10 @@ export function infiniteScroll<T>(
 			};
 		}
 		try {
-			const searchParams = filterToSearchParams(...filters);
-			searchParams.append('offset', String(Math.min(data.offset + data.limit, data.total)));
-			searchParams.append('limit', String(Math.min(step, data.total - data.offset)));
-			const res = await fetch(`${url}?${searchParams}`);
-			const block = (await res.json()) as Paginated<T>;
+			const block = await loadMore(
+				data.offset + data.limit,
+				Math.min(step, data.total - data.offset)
+			);
 			data = {
 				data: [...data.data, ...block.data],
 				limit: block.limit,
