@@ -104,6 +104,7 @@ async def verify(token: str, db: Database) -> RedirectResponse:
         httponly=True,
         secure=cfg.COOKIE_SECURE,
         samesite=cfg.COOKIE_SAMESITE,
+        max_age=cfg.JWT_ACCESS_EXPIRATION_MINUTES * 60
     )
     redirect_response.set_cookie(
         key="refresh_token",
@@ -111,6 +112,7 @@ async def verify(token: str, db: Database) -> RedirectResponse:
         httponly=True,
         secure=cfg.COOKIE_SECURE,
         samesite=cfg.COOKIE_SAMESITE,
+        max_age=cfg.JWT_REFRESH_EXPIRATION_DAYS * 24 * 60 * 60
     )
 
     return redirect_response
