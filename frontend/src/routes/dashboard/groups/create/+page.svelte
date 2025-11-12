@@ -95,6 +95,7 @@
 			});
 
 			successMessage = 'Group created successfully!';
+
 			goto(`/dashboard/groups/${group.id}`);
 		} catch (err) {
 			errorMessage = err instanceof Error ? err.message : 'An error occurred';

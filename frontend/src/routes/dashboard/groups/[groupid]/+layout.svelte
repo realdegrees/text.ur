@@ -8,7 +8,7 @@
 	import type { LocalizedString } from 'typesafe-i18n';
 
 	let { data, children } = $props();
-	let group = $derived(data.selectedGroup);
+	let group = $derived(data.group);
 
 	type MenuItem = {
 		path: string;

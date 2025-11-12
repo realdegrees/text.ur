@@ -1,31 +1,24 @@
 import { api } from '$api/client';
 import type { Paginated } from '$api/pagination';
-import type { DocumentRead, Filter, GroupRead } from '$api/types';
-import { filterToSearchParams } from '$lib/util/filters';
+import type { DocumentRead, GroupRead } from '$api/types';
 import type { LayoutLoad } from './$types';
 
-export const load: LayoutLoad = async ({ fetch, params, parent, url }) => {
+export const load: LayoutLoad = async ({ fetch, params, parent }) => {
 	const data = await parent();
-
-	// If not selectedGroup is not provided by parent, fetch it directly from the API
-	if (!data.selectedGroup) {
-		const group = await api.fetch<GroupRead>(`/groups/${params.groupid}`, { fetch });
-		data.selectedGroup = group;
-	}
-
-	const searchParams = new URLSearchParams({
-		...Object.fromEntries(url.searchParams),
-		...filterToSearchParams({
-			field: 'group_id',
-			operator: '==',
-			value: params.groupid
-		} satisfies Filter)
-	});
+	const group =
+		data.groups.data.find((g) => g.id === params.groupid) ??
+		(await api.fetch<GroupRead>(`/groups/${params.groupid}`, { fetch }));
 
 	// Fetch documents for this group
-	const documents = await api.fetch<Paginated<DocumentRead>>(
-		`/documents?` + searchParams.toString(),
-		{ fetch }
-	);
-	return { documents, ...data };
+	const documents = await api.fetch<Paginated<DocumentRead>>(`/documents`, {
+		fetch,
+		filters: [
+			{
+				field: 'group_id',
+				operator: '==',
+				value: params.groupid
+			}
+		]
+	});
+	return { documents, group, ...data };
 };

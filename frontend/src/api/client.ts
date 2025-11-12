@@ -2,6 +2,8 @@ import { jwtDecode } from 'jwt-decode';
 import { browser } from '$app/environment';
 import { error } from '@sveltejs/kit';
 import { env } from '$env/dynamic/public';
+import type { Filter, Sort } from './types';
+import { filterToSearchParam, sortToSearchParam } from '$lib/util/query';
 
 
 /**
@@ -125,6 +127,8 @@ class ApiClient {
 		input: string | URL | Request,
 		init?: RequestInit & {
 			fetch?: typeof fetch;
+			filters?: (Filter | undefined)[];
+			sort?: Sort[];
 		}
 	): Promise<T> {
 		if (!browser && !init?.fetch) {
@@ -133,7 +137,7 @@ class ApiClient {
 			);
 		}
 		
-		const { fetch: fetchFnOverride, ...cleanedInit } = init || {};
+		const { fetch: fetchFnOverride, filters, sort, ...cleanedInit } = init || {};
 
 		const actualFetch = fetchFnOverride ?? fetch!;
 
@@ -143,6 +147,29 @@ class ApiClient {
 			url = this.resolveUrl(input.url);			
 		} else {
 			url = this.resolveUrl(input);			
+		}
+
+		// Append filters and sort parameters to the URL
+		if ((filters && filters.length > 0) || (sort && sort.length > 0)) {
+			const urlObj = new URL(url);
+			
+			if (filters && filters.length > 0) {
+				filters.forEach((filter) => {
+					if (filter) {
+						const { key, value } = filterToSearchParam(filter);
+						urlObj.searchParams.append(key, value);
+					}
+				});
+			}
+			
+			if (sort && sort.length > 0) {
+				sort.forEach((sortItem) => {
+					const { key, value } = sortToSearchParam(sortItem);
+					urlObj.searchParams.append(key, value);
+				});
+			}
+			
+			url = urlObj.toString();
 		}
 
 		if (browser) {

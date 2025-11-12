@@ -24,19 +24,16 @@
 </script>
 
 <!-- Scrollable Container -->
-<div class="h-full custom-scrollbar flex-1 overflow-y-auto">
+<div bind:this={scroll.scrollContainer.node} class="h-full custom-scrollbar flex-1 overflow-y-auto">
 	<ul class="w-full">
 		{#each scroll.items as item (item)}
 			<li class="mr-1">
 				{#if onSelect}
-					<button
-						class="block w-full cursor-pointer rounded-sm hover:bg-primary"
-						onclick={() => onSelect(item)}
-					>
+					<button class="block w-full cursor-pointer rounded-sm" onclick={() => onSelect(item)}>
 						{@render itemSnippet(item as Item)}
 					</button>
 				{:else}
-					<div class="block w-full rounded-sm hover:bg-primary">
+					<div class="block w-full rounded-sm">
 						{@render itemSnippet(item as Item)}
 					</div>
 				{/if}

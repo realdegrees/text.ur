@@ -238,6 +238,10 @@ export interface ShareLinkUpdate {
   label?: string | null;
   rotate_token?: boolean | null;
 }
+export interface Sort {
+  field: string;
+  direction: "asc" | "desc";
+}
 /**
  * A token object that contains the access and refresh tokens.
  */

@@ -2,15 +2,9 @@
 	import SaveIcon from '~icons/material-symbols/save-outline';
 
 	let { data } = $props();
-	let group = $derived(data.selectedGroup);
+	let group = $derived(data.group);
 
 	let groupName: string = $state('');
-
-	$effect(() => {
-		if (group) {
-			groupName = group.name;
-		}
-	});
 
 	async function handleSave(): Promise<void> {
 		console.log('Saving settings:', { groupName });
@@ -26,7 +20,7 @@
 			<input
 				id="groupName"
 				type="text"
-				bind:value={groupName}
+				bind:value={group.name}
 				class="rounded-md border border-text/20 bg-text/5 px-4 py-2 transition-colors focus:border-text/50 focus:outline-none"
 			/>
 		</div>

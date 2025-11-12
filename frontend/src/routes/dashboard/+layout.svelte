@@ -1,12 +1,12 @@
 <script lang="ts">
-	import type { Filter, GroupRead } from '$api/types';
+	import type { GroupRead } from '$api/types';
 	import { goto } from '$app/navigation';
 	import LL from '$i18n/i18n-svelte';
 	import InfiniteScrollList from '$lib/components/infiniteScrollList.svelte';
 	import ChevronDown from '~icons/material-symbols/keyboard-arrow-down';
 	import AddIcon from '~icons/material-symbols/add-circle-outline';
 	import { api } from '$api/client.js';
-	import { filterToSearchParams } from '$lib/util/filters.js';
+	import { page } from '$app/state';
 
 	let { data, children } = $props();
 </script>
@@ -29,17 +29,22 @@
 		<InfiniteScrollList
 			data={data.groups}
 			loadMore={(offset, limit) => {
-				const searchParams = filterToSearchParams({
-					field: 'accepted',
-					operator: '==',
-					value: 'true'
-				} satisfies Filter);
-				searchParams.append('offset', offset.toString());
-				searchParams.append('limit', limit.toString());
-
-				console.log('a');
-
-				return api.fetch(`/groups?${searchParams}`);
+				return api.fetch(`/groups?offset=${offset}&limit=${limit}`, {
+					filters: [
+						{
+							field: 'accepted',
+							operator: '==',
+							value: 'true'
+						},
+						page.params.groupid
+							? {
+									field: 'id',
+									operator: '!=',
+									value: page.params.groupid
+								}
+							: undefined
+					]
+				});
 			}}
 			step={2}
 			onSelect={(group) => {
@@ -48,15 +53,13 @@
 		>
 			{#snippet itemSnippet(group: GroupRead)}
 				<div
-					class="flex w-full flex-row items-center justify-start rounded p-2 shadow-black transition-shadow hover:shadow-inner-sym-[5px]"
+					class:bg-primary={group.id === page.params.groupid}
+					class=" group flex w-full flex-row items-center justify-start rounded p-2 shadow-black transition-shadow"
 				>
-					<div
-						class:bg-primary={group.id === data.selectedGroup?.id}
-						class="mr-4 h-full rounded-sm"
-					>
+					<div class="mr-4 h-full rounded-sm group-hover:bg-primary">
 						<ChevronDown class="h-6 w-6 -rotate-90" />
 					</div>
-					<div class="flex w-full flex-col gap-1">
+					<div class="flex w-full flex-col gap-1 hover:shadow-inner-sym-[5px]">
 						<h3 class=" text-left font-semibold">{group.name}</h3>
 						<div class="flex flex-row gap-4 text-sm">
 							<span>{$LL.group.memberships.owner()}: {group.owner?.username}</span>

@@ -189,6 +189,11 @@ export const shareLinkUpdateSchema = z.object({
     rotate_token: z.boolean().optional().nullable()
 });
 
+export const sortSchema = z.object({
+    field: z.string(),
+    direction: z.union([z.literal("asc"), z.literal("desc")])
+});
+
 export const tokenSchema = z.object({
     access_token: z.string(),
     refresh_token: z.string().optional().nullable(),

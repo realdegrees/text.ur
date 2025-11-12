@@ -7,10 +7,11 @@
 	import { permissionSchema } from '$api/schemas';
 	import LL from '$i18n/i18n-svelte.js';
 	import { api } from '$api/client.js';
+	import type { Paginated } from '$api/pagination.js';
 
 	let { data } = $props();
 	let memberships = $derived(data.memberships);
-	let group = $derived(data.selectedGroup!);
+	let group = $derived(data.group);
 
 	let selected = $state<GroupMembershipRead[]>([]);
 
@@ -55,7 +56,12 @@
 		]}
 		data={memberships}
 		loadMore={(offset, limit) =>
-			api.fetch(`/groups/${group?.id}/memberships?offset=${offset}&limit=${limit}`)}
+			api.fetch<Paginated<GroupMembershipRead>>(
+				`/groups/${group?.id}/memberships?offset=${offset}&limit=${limit}`,
+				{
+					sort: [{ field: 'accepted', direction: 'asc' }]
+				}
+			)}
 		step={20}
 		selectable={true}
 		onSelectionChange={handleSelectionChange}

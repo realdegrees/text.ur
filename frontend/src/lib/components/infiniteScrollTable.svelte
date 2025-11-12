@@ -101,7 +101,7 @@
 	</div>
 
 	<!-- Scrollable Table Body -->
-	<div class="custom-scrollbar flex-1 overflow-y-auto">
+	<div bind:this={scroll.scrollContainer.node} class="custom-scrollbar flex-1 overflow-y-auto">
 		<div>
 			{#each scroll.items as item, index (item)}
 				<div

@@ -10,6 +10,7 @@ export function infiniteScroll<T>(
 	let data = $state(initialData);
 	let loadingMore = $state(false);
 	let sentinel = $state<HTMLDivElement>();
+	let scrollContainer = $state<HTMLElement>();
 	let observer: IntersectionObserver | null = null;
 
 	const items = $derived(data.data);
@@ -53,7 +54,7 @@ export function infiniteScroll<T>(
 					if (e.isIntersecting) handleLoadMore();
 				}
 			},
-			{ root: null, rootMargin: '200px', threshold: 0.1 }
+			{ root: scrollContainer || null, rootMargin: '0px 0px 100px 0px', threshold: 0.1 }
 		);
 		if (sentinel) observer.observe(sentinel);
 	}
@@ -89,6 +90,15 @@ export function infiniteScroll<T>(
 			},
 			set node(value: HTMLDivElement | undefined) {
 				sentinel = value;
+				createObserver();
+			}
+		},
+		scrollContainer: {
+			get node() {
+				return scrollContainer;
+			},
+			set node(value: HTMLElement | undefined) {
+				scrollContainer = value;
 				createObserver();
 			}
 		}
