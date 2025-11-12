@@ -1,11 +1,12 @@
 <script lang="ts">
-	import { page } from '$app/stores';
 	import type { Component } from 'svelte';
 	import LL from '$i18n/i18n-svelte';
 	import SettingsIcon from '~icons/material-symbols/settings-outline';
 	import PeopleIcon from '~icons/material-symbols/group-outline';
 	import DocumentIcon from '~icons/material-symbols/description-outline';
 	import type { LocalizedString } from 'typesafe-i18n';
+	import { fly } from 'svelte/transition';
+	import { page } from '$app/state';
 
 	let { data, children } = $props();
 	let group = $derived(data.group);
@@ -23,7 +24,7 @@
 	];
 
 	function isActive(itemPath: string): boolean {
-		const currentPath = $page.url.pathname;
+		const currentPath = page.url.pathname;
 		const basePath = `/dashboard/groups/${group?.id}`;
 
 		if (itemPath === '') {
@@ -33,7 +34,7 @@
 	}
 
 	const currentPageTitle = $derived.by(() => {
-		const currentPath = $page.url.pathname;
+		const currentPath = page.url.pathname;
 		const basePath = `/dashboard/groups/${group?.id}`;
 
 		const activeItem = menuItems.find((item) => {
@@ -47,7 +48,8 @@
 	});
 </script>
 
-<div class="flex h-full w-full flex-col gap-4">
+{#key page.params.groupid}
+<div class="flex h-full w-full flex-col gap-4"  in:fly={{ y: -60, duration: 150, delay: 200 }} out:fly={{ y: -60, duration: 200 }}>
 	<!-- Header Section -->
 	<div class="flex flex-col gap-3">
 		<div class="flex flex-row items-center gap-3">
@@ -81,3 +83,4 @@
 		{@render children?.()}
 	</div>
 </div>
+{/key}
