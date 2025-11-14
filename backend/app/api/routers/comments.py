@@ -11,6 +11,7 @@ from models.pagination import Paginated
 from models.tables import Comment, User
 from util.api_router import APIRouter
 from util.queries import Guard
+from util.response import ExcludableFieldsJSONResponse
 
 # ======= Comment Router ==============
 
@@ -22,7 +23,7 @@ router = APIRouter(
 # ======= Comment Endpoints ==============
 
 
-@router.get("/", response_model=Paginated[CommentRead])
+@router.get("/", response_model=Paginated[CommentRead], response_class=ExcludableFieldsJSONResponse)
 async def list_comments(
     _: BasicAuthentication,
     comments: Paginated[Comment] = PaginatedResource(

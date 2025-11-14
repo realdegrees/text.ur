@@ -14,13 +14,14 @@ from models.sharelink import ShareLinkCreate, ShareLinkRead, ShareLinkUpdate
 from models.tables import Group, ShareLink, User
 from util.api_router import APIRouter
 from util.queries import Guard
+from util.response import ExcludableFieldsJSONResponse
 
 router = APIRouter(
     prefix="/sharelinks",
     tags=["Share Links"],
 )
 
-@router.get("/", response_model=Paginated[ShareLinkRead])
+@router.get("/", response_model=Paginated[ShareLinkRead], response_class=ExcludableFieldsJSONResponse)
 async def list_share_links(
     _: BasicAuthentication,
     share_links: Paginated[ShareLink] = PaginatedResource(

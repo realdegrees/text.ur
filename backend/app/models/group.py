@@ -40,17 +40,9 @@ class MembershipPermissionUpdate(SQLModel):
 
 # =========================
 
-class GroupMembershipRead(SQLModel):
+class MembershipRead(SQLModel):
     permissions: list[Permission]
     user: "UserRead"
-    is_owner: bool
-    accepted: bool
-    group_id: str
-
-class UserMembershipRead(SQLModel):
-    permissions: list[Permission]
     group: GroupRead
     is_owner: bool
     accepted: bool
-    user_id: int
-

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import InfiniteTable from '$lib/components/infiniteScrollTable.svelte';
-	import type { GroupMembershipRead, Permission } from '$api/types';
+	import type { MembershipRead, Permission } from '$api/types';
 	import OwnerIcon from '~icons/material-symbols/admin-panel-settings-outline';
 	import PendingIcon from '~icons/material-symbols/pending-outline';
 	import AcceptedIcon from '~icons/material-symbols/check-circle-outline';
@@ -13,10 +13,10 @@
 	let memberships = $derived(data.memberships);
 	let group = $derived(data.group);
 
-	let selected = $state<GroupMembershipRead[]>([]);
+	let selected = $state<MembershipRead[]>([]);
 
 	// Handle selection changes
-	function handleSelectionChange(memberships: GroupMembershipRead[]) {
+	function handleSelectionChange(memberships: MembershipRead[]) {
 		selected = memberships;
 		console.log('Selected memberships:', memberships.length);
 	}
@@ -56,12 +56,16 @@
 		]}
 		data={memberships}
 		loadMore={(offset, limit) =>
-			api.fetch<Paginated<GroupMembershipRead>>(
-				`/groups/${group?.id}/memberships?offset=${offset}&limit=${limit}`,
-				{
-					sort: [{ field: 'accepted', direction: 'asc' }]
-				}
-			)}
+			api.fetch<Paginated<MembershipRead>>(`/memberships?offset=${offset}&limit=${limit}`, {
+				sort: [{ field: 'accepted', direction: 'asc' }],
+				filters: [
+					{
+						field: 'group_id',
+						operator: '==',
+						value: group?.id
+					}
+				]
+			})}
 		step={20}
 		selectable={true}
 		onSelectionChange={handleSelectionChange}
@@ -69,7 +73,7 @@
 	/>
 </div>
 
-{#snippet usernameSnippet(membership: GroupMembershipRead)}
+{#snippet usernameSnippet(membership: MembershipRead)}
 	<div class="flex flex-row items-center text-text">
 		<p class="font-medium">{membership.user.username || 'Unknown User'}</p>
 		{#if membership.user.first_name || membership.user.last_name}
@@ -81,7 +85,7 @@
 	</div>
 {/snippet}
 
-{#snippet badgeSnippet(membership: GroupMembershipRead)}
+{#snippet badgeSnippet(membership: MembershipRead)}
 	<span
 		class="flex w-fit flex-row rounded-full px-2 py-1 text-xs font-semibold uppercase"
 		class:bg-blue-100={membership.is_owner}
@@ -104,7 +108,7 @@
 	</span>
 {/snippet}
 
-{#snippet permissionsSnippet(membership: GroupMembershipRead)}
+{#snippet permissionsSnippet(membership: MembershipRead)}
 	<div class="flex flex-wrap items-center gap-1">
 		{#each membership.permissions as perm (perm)}
 			<span

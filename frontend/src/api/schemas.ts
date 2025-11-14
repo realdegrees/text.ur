@@ -33,7 +33,9 @@ export const commentCreateSchema = z.object({
 });
 
 export const commentFilterSchema = z.object({
-    visibility: visibilitySchema
+    visibility: visibilitySchema,
+    user_id: z.number(),
+    document_id: z.string()
 });
 
 export const userReadSchema = z.object({
@@ -120,18 +122,6 @@ export const groupFilterSchema = z.object({
     accepted: z.boolean()
 });
 
-export const groupMembershipFilterSchema = z.object({
-    user_id: z.number()
-});
-
-export const groupMembershipReadSchema = z.object({
-    permissions: z.array(permissionSchema),
-    user: userReadSchema,
-    is_owner: z.boolean(),
-    accepted: z.boolean(),
-    group_id: z.string()
-});
-
 export const groupReadSchema = z.object({
     created_at: z.string().optional(),
     updated_at: z.string().optional(),
@@ -154,6 +144,20 @@ export const membershipSchema = z.object({
     permissions: z.array(permissionSchema).optional(),
     is_owner: z.boolean().optional(),
     accepted: z.boolean().optional()
+});
+
+export const membershipFilterSchema = z.object({
+    user_id: z.number(),
+    group_id: z.string(),
+    accepted: z.boolean()
+});
+
+export const membershipReadSchema = z.object({
+    permissions: z.array(permissionSchema),
+    user: userReadSchema,
+    group: groupReadSchema,
+    is_owner: z.boolean(),
+    accepted: z.boolean()
 });
 
 export const filterSchema = z.record(z.string(), z.unknown()).and(z.object({
@@ -233,14 +237,6 @@ export const userJwtPayloadSchema = z.object({
     iat: z.string().optional().nullable()
 });
 
-export const userMembershipReadSchema = z.object({
-    permissions: z.array(permissionSchema),
-    group: groupReadSchema,
-    is_owner: z.boolean(),
-    accepted: z.boolean(),
-    user_id: z.number()
-});
-
 export const userPrivateSchema = z.object({
     created_at: z.string().optional(),
     updated_at: z.string().optional(),
@@ -278,5 +274,6 @@ export const paginatedBaseSchema = z.object({
     offset: z.number(),
     limit: z.number(),
     filters: z.array(filterSchema).optional(),
-    order_by: z.array(z.string()).optional()
+    order_by: z.array(z.string()).optional(),
+    excluded_fields: z.array(z.string()).optional()
 });

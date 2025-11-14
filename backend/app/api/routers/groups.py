@@ -2,8 +2,9 @@ from api.dependencies.authentication import Authenticate, BasicAuthentication
 from api.dependencies.database import Database
 from api.dependencies.paginated.resources import PaginatedResource
 from api.dependencies.resource import Resource
-from api.routers.documents import router as DocumentRouter
-from api.routers.memberships import router as MembershipRouter
+from api.routers.memberships import (
+    groupmembership_router as GroupMembershipRouter,
+)
 from api.routers.sharelinks import router as ShareLinkRouter
 from fastapi import Body, HTTPException, Response
 from models.enums import Permission
@@ -13,12 +14,15 @@ from models.group import (
     GroupRead,
     GroupTransfer,
     GroupUpdate,
+    MembershipCreate,
+    MembershipPermissionUpdate,
 )
 from models.pagination import Paginated
 from models.tables import Group, Membership, User
 from sqlmodel import select
 from util.api_router import APIRouter
 from util.queries import Guard
+from util.response import ExcludableFieldsJSONResponse
 
 router = APIRouter(
     prefix="/groups",
@@ -27,7 +31,7 @@ router = APIRouter(
 
 # region Groups
 
-@router.get("/", response_model=Paginated[GroupRead])
+@router.get("/", response_model=Paginated[GroupRead], response_class=ExcludableFieldsJSONResponse)
 async def list_groups(
     _: BasicAuthentication,
     groups: Paginated[Group] = PaginatedResource(
@@ -153,13 +157,12 @@ async def delete_group(
     db.commit()
     return Response(status_code=204)
 
-
 # endregion
 
 tags = router.tags
 router.tags = []
-router.include_router(MembershipRouter, prefix="/{group_id}")
 router.include_router(ShareLinkRouter, prefix="/{group_id}")
+router.include_router(GroupMembershipRouter, prefix="/{group_id}/memberships")
 router.tags = tags
 
 # TODO: add sharelink management endpoints (only owner and admin can create share links, admins can not create share links with admin permissions)

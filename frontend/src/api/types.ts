@@ -67,6 +67,8 @@ export interface CommentCreate {
 }
 export interface CommentFilter {
   visibility: Visibility;
+  user_id: number;
+  document_id: string;
 }
 export interface CommentRead {
   created_at?: string;
@@ -167,16 +169,6 @@ export interface GroupFilter {
   member_count: number;
   accepted: boolean;
 }
-export interface GroupMembershipFilter {
-  user_id: number;
-}
-export interface GroupMembershipRead {
-  permissions: Permission[];
-  user: UserRead;
-  is_owner: boolean;
-  accepted: boolean;
-  group_id: string;
-}
 export interface GroupRead {
   created_at?: string;
   updated_at?: string;
@@ -201,6 +193,18 @@ export interface Membership {
   is_owner?: boolean;
   accepted?: boolean;
 }
+export interface MembershipFilter {
+  user_id: number;
+  group_id: string;
+  accepted: boolean;
+}
+export interface MembershipRead {
+  permissions: Permission[];
+  user: UserRead;
+  group: GroupRead;
+  is_owner: boolean;
+  accepted: boolean;
+}
 export interface PaginatedBase {
   data: unknown[];
   total: number;
@@ -208,6 +212,7 @@ export interface PaginatedBase {
   limit: number;
   filters?: Filter[];
   order_by?: string[];
+  excluded_fields?: string[];
 }
 export interface Filter {
   field: string;
@@ -281,13 +286,6 @@ export interface UserJWTPayload {
   sub: string;
   exp?: string | null;
   iat?: string | null;
-}
-export interface UserMembershipRead {
-  permissions: Permission[];
-  group: GroupRead;
-  is_owner: boolean;
-  accepted: boolean;
-  user_id: number;
 }
 export interface UserPrivate {
   created_at?: string;

@@ -4,15 +4,22 @@ from fastapi import Depends, Query, Request
 from models.filter import Filter, FilterableField, Operator
 
 
-def get_filters_dependency(filterable_field_data: list[FilterableField]) -> Callable[[], Depends]:
+def get_filters_dependency(filterable_field_data: list[FilterableField]) -> Callable[[], Depends]: # noqa: C901
     """Generate a FastAPI dependency to parse filters from query parameters."""
+    def format_field_description(field: FilterableField) -> str:
+        """Format a field description with exclusion indicator if applicable."""
+        base = f"❖ {field.name}"
+        if field.exclude_field:
+            base += f" 🚫 (excludes: {field.exclude_field})"
+        return base
+    
     async def filters(request: Request, _: str = Query(
             default=None,
             alias="filter",
             description=(
                 "<details><summary>Expand to view available filter fields</summary>"
                 "<pre>"
-                + "\n".join(f"❖ {field.name}" for field in filterable_field_data)
+                + "\n".join(format_field_description(field) for field in filterable_field_data)
                 + "</pre></details>"
             ))) -> list[Filter]:
         """Parse query parameters for filters."""

@@ -15,15 +15,14 @@ from models.filter import (
     CommentFilter,
     DocumentFilter,
     GroupFilter,
-    GroupMembershipFilter,
+    MembershipFilter,
     UserFilter,
 )
 from models.group import (
     GroupCreate,
-    GroupMembershipRead,
     GroupRead,
     GroupUpdate,
-    UserMembershipRead,
+    MembershipRead,
 )
 from models.pagination import PaginatedBase
 from models.reaction import ReactionCreate, ReactionRead
@@ -57,9 +56,8 @@ GroupCreate.model_rebuild()
 GroupRead.model_rebuild()
 GroupUpdate.model_rebuild()
 GroupFilter.model_rebuild()
-GroupMembershipFilter.model_rebuild()
-GroupMembershipRead.model_rebuild()
-UserMembershipRead.model_rebuild()
+MembershipFilter.model_rebuild()
+MembershipRead.model_rebuild()
 
 ShareLinkCreate.model_rebuild()
 ShareLinkRead.model_rebuild()

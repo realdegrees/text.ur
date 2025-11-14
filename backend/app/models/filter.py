@@ -63,6 +63,7 @@ class FilterableField:
     join: JoinInfo | None = None
     allow_sorting: bool = False
     requires_user: bool = False
+    exclude_field: str | None = None
 
 
 @dataclass
@@ -77,6 +78,18 @@ class FilterMeta:
     condition: ColumnElement[bool] | None = None
     allow_sorting: bool = False
     user_condition: Callable[[User | None], ColumnElement[bool]] | None = None
+    exclude: bool | str | ColumnElement | InstrumentedAttribute | None = None
+
+    @staticmethod
+    def _extract_field_name(attr: ColumnElement | InstrumentedAttribute | str) -> str:
+        """Extract field name from a ColumnElement, InstrumentedAttribute, or return string as-is."""
+        if isinstance(attr, str):
+            return attr
+        if hasattr(attr, "key"):
+            return attr.key
+        if hasattr(attr, "name"):
+            return attr.name
+        raise ValueError(f"Cannot extract field name from {type(attr)}")
 
     @staticmethod
     def from_filter(filter_model: SQLModel) -> list[FilterableField]:
@@ -147,6 +160,13 @@ class FilterMeta:
                 raise ValueError(f"Operator '{operator}' not allowed for field '{field_name}'. Allowed: {allowed_operators}")
             return self._build_clause(operator, value, filter_type, inferred_type, user)
 
+        # Resolve exclude parameter
+        exclude_field: str | None = None
+        if self.exclude is True:
+            exclude_field = field_name
+        elif self.exclude is not None and self.exclude is not False:
+            exclude_field = FilterMeta._extract_field_name(self.exclude)
+
         return FilterableField(
             name=field_name,
             field=self.field,
@@ -155,6 +175,7 @@ class FilterMeta:
             allowed_operators=allowed_operators,
             allow_sorting=self.allow_sorting,
             requires_user=self.user_condition is not None,
+            exclude_field=exclude_field,
         )
 
     def _convert_value(self, value: Any, inferred_type: type, operator: Operator) -> Any:  # noqa: ANN401
@@ -249,6 +270,7 @@ class GroupFilter(BaseFilterModel):
                 field=Membership.accepted,
                 join=JoinInfo(target=Group.memberships),
                 user_condition=lambda user: Membership.user_id == user.id if user else None,
+                exclude=True,
             ),
         }
 
@@ -266,7 +288,7 @@ class DocumentFilter(BaseFilterModel):
         """Return filter metadata for DocumentFilter fields."""
         return {
             "size_bytes": FilterMeta(field=Document.size_bytes),
-            "group_id": FilterMeta(field=Document.group_id),
+            "group_id": FilterMeta(field=Document.group_id, exclude=Document.group),
         }
 
 
@@ -275,26 +297,20 @@ class DocumentFilter(BaseFilterModel):
 # ================================================================
 
 
-class GroupMembershipFilter(BaseFilterModel):
+class MembershipFilter(BaseFilterModel):
     user_id: int = Field()
-
-    @classmethod
-    def get_filter_metadata(cls) -> dict[str, FilterMeta]:
-        """Return filter metadata for GroupMembershipFilter fields."""
-        return {
-            "user_id": FilterMeta(field=Membership.user_id),
-        }
-
-
-class UserMembershipFilter(BaseFilterModel):
     group_id: str = Field()
+    accepted: bool = Field()
 
     @classmethod
     def get_filter_metadata(cls) -> dict[str, FilterMeta]:
-        """Return filter metadata for UserMembershipFilter fields."""
+        """Return filter metadata for MembershipFilter fields."""
         return {
-            "group_id": FilterMeta(field=Membership.group_id),
+            "user_id": FilterMeta(field=Membership.user_id, exclude=Membership.user),
+            "group_id": FilterMeta(field=Membership.group_id, exclude=Membership.group),
+            "accepted": FilterMeta(field=Membership.accepted),
         }
+
 
 # ================================================================
 # ========================= COMMENT FILTER ====================
@@ -303,12 +319,16 @@ class UserMembershipFilter(BaseFilterModel):
 
 class CommentFilter(BaseFilterModel):    
     visibility: Visibility = Field()
+    user_id: int = Field()
+    document_id: str = Field()
     
     @classmethod
     def get_filter_metadata(cls) -> dict[str, FilterMeta]:
         """Return filter metadata for Comment fields."""
         return {
             "visibility": FilterMeta(field=Comment.visibility),
+            "user_id": FilterMeta(field=Comment.user_id, exclude=Comment.user),
+            "document_id": FilterMeta(field=Comment.document_id, exclude=Comment.document),
         }
 
 # ================================================================
@@ -337,6 +357,7 @@ class UserFilter(BaseFilterModel):
 class ShareLinkFilter(BaseFilterModel):
     label: str = Field()
     expires_at: datetime = Field()
+    author_id: int = Field()
 
     @classmethod
     def get_filter_metadata(cls) -> dict[str, FilterMeta]:
@@ -344,4 +365,5 @@ class ShareLinkFilter(BaseFilterModel):
         return {
             "label": FilterMeta(field=ShareLink.label),
             "expires_at": FilterMeta(field=ShareLink.expires_at),
+            "author_id": FilterMeta(field=ShareLink.author_id, exclude=ShareLink.author),
         }

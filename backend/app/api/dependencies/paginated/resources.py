@@ -28,6 +28,33 @@ Model = TypeVar("Model", bound=SQLModel)
 FilterModel = TypeVar("FilterModel", bound=SQLModel)
 
 
+def build_paginated_description(base_description: str, guards: Sequence[EndpointGuard]) -> str:
+    """Build endpoint description with guard exclusion information.
+    
+    Args:
+        base_description: The main endpoint description
+        guards: Sequence of guards to extract exclusions from
+    
+    Returns:
+        Complete description with exclusion notices appended
+    
+    """
+    guard_exclusions = []
+    for guard in guards:
+        excluded = guard.get_excluded_fields()
+        if excluded:
+            guard_exclusions.extend(excluded)
+    
+    if guard_exclusions:
+        exclusion_notice = (
+            f"\\n\\n**Field Exclusions:** The following fields are always excluded from this endpoint's "
+            f"responses due to access control rules: `{'`, `'.join(sorted(set(guard_exclusions)))}`"
+        )
+        return base_description + exclusion_notice
+    
+    return base_description
+
+
 def PaginatedResource(  # noqa: C901
     base_model: type[Model],
     filter_model: type[FilterModel],
@@ -35,8 +62,19 @@ def PaginatedResource(  # noqa: C901
     key_columns: list[ColumnElement] | None = None,
     validate: Callable[[Paginated[Model], User | None], Paginated[Model]] | None = None,
     guards: Sequence[EndpointGuard] = (),
+    description_suffix: str | None = None,
 ) -> Callable[..., Paginated[Model]]:
-    """Generate an advanced filter+sort query dependency with pagination."""
+    """Generate an advanced filter+sort query dependency with pagination.
+    
+    Args:
+        base_model: The SQLModel class to query
+        filter_model: The filter model class defining available filters
+        key_columns: Custom primary key columns (defaults to base_model.id)
+        validate: Optional validator function to transform results
+        guards: Sequence of EndpointGuard instances for access control
+        description_suffix: Additional text to append to auto-generated description
+    
+    """
     filterable_field_data = FilterMeta.from_filter(filter_model)
 
     def build_conditions(
@@ -90,8 +128,9 @@ def PaginatedResource(  # noqa: C901
             )  # Direction for ORDER BY
 
         return columns, order_expressions
+    
 
-    async def dependency(
+    async def dependency( # noqa: C901
         db: Database,
         request: Request,
         pagination: Pagination = Depends(),
@@ -101,6 +140,21 @@ def PaginatedResource(  # noqa: C901
     ) -> Paginated[Model]:            
         # Resolve primary key(s)
         resolved_key_columns: list[ColumnElement] = key_columns if key_columns else [base_model.id]
+
+        # Collect fields to exclude from response
+        excluded_fields: list[str] = []
+        
+        # 1. Guard-based exclusions (static, based on endpoint access rules)
+        for guard in guards:
+            excluded_fields.extend(guard.get_excluded_fields())
+        
+        # 2. Filter-based exclusions (dynamic, based on active equality filters)
+        for filter_item in filters:
+            # Only exclude fields when using the equality operator
+            if filter_item.operator == "==":
+                field_data = next((f for f in filterable_field_data if f.name == filter_item.field), None)
+                if field_data and field_data.exclude_field:
+                    excluded_fields.append(field_data.exclude_field)
 
         # Build filter conditions
         filter_conditions = build_conditions(filters, session_user=session_user)
@@ -117,11 +171,27 @@ def PaginatedResource(  # noqa: C901
         )
         if filter_conditions:
             base_query = base_query.where(*filter_conditions)
+            
+        params: dict[str, Any] = {}
+        # Add filters to params as dict entries
+        for filter_item in filters:
+            params[filter_item.field] = filter_item.value
+        
+        # Add query parameters from request
+        if isinstance(request.query_params, QueryParams):
+            for key, value in request.query_params.multi_items():
+                if key not in params:
+                    params[key] = value
+                    
+        # Add path parameters from request
+        for key, value in request.path_params.items():
+            if key not in params:
+                params[key] = value
 
         # Add custom query modifications
         if guards:
             for guard in guards:
-                base_query = base_query.where(guard.clause(session_user, request.path_params, request.query_params, multi=True))
+                base_query = base_query.where(guard.clause(session_user, params, multi=True))
 
         # Ensure GROUP BY includes all selected columns
         group_by_columns = resolved_key_columns + list(labeled_order_columns)
@@ -163,6 +233,7 @@ def PaginatedResource(  # noqa: C901
             limit=pagination.limit,
             filters=filters,
             order_by=sorts,
+            excluded_fields=excluded_fields,
         )
 
         if validate:

@@ -3,6 +3,8 @@ import { browser } from '$app/environment';
 import { error } from '@sveltejs/kit';
 import { env } from '$env/dynamic/public';
 import type { Filter, Sort } from './types';
+import type { Paginated } from './pagination';
+import type { GetFilterModel, TypedFilter, ComputeExclusions } from './filters';
 import { filterToSearchParam, sortToSearchParam } from '$lib/util/query';
 
 
@@ -121,16 +123,36 @@ class ApiClient {
 	}
 
 	/**
-	 * Fetch wrapper with automatic authentication and base URL resolution.
+	 * Fetch wrapper with automatic authentication and type-safe filters.
+	 * 
+	 * When fetching Paginated<T> with filters, the return type automatically
+	 * excludes fields based on the active filters.
+	 * 
+	 * @example
+	 * ```typescript
+	 * const result = await api.fetch<Paginated<GroupMembershipRead>>('/memberships', {
+	 *   filters: [{ field: 'user_id', operator: '==', value: '1' }]
+	 * });
+	 * // result.data[0].user is excluded from the type
+	 * ```
 	 */
-	async fetch<T>(
+	async fetch<
+		T,
+		TData = T extends Paginated<infer U, any> ? U : T,
+		TFilter = GetFilterModel<TData>,
+		TFilters extends readonly TypedFilter<TFilter>[] = readonly TypedFilter<TFilter>[]
+	>(
 		input: string | URL | Request,
 		init?: RequestInit & {
 			fetch?: typeof fetch;
-			filters?: (Filter | undefined)[];
+			filters?: TFilters;
 			sort?: Sort[];
 		}
-	): Promise<T> {
+	): Promise<
+		T extends Paginated<infer U, any>
+			? Paginated<U, ComputeExclusions<TFilter, TFilters> & PropertyKey>
+			: T
+	> {
 		if (!browser && !init?.fetch) {
 			throw new Error(
 				'API client requires a fetch function when used in server context. Pass event.fetch as the third argument.'
@@ -156,7 +178,7 @@ class ApiClient {
 			if (filters && filters.length > 0) {
 				filters.forEach((filter) => {
 					if (filter) {
-						const { key, value } = filterToSearchParam(filter);
+						const { key, value } = filterToSearchParam(filter as Filter);
 						urlObj.searchParams.append(key, value);
 					}
 				});
@@ -192,7 +214,11 @@ class ApiClient {
 			error(response.status, `API request failed: ${response.statusText}`);
 		}
 
-		return response.json() as Promise<T>;
+		return response.json() as Promise<
+			T extends Paginated<infer U, any>
+				? Paginated<U, ComputeExclusions<TFilter, TFilters> & PropertyKey>
+				: T
+		>;
 	}
 }
 
