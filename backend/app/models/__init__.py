@@ -24,6 +24,7 @@ from models.group import (
     GroupCreate,
     GroupRead,
     GroupUpdate,
+    GroupTransfer,
     MembershipCreate,
     MembershipPermissionUpdate,
     MembershipRead,
@@ -62,6 +63,7 @@ GroupCreate.model_rebuild()
 GroupRead.model_rebuild()
 GroupUpdate.model_rebuild()
 GroupFilter.model_rebuild()
+GroupTransfer.model_rebuild()
 MembershipFilter.model_rebuild()
 MembershipRead.model_rebuild()
 MembershipPermissionUpdate.model_rebuild()

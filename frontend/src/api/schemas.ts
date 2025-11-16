@@ -136,7 +136,12 @@ export const groupReadSchema = z.object({
     id: z.string(),
     name: z.string(),
     member_count: z.number(),
-    owner: userReadSchema.nullable()
+    owner: userReadSchema.nullable(),
+    default_permissions: z.array(permissionSchema)
+});
+
+export const groupTransferSchema = z.object({
+    user_id: z.number()
 });
 
 export const groupUpdateSchema = z.object({

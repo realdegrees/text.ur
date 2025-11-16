@@ -21,6 +21,7 @@ class GroupRead(BaseModel):
     name: str
     member_count: int
     owner: "UserRead | None"
+    default_permissions: list[Permission]
     
 class GroupUpdate(SQLModel):
     name: str | None = Field(default=None, max_length=MAX_GROUP_NAME_LENGTH)

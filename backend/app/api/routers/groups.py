@@ -90,11 +90,9 @@ async def update_group(
     if not is_owner and group_update.default_permissions is not None:
         raise HTTPException(
             status_code=403, detail="Only the owner can update default permissions")
-    update_data = group_update.model_dump()
-    for field_name, field_value in update_data.items():
-        setattr(group, field_name, field_value)
+    db.merge(group)
+    group.sqlmodel_update(group_update.model_dump(exclude_unset=True))
 
-    db.add(group)
     db.commit()
     db.refresh(group)
 

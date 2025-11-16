@@ -200,6 +200,10 @@ export interface GroupRead {
   name: string;
   member_count: number;
   owner: UserRead | null;
+  default_permissions: Permission[];
+}
+export interface GroupTransfer {
+  user_id: number;
 }
 export interface GroupUpdate {
   name?: string | null;
