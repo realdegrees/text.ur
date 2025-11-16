@@ -73,3 +73,7 @@ class AppErrorCode(str, Enum):
     INVALID_CREDENTIALS = "invalid_credentials"  # use when username/password is incorrect
     NOT_IN_GROUP = "not_in_group"  # use when user is not a member of the group they are trying to access
     EMAIL_NOT_VERIFIED = "email_not_verified"  # use when user has not verified their email address
+    
+    # Group Membership Errors
+    MEMBERSHIP_NOT_FOUND = "membership_not_found"  # use when membership invite is not found or has been revoked or user is not a member of the group
+    OWNER_CANNOT_LEAVE_GROUP = "owner_cannot_leave_group"  # use when the owner tries to leave the group instead of deleting it

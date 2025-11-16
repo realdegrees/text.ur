@@ -1,8 +1,10 @@
-<script lang="ts" generics="Item extends Record<string, any>">
+<script lang="ts" generics="Item, ExcludedFields extends PropertyKey = never">
 	import type { Paginated } from '$api/pagination';
 	import type { Snippet } from 'svelte';
 	import ChevronDown from '~icons/material-symbols/keyboard-arrow-down';
 	import { infiniteScroll } from '$lib/util/infiniteScroll.svelte';
+
+	type ActualItem = Omit<Item, ExcludedFields & keyof Item>;
 
 	let {
 		itemSnippet,
@@ -12,12 +14,12 @@
 		autoLoad = true,
 		onSelect
 	}: {
-		itemSnippet: Snippet<[Item]>;
-		data: Paginated<Item>;
-		loadMore: (offset: number, limit: number) => Promise<Paginated<Item>>;
+		itemSnippet: Snippet<[ActualItem]>;
+		data: Paginated<Item, ExcludedFields>;
+		loadMore: (offset: number, limit: number) => Promise<Paginated<Item, ExcludedFields> | undefined>;
 		step?: number;
 		autoLoad?: boolean;
-		onSelect?: (item: Item) => void;
+		onSelect?: (item: ActualItem) => void;
 	} = $props();
 
 	const scroll = infiniteScroll(initialData, loadMore, step, autoLoad);
@@ -30,11 +32,11 @@
 			<li class="mr-1">
 				{#if onSelect}
 					<button class="block w-full cursor-pointer rounded-sm" onclick={() => onSelect(item)}>
-						{@render itemSnippet(item as Item)}
+						{@render itemSnippet(item)}
 					</button>
 				{:else}
 					<div class="block w-full rounded-sm">
-						{@render itemSnippet(item as Item)}
+						{@render itemSnippet(item)}
 					</div>
 				{/if}
 			</li>

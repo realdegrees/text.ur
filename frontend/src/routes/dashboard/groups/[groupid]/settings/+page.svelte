@@ -2,7 +2,7 @@
 	import SaveIcon from '~icons/material-symbols/save-outline';
 
 	let { data } = $props();
-	let group = $derived(data.group);
+	let group = $derived(data.membership.group);
 
 	let groupName: string = $state('');
 

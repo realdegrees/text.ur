@@ -7,6 +7,7 @@
 	import GroupIcon from '~icons/material-symbols/group-outline';
 	import Loading from '~icons/svg-spinners/90-ring-with-bg';
 	import { api } from '$api/client';
+	import { notification } from '$lib/stores/notificationStore';
 
 	let groupName: string = $state('');
 	let selectedPermissions: Permission[] = $state([]);
@@ -72,8 +73,6 @@
 
 	async function handleSubmit(event: Event): Promise<void> {
 		event.preventDefault();
-		errorMessage = '';
-		successMessage = '';
 
 		if (!groupName.trim()) {
 			errorMessage = 'Group name is required';
@@ -82,33 +81,25 @@
 
 		isLoading = true;
 
-		try {
-			const group = await api.fetch<GroupRead>('/groups', {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json'
-				},
-				body: JSON.stringify({
-					name: groupName.trim(),
-					default_permissions: selectedPermissions
-				} satisfies GroupCreate)
-			});
+		const result = await api.post<GroupRead>('/groups', {
+			name: groupName.trim(),
+			default_permissions: selectedPermissions
+		} satisfies GroupCreate);
 
-			successMessage = 'Group created successfully!';
-
-			goto(`/dashboard/groups/${group.id}`);
-		} catch (err) {
-			errorMessage = err instanceof Error ? err.message : 'An error occurred';
-		} finally {
-			isLoading = false;
+		if (!result.success) {
+			notification(result.error);
+			return;
 		}
+
+		isLoading = false;
+		goto(`/dashboard/groups/${result.data.id}`);
 	}
 </script>
 
 <div class="flex h-full w-full flex-col gap-4 p-6">
 	<!-- Header Section -->
 	<div class="flex flex-row items-center gap-3">
-		<a href="/dashboard" class="text-text/70 transition-colors hover:text-text">Dashboard</a>
+		<a href="/dashboard" class="text-text/70 hover:text-text transition-colors">Dashboard</a>
 		<span class="text-text/50">/</span>
 		<h1 class="text-2xl font-bold">Create New Group</h1>
 	</div>
@@ -142,14 +133,14 @@
 				<h2 class="text-xl font-semibold">Group Details</h2>
 			</div>
 
-			<label for="groupName" class="text-sm font-semibold text-text/70">Group Name *</label>
+			<label for="groupName" class="text-text/70 text-sm font-semibold">Group Name *</label>
 			<input
 				id="groupName"
 				type="text"
 				bind:value={groupName}
 				required
 				placeholder="Enter group name"
-				class="rounded-md border border-text/20 bg-text/5 px-4 py-2 transition-colors focus:border-text/50 focus:outline-none"
+				class="border-text/20 bg-text/5 focus:border-text/50 rounded-md border px-4 py-2 transition-colors focus:outline-none"
 				disabled={isLoading}
 			/>
 		</div>
@@ -164,7 +155,7 @@
 					<button
 						type="button"
 						onclick={selectAll}
-						class="rounded-md bg-text/10 px-3 py-1 text-sm transition-all hover:bg-text/20"
+						class="bg-text/10 hover:bg-text/20 rounded-md px-3 py-1 text-sm transition-all"
 						disabled={isLoading}
 					>
 						Select All
@@ -172,7 +163,7 @@
 					<button
 						type="button"
 						onclick={clearAll}
-						class="rounded-md bg-text/10 px-3 py-1 text-sm transition-all hover:bg-text/20"
+						class="bg-text/10 hover:bg-text/20 rounded-md px-3 py-1 text-sm transition-all"
 						disabled={isLoading}
 					>
 						Clear All
@@ -180,7 +171,7 @@
 				</div>
 			</div>
 
-			<p class="text-sm text-text/70">
+			<p class="text-text/70 text-sm">
 				Select the default permissions that new members will have when joining this group.
 			</p>
 
@@ -189,7 +180,7 @@
 				{#each Object.entries(permissionGroups) as [groupKey, groupPermissions] (groupKey)}
 					<div class="flex flex-col gap-2">
 						<div class="flex flex-row items-center justify-between">
-							<h3 class="text-sm font-semibold text-text/80">
+							<h3 class="text-text/80 text-sm font-semibold">
 								{$LL.permissionGroups[groupKey as keyof typeof $LL.permissionGroups]()}
 							</h3>
 							<div class="flex flex-row gap-2">
@@ -197,7 +188,7 @@
 									<button
 										type="button"
 										onclick={() => clearGroup(groupPermissions)}
-										class="text-xs text-text/60 transition-colors hover:text-text"
+										class="text-text/60 hover:text-text text-xs transition-colors"
 										disabled={isLoading}
 									>
 										Clear
@@ -206,7 +197,7 @@
 									<button
 										type="button"
 										onclick={() => selectGroup(groupPermissions)}
-										class="text-xs text-primary transition-colors hover:text-primary/80"
+										class="text-primary hover:text-primary/80 text-xs transition-colors"
 										disabled={isLoading}
 									>
 										{isGroupPartiallySelected(groupPermissions) ? 'Select All' : 'Select'}
@@ -218,7 +209,7 @@
 							{#each groupPermissions as permission (permission)}
 								{@const isSelected = selectedPermissions.includes(permission)}
 								<label
-									class="flex cursor-pointer flex-row items-center gap-2 bg-inset p-2 transition-all hover:bg-text/10"
+									class="bg-inset hover:bg-text/10 flex cursor-pointer flex-row items-center gap-2 p-2 transition-all"
 									style={isSelected ? 'background-color: rgba(var(--primary-rgb), 0.1);' : ''}
 								>
 									<input
@@ -241,13 +232,13 @@
 
 		<!-- Submit Button -->
 		<div class="flex flex-row justify-end gap-2">
-			<a href="/dashboard" class="rounded-md bg-text/10 px-6 py-2 transition-all hover:bg-text/20">
+			<a href="/dashboard" class="bg-text/10 hover:bg-text/20 rounded-md px-6 py-2 transition-all">
 				Cancel
 			</a>
 			<button
 				type="submit"
 				disabled={isLoading || !groupName.trim()}
-				class="flex flex-row items-center gap-2 rounded-md bg-primary px-6 py-2 text-background transition-all hover:bg-primary/80 disabled:cursor-not-allowed disabled:bg-text/30"
+				class="bg-primary text-background hover:bg-primary/80 disabled:bg-text/30 flex flex-row items-center gap-2 rounded-md px-6 py-2 transition-all disabled:cursor-not-allowed"
 			>
 				{#if isLoading}
 					<Loading class="h-5 w-5" />

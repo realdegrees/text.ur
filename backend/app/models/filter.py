@@ -340,6 +340,7 @@ class UserFilter(BaseFilterModel):
     username: str = Field()
     first_name: str = Field()
     last_name: str = Field()
+    group_id: str = Field()
 
     @classmethod
     def get_filter_metadata(cls) -> dict[str, FilterMeta]:
@@ -348,6 +349,10 @@ class UserFilter(BaseFilterModel):
             "username": FilterMeta(field=User.username),
             "first_name": FilterMeta(field=User.first_name),
             "last_name": FilterMeta(field=User.last_name),
+            "group_id": FilterMeta(
+                field=Membership.group_id,
+                join=JoinInfo(target=User.memberships),
+            ),
         }
 
 # ================================================================

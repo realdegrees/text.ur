@@ -24,9 +24,14 @@ const en = {
 		memberships: {
 			owner: 'Owner',
 			label: 'Memberships',
-			accepted: 'Accepted',
+			accepted: 'Member',
 			invited: 'Invited',
 		}
+	},
+	memberships: {
+		kick: 'Kick',
+		actions: 'Actions',
+		leave: 'Leave Group'
 	},
 	permissionGroups: {
 		administration: 'Administration',
@@ -53,10 +58,36 @@ const en = {
 		add_reactions: 'Add reactions',
 		manage_share_links: 'Manage share links'
 	},
+	visibility: {
+		public: {
+			label: 'Public',
+			description: 'Anyone in the group can view this document'
+		},
+		restricted: {
+			label: 'Restricted',
+			description: 'Only members with VIEW_RESTRICTED_DOCUMENTS permission can view'
+		},
+		private: {
+			label: 'Private',
+			description: 'Only you can view this document'
+		}
+	},
 	user: 'User',
 	status: 'Status',
 	add: 'Add',
 	remove: 'Remove',
+	errors: {
+		unknown_error: 'An unknown error occurred',
+		validation_error: 'Validation error',
+		invalid_input: 'Invalid input provided',
+		database_unavailable: 'Database is currently unavailable',
+		invalid_token: 'Your session token is invalid or expired',
+		not_authenticated: 'You must be logged in to perform this action',
+		not_authorized: 'You do not have permission to perform this action',
+		invalid_credentials: 'Invalid username or password',
+		not_in_group: 'You are not a member of this group',
+		email_not_verified: 'Please verify your email address before continuing'
+	}
 } satisfies BaseTranslation;
 
 export default en;

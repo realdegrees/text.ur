@@ -9,7 +9,7 @@
 	import { page } from '$app/state';
 
 	let { data, children } = $props();
-	let group = $derived(data.group);
+	let group = $derived(data.membership.group);
 
 	type MenuItem = {
 		path: string;
@@ -18,7 +18,7 @@
 	};
 
 	const menuItems: MenuItem[] = [
-		{ path: '', i18nKey: $LL.group.documents, icon: DocumentIcon },
+		{ path: '/documents', i18nKey: $LL.group.documents, icon: DocumentIcon },
 		{ path: '/memberships', i18nKey: $LL.group.members, icon: PeopleIcon },
 		{ path: '/settings', i18nKey: $LL.group.settings, icon: SettingsIcon }
 	];

@@ -18,18 +18,11 @@ export const actions: Actions = {
 			return fail(400, { error: 'Username/Email and password are required' });
 		}
 
-		const loginFormData = new URLSearchParams();
-		loginFormData.append('username', username);
-		loginFormData.append('password', password);
+		const result = await api.post('/login', formData, { fetch });
 
-		await api.fetch('/login', {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'application/x-www-form-urlencoded'
-			},
-			body: loginFormData.toString(),
-			fetch
-		});
+		if (!result.success) {
+			return fail(401, { error: 'Invalid username/email or password' });
+		}
 
 		throw redirect(303, '/');
 	},
@@ -51,20 +44,19 @@ export const actions: Actions = {
 			return fail(400, { error: 'Passwords do not match' });
 		}
 
-		await api.fetch('/register', {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json'
-			},
-			body: JSON.stringify({
+		await api.post(
+			'/register',
+			{
 				username,
 				email,
 				password,
 				first_name: firstName || undefined,
 				last_name: lastName || undefined
-			}),
-			fetch
-		});
+			},
+			{
+				fetch
+			}
+		);
 
 		return {
 			success: true,

@@ -24,9 +24,14 @@ const de = {
 		memberships: {
 			owner: 'Ersteller',
 			label: 'Mitgliedschaften',
-			accepted: 'Akzeptiert',
+			accepted: 'Mitglied',
 			invited: 'Eingeladen',
 		}
+	},
+	memberships: {
+		kick: 'Kicken',
+		actions: 'Aktionen',
+		leave: 'Gruppe verlassen'
 	},
 	permissionGroups: {
 		administration: 'Administration',
@@ -53,10 +58,36 @@ const de = {
 		add_reactions: 'Reaktionen hinzufügen',
 		manage_share_links: 'Freigabelinks verwalten'
 	},
+	visibility: {
+		public: {
+			label: 'Öffentlich',
+			description: 'Jeder in der Gruppe kann dieses Dokument sehen'
+		},
+		restricted: {
+			label: 'Eingeschränkt',
+			description: 'Nur Mitglieder mit der Berechtigung VIEW_RESTRICTED_DOCUMENTS können es sehen'
+		},
+		private: {
+			label: 'Privat',
+			description: 'Nur Sie können dieses Dokument sehen'
+		}
+	},
 	user: 'Benutzer',
 	status: 'Status',
 	add: 'Hinzufügen',
 	remove: 'Entfernen',
+	errors: {
+		unknown_error: 'Ein unbekannter Fehler ist aufgetreten',
+		validation_error: 'Validierungsfehler',
+		invalid_input: 'Ungültige Eingabe',
+		database_unavailable: 'Datenbank ist derzeit nicht verfügbar',
+		invalid_token: 'Ihr Sitzungstoken ist ungültig oder abgelaufen',
+		not_authenticated: 'Sie müssen angemeldet sein, um diese Aktion durchzuführen',
+		not_authorized: 'Sie haben keine Berechtigung für diese Aktion',
+		invalid_credentials: 'Ungültiger Benutzername oder Passwort',
+		not_in_group: 'Sie sind kein Mitglied dieser Gruppe',
+		email_not_verified: 'Bitte bestätigen Sie Ihre E-Mail-Adresse, bevor Sie fortfahren'
+	}
 } satisfies Translation;
 
 export default de;

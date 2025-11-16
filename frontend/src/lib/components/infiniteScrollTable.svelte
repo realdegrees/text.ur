@@ -1,14 +1,17 @@
-<script lang="ts" generics="Item extends Record<string, any>">
+<script lang="ts" generics="Item, ExcludedFields extends PropertyKey = never">
 	import type { Paginated } from '$api/pagination';
 	import type { Snippet } from 'svelte';
+	import { SvelteSet } from 'svelte/reactivity';
 	import ChevronDown from '~icons/material-symbols/keyboard-arrow-down';
 	import { infiniteScroll } from '$lib/util/infiniteScroll.svelte';
 
-	type ColumnConfig<T extends Item> = {
+	type ColumnConfig<T> = {
 		label: string;
 		width?: string;
 		snippet: Snippet<[T]>;
 	};
+
+	type ActualItem = Omit<Item, ExcludedFields & keyof Item>;
 
 	let {
 		data: initialData,
@@ -21,13 +24,13 @@
 		headerBgClass = '',
 		rowBgClass = ''
 	}: {
-		columns: ColumnConfig<Item>[];
-		data: Paginated<Item>;
-		loadMore: (offset: number, limit: number) => Promise<Paginated<Item>>;
+		columns: ColumnConfig<ActualItem>[];
+		data: Paginated<Item, ExcludedFields>;
+		loadMore: (offset: number, limit: number) => Promise<Paginated<Item, ExcludedFields> | undefined>;
 		step?: number;
 		autoLoad?: boolean;
 		selectable?: boolean;
-		onSelectionChange?: (selectedItems: Item[]) => void;
+		onSelectionChange?: (selectedItems: ActualItem[]) => void;
 		headerBgClass?: string;
 		rowBgClass?: string;
 	} = $props();
@@ -41,11 +44,11 @@
 				...col,
 				label: col.label,
 				width: col.width || 'auto'
-			} as ColumnConfig<Item>;
+			} as ColumnConfig<ActualItem>;
 		});
 	});
 
-	let selectedItems = $state<Set<Item>>(new Set());
+	let selectedItems = $state.raw(new SvelteSet<ActualItem>());
 	let allSelected = $derived(
 		selectable && scroll.items.length > 0 && scroll.items.every((item) => selectedItems.has(item))
 	);
@@ -57,14 +60,15 @@
 	});
 
 	function toggleSelectAll() {
-		if (allSelected) {
+		const currentlyAllSelected = scroll.items.length > 0 && scroll.items.every((item) => selectedItems.has(item));
+		if (currentlyAllSelected) {
 			selectedItems.clear();
 		} else {
 			scroll.items.forEach((item) => selectedItems.add(item));
 		}
 	}
 
-	function toggleSelection(item: Item) {
+	function toggleSelection(item: ActualItem) {
 		if (selectedItems.has(item)) {
 			selectedItems.delete(item);
 		} else {

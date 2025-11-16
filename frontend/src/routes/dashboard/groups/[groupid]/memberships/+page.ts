@@ -4,7 +4,7 @@ import type { MembershipRead } from '$api/types';
 import type { PageLoad } from './$types';
 
 export const load: PageLoad = async ({ fetch, params, url }) => {
-	const memberships = await api.fetch<Paginated<MembershipRead>>(
+	const result = await api.get<Paginated<MembershipRead>, 'group'>(
 		`/memberships?${url.searchParams}`,
 		{
 			fetch,
@@ -17,5 +17,10 @@ export const load: PageLoad = async ({ fetch, params, url }) => {
 			]
 		}
 	);
-	return { memberships };
+	
+	if (!result.success) {
+		throw new Error(`Failed to load memberships: ${result.error.detail}`);
+	}
+
+	return { memberships: result.data };
 };

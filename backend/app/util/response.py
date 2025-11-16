@@ -9,6 +9,8 @@ from pydantic import BaseModel
 class ExcludableFieldsJSONResponse(JSONResponse):
     """JSON response that can exclude fields from nested objects in paginated data."""
 
+    media_type = "application/json"
+
     def render(self, content: Any) -> bytes:  # noqa: ANN401
         """Render content, excluding specified fields from data items."""
         if isinstance(content, dict) and "excluded_fields" in content and "data" in content:

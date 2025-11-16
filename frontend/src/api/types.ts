@@ -6,6 +6,22 @@
 */
 
 /**
+ * Types of custom application exceptions.
+ */
+export type AppErrorCode =
+  | "unknown_error"
+  | "validation_error"
+  | "invalid_input"
+  | "database_unavailable"
+  | "invalid_token"
+  | "not_authenticated"
+  | "not_authorized"
+  | "invalid_credentials"
+  | "not_in_group"
+  | "email_not_verified"
+  | "membership_not_found"
+  | "owner_cannot_leave_group";
+/**
  * Visibility levels for comments.
  */
 export type Visibility = "private" | "restricted" | "public";
@@ -40,6 +56,14 @@ export type Permission =
   | "add_reactions"
   | "manage_share_links";
 
+/**
+ * Base class for all custom exceptions in the application.
+ */
+export interface AppError {
+  status_code: number;
+  error_code: AppErrorCode;
+  detail: string;
+}
 /**
  * Comment entity for annotations and discussions.
  */
@@ -193,10 +217,16 @@ export interface Membership {
   is_owner?: boolean;
   accepted?: boolean;
 }
+export interface MembershipCreate {
+  user_id: number;
+}
 export interface MembershipFilter {
   user_id: number;
   group_id: string;
   accepted: boolean;
+}
+export interface MembershipPermissionUpdate {
+  permissions: Permission[];
 }
 export interface MembershipRead {
   permissions: Permission[];
@@ -278,6 +308,7 @@ export interface UserFilter {
   username: string;
   first_name: string;
   last_name: string;
+  group_id: string;
 }
 /**
  * The inner payload of a JWT, signed with the user's secret.

@@ -9,13 +9,14 @@
 	const defaults = {
 		placeholder: '',
 		noResultsHint: '❌ No results found',
-		fullMatchHint: '✅'
+		// eslint-disable-next-line @typescript-eslint/no-unused-vars
+		fullMatchHint: (selected?: Option) => '✅'
 	};
 
 	let {
 		debounceMs = 500,
 		fetchOptions,
-		stringifyOption,
+		stringify,
 		config,
 		value = $bindable<string>(''),
 		selected = $bindable<Option | undefined>(),
@@ -38,10 +39,12 @@
 		config?: {
 			placeholder?: string;
 			noResultsHint?: string;
-			fullMatchHint?: string;
 		};
 		Icon?: Component<SVGAttributes<SVGElement>>;
-		stringifyOption?: Option extends string ? never : (item: Option) => string;
+		stringify?: {
+			option: Option extends string ? never : (item: Option) => string;
+			hint?: Option extends string ? never : (item: Option) => string;
+		}
 		onSubmit?: (query: string, option: Option | undefined) => void;
 		name?: string;
 		label?: string;
@@ -70,18 +73,19 @@
 		(() => {
 			const placeholder = config?.placeholder ?? defaults.placeholder;
 			const noResultsHint = config?.noResultsHint ?? defaults.noResultsHint;
-			const fullMatchHint = config?.fullMatchHint ?? defaults.fullMatchHint;
+			const fullMatchHint = stringify?.hint?.(selected) ?? defaults.fullMatchHint?.(selected);
 			const selectedOptionText: string | undefined = options[selectedIndex]?.text;
 
 			if (!effectiveFetchOptions) return { prefix: '', suffix: '' };
 			if (hideOnBlur && !focused) return { prefix: '', suffix: value.length ? '' : placeholder };
 			if (!value.length) return { prefix: '', suffix: placeholder };
-			if (selectedOptionText?.toLowerCase() === value.toLowerCase())
+			if (typeof selectedOptionText === 'string' && selectedOptionText.toLowerCase() === value.toLowerCase()) {
 				return { prefix: '', suffix: fullMatchHint };
-			if (options[selectedIndex]) {
+			}
+			if (options[selectedIndex] && typeof selectedOptionText === 'string') {
 				const split = selectedOptionText.toLowerCase().split(value.toLocaleLowerCase());
 				const prefix = split.length > 1 ? selectedOptionText.slice(0, split[0].length) : '';
-				const suffix = selectedOptionText.slice(prefix.length + value.length);
+				const suffix = selectedOptionText.slice(prefix.length + value.length) + (stringify?.hint?.(options[selectedIndex]?.value) ?? '');
 				return {
 					prefix,
 					suffix: suffix + ` ⇥ Select${options.length > 1 ? ' - ⇅ Cycle' : ''}`
@@ -118,7 +122,7 @@
 					? ((await effectiveFetchOptions(value.replace(/\u00A0/g, ' '))) as Option[])?.map(
 							(o) => ({
 								value: o,
-								text: stringifyOption?.(o) ?? (o as unknown as string)
+								text: stringify?.option?.(o) ?? (o as unknown as string)
 							})
 						)
 					: [];
@@ -146,8 +150,15 @@
 				break;
 			case 'Tab':
 				event.preventDefault();
-				selectedIndex = options.findIndex((o) => o.text === value);
-				onSubmit?.(value, selected);
+				if (options[selectedIndex]) {
+					doComplete();
+				}
+				break;
+			case 'Enter':
+				event.preventDefault();
+				if (selected) {
+					onSubmit?.(value, selected);
+				}
 				break;
 		}
 	}
@@ -155,6 +166,12 @@
 	async function doComplete() {
 		value = options[selectedIndex]?.text ?? value;
 
+		await tick();
+		if (searchElement) {
+			// TODO: this is just a hack, need to fix
+			// eslint-disable-next-line svelte/no-dom-manipulating
+			searchElement.textContent = value;
+		}
 		await tick();
 		const range = document.createRange();
 		const selection = window.getSelection();
@@ -179,7 +196,7 @@
 		</label>
 	{/if}
 	<div
-		class="flex w-full flex-row items-center gap-2 rounded-lg border border-text/60 bg-background px-2 py-2.5 text-sm text-text focus-within:border-transparent focus-within:ring-2 focus-within:ring-primary"
+		class="flex w-full flex-row items-center gap-2 rounded border border-text/20 bg-background px-2 py-2.5 text-sm text-text focus-within:border-primary focus-within:ring-1 focus-within:ring-primary"
 	>
 		{#if Icon}
 			<div class="text-muted">
@@ -221,22 +238,10 @@
 				onInput();
 			}}
 			onkeydown={(e) => {
-				if (e.key === 'Tab' && effectiveFetchOptions && options[selectedIndex]) {
+				if (e.key === 'ArrowRight' && effectiveFetchOptions && options[selectedIndex]) {
 					e.preventDefault();
 					doComplete();
 					return;
-				}
-				if (effectiveFetchOptions && (e.key === 'ArrowRight' || (!onSubmit && e.key === 'Enter'))) {
-					e.preventDefault();
-					doComplete();
-					return;
-				}
-				if (e.key === 'Enter' && !effectiveFetchOptions) {
-					e.preventDefault();
-					const form = searchElement?.closest('form');
-					if (form) {
-						form.requestSubmit();
-					}
 				}
 			}}
 		></div>

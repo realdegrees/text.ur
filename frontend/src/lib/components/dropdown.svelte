@@ -15,7 +15,8 @@
 		title,
 		icon,
 		hideCurrentSelection = false,
-		showArrow = true
+		showArrow = true,
+		allowSelection = true // New flag to control selection toggle visibility
 	}: {
 		items: Item[];
 		itemSnippet: Snippet<[Item]>;
@@ -28,6 +29,7 @@
 		icon?: Snippet;
 		hideCurrentSelection?: boolean;
 		showArrow?: boolean;
+		allowSelection?: boolean; // Add type for the new flag
 	} = $props();
 
 	let dropdownRef: HTMLDivElement;
@@ -76,33 +78,35 @@
 </script>
 
 <div class="relative" bind:this={dropdownRef}>
-	<button
-		class="bg-surface hover:bg-surface-variant flex cursor-pointer items-center justify-between gap-1 rounded-sm"
-		onclick={toggleDropdown}
-		{title}
-	>
-		{#if icon}
-			{@render icon()}
-		{/if}
+	{#if allowSelection} <!-- Check the allowSelection flag -->
+		<button
+			class="bg-surface hover:bg-surface-variant flex cursor-pointer items-center justify-between gap-1 rounded-sm"
+			onclick={toggleDropdown}
+			{title}
+		>
+			{#if icon}
+				{@render icon()}
+			{/if}
 
-		{#if !hideCurrentSelection && currentItem && itemTextMap}
-			<span class="text-sm">{itemTextMap(currentItem)}</span>
-		{/if}
+			{#if !hideCurrentSelection && currentItem && itemTextMap}
+				<span class="text-sm">{itemTextMap(currentItem)}</span>
+			{/if}
 
-		{#if showArrow}
-			<div bind:this={arrowRef} class:rotate-180={show} class="transition-transform duration-200">
-				<ChevronDown class="h-4 w-4" />
-			</div>
-		{/if}
-	</button>
+			{#if showArrow}
+				<div bind:this={arrowRef} class:rotate-180={show} class="transition-transform duration-200">
+					<ChevronDown class="h-4 w-4" />
+				</div>
+			{/if}
+		</button>
+	{/if}
 
 	{#if show}
 		<div
 			class="bg-surface absolute z-50 min-w-max rounded-sm border border-text/50 bg-background shadow-lg"
-			style:left="{getArrowPosition().left}px"
+			style:left={position.includes('left') ? '0' : 'auto'}
+			style:right={position.includes('right') ? '0' : 'auto'}
 			style:top={position.includes('top') ? 'auto' : '100%'}
 			style:bottom={position.includes('top') ? '100%' : 'auto'}
-			style:transform="translateX(-50%)"
 			transition:slide={{ duration: 200, easing: quintInOut }}
 		>
 			{#each items.filter((item) => item !== currentItem) as item (item)}

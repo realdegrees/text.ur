@@ -1,5 +1,6 @@
 """Exports all models and schemas that need to be either rebuilt on start OR included in the pydantic2ts scope for frontend model generation"""
 
+from models.app_error import AppError
 from models.auth import GlobalJWTPayload, Token, UserJWTPayload
 from models.comment import (
     CommentCreate,
@@ -11,6 +12,7 @@ from models.document import (
     DocumentRead,
     DocumentTransfer,
 )
+from models.enums import AppErrorCode
 from models.filter import (
     CommentFilter,
     DocumentFilter,
@@ -22,6 +24,8 @@ from models.group import (
     GroupCreate,
     GroupRead,
     GroupUpdate,
+    MembershipCreate,
+    MembershipPermissionUpdate,
     MembershipRead,
 )
 from models.pagination import PaginatedBase
@@ -32,6 +36,8 @@ from models.tables import Comment, Document, Group, Membership, User
 from models.user import UserCreate, UserPrivate, UserRead, UserUpdate
 
 # ! Models that use TYPE_CHECKING for string type hints need to be imported and rebuilt here to avoid runtime errors
+
+AppError.model_rebuild()
 
 Document.model_rebuild()
 Group.model_rebuild()
@@ -58,6 +64,8 @@ GroupUpdate.model_rebuild()
 GroupFilter.model_rebuild()
 MembershipFilter.model_rebuild()
 MembershipRead.model_rebuild()
+MembershipPermissionUpdate.model_rebuild()
+MembershipCreate.model_rebuild()
 
 ShareLinkCreate.model_rebuild()
 ShareLinkRead.model_rebuild()

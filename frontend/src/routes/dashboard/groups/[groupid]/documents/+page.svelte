@@ -14,6 +14,7 @@
 </script>
 
 <div class="flex h-full w-full flex-col gap-4">
+	<button>Add Document</button>
 	<!-- Documents Section -->
 	<div class="flex flex-col gap-2">
 		{#if documents.total === 0}

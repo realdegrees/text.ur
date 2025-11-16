@@ -5,7 +5,8 @@ from api.dependencies.paginated.resources import (
 )
 from api.dependencies.resource import Resource
 from fastapi import Body, HTTPException, Response
-from models.enums import Permission
+from models.app_error import AppError
+from models.enums import AppErrorCode, Permission
 from models.filter import MembershipFilter
 from models.group import (
     MembershipCreate,
@@ -83,6 +84,8 @@ async def invite_member(
     if membership:
         raise HTTPException(
             status_code=400, detail="User is already a member of this group")
+        
+    # TODO: Send an email notification to the user about the invite (just link to the frontend dashboard group page and accept on load if the query param accept is present)
 
     # Create new membership
     membership_create = Membership(
@@ -139,11 +142,11 @@ async def update_member_permissions(
         raise HTTPException(
             status_code=403, detail="Only the owner can revoke the ADMINISTRATOR permission")
 
-    if Permission.MANAGE_PERMISSIONS in added_permissions and not is_administrator:
+    if Permission.MANAGE_PERMISSIONS in added_permissions and not (is_administrator or is_owner):
         raise HTTPException(
             status_code=403, detail="Only administrators can grant the MANAGE_PERMISSIONS permission")
 
-    if Permission.MANAGE_PERMISSIONS in removed_permissions and not is_administrator:
+    if Permission.MANAGE_PERMISSIONS in removed_permissions and not (is_administrator or is_owner):
         raise HTTPException(
             status_code=403, detail="Only administrators can grant or revoke the MANAGE_PERMISSIONS permission")
 
@@ -165,12 +168,16 @@ async def accept_membership(
     group: Group = Resource(Group, param_alias="group_id"),
 ) -> Response:
     """Accept group membership."""
-    membership: Membership = db.exec(
+    membership: Membership | None = db.exec(
         select(Membership).where(
             Membership.group_id == group.id,
             Membership.user_id == session_user.id,
         )
     ).first()
+    
+    # If membership doesn't exist, the invite was revoked
+    if not membership:
+        raise AppError(status_code=404, detail="Membership invite not found or has been revoked", error_code=AppErrorCode.MEMBERSHIP_NOT_FOUND)
 
     db.merge(membership)
     membership.accepted = True
@@ -178,7 +185,7 @@ async def accept_membership(
     return Response(status_code=204)
 
 
-@groupmembership_router.put("/reject")
+@groupmembership_router.delete("/reject")
 async def reject_membership(
     db: Database,
     session_user: User = Authenticate(
@@ -187,12 +194,18 @@ async def reject_membership(
     group: Group = Resource(Group, param_alias="group_id"),
 ) -> Response:
     """Reject group membership. Can be used to leave a group."""
-    membership: Membership = db.exec(
+    membership: Membership | None = db.exec(
         select(Membership).where(
             Membership.group_id == group.id,
             Membership.user_id == session_user.id,
         )
     ).first()
+
+    if not membership:
+        raise AppError(status_code=404, detail="Membership invite not found or has been revoked", error_code=AppErrorCode.MEMBERSHIP_NOT_FOUND)
+    
+    if membership.is_owner:
+        raise AppError(status_code=403, detail="The owner cannot leave the group. Delete the group instead.", error_code=AppErrorCode.OWNER_CANNOT_LEAVE_GROUP)
 
     db.delete(membership)
     db.commit()

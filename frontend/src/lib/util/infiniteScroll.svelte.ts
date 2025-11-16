@@ -1,13 +1,15 @@
 import type { Paginated } from '$api/pagination';
 import { onMount } from 'svelte';
 
-export function infiniteScroll<T>(
-	initialData: Paginated<T>,
-	loadMore: (offset: number, limit: number) => Promise<Paginated<T>>,
+export function infiniteScroll<T, ExcludedFields extends PropertyKey = never>(
+	initialData: Paginated<T, ExcludedFields> | undefined,
+	loadMore: (offset: number, limit: number) => Promise<Paginated<T, ExcludedFields> | undefined>,
 	step: number,
 	autoLoad: boolean
 ) {
-	let data = $state(initialData);
+	let data = $state<Paginated<T, ExcludedFields>>(
+		initialData ?? { data: [], total: 0, offset: 0, limit: 0 }
+	);
 	let loadingMore = $state(false);
 	let sentinel = $state<HTMLDivElement>();
 	let scrollContainer = $state<HTMLElement>();
@@ -34,6 +36,7 @@ export function infiniteScroll<T>(
 				data.offset + data.limit,
 				Math.min(step, data.total - data.offset)
 			);
+			if (!block) return;
 			data = {
 				data: [...data.data, ...block.data],
 				limit: block.limit,
@@ -80,7 +83,7 @@ export function infiniteScroll<T>(
 		get data() {
 			return data;
 		},
-		set data(value: Paginated<T>) {
+		set data(value: Paginated<T, ExcludedFields>) {
 			data = value;
 		},
 		handleLoadMore,

@@ -2,6 +2,8 @@
 import { z } from "zod";
 import { type CommentRead } from "./types";
 
+export const appErrorCodeSchema = z.union([z.literal("unknown_error"), z.literal("validation_error"), z.literal("invalid_input"), z.literal("database_unavailable"), z.literal("invalid_token"), z.literal("not_authenticated"), z.literal("not_authorized"), z.literal("invalid_credentials"), z.literal("not_in_group"), z.literal("email_not_verified"), z.literal("membership_not_found"), z.literal("owner_cannot_leave_group")]);
+
 export const visibilitySchema = z.union([z.literal("private"), z.literal("restricted"), z.literal("public")]);
 
 export const reactionTypeSchema = z.union([z.literal("like"), z.literal("dislike"), z.literal("laugh"), z.literal("confused"), z.literal("fire")]);
@@ -11,6 +13,12 @@ export const visibility1Schema = z.union([z.literal("private"), z.literal("restr
 export const viewModeSchema = z.union([z.literal("private"), z.literal("anonymous"), z.literal("public")]);
 
 export const permissionSchema = z.union([z.literal("administrator"), z.literal("add_comments"), z.literal("remove_comments"), z.literal("view_public_comments"), z.literal("view_restricted_comments"), z.literal("add_members"), z.literal("remove_members"), z.literal("manage_permissions"), z.literal("upload_documents"), z.literal("view_restricted_documents"), z.literal("delete_documents"), z.literal("remove_reactions"), z.literal("add_reactions"), z.literal("manage_share_links")]);
+
+export const appErrorSchema = z.object({
+    status_code: z.number(),
+    error_code: appErrorCodeSchema,
+    detail: z.string()
+});
 
 export const commentSchema = z.object({
     created_at: z.string().optional(),
@@ -146,10 +154,18 @@ export const membershipSchema = z.object({
     accepted: z.boolean().optional()
 });
 
+export const membershipCreateSchema = z.object({
+    user_id: z.number()
+});
+
 export const membershipFilterSchema = z.object({
     user_id: z.number(),
     group_id: z.string(),
     accepted: z.boolean()
+});
+
+export const membershipPermissionUpdateSchema = z.object({
+    permissions: z.array(permissionSchema)
 });
 
 export const membershipReadSchema = z.object({
@@ -228,7 +244,8 @@ export const userCreateSchema = z.object({
 export const userFilterSchema = z.object({
     username: z.string(),
     first_name: z.string(),
-    last_name: z.string()
+    last_name: z.string(),
+    group_id: z.string()
 });
 
 export const userJwtPayloadSchema = z.object({

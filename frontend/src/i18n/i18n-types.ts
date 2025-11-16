@@ -101,7 +101,7 @@ type RootTranslation = {
 			 */
 			label: string
 			/**
-			 * A​c​c​e​p​t​e​d
+			 * M​e​m​b​e​r
 			 */
 			accepted: string
 			/**
@@ -109,6 +109,20 @@ type RootTranslation = {
 			 */
 			invited: string
 		}
+	}
+	memberships: {
+		/**
+		 * K​i​c​k
+		 */
+		kick: string
+		/**
+		 * A​c​t​i​o​n​s
+		 */
+		actions: string
+		/**
+		 * L​e​a​v​e​ ​G​r​o​u​p
+		 */
+		leave: string
 	}
 	permissionGroups: {
 		/**
@@ -198,6 +212,38 @@ type RootTranslation = {
 		 */
 		manage_share_links: string
 	}
+	visibility: {
+		'public': {
+			/**
+			 * P​u​b​l​i​c
+			 */
+			label: string
+			/**
+			 * A​n​y​o​n​e​ ​i​n​ ​t​h​e​ ​g​r​o​u​p​ ​c​a​n​ ​v​i​e​w​ ​t​h​i​s​ ​d​o​c​u​m​e​n​t
+			 */
+			description: string
+		}
+		restricted: {
+			/**
+			 * R​e​s​t​r​i​c​t​e​d
+			 */
+			label: string
+			/**
+			 * O​n​l​y​ ​m​e​m​b​e​r​s​ ​w​i​t​h​ ​V​I​E​W​_​R​E​S​T​R​I​C​T​E​D​_​D​O​C​U​M​E​N​T​S​ ​p​e​r​m​i​s​s​i​o​n​ ​c​a​n​ ​v​i​e​w
+			 */
+			description: string
+		}
+		'private': {
+			/**
+			 * P​r​i​v​a​t​e
+			 */
+			label: string
+			/**
+			 * O​n​l​y​ ​y​o​u​ ​c​a​n​ ​v​i​e​w​ ​t​h​i​s​ ​d​o​c​u​m​e​n​t
+			 */
+			description: string
+		}
+	}
 	/**
 	 * U​s​e​r
 	 */
@@ -214,6 +260,48 @@ type RootTranslation = {
 	 * R​e​m​o​v​e
 	 */
 	remove: string
+	errors: {
+		/**
+		 * A​n​ ​u​n​k​n​o​w​n​ ​e​r​r​o​r​ ​o​c​c​u​r​r​e​d
+		 */
+		unknown_error: string
+		/**
+		 * V​a​l​i​d​a​t​i​o​n​ ​e​r​r​o​r
+		 */
+		validation_error: string
+		/**
+		 * I​n​v​a​l​i​d​ ​i​n​p​u​t​ ​p​r​o​v​i​d​e​d
+		 */
+		invalid_input: string
+		/**
+		 * D​a​t​a​b​a​s​e​ ​i​s​ ​c​u​r​r​e​n​t​l​y​ ​u​n​a​v​a​i​l​a​b​l​e
+		 */
+		database_unavailable: string
+		/**
+		 * Y​o​u​r​ ​s​e​s​s​i​o​n​ ​t​o​k​e​n​ ​i​s​ ​i​n​v​a​l​i​d​ ​o​r​ ​e​x​p​i​r​e​d
+		 */
+		invalid_token: string
+		/**
+		 * Y​o​u​ ​m​u​s​t​ ​b​e​ ​l​o​g​g​e​d​ ​i​n​ ​t​o​ ​p​e​r​f​o​r​m​ ​t​h​i​s​ ​a​c​t​i​o​n
+		 */
+		not_authenticated: string
+		/**
+		 * Y​o​u​ ​d​o​ ​n​o​t​ ​h​a​v​e​ ​p​e​r​m​i​s​s​i​o​n​ ​t​o​ ​p​e​r​f​o​r​m​ ​t​h​i​s​ ​a​c​t​i​o​n
+		 */
+		not_authorized: string
+		/**
+		 * I​n​v​a​l​i​d​ ​u​s​e​r​n​a​m​e​ ​o​r​ ​p​a​s​s​w​o​r​d
+		 */
+		invalid_credentials: string
+		/**
+		 * Y​o​u​ ​a​r​e​ ​n​o​t​ ​a​ ​m​e​m​b​e​r​ ​o​f​ ​t​h​i​s​ ​g​r​o​u​p
+		 */
+		not_in_group: string
+		/**
+		 * P​l​e​a​s​e​ ​v​e​r​i​f​y​ ​y​o​u​r​ ​e​m​a​i​l​ ​a​d​d​r​e​s​s​ ​b​e​f​o​r​e​ ​c​o​n​t​i​n​u​i​n​g
+		 */
+		email_not_verified: string
+	}
 }
 
 export type TranslationFunctions = {
@@ -304,7 +392,7 @@ export type TranslationFunctions = {
 			 */
 			label: () => LocalizedString
 			/**
-			 * Accepted
+			 * Member
 			 */
 			accepted: () => LocalizedString
 			/**
@@ -312,6 +400,20 @@ export type TranslationFunctions = {
 			 */
 			invited: () => LocalizedString
 		}
+	}
+	memberships: {
+		/**
+		 * Kick
+		 */
+		kick: () => LocalizedString
+		/**
+		 * Actions
+		 */
+		actions: () => LocalizedString
+		/**
+		 * Leave Group
+		 */
+		leave: () => LocalizedString
 	}
 	permissionGroups: {
 		/**
@@ -401,6 +503,38 @@ export type TranslationFunctions = {
 		 */
 		manage_share_links: () => LocalizedString
 	}
+	visibility: {
+		'public': {
+			/**
+			 * Public
+			 */
+			label: () => LocalizedString
+			/**
+			 * Anyone in the group can view this document
+			 */
+			description: () => LocalizedString
+		}
+		restricted: {
+			/**
+			 * Restricted
+			 */
+			label: () => LocalizedString
+			/**
+			 * Only members with VIEW_RESTRICTED_DOCUMENTS permission can view
+			 */
+			description: () => LocalizedString
+		}
+		'private': {
+			/**
+			 * Private
+			 */
+			label: () => LocalizedString
+			/**
+			 * Only you can view this document
+			 */
+			description: () => LocalizedString
+		}
+	}
 	/**
 	 * User
 	 */
@@ -417,6 +551,48 @@ export type TranslationFunctions = {
 	 * Remove
 	 */
 	remove: () => LocalizedString
+	errors: {
+		/**
+		 * An unknown error occurred
+		 */
+		unknown_error: () => LocalizedString
+		/**
+		 * Validation error
+		 */
+		validation_error: () => LocalizedString
+		/**
+		 * Invalid input provided
+		 */
+		invalid_input: () => LocalizedString
+		/**
+		 * Database is currently unavailable
+		 */
+		database_unavailable: () => LocalizedString
+		/**
+		 * Your session token is invalid or expired
+		 */
+		invalid_token: () => LocalizedString
+		/**
+		 * You must be logged in to perform this action
+		 */
+		not_authenticated: () => LocalizedString
+		/**
+		 * You do not have permission to perform this action
+		 */
+		not_authorized: () => LocalizedString
+		/**
+		 * Invalid username or password
+		 */
+		invalid_credentials: () => LocalizedString
+		/**
+		 * You are not a member of this group
+		 */
+		not_in_group: () => LocalizedString
+		/**
+		 * Please verify your email address before continuing
+		 */
+		email_not_verified: () => LocalizedString
+	}
 }
 
 export type Formatters = {}
