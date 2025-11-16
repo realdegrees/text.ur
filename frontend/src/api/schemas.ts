@@ -71,6 +71,7 @@ export const documentSchema = z.object({
     created_at: z.string().optional(),
     updated_at: z.string().optional(),
     id: z.string().optional(),
+    name: z.string(),
     s3_key: z.string(),
     size_bytes: z.number().optional(),
     visibility: visibility1Schema.optional(),
@@ -81,6 +82,7 @@ export const documentSchema = z.object({
 
 export const documentCreateSchema = z.object({
     visibility: visibilitySchema,
+    name: z.string(),
     group_id: z.string()
 });
 
@@ -94,6 +96,7 @@ export const documentReadSchema = z.object({
     updated_at: z.string().optional(),
     id: z.string(),
     s3_key: z.string(),
+    name: z.string(),
     group_id: z.string(),
     visibility: visibilitySchema
 });

@@ -22,8 +22,8 @@
 	let selectedVisibility: Visibility = $state('public');
 	let isLoading: boolean = $state(false);
 	let errorMessage: string = $state('');
-	let successMessage: string = $state('');
 	let isDragging: boolean = $state(false);
+	let documentName: string = $state('');
 
 	const visibilityOptions = $derived(
 		visibilitySchema.options.map((option) => ({
@@ -116,35 +116,29 @@
 
 		const documentData: DocumentCreate = {
 			visibility: selectedVisibility,
-			group_id: groupId
+			group_id: groupId,
+			name: documentName
 		};
 
 		formData.append('data', JSON.stringify(documentData));
+		formData.append('name', documentName);
 
 		const result = await api.post<DocumentRead>('/documents', formData);
+
+		isLoading = false;
 
 		if (!result.success) {
 			notification(result.error);
 			return;
 		}
-		isLoading = false;
+		
+		notification('success', 'Document uploaded successfully');
 		goto(`/dashboard/documents/${result.data.id}`);
 	}
 </script>
 
-<div class="flex h-full w-full flex-col gap-4 p-6">
-	<!-- Header Section -->
-	<div class="flex flex-row items-center gap-3">
-		<a href="/dashboard" class="text-text/70 hover:text-text transition-colors">Dashboard</a>
-		<span class="text-text/50">/</span>
-		<a href="/dashboard/groups/{groupId}" class="text-text/70 hover:text-text transition-colors">
-			Group
-		</a>
-		<span class="text-text/50">/</span>
-		<h1 class="text-2xl font-bold">Upload Document</h1>
-	</div>
-
-	<hr class="border-text/20" />
+<div class="flex h-full w-full flex-col gap-6 p-6">
+	<h1 class="text-2xl font-bold">Upload Document</h1>
 
 	<!-- Form Section -->
 	<form onsubmit={handleSubmit} class="flex flex-col gap-6">
@@ -157,23 +151,10 @@
 			</div>
 		{/if}
 
-		<!-- Success Message -->
-		{#if successMessage}
-			<div
-				class="rounded-md border border-green-300 bg-green-100 p-3 text-green-700 dark:border-green-700 dark:bg-green-900/30 dark:text-green-300"
-			>
-				{successMessage}
-			</div>
-		{/if}
-
 		<!-- File Upload Section -->
 		<div class="flex flex-col gap-2">
-			<div class="flex flex-row items-center gap-2">
-				<DocumentIcon class="h-6 w-6" />
-				<h2 class="text-xl font-semibold">Document File</h2>
-			</div>
-
-			<p class="text-text/70 text-sm">
+			<div class="text-sm font-semibold text-text/70">Document File</div>
+			<p class="text-text/50 text-xs">
 				Upload a PDF file (max {MAX_FILE_SIZE_MB}MB)
 			</p>
 
@@ -228,12 +209,23 @@
 			{/if}
 		</div>
 
-		<hr class="border-text/20" />
+		<!-- Document Name Field -->
+		<div class="flex flex-col gap-2">
+			<label for="documentName" class="text-sm font-semibold text-text/70">Document Name</label>
+			<input
+				type="text"
+				id="documentName"
+				bind:value={documentName}
+				placeholder="Enter document name"
+				class="rounded-lg border border-text/20 bg-inset p-3 text-sm shadow-inner focus:border-primary focus:ring-1 focus:ring-primary"
+				required
+			/>
+		</div>
 
 		<!-- Visibility Section -->
 		<div class="flex flex-col gap-2">
-			<h2 class="text-xl font-semibold">Visibility Settings</h2>
-			<p class="text-text/70 text-sm">Choose who can view this document</p>
+			<div class="text-sm font-semibold text-text/70">Visibility Settings</div>
+			<p class="text-text/50 text-xs">Choose who can view this document</p>
 
 			<div class="flex flex-col gap-2">
 				{#each visibilityOptions as option (option.value)}
@@ -260,12 +252,10 @@
 			</div>
 		</div>
 
-		<hr class="border-text/20" />
-
 		<!-- Submit Button -->
 		<div class="flex flex-row justify-end gap-2">
 			<a
-				href="/dashboard/groups/{groupId}"
+				href="/dashboard/groups/{groupId}/documents"
 				class="bg-text/10 hover:bg-text/20 rounded-md px-6 py-2 transition-all"
 			>
 				Cancel

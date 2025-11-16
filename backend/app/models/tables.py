@@ -120,6 +120,7 @@ class Document(BaseModel, table=True):
     """Document entity representing uploaded files."""
 
     id: str = Field(default_factory=lambda: generate(size=10), primary_key=True, index=True)
+    name: str = Field()
     s3_key: str = Field(index=True, unique=True)
     size_bytes: int = Field(default=0)
     visibility: Visibility = Field(default=Visibility.PRIVATE, sa_column=Column(String, server_default=Visibility.PRIVATE.value))
