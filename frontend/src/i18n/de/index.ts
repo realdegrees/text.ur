@@ -87,7 +87,8 @@ const de = {
 		invalid_credentials: 'Ungültiger Benutzername oder Passwort',
 		not_in_group: 'Sie sind kein Mitglied dieser Gruppe',
 		email_not_verified: 'Bitte bestätigen Sie Ihre E-Mail-Adresse, bevor Sie fortfahren'
-	}
+	},
+	invitations: 'Einladungen'
 } satisfies Translation;
 
 export default de;

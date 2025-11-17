@@ -10,7 +10,6 @@
 	import OwnerIcon from '~icons/material-symbols/admin-panel-settings-outline';
 	import PendingIcon from '~icons/material-symbols/pending-outline';
 	import AcceptedIcon from '~icons/material-symbols/check-circle-outline';
-	import RemoveIcon from '~icons/material-symbols/close-rounded';
 	import AddIcon from '~icons/material-symbols/add-2-rounded';
 	import { permissionSchema } from '$api/schemas';
 	import LL from '$i18n/i18n-svelte.js';
@@ -19,6 +18,7 @@
 	import { validatePermissions } from '$api/validatePermissions.js';
 	import { notification } from '$lib/stores/notificationStore.js';
 	import Dropdown from '$lib/components/dropdown.svelte';
+	import Badge from '$lib/components/badge.svelte';
 	import { scale, slide } from 'svelte/transition';
 	import AdvancedInput from '$lib/components/advancedInput.svelte';
 	import { invalidateAll } from '$app/navigation';
@@ -321,22 +321,12 @@
 {#snippet permissionsSnippet(membership: Omit<MembershipRead, 'group'>)}
 	<div class="flex flex-wrap items-center gap-1.5">
 		{#each membership.permissions as perm (perm)}
-			<div
-				class="bg-background text-text h-5.5 flex flex-row items-center rounded text-xs shadow-inner shadow-black/30"
-				in:scale
-				out:scale
-			>
-				<p class="whitespace-nowrap p-1.5">{$LL.permissions[perm]?.() || perm}</p>
-				{#if validatePermissions(data.membership, ['manage_permissions'])}
-					<button
-						onclick={() => removePermissionFromMembership(membership, perm)}
-						class="h-full w-full rounded-r bg-black/10 shadow-black/20 transition-all hover:cursor-pointer hover:bg-red-500/30 hover:shadow-inner"
-						aria-label="Remove {perm} permission"
-					>
-						<RemoveIcon class="h-full w-full" />
-					</button>
-				{/if}
-			</div>
+			<Badge
+				item={perm}
+				label={$LL.permissions[perm]?.() || perm}
+				showRemove={validatePermissions(data.membership, ['manage_permissions'])}
+				onRemove={() => removePermissionFromMembership(membership, perm)}
+			/>
 		{/each}
 
 		{#key membership.permissions}
@@ -376,7 +366,7 @@
 	!(membership.permissions.includes('administrator') || membership.permissions.includes('manage_permissions'))}
 
 	{@const useLeaveButton =
-		data.sessionUser.id === membership.user.id && !membership.is_owner}
+		data.sessionUser!.id === membership.user.id && !membership.is_owner}
 	
 	{#if useLeaveButton || useRemoveButton }
 		<button

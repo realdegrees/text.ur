@@ -2,7 +2,6 @@
 	import SaveIcon from '~icons/material-symbols/save-outline';
 	import DeleteIcon from '~icons/material-symbols/delete-outline';
 	import TransferIcon from '~icons/material-symbols/swap-horiz';
-	import RemoveIcon from '~icons/material-symbols/close-rounded';
 	import AddIcon from '~icons/material-symbols/add-2-rounded';
 	import { permissionSchema } from '$api/schemas';
 	import { api } from '$api/client';
@@ -13,6 +12,7 @@
 	import type { Paginated } from '$api/pagination';
 	import AdvancedInput from '$lib/components/advancedInput.svelte';
 	import Dropdown from '$lib/components/dropdown.svelte';
+	import Badge from '$lib/components/badge.svelte';
 	import { scale } from 'svelte/transition';
 	import LL from '$i18n/i18n-svelte.js';
 
@@ -97,7 +97,7 @@
 				filters: [
 					{ field: 'group_id', operator: '==', value: group.id },
 					{ field: 'accepted', operator: '==', value: 'true' },
-					{ field: 'user_id', operator: '!=', value: data.sessionUser.id.toString() }
+					{ field: 'user_id', operator: '!=', value: data.sessionUser!.id.toString() }
 				]
 			}
 		);
@@ -164,20 +164,7 @@
 					class="flex flex-wrap items-center gap-1.5 rounded-md border border-text/20 bg-text/5 p-3"
 				>
 					{#each defaultPermissions as perm (perm)}
-						<div
-							class="bg-background text-text h-5.5 flex flex-row items-center rounded text-xs shadow-inner shadow-black/30"
-							in:scale
-							out:scale
-						>
-							<p class="whitespace-nowrap p-1.5">{$LL.permissions[perm]?.() || perm}</p>
-							<button
-								onclick={() => removeDefaultPermission(perm)}
-								class="h-full w-full rounded-r bg-black/10 shadow-black/20 transition-all hover:cursor-pointer hover:bg-red-500/30 hover:shadow-inner"
-								aria-label="Remove {perm} permission"
-							>
-								<RemoveIcon class="h-full w-full" />
-							</button>
-						</div>
+						<Badge item={perm} label={$LL.permissions[perm]?.() || perm} onRemove={removeDefaultPermission} />
 					{/each}
 
 					{#key defaultPermissions.length}

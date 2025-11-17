@@ -22,7 +22,7 @@
 		onSelect?: (item: ActualItem) => void;
 	} = $props();
 
-	const scroll = infiniteScroll(initialData, loadMore, step, autoLoad);
+	const scroll = infiniteScroll<Item, ExcludedFields>(initialData, loadMore, step, autoLoad);
 </script>
 
 <!-- Scrollable Container -->

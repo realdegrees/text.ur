@@ -302,6 +302,10 @@ type RootTranslation = {
 		 */
 		email_not_verified: string
 	}
+	/**
+	 * I​n​v​i​t​a​t​i​o​n​s
+	 */
+	invitations: string
 }
 
 export type TranslationFunctions = {
@@ -593,6 +597,10 @@ export type TranslationFunctions = {
 		 */
 		email_not_verified: () => LocalizedString
 	}
+	/**
+	 * Invitations
+	 */
+	invitations: () => LocalizedString
 }
 
 export type Formatters = {}

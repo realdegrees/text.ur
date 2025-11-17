@@ -1,13 +1,18 @@
 <script lang="ts">
 	import type { GroupCreate, GroupRead, Permission } from '$api/types';
 	import { permissionSchema } from '$api/schemas';
-	import { goto } from '$app/navigation';
+	import { goto, invalidate, invalidateAll } from '$app/navigation';
 	import LL from '$i18n/i18n-svelte';
-	import AddIcon from '~icons/material-symbols/add-circle-outline';
+	import AddIcon from '~icons/material-symbols/add-2-rounded';
 	import GroupIcon from '~icons/material-symbols/group-outline';
 	import Loading from '~icons/svg-spinners/90-ring-with-bg';
 	import { api } from '$api/client';
 	import { notification } from '$lib/stores/notificationStore';
+	import Dropdown from '$lib/components/dropdown.svelte';
+	import Badge from '$lib/components/badge.svelte';
+	import { scale } from 'svelte/transition';
+
+	let { data } = $props();
 
 	let groupName: string = $state('');
 	let selectedPermissions: Permission[] = $state([]);
@@ -15,60 +20,16 @@
 	let errorMessage: string = $state('');
 	let successMessage: string = $state('');
 
-	const allPermissions: Permission[] = permissionSchema.options.map((option) => option.value);
+	const availablePermissions = permissionSchema.options.map((p) => p.value);
 
-	const permissionGroups: Record<string, Permission[]> = {
-		administration: ['administrator'],
-		comments: [
-			'add_comments',
-			'remove_comments',
-			'view_public_comments',
-			'view_restricted_comments'
-		],
-		documents: ['upload_documents', 'view_restricted_documents', 'delete_documents'],
-		members: ['add_members', 'remove_members', 'manage_permissions'],
-		reactions: ['add_reactions', 'remove_reactions'],
-		shareLinks: ['manage_share_links']
-	};
-
-	function togglePermission(permission: Permission): void {
-		const index = selectedPermissions.indexOf(permission);
-		if (index > -1) {
-			selectedPermissions.splice(index, 1);
-		} else {
-			selectedPermissions.push(permission);
+	function addPermission(permission: Permission): void {
+		if (!selectedPermissions.includes(permission)) {
+			selectedPermissions = [...selectedPermissions, permission];
 		}
 	}
 
-	function selectAll(): void {
-		selectedPermissions = [...allPermissions];
-	}
-
-	function clearAll(): void {
-		selectedPermissions = [];
-	}
-
-	function selectGroup(groupPermissions: Permission[]): void {
-		for (const permission of groupPermissions) {
-			if (!selectedPermissions.includes(permission)) {
-				selectedPermissions.push(permission);
-			}
-		}
-	}
-
-	function clearGroup(groupPermissions: Permission[]): void {
-		selectedPermissions = selectedPermissions.filter((p) => !groupPermissions.includes(p));
-	}
-
-	function isGroupFullySelected(groupPermissions: Permission[]): boolean {
-		return groupPermissions.every((p) => selectedPermissions.includes(p));
-	}
-
-	function isGroupPartiallySelected(groupPermissions: Permission[]): boolean {
-		return (
-			groupPermissions.some((p) => selectedPermissions.includes(p)) &&
-			!isGroupFullySelected(groupPermissions)
-		);
+	function removePermission(permission: Permission): void {
+		selectedPermissions = selectedPermissions.filter((p) => p !== permission);
 	}
 
 	async function handleSubmit(event: Event): Promise<void> {
@@ -88,11 +49,12 @@
 
 		if (!result.success) {
 			notification(result.error);
+			isLoading = false;
 			return;
 		}
 
 		isLoading = false;
-		goto(`/dashboard/groups/${result.data.id}`);
+		goto(`/dashboard/groups/${result.data.id}/documents`, { invalidateAll: true });
 	}
 </script>
 
@@ -149,82 +111,49 @@
 
 		<!-- Default Permissions -->
 		<div class="flex flex-col gap-4">
-			<div class="flex flex-row items-center justify-between">
-				<h2 class="text-xl font-semibold">Default Member Permissions</h2>
-				<div class="flex flex-row gap-2">
-					<button
-						type="button"
-						onclick={selectAll}
-						class="bg-text/10 hover:bg-text/20 rounded-md px-3 py-1 text-sm transition-all"
-						disabled={isLoading}
-					>
-						Select All
-					</button>
-					<button
-						type="button"
-						onclick={clearAll}
-						class="bg-text/10 hover:bg-text/20 rounded-md px-3 py-1 text-sm transition-all"
-						disabled={isLoading}
-					>
-						Clear All
-					</button>
-				</div>
-			</div>
+			<h2 class="text-xl font-semibold">Default Member Permissions</h2>
 
 			<p class="text-text/70 text-sm">
 				Select the default permissions that new members will have when joining this group.
 			</p>
 
-			<!-- Permissions by Category -->
-			<div class="flex flex-col gap-4">
-				{#each Object.entries(permissionGroups) as [groupKey, groupPermissions] (groupKey)}
-					<div class="flex flex-col gap-2">
-						<div class="flex flex-row items-center justify-between">
-							<h3 class="text-text/80 text-sm font-semibold">
-								{$LL.permissionGroups[groupKey as keyof typeof $LL.permissionGroups]()}
-							</h3>
-							<div class="flex flex-row gap-2">
-								{#if isGroupFullySelected(groupPermissions)}
-									<button
-										type="button"
-										onclick={() => clearGroup(groupPermissions)}
-										class="text-text/60 hover:text-text text-xs transition-colors"
-										disabled={isLoading}
-									>
-										Clear
-									</button>
-								{:else}
-									<button
-										type="button"
-										onclick={() => selectGroup(groupPermissions)}
-										class="text-primary hover:text-primary/80 text-xs transition-colors"
-										disabled={isLoading}
-									>
-										{isGroupPartiallySelected(groupPermissions) ? 'Select All' : 'Select'}
-									</button>
-								{/if}
-							</div>
-						</div>
-						<div class="flex flex-col">
-							{#each groupPermissions as permission (permission)}
-								{@const isSelected = selectedPermissions.includes(permission)}
-								<label
-									class="bg-inset hover:bg-text/10 flex cursor-pointer flex-row items-center gap-2 p-2 transition-all"
-									style={isSelected ? 'background-color: rgba(var(--primary-rgb), 0.1);' : ''}
-								>
-									<input
-										type="checkbox"
-										checked={isSelected}
-										onchange={() => togglePermission(permission)}
-										class="h-4 w-4 shrink-0"
-										disabled={isLoading}
-									/>
-									<span class="text-sm">{$LL.permissions[permission]()}</span>
-								</label>
-							{/each}
-						</div>
-					</div>
+			<div
+				class="flex flex-wrap items-center gap-1.5 rounded-md border border-text/20 bg-text/5 p-3"
+			>
+				{#each selectedPermissions as perm (perm)}
+					<Badge
+						item={perm}
+						label={$LL.permissions[perm]?.() || perm}
+						onRemove={removePermission}
+						disabled={isLoading}
+					/>
 				{/each}
+
+				{#key selectedPermissions.length}
+					<div in:scale out:scale>
+						<Dropdown
+							items={availablePermissions.filter((p) => !selectedPermissions.includes(p))}
+							onSelect={(perm) => addPermission(perm)}
+							position="bottom-left"
+							title="Add Permission"
+							showArrow={false}
+							show={false}
+							hideCurrentSelection={true}
+							allowSelection={true}
+						>
+							{#snippet icon()}
+								{#if availablePermissions.filter((p) => !selectedPermissions.includes(p)).length > 0}
+									<AddIcon
+										class="w-5.5 bg-background text-text h-full rounded shadow-inner shadow-black/20 transition-all hover:bg-green-500/30"
+									/>
+								{/if}
+							{/snippet}
+							{#snippet itemSnippet(perm)}
+								{@render permissionItem(perm)}
+							{/snippet}
+						</Dropdown>
+					</div>
+				{/key}
 			</div>
 		</div>
 
@@ -251,3 +180,7 @@
 		</div>
 	</form>
 </div>
+
+{#snippet permissionItem(perm: Permission)}
+	<p class="text-text p-1 text-left">{$LL.permissions[perm]?.() || perm}</p>
+{/snippet}

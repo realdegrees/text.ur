@@ -9,29 +9,48 @@ export const load: LayoutLoad = async ({ fetch, parent, params }) => {
 	// Load all groups the user is a member of (endpoint only returns groups for the session user)
 	const { sessionUser } = await parent();
 
-	const result = await api.get<Paginated<MembershipRead>, 'user'>('/memberships', {
+	const membershipsResult = await api.get<Paginated<MembershipRead>, 'user'>('/memberships', {
 		fetch,
 		filters: [
 			{ field: 'accepted', operator: '==', value: 'true' },
-			{ field: 'user_id', operator: '==', value: sessionUser.id }
+			{ field: 'user_id', operator: '==', value: sessionUser!.id.toString() }
+		]
+	});
+	const invitesResult = await api.get<Paginated<MembershipRead>, 'user'>('/memberships', {
+		fetch,
+		filters: [
+			{ field: 'accepted', operator: '==', value: 'false' },
+			{ field: 'user_id', operator: '==', value: sessionUser!.id.toString() }
 		]
 	});
 
 	let memberships: Paginated<MembershipRead, 'user'>;
-	if (result.success) {
-		memberships = result.data;
+	let invites: Paginated<MembershipRead, 'user'>;
+
+	if (membershipsResult.success) {
+		memberships = membershipsResult.data;
 	} else {		
-		notification(result.error);
+		notification(membershipsResult.error);
 		return {
 			...(await parent()),
 			memberships: { data: [], total: 0, offset: 0, limit: 0 }
 		};
 	}
 
+	if (invitesResult.success) {
+		invites = invitesResult.data;
+	} else {		
+		notification(invitesResult.error);
+		return {
+			...(await parent()),
+			invites: { data: [], total: 0, offset: 0, limit: 0 }
+		};
+	}
+
 	if (params.groupid && !memberships.data.find(({ group }) => group.id === params.groupid)) {
 		// If the selected group is not in the list, fetch it directly from the API and add it to the list
 		const result = await api.get<MembershipRead>(
-			`/groups/${params.groupid}/memberships/${sessionUser.id}`,
+			`/groups/${params.groupid}/memberships/${sessionUser!.id}`,
 			{ fetch }
 		);
 		if (!result.success) {
@@ -40,8 +59,12 @@ export const load: LayoutLoad = async ({ fetch, parent, params }) => {
 		memberships.data.unshift(result.data);
 	}	
 
+	console.log(`Found ${memberships.data.length} memberships and ${invites.data.length} invites`);
+	
+
 	return {
 		...(await parent()),
-		memberships: memberships
+		memberships: memberships,
+		invites: invites
 	};
 };

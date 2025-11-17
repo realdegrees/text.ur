@@ -87,7 +87,8 @@ const en = {
 		invalid_credentials: 'Invalid username or password',
 		not_in_group: 'You are not a member of this group',
 		email_not_verified: 'Please verify your email address before continuing'
-	}
+	},
+	invitations: 'Invitations'
 } satisfies BaseTranslation;
 
 export default en;

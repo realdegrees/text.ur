@@ -339,7 +339,6 @@ class Guard:
                 return Group.id.in_(
                     select(Membership.group_id).where(
                         Membership.user_id == user.id,
-                        Membership.accepted.is_(True),
                         build_permission_clause()
                     )
                 )
@@ -348,19 +347,16 @@ class Guard:
                 return select(Membership).where(
                     (Membership.user_id == user.id) &
                     (Membership.group_id == group_id) &
-                    Membership.accepted.is_(True) &
                     build_permission_clause()
                 ).exists()
             else:
                 return select(Membership).where(
                     (Membership.user_id == user.id) &
-                    Membership.accepted.is_(True) &
                     build_permission_clause()
                 ).exists()
 
         def predicate(group: Group, user: User) -> bool:
             return any(
-                m.accepted and
                 (m.user_id == user.id) and
                 (m.is_owner if only_owner else True) and
                 all(p in require_permissions for p in m.permissions)

@@ -23,8 +23,8 @@ from models.filter import (
 from models.group import (
     GroupCreate,
     GroupRead,
-    GroupUpdate,
     GroupTransfer,
+    GroupUpdate,
     MembershipCreate,
     MembershipPermissionUpdate,
     MembershipRead,
