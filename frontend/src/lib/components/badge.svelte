@@ -1,6 +1,6 @@
 <script lang="ts" generics="T">
-	import RemoveIcon from "~icons/material-symbols/close-rounded";
-	import { scale } from "svelte/transition";
+	import RemoveIcon from '~icons/material-symbols/close-rounded';
+	import { scale } from 'svelte/transition';
 
 	interface BadgeProps<T> {
 		item: T;
@@ -11,12 +11,6 @@
 	}
 
 	let { item, label, showRemove = true, onRemove, disabled = false }: BadgeProps<T> = $props();
-
-	function handleRemove(): void {
-		if (onRemove) {
-			onRemove(item);
-		}
-	}
 </script>
 
 <div
@@ -27,7 +21,7 @@
 	<p class="whitespace-nowrap p-1.5">{label}</p>
 	{#if showRemove}
 		<button
-			onclick={handleRemove}
+			onclick={() => onRemove?.(item)}
 			class="h-full w-full rounded-r bg-black/10 shadow-black/20 transition-all hover:cursor-pointer hover:bg-red-500/30 hover:shadow-inner"
 			aria-label="Remove {label}"
 			type="button"

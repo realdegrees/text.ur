@@ -7,6 +7,7 @@
 	import type { LocalizedString } from 'typesafe-i18n';
 	import { fly } from 'svelte/transition';
 	import { page } from '$app/state';
+	import { validatePermissions } from '$api/validatePermissions.js';
 
 	let { data, children } = $props();
 	let group = $derived(data.membership.group);
@@ -15,12 +16,13 @@
 		path: string;
 		i18nKey: () => LocalizedString;
 		icon: Component;
+		condition: boolean;
 	};
 
 	const menuItems: MenuItem[] = [
-		{ path: '/documents', i18nKey: $LL.group.documents, icon: DocumentIcon },
-		{ path: '/memberships', i18nKey: $LL.group.members, icon: PeopleIcon },
-		{ path: '/settings', i18nKey: $LL.group.settings, icon: SettingsIcon }
+		{ path: '/documents', i18nKey: $LL.group.documents, icon: DocumentIcon, condition: true },
+		{ path: '/memberships', i18nKey: $LL.group.members, icon: PeopleIcon, condition: true },
+		{ path: '/settings', i18nKey: $LL.group.settings, icon: SettingsIcon, condition: validatePermissions(data.membership, ['administrator']) }
 	];
 
 	function isActive(itemPath: string): boolean {
