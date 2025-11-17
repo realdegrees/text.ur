@@ -2,6 +2,8 @@
 import { z } from "zod";
 import { type CommentRead } from "./types";
 
+export const appErrorCodeSchema = z.union([z.literal("unknown_error"), z.literal("validation_error"), z.literal("invalid_input"), z.literal("database_unavailable"), z.literal("invalid_token"), z.literal("not_authenticated"), z.literal("not_authorized"), z.literal("invalid_credentials"), z.literal("not_in_group"), z.literal("email_not_verified"), z.literal("membership_not_found"), z.literal("owner_cannot_leave_group")]);
+
 export const visibilitySchema = z.union([z.literal("private"), z.literal("restricted"), z.literal("public")]);
 
 export const reactionTypeSchema = z.union([z.literal("like"), z.literal("dislike"), z.literal("laugh"), z.literal("confused"), z.literal("fire")]);
@@ -12,12 +14,18 @@ export const viewModeSchema = z.union([z.literal("private"), z.literal("anonymou
 
 export const permissionSchema = z.union([z.literal("administrator"), z.literal("add_comments"), z.literal("remove_comments"), z.literal("view_public_comments"), z.literal("view_restricted_comments"), z.literal("add_members"), z.literal("remove_members"), z.literal("manage_permissions"), z.literal("upload_documents"), z.literal("view_restricted_documents"), z.literal("delete_documents"), z.literal("remove_reactions"), z.literal("add_reactions"), z.literal("manage_share_links")]);
 
+export const appErrorSchema = z.object({
+    status_code: z.number(),
+    error_code: appErrorCodeSchema,
+    detail: z.string()
+});
+
 export const commentSchema = z.object({
     created_at: z.string().optional(),
     updated_at: z.string().optional(),
     id: z.number().optional(),
     visibility: visibilitySchema,
-    document_id: z.number(),
+    document_id: z.string(),
     user_id: z.number(),
     parent_id: z.number().optional().nullable(),
     content: z.string().optional().nullable(),
@@ -26,14 +34,16 @@ export const commentSchema = z.object({
 
 export const commentCreateSchema = z.object({
     visibility: visibilitySchema,
-    document_id: z.number(),
+    document_id: z.string(),
     parent_id: z.number().optional().nullable(),
     content: z.string().optional().nullable(),
     annotation: z.record(z.string(), z.unknown()).optional().nullable()
 });
 
 export const commentFilterSchema = z.object({
-    visibility: visibilitySchema
+    visibility: visibilitySchema,
+    user_id: z.number(),
+    document_id: z.string()
 });
 
 export const userReadSchema = z.object({
@@ -60,36 +70,39 @@ export const commentUpdateSchema = z.object({
 export const documentSchema = z.object({
     created_at: z.string().optional(),
     updated_at: z.string().optional(),
-    id: z.number().optional(),
+    id: z.string().optional(),
+    name: z.string(),
     s3_key: z.string(),
     size_bytes: z.number().optional(),
     visibility: visibility1Schema.optional(),
     view_mode: viewModeSchema.optional(),
     secret: z.string().optional(),
-    group_id: z.number()
+    group_id: z.string()
 });
 
 export const documentCreateSchema = z.object({
     visibility: visibilitySchema,
-    group_id: z.number()
+    name: z.string(),
+    group_id: z.string()
 });
 
 export const documentFilterSchema = z.object({
     size_bytes: z.number(),
-    group_id: z.number()
+    group_id: z.string()
 });
 
 export const documentReadSchema = z.object({
     created_at: z.string().optional(),
     updated_at: z.string().optional(),
-    id: z.number(),
+    id: z.string(),
     s3_key: z.string(),
-    group_id: z.number(),
+    name: z.string(),
+    group_id: z.string(),
     visibility: visibilitySchema
 });
 
 export const documentTransferSchema = z.object({
-    group_id: z.number()
+    group_id: z.string()
 });
 
 export const globalJwtPayloadSchema = z.object({
@@ -103,7 +116,7 @@ export const globalJwtPayloadSchema = z.object({
 export const groupSchema = z.object({
     created_at: z.string().optional(),
     updated_at: z.string().optional(),
-    id: z.number().optional(),
+    id: z.string().optional(),
     name: z.string(),
     secret: z.string().optional(),
     default_permissions: z.array(permissionSchema).optional()
@@ -116,28 +129,22 @@ export const groupCreateSchema = z.object({
 
 export const groupFilterSchema = z.object({
     name: z.string(),
-    member_count: z.number()
-});
-
-export const groupMembershipFilterSchema = z.object({
-    user_id: z.number()
-});
-
-export const groupMembershipReadSchema = z.object({
-    permissions: z.array(permissionSchema),
-    user: userReadSchema,
-    is_owner: z.boolean(),
-    accepted: z.boolean(),
-    group_id: z.number()
+    member_count: z.number(),
+    accepted: z.boolean()
 });
 
 export const groupReadSchema = z.object({
     created_at: z.string().optional(),
     updated_at: z.string().optional(),
-    id: z.number(),
+    id: z.string(),
     name: z.string(),
     member_count: z.number(),
-    owner: userReadSchema.nullable()
+    owner: userReadSchema.nullable(),
+    default_permissions: z.array(permissionSchema)
+});
+
+export const groupTransferSchema = z.object({
+    user_id: z.number()
 });
 
 export const groupUpdateSchema = z.object({
@@ -149,10 +156,32 @@ export const membershipSchema = z.object({
     created_at: z.string().optional(),
     updated_at: z.string().optional(),
     user_id: z.number(),
-    group_id: z.number(),
+    group_id: z.string(),
     permissions: z.array(permissionSchema).optional(),
     is_owner: z.boolean().optional(),
     accepted: z.boolean().optional()
+});
+
+export const membershipCreateSchema = z.object({
+    user_id: z.number()
+});
+
+export const membershipFilterSchema = z.object({
+    user_id: z.number(),
+    group_id: z.string(),
+    accepted: z.boolean()
+});
+
+export const membershipPermissionUpdateSchema = z.object({
+    permissions: z.array(permissionSchema)
+});
+
+export const membershipReadSchema = z.object({
+    permissions: z.array(permissionSchema),
+    user: userReadSchema,
+    group: groupReadSchema,
+    is_owner: z.boolean(),
+    accepted: z.boolean()
 });
 
 export const filterSchema = z.record(z.string(), z.unknown()).and(z.object({
@@ -176,7 +205,9 @@ export const shareLinkReadSchema = z.object({
     permissions: z.array(permissionSchema),
     expires_at: z.string().optional().nullable(),
     label: z.string().optional().nullable(),
-    token: z.string()
+    token: z.string(),
+    author: userReadSchema,
+    group_id: z.string()
 });
 
 export const shareLinkUpdateSchema = z.object({
@@ -184,6 +215,11 @@ export const shareLinkUpdateSchema = z.object({
     expires_at: z.string().optional().nullable(),
     label: z.string().optional().nullable(),
     rotate_token: z.boolean().optional().nullable()
+});
+
+export const sortSchema = z.object({
+    field: z.string(),
+    direction: z.union([z.literal("asc"), z.literal("desc")])
 });
 
 export const tokenSchema = z.object({
@@ -216,21 +252,14 @@ export const userCreateSchema = z.object({
 export const userFilterSchema = z.object({
     username: z.string(),
     first_name: z.string(),
-    last_name: z.string()
+    last_name: z.string(),
+    group_id: z.string()
 });
 
 export const userJwtPayloadSchema = z.object({
     sub: z.string(),
     exp: z.string().optional().nullable(),
     iat: z.string().optional().nullable()
-});
-
-export const userMembershipReadSchema = z.object({
-    permissions: z.array(permissionSchema),
-    group: groupReadSchema,
-    is_owner: z.boolean(),
-    accepted: z.boolean(),
-    user_id: z.number()
 });
 
 export const userPrivateSchema = z.object({
@@ -270,5 +299,6 @@ export const paginatedBaseSchema = z.object({
     offset: z.number(),
     limit: z.number(),
     filters: z.array(filterSchema).optional(),
-    order_by: z.array(z.string()).optional()
+    order_by: z.array(z.string()).optional(),
+    excluded_fields: z.array(z.string()).optional()
 });

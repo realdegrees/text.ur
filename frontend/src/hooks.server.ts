@@ -1,6 +1,5 @@
 import { sequence } from '@sveltejs/kit/hooks';
 import type { Handle, HandleFetch } from '@sveltejs/kit';
-import { jwtDecode } from 'jwt-decode';
 import { env } from '$env/dynamic/public';
 import { loadAllLocales } from '$i18n/i18n-util.sync';
 import { detectLocale } from '$i18n/i18n-util';
@@ -12,31 +11,10 @@ const withBaseUrl = (request: Request, baseUrl: string): Request => {
 	return new Request(`${baseUrl}${url.pathname}${url.search}`, request);
 };
 
-const isTokenExpired = (token: string | undefined): boolean => {
-	if (!token) return true;
-	try {
-		const decoded = jwtDecode(token);
-		return !decoded.exp || decoded.exp * 1000 <= Date.now();
-	} catch {
-		return true;
-	}
-};
-
 /**
- * Handles automatic token refresh when the access token is expired.
+ * Forwards API requests to the backend and sets x-forwarded-for headers.
  */
-export const handleFetch: HandleFetch = async ({
-	event: { cookies, getClientAddress },
-	request,
-	fetch
-}) => {
-	const existingHeader = request.headers.get('x-forwarded-for');
-	if (existingHeader) {
-		request.headers.set('x-forwarded-for', `${getClientAddress()}, ${existingHeader}`);
-	} else {
-		request.headers.set('x-forwarded-for', getClientAddress());
-	}
-
+export const handleFetch: HandleFetch = async ({ request, fetch, event }) => {
 	const url = new URL(request.url);
 
 	if (!url.pathname.startsWith('/api')) {
@@ -45,34 +23,19 @@ export const handleFetch: HandleFetch = async ({
 
 	request = withBaseUrl(request, baseUrl);
 
-	const accessToken = cookies.get('access_token');
-	const refreshToken = cookies.get('refresh_token');
+	const response = await fetch(request);
 
-	if (isTokenExpired(accessToken) && !isTokenExpired(refreshToken)) {
-		try {
-			const refreshResponse = await fetch(`${baseUrl}/api/login/refresh`, {
-				method: 'POST',
-				headers: {
-					Cookie: `refresh_token=${refreshToken}`
-				}
-			});
+	// Forward cookies from the backend response to the client
+	forwardCookies(response, event.cookies);
 
-			if (refreshResponse.ok) {
-				forwardCookies(refreshResponse, cookies);
-			}
-		} catch (e) {
-			console.log('Failed to refresh token:', e);
-		}
-	}
-
-	return fetch(request);
+	return response;
 };
 
 /**
  * Fetches the user info from the backend and attaches it to the SvelteKit session store.
  */
 const user: Handle = async ({ event, resolve }) => {
-	if (event.url.pathname.startsWith('/api')) return resolve(event);
+	if (event.url.pathname.startsWith('/api')) return resolve(event); // Only needed for server side requests
 
 	const accessToken = event.cookies.get('access_token');
 	const refreshToken = event.cookies.get('refresh_token');
@@ -116,7 +79,12 @@ const translation: Handle = async ({ event, resolve }) => {
 
 	// Make it available in all load functions and hooks
 	event.locals.locale = locale;
-	event.cookies.set('locale', locale, { path: '/' });
+	event.cookies.set('locale', locale, {
+		path: '/',
+		httpOnly: false, // Allow client-side access for language switching
+		sameSite: 'lax',
+		maxAge: 60 * 60 * 24 * 365 // 1 year
+	});
 
 	// Continue with SSR rendering
 	const response = await resolve(event, {

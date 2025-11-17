@@ -1,5 +1,6 @@
 """Exports all models and schemas that need to be either rebuilt on start OR included in the pydantic2ts scope for frontend model generation"""
 
+from models.app_error import AppError
 from models.auth import GlobalJWTPayload, Token, UserJWTPayload
 from models.comment import (
     CommentCreate,
@@ -11,27 +12,33 @@ from models.document import (
     DocumentRead,
     DocumentTransfer,
 )
+from models.enums import AppErrorCode
 from models.filter import (
     CommentFilter,
     DocumentFilter,
     GroupFilter,
-    GroupMembershipFilter,
+    MembershipFilter,
     UserFilter,
 )
 from models.group import (
     GroupCreate,
-    GroupMembershipRead,
     GroupRead,
+    GroupTransfer,
     GroupUpdate,
-    UserMembershipRead,
+    MembershipCreate,
+    MembershipPermissionUpdate,
+    MembershipRead,
 )
 from models.pagination import PaginatedBase
 from models.reaction import ReactionCreate, ReactionRead
 from models.sharelink import ShareLinkCreate, ShareLinkRead, ShareLinkUpdate
+from models.sort import Sort
 from models.tables import Comment, Document, Group, Membership, User
 from models.user import UserCreate, UserPrivate, UserRead, UserUpdate
 
 # ! Models that use TYPE_CHECKING for string type hints need to be imported and rebuilt here to avoid runtime errors
+
+AppError.model_rebuild()
 
 Document.model_rebuild()
 Group.model_rebuild()
@@ -56,9 +63,11 @@ GroupCreate.model_rebuild()
 GroupRead.model_rebuild()
 GroupUpdate.model_rebuild()
 GroupFilter.model_rebuild()
-GroupMembershipFilter.model_rebuild()
-GroupMembershipRead.model_rebuild()
-UserMembershipRead.model_rebuild()
+GroupTransfer.model_rebuild()
+MembershipFilter.model_rebuild()
+MembershipRead.model_rebuild()
+MembershipPermissionUpdate.model_rebuild()
+MembershipCreate.model_rebuild()
 
 ShareLinkCreate.model_rebuild()
 ShareLinkRead.model_rebuild()
@@ -69,3 +78,5 @@ UserRead.model_rebuild()
 UserUpdate.model_rebuild()
 UserFilter.model_rebuild()
 UserPrivate.model_rebuild()
+
+Sort.model_rebuild()

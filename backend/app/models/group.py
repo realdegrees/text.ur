@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING
 
-from sqlmodel import SQLModel
+from sqlmodel import Field, SQLModel
 
 from models.base import BaseModel
 from models.enums import Permission
@@ -8,20 +8,23 @@ from models.enums import Permission
 if TYPE_CHECKING:
     from models.user import UserRead
 
+MAX_GROUP_NAME_LENGTH = 80
+
 # =========================
 
 class GroupCreate(SQLModel):
-    name: str
+    name: str = Field(max_length=MAX_GROUP_NAME_LENGTH)
     default_permissions: list[Permission]
 
 class GroupRead(BaseModel):
-    id: int
+    id: str
     name: str
     member_count: int
     owner: "UserRead | None"
+    default_permissions: list[Permission]
     
 class GroupUpdate(SQLModel):
-    name: str | None = None
+    name: str | None = Field(default=None, max_length=MAX_GROUP_NAME_LENGTH)
     default_permissions: list[Permission] | None = None
     
 class GroupTransfer(SQLModel):
@@ -38,17 +41,9 @@ class MembershipPermissionUpdate(SQLModel):
 
 # =========================
 
-class GroupMembershipRead(SQLModel):
+class MembershipRead(SQLModel):
     permissions: list[Permission]
     user: "UserRead"
-    is_owner: bool
-    accepted: bool
-    group_id: int
-
-class UserMembershipRead(SQLModel):
-    permissions: list[Permission]
     group: GroupRead
     is_owner: bool
     accepted: bool
-    user_id: int
-

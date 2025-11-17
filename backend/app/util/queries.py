@@ -27,30 +27,42 @@ class EndpointGuard[T]:
 
     def __init__(
         self,
-        clause_factory: Callable[[User, dict[str, Any], QueryParams], ColumnElement[bool]],
-        predicate: Callable[[T, User], bool],
+        clause_factory: Callable[[User, dict[str, Any]], ColumnElement[bool]],
+        predicate: Callable[[T, User, dict[str, Any]], bool],
+        exclude_fields: list[ColumnElement] | None = None,
     ) -> None:
-        """Initialize the Guard with a clause factory and a predicate."""
+        """Initialize the Guard with a clause factory, predicate, and optional field exclusions.
+        
+        Args:
+            clause_factory: Function to generate SQLAlchemy WHERE clause
+            predicate: Function to validate access on Python objects
+            exclude_fields: List of model fields (e.g., Membership.user) to exclude from responses
+        
+        """
         self._clause_factory = clause_factory
         self._predicate = predicate
+        self._exclude_fields = exclude_fields or []
 
     def clause(
         self,
         user: User,
         params: dict[str, Any],
-        query_params: QueryParams,
         multi: bool = False
     ) -> ColumnElement[bool]:
         """Generate the SQLAlchemy clause for this guard."""
-        return self._clause_factory(user, params, query_params, multi=multi)
+        return self._clause_factory(user, params, multi=multi)
 
     def predicate(
         self,
         obj: T,
-        user: User
+        user: User,
     ) -> bool:
         """Run the Python-side predicate for this guard."""
         return self._predicate(obj, user)
+    
+    def get_excluded_fields(self) -> list[str]:
+        """Get field names that should be excluded from responses."""
+        return [field.key for field in self._exclude_fields]
 
     def validate(self, predicate_false_model: SQLModel, predicate_true_model: SQLModel) -> Callable[[Any, User], Any]:
         """Return a validator function that casts to one of the supplied models based on the guard's predicate result.
@@ -77,7 +89,7 @@ class Guard:
     @staticmethod
     def must_share_group() -> EndpointGuard[Membership]:
         """User can only access memberships of users that share at least one group with them."""
-        # def clause(user: User, params: dict[str, Any], query_params: QueryParams, multi: bool = False) -> ColumnElement[bool]:
+        # def clause(user: User, params: dict[str, Any], multi: bool = False) -> ColumnElement[bool]:
         #     target_user_id = params.get("user_id", None)
         #     if not target_user_id:
         #         raise HTTPException(
@@ -91,7 +103,7 @@ class Guard:
         #         ))
         #     ).exists()
 
-        def clause(user: User, params: dict[str, Any], query_params: QueryParams, multi: bool = False) -> ColumnElement[bool]:
+        def clause(user: User, params: dict[str, Any], multi: bool = False) -> ColumnElement[bool]:
             target_user_id = params.get("user_id", None)
             if not target_user_id and not multi:
                 raise HTTPException(
@@ -119,7 +131,7 @@ class Guard:
                 raise HTTPException(
                     status_code=500, detail="Endpoint Guard misconfiguration: invalid configuration for multi parameter")
 
-        def predicate(membership: Membership, user: User, params: dict[str, Any], query_params: QueryParams) -> bool:
+        def predicate(membership: Membership, user: User, params: dict[str, Any]) -> bool:
             return any(
                 m.accepted and m.user_id == user.id
                 for m in membership.group.memberships
@@ -131,7 +143,7 @@ class Guard:
     def is_account_owner() -> EndpointGuard[User]:
         """User can only access their own account."""
 
-        def clause(user: User, params: dict[str, Any], query_params: QueryParams, multi: bool = False) -> ColumnElement[bool]:
+        def clause(user: User, params: dict[str, Any], multi: bool = False) -> ColumnElement[bool]:
             if multi:
                 raise HTTPException(
                     # TODO: This should throw an internal error and print it to the logs
@@ -142,23 +154,30 @@ class Guard:
                     status_code=500, detail="Endpoint Guard misconfiguration: missing user_id parameter")
             return (User.id == user.id) & (User.id == target_user_id)
 
-        def predicate(user: User, session_user: User, params: dict[str, Any], query_params: QueryParams) -> bool:
-            target_user_id = params.get(
-                "user_id") or query_params.get("user_id")
-            return user.id == target_user_id and user.id == session_user.id
+        def predicate(user: User, session_user: User) -> bool:
+            return user.id == session_user.id
 
         return EndpointGuard(clause, predicate)
 
     @staticmethod
-    def document_access(require_permissions: set[Permission] | None = None) -> EndpointGuard[Document]:  # noqa: C901
+    def document_access(  # noqa: C901
+        require_permissions: set[Permission] | None = None,
+        *,
+        exclude_fields: list[ColumnElement] | None = None,
+    ) -> EndpointGuard[Document]:
         """User can access a document based on its visibility and the given required permissions:
 
         - VisibilityType.private: only the group owner and administrators.
         - VisibilityType.restricted: private + and members with VIEW_RESTRICTED_DOCUMENTS permission.
         - VisibilityType.public: private, restricted + every group member.
+        
+        Args:
+            require_permissions: Set of permissions required to access documents
+            exclude_fields: List of model fields to exclude from responses
+        
         """
 
-        def clause(user: User, params: dict[str, Any], query_params: QueryParams, multi: bool = False) -> ColumnElement[bool]:
+        def clause(user: User, params: dict[str, Any], multi: bool = False) -> ColumnElement[bool]:
             document_id = params.get("document_id", None)
             if not document_id and not multi:
                 raise HTTPException(
@@ -236,7 +255,7 @@ class Guard:
             else:
                 return build_visibility_clause()
 
-        def predicate(doc: Document, user: User, params: dict[str, Any], query_params: QueryParams) -> bool:
+        def predicate(doc: Document, user: User) -> bool:
 
             if doc.group is None:
                 return False
@@ -279,13 +298,25 @@ class Guard:
                 )
             return False
 
-        return EndpointGuard(clause, predicate)
+        return EndpointGuard(clause, predicate, exclude_fields=exclude_fields)
 
     @staticmethod
-    def group_access(require_permissions: set[Permission] | None = None, *, only_owner: bool = False) -> EndpointGuard[Group]:
-        """User can access a group if they have at least min_role in it."""
+    def group_access(
+        require_permissions: set[Permission] | None = None,
+        *,
+        only_owner: bool = False,
+        exclude_fields: list[ColumnElement] | None = None,
+    ) -> EndpointGuard[Group]:
+        """User can access a group if they have at least min_role in it.
+        
+        Args:
+            require_permissions: Set of permissions required to access groups
+            only_owner: If True, restrict access to group owners only
+            exclude_fields: List of model fields to exclude from responses
+        
+        """
 
-        def clause(user: User, params: dict[str, Any], query_params: QueryParams, multi: bool = False) -> ColumnElement[bool]:
+        def clause(user: User, params: dict[str, Any], multi: bool = False) -> ColumnElement[bool]:
             group_id = params.get("group_id", None)
             if not group_id and not multi:
                 raise HTTPException(
@@ -319,27 +350,43 @@ class Guard:
                     build_permission_clause()
                 ).exists()
             else:
-                return (
+                return select(Membership).where(
                     (Membership.user_id == user.id) &
                     build_permission_clause()
-                )
+                ).exists()
 
-        def predicate(group: Group, user: User, params: dict[str, Any], query_params: QueryParams) -> bool:
-            return any(((m.user_id == user.id) and (m.is_owner if only_owner else True) and all(p in require_permissions for p in m.permissions)) for m in group.memberships)
+        def predicate(group: Group, user: User) -> bool:
+            return any(
+                (m.user_id == user.id) and
+                (m.is_owner if only_owner else True) and
+                all(p in require_permissions for p in m.permissions)
+                for m in group.memberships
+            )
 
-        return EndpointGuard(clause, predicate)
+        return EndpointGuard(clause, predicate, exclude_fields=exclude_fields)
 
     @staticmethod
-    def comment_access(require_permissions: set[Permission] | None = None, only_owner: bool = False) -> EndpointGuard[Comment]:  # noqa: C901
+    def comment_access(  # noqa: C901
+        require_permissions: set[Permission] | None = None,
+        *,
+        only_owner: bool = False,
+        exclude_fields: list[ColumnElement] | None = None,
+    ) -> EndpointGuard[Comment]:
         """User can access a comment based on its visibility and the given required permissions:
 
         The visibility restrictions apply regardless of if additional permissions are required.
         - VisibilityType.private: only the comment owner.
         - VisibilityType.restricted: private + group owners/admins/members with VIEW_RESTRICTED_COMMENTS permission.
         - VisibilityType.public: private, restricted + any group member.
+        
+        Args:
+            require_permissions: Set of permissions required to access comments
+            only_owner: If True, restrict access to comment owners only
+            exclude_fields: List of model fields to exclude from responses
+        
         """
 
-        def clause(user: User, params: dict[str, Any], query_params: QueryParams, multi: bool = False) -> ColumnElement[bool]:
+        def clause(user: User, params: dict[str, Any], multi: bool = False) -> ColumnElement[bool]:
             comment_id = params.get("comment_id", None)
             if not comment_id and not multi:
                 raise HTTPException(
@@ -434,7 +481,7 @@ class Guard:
             else:
                 return build_visibility_clause()
 
-        def predicate(comment: Comment, user: User, params: dict[str, Any], query_params: QueryParams) -> bool:
+        def predicate(comment: Comment, user: User) -> bool:
             if only_owner:
                 return comment.user_id == user.id
 
@@ -468,12 +515,22 @@ class Guard:
                 )
             return False
 
-        return EndpointGuard(clause, predicate)
+        return EndpointGuard(clause, predicate, exclude_fields=exclude_fields)
 
     @staticmethod
-    def reaction_access(only_owner: bool = False) -> EndpointGuard[Reaction]:
-        """User can access a reaction if they can access the parent comment."""
-        def clause(user: User, params: dict[str, Any], query_params: QueryParams, multi: bool = False) -> ColumnElement[bool]:
+    def reaction_access(
+        *,
+        only_owner: bool = False,
+        exclude_fields: list[ColumnElement] | None = None,
+    ) -> EndpointGuard[Reaction]:
+        """User can access a reaction if they can access the parent comment.
+        
+        Args:
+            only_owner: If True, restrict access to reaction owners only
+            exclude_fields: List of model fields to exclude from responses
+        
+        """
+        def clause(user: User, params: dict[str, Any], multi: bool = False) -> ColumnElement[bool]:
             reaction_id = params.get("reaction_id", None)
             if not reaction_id and not multi:
                 raise HTTPException(
@@ -488,7 +545,7 @@ class Guard:
                     Reaction.comment_id.in_(
                         select(Comment.id).where(
                             Guard.comment_access(None, only_owner=only_owner).clause(
-                                user, params, query_params, multi=True
+                                user, params, params, multi=True
                             )
                         ))
                 )
@@ -504,8 +561,10 @@ class Guard:
             else:
                 return build_clause()
 
-        def predicate(reaction: Reaction, user: User, params: dict[str, Any], query_params: QueryParams) -> bool:
-            return Guard.comment_access(None, only_owner=only_owner).predicate(reaction.comment, user, params, query_params)
+        def predicate(reaction: Reaction, user: User) -> bool:
+            return Guard.comment_access(None, only_owner=only_owner).predicate(reaction.comment, user)
+        
+        return EndpointGuard(clause, predicate, exclude_fields=exclude_fields)
 
     @staticmethod
     def combine[T](*, op: Literal["and", "or"] = "and", guards: list[EndpointGuard[T]]) -> EndpointGuard[T]:
@@ -513,8 +572,8 @@ class Guard:
         if op not in ("and", "or"):
             raise ValueError("op must be 'and' or 'or'")
 
-        def clause(session_user: User, params: dict[str, Any], query_params: QueryParams) -> ColumnElement[bool]:
-            clauses = [guard.clause(session_user, params, query_params)
+        def clause(session_user: User, params: dict[str, Any], multi: bool = False) -> ColumnElement[bool]:
+            clauses = [guard.clause(session_user, params, multi=multi)
                        for guard in guards]
             if op == "and":
                 combined = clauses[0]

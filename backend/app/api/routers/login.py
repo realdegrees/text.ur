@@ -48,8 +48,22 @@ async def login(
         refresh_token=generate_token(user, "refresh"),
         token_type="bearer",
     )
-    response.set_cookie(key="access_token", value=token.access_token, httponly=True, secure=cfg.COOKIE_SECURE, samesite=cfg.COOKIE_SAMESITE)
-    response.set_cookie(key="refresh_token", value=token.refresh_token, httponly=True, secure=cfg.COOKIE_SECURE, samesite=cfg.COOKIE_SAMESITE)
+    response.set_cookie(
+        key="access_token",
+        value=token.access_token,
+        httponly=True,
+        secure=cfg.COOKIE_SECURE,
+        samesite=cfg.COOKIE_SAMESITE,
+        max_age=cfg.JWT_ACCESS_EXPIRATION_MINUTES * 60
+    )
+    response.set_cookie(
+        key="refresh_token",
+        value=token.refresh_token,
+        httponly=True,
+        secure=cfg.COOKIE_SECURE,
+        samesite=cfg.COOKIE_SAMESITE,
+        max_age=cfg.JWT_REFRESH_EXPIRATION_DAYS * 24 * 60 * 60
+    )
     return token
 
 
@@ -61,7 +75,22 @@ async def refresh(response: Response, user: User = Authenticate(token_type="refr
         refresh_token=generate_token(user, "refresh"),
         token_type="bearer",
     )
-    response.set_cookie(key="access_token", value=token.access_token, httponly=True, secure=cfg.COOKIE_SECURE, samesite=cfg.COOKIE_SAMESITE)
+    response.set_cookie(
+        key="access_token",
+        value=token.access_token,
+        httponly=True,
+        secure=cfg.COOKIE_SECURE,
+        samesite=cfg.COOKIE_SAMESITE,
+        max_age=cfg.JWT_ACCESS_EXPIRATION_MINUTES * 60
+    )
+    response.set_cookie(
+        key="refresh_token",
+        value=token.refresh_token,
+        httponly=True,
+        secure=cfg.COOKIE_SECURE,
+        samesite=cfg.COOKIE_SAMESITE,
+        max_age=cfg.JWT_REFRESH_EXPIRATION_DAYS * 24 * 60 * 60
+    )
     return token
 
 

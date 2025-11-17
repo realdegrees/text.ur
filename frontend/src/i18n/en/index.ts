@@ -15,7 +15,80 @@ const en = {
 	usernameOrEmail: 'Username or Email',
 	alreadyHaveAccount: 'Already have an account? Login',
 	needAccount: 'Need an account? Register',
-	emailVerified: 'Email verified successfully! Your account is now activated.'
+	emailVerified: 'Email verified successfully! Your account is now activated.',
+	myGroups: 'My Groups',
+	group: {
+		documents: 'Documents',
+		members: 'Members',
+		settings: 'Settings',
+		memberships: {
+			owner: 'Owner',
+			label: 'Memberships',
+			accepted: 'Member',
+			invited: 'Invited',
+		}
+	},
+	memberships: {
+		kick: 'Kick',
+		actions: 'Actions',
+		leave: 'Leave Group'
+	},
+	permissionGroups: {
+		administration: 'Administration',
+		comments: 'Comments',
+		documents: 'Documents',
+		members: 'Members',
+		reactions: 'Reactions',
+		shareLinks: 'Share Links'
+	},
+	permissions: {
+		label: 'Permissions',
+		administrator: 'Full administrative access',
+		add_comments: 'Add comments',
+		remove_comments: 'Remove comments',
+		view_public_comments: 'View public comments',
+		view_restricted_comments: 'View restricted comments',
+		add_members: 'Add members',
+		remove_members: 'Remove members',
+		manage_permissions: 'Manage permissions',
+		upload_documents: 'Upload documents',
+		view_restricted_documents: 'View restricted documents',
+		delete_documents: 'Delete documents',
+		remove_reactions: 'Remove reactions',
+		add_reactions: 'Add reactions',
+		manage_share_links: 'Manage share links'
+	},
+	visibility: {
+		public: {
+			label: 'Public',
+			description: 'Anyone in the group can view this document'
+		},
+		restricted: {
+			label: 'Restricted',
+			description: 'Only members with VIEW_RESTRICTED_DOCUMENTS permission can view'
+		},
+		private: {
+			label: 'Private',
+			description: 'Only you can view this document'
+		}
+	},
+	user: 'User',
+	status: 'Status',
+	add: 'Add',
+	remove: 'Remove',
+	errors: {
+		unknown_error: 'An unknown error occurred',
+		validation_error: 'Validation error',
+		invalid_input: 'Invalid input provided',
+		database_unavailable: 'Database is currently unavailable',
+		invalid_token: 'Your session token is invalid or expired',
+		not_authenticated: 'You must be logged in to perform this action',
+		not_authorized: 'You do not have permission to perform this action',
+		invalid_credentials: 'Invalid username or password',
+		not_in_group: 'You are not a member of this group',
+		email_not_verified: 'Please verify your email address before continuing'
+	},
+	invitations: 'Invitations'
 } satisfies BaseTranslation;
 
 export default en;

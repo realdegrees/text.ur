@@ -23,6 +23,7 @@ class Paginated[Model: PydanticBaseModel](PydanticBaseModel):
     limit: int = Field(ge=0, le=100)
     filters: list[Filter] = Field(default=[])
     order_by: list[str] = Field(default=[])
+    excluded_fields: list[str] = Field(default=[])
 
 
 PaginatedBase = create_model(

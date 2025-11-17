@@ -5,6 +5,10 @@ import Success from '~icons/line-md/confirm-square-twotone';
 import Error from '~icons/line-md/alert-square-twotone-loop';
 import Warning from '~icons/line-md/alert-twotone-loop';
 import Locked from '~icons/material-symbols/lock-outline';
+import type { AppError } from '$api/types';
+import { appErrorCodeSchema } from '$api/schemas';
+import { get } from 'svelte/store';
+import LL from '$i18n/i18n-svelte';
 
 // Define the notification store
 export const notificationStore = writable<
@@ -12,55 +16,87 @@ export const notificationStore = writable<
 >([]);
 
 type NotificationType = 'success' | 'error' | 'warning' | 'info';
-
 let nextId = 1;
 
-/**
- * Function to trigger a notification
- * @param code - The status code of the notification
- * @param message - The message to display
- * @param Icon - The icon component to display
- * @param color - The color of the notification (tailwind class)
- * @param duration - The duration to display the notification (in milliseconds). If undefined or 0, the notification will not auto-dismiss.
- */
+export function notification(
+	appError: AppError,
+	config?: {
+		Icon?: Component<SVGAttributes<SVGSVGElement>>;
+		color?: string;
+		duration?: number;
+	}
+): void;
 export function notification(
 	notificationType: NotificationType,
 	message: string,
-	config: {
+	config?: {
 		Icon?: Component<SVGAttributes<SVGSVGElement>>;
 		color?: string;
-		duration: number | undefined;
-	} = { duration: 5000 }
+		duration?: number;
+	}
+): void;
+export function notification(
+	notificationTypeOrError: NotificationType | AppError,
+	messageOrConfig?:
+		| string
+		| {
+				Icon?: Component<SVGAttributes<SVGSVGElement>>;
+				color?: string;
+				duration?: number;
+		  },
+	config?: {
+		Icon?: Component<SVGAttributes<SVGSVGElement>>;
+		color?: string;
+		duration?: number;
+	}
 ) {
+	const finalConfig = { duration: 5000, ...config };
+	let notificationType: NotificationType;
+	let message: string;
+
+	if (appErrorCodeSchema.safeParse(notificationTypeOrError).success) {
+		const appError = notificationTypeOrError as AppError;
+		notificationType = 'error';
+		message =
+			get(LL).errors[appError.error_code]?.() || appError.detail || 'An unknown error occurred.';
+
+		if (typeof messageOrConfig === 'object') {
+			Object.assign(finalConfig, messageOrConfig);
+		}
+	} else {
+		notificationType = notificationTypeOrError as NotificationType;
+		message = messageOrConfig as string;
+	}
+
 	const id = nextId++;
 
-	if (!config.Icon) {
+	if (!finalConfig.Icon) {
 		if (notificationType === 'error') {
-			config.Icon = Locked;
+			finalConfig.Icon = Locked;
 		} else if (notificationType === 'success') {
-			config.Icon = Success;
+			finalConfig.Icon = Success;
 		} else if (notificationType === 'warning') {
-			config.Icon = Warning;
+			finalConfig.Icon = Warning;
 		} else {
-			config.Icon = Error;
+			finalConfig.Icon = Error;
 		}
 	}
 
-	config.color =
-		config.color ||
+	finalConfig.color =
+		finalConfig.color ||
 		(notificationType === 'success' ? 'green' : notificationType === 'warning' ? 'orange' : 'red');
 
 	notificationStore.update((notifications) => [
 		...notifications,
-		{ id, message, Icon: config.Icon, color: config.color! }
+		{ id, message, Icon: finalConfig.Icon, color: finalConfig.color! }
 	]);
 	const notificationFn = () => {
 		notificationStore.update((notifications) =>
 			notifications.filter((notification) => notification.id !== id)
 		);
 	};
-	if (config.duration && config.duration > 0) {
-		setTimeout(notificationFn, config.duration);
+	if (finalConfig.duration && finalConfig.duration > 0) {
+		setTimeout(notificationFn, finalConfig.duration);
 	} else {
 		notificationFn();
 	}

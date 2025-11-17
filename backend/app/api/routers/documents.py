@@ -38,6 +38,7 @@ from models.tables import Comment, Document, Group, Membership, User
 from sqlmodel import select
 from util.api_router import APIRouter
 from util.queries import Guard
+from util.response import ExcludableFieldsJSONResponse
 
 router = APIRouter(
     prefix="/documents",
@@ -109,7 +110,7 @@ async def create_document(
     s3.upload(s3_key, file.file, content_type=file.content_type)
     return document
 
-@router.get("/", response_model=Paginated[DocumentRead])
+@router.get("/", response_model=Paginated[DocumentRead], response_class=ExcludableFieldsJSONResponse)
 async def list_documents(
     _: BasicAuthentication,
     documents: Paginated[Document] = PaginatedResource(

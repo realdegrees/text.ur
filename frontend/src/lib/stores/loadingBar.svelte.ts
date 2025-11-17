@@ -8,6 +8,7 @@ function clamp(value: number): number {
 
 const createLoadingBar = () => {
 	let isVisible = $state(false);
+	let isShrinking = $state(false);
 	// use a tweened store for smooth progress animation
 	const progressTween = new Tween(0, {
 		duration: 400,
@@ -23,6 +24,9 @@ const createLoadingBar = () => {
 		get progress(): number {
 			return progressTween.current;
 		},
+		get shrinking(): boolean {
+			return isShrinking;
+		},
 		progressTween,
 
 		set(value: number) {
@@ -31,6 +35,7 @@ const createLoadingBar = () => {
 			const v = clamp(value);
 			if (v > 0 && v < 100) {
 				isVisible = true;
+				isShrinking = false;
 				progressTween.set(v); // tween smoothly
 			}
 			if (v === 100 && !finishing) this.finish();
@@ -42,10 +47,13 @@ const createLoadingBar = () => {
 			finishing = true;
 			try {
 				isVisible = true;
+				isShrinking = false;
 				progressTween.set(100);
 				await new Promise((r) => setTimeout(r, 300));
+				isShrinking = true;
+				await new Promise((r) => setTimeout(r, 500));
 				isVisible = false;
-				await new Promise((r) => setTimeout(r, 200));
+				isShrinking = false;
 				progressTween.set(0);
 			} finally {
 				finishing = false;
@@ -72,6 +80,7 @@ const createLoadingBar = () => {
 			if (!browser) return;
 			progressTween.set(0);
 			isVisible = false;
+			isShrinking = false;
 		}
 	};
 };

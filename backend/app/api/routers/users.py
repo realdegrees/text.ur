@@ -12,6 +12,7 @@ from models.tables import User
 from models.user import UserPrivate, UserRead, UserUpdate
 from util.api_router import APIRouter
 from util.queries import Guard
+from util.response import ExcludableFieldsJSONResponse
 
 router = APIRouter(
     prefix="/users",
@@ -28,7 +29,7 @@ async def read_current_user(
     return user
 
 
-@router.get("/", response_model=Paginated[UserRead])
+@router.get("/", response_model=Paginated[UserRead], response_class=ExcludableFieldsJSONResponse)
 async def list_users(
     _: BasicAuthentication,
     users: Paginated[User] = PaginatedResource(

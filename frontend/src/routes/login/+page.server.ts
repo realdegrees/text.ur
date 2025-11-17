@@ -1,6 +1,6 @@
 import { redirect, fail, type Actions } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
-import { forwardCookies } from '$lib/server/cookies';
+import { api } from '$api/client';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	if (locals.sessionUser) {
@@ -9,7 +9,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 };
 
 export const actions: Actions = {
-	login: async ({ request, fetch, cookies }) => {
+	login: async ({ fetch, request }) => {
 		const formData = await request.formData();
 		const username = formData.get('username')?.toString();
 		const password = formData.get('password')?.toString();
@@ -18,29 +18,16 @@ export const actions: Actions = {
 			return fail(400, { error: 'Username/Email and password are required' });
 		}
 
-		const loginFormData = new URLSearchParams();
-		loginFormData.append('username', username);
-		loginFormData.append('password', password);
+		const result = await api.post('/login', formData, { fetch });
 
-		const response = await fetch('/api/login', {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'application/x-www-form-urlencoded'
-			},
-			body: loginFormData.toString()
-		});
-
-		if (!response.ok) {
-			const error = await response.json().catch(() => ({ detail: 'Login failed' }));
-			return fail(response.status, { error: error.detail || 'Invalid credentials' });
+		if (!result.success) {
+			return fail(401, { error: 'Invalid username/email or password' });
 		}
-
-		forwardCookies(response, cookies);
 
 		throw redirect(303, '/');
 	},
 
-	register: async ({ request, fetch }) => {
+	register: async ({ fetch, request }) => {
 		const formData = await request.formData();
 		const username = formData.get('username')?.toString();
 		const email = formData.get('email')?.toString();
@@ -57,24 +44,19 @@ export const actions: Actions = {
 			return fail(400, { error: 'Passwords do not match' });
 		}
 
-		const response = await fetch('/api/register', {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json'
-			},
-			body: JSON.stringify({
+		await api.post(
+			'/register',
+			{
 				username,
 				email,
 				password,
 				first_name: firstName || undefined,
 				last_name: lastName || undefined
-			})
-		});
-
-		if (!response.ok) {
-			const error = await response.json().catch(() => ({ detail: 'Registration failed' }));
-			return fail(response.status, { error: error.detail || 'Registration failed' });
-		}
+			},
+			{
+				fetch
+			}
+		);
 
 		return {
 			success: true,

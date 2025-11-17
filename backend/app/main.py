@@ -14,6 +14,7 @@ from api.routers.comments import router as CommentRouter
 from api.routers.documents import router as DocumentsRouter
 from api.routers.groups import router as GroupRouter
 from api.routers.login import router as LoginRouter
+from api.routers.memberships import membership_router as MembershipRouter
 from api.routers.register import router as RegisterRouter
 from api.routers.users import router as UserRouter
 from core import config
@@ -29,7 +30,7 @@ from models.enums import AppErrorCode
 from util.api_router import APIRouter
 from util.openapi import custom_openapi
 
-routers = [RegisterRouter, LoginRouter, UserRouter, GroupRouter, DocumentsRouter, CommentRouter]
+routers = [RegisterRouter, LoginRouter, UserRouter, MembershipRouter, GroupRouter, DocumentsRouter, CommentRouter]
 
 logger = get_logger("requests")
 app_logger = get_logger("app")
@@ -49,7 +50,19 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 app = FastAPI(
     lifespan=lifespan,
     title="Annotation Software API",
-    description="This API allows interfacing with the Annotation Software database",
+    description=(
+        "This API allows interfacing with the Annotation Software database.\n\n"
+        "## Pagination\n"
+        "All list endpoints are paginated and return results in a standardized format with metadata.\n\n"
+        "## Filter Exclusions\n"
+        "When using equality filters (`==` operator), redundant fields are automatically excluded from responses. "
+        "For example, filtering memberships by `user_id == 1` will exclude the full `user` object from each result, "
+        "since all results would contain the same user.\n\n"
+        "**Note:** Field exclusions only apply to equality filters. Other operators (e.g., `!=`, `>`, `<`) "
+        "do not trigger exclusions.\n\n"
+        "Filter parameters that support exclusions are marked with a 🚫 indicator in their descriptions below. "
+        "The excluded field name is shown in parentheses."
+    ),
     openapi_url="/api/openapi.json",
     redirect_slashes=False,
     docs_url=None,  # Swagger doc is manually adjusted at /docs below

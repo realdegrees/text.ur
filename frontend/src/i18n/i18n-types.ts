@@ -74,6 +74,238 @@ type RootTranslation = {
 	 * E​m​a​i​l​ ​v​e​r​i​f​i​e​d​ ​s​u​c​c​e​s​s​f​u​l​l​y​!​ ​Y​o​u​r​ ​a​c​c​o​u​n​t​ ​i​s​ ​n​o​w​ ​a​c​t​i​v​a​t​e​d​.
 	 */
 	emailVerified: string
+	/**
+	 * M​y​ ​G​r​o​u​p​s
+	 */
+	myGroups: string
+	group: {
+		/**
+		 * D​o​c​u​m​e​n​t​s
+		 */
+		documents: string
+		/**
+		 * M​e​m​b​e​r​s
+		 */
+		members: string
+		/**
+		 * S​e​t​t​i​n​g​s
+		 */
+		settings: string
+		memberships: {
+			/**
+			 * O​w​n​e​r
+			 */
+			owner: string
+			/**
+			 * M​e​m​b​e​r​s​h​i​p​s
+			 */
+			label: string
+			/**
+			 * M​e​m​b​e​r
+			 */
+			accepted: string
+			/**
+			 * I​n​v​i​t​e​d
+			 */
+			invited: string
+		}
+	}
+	memberships: {
+		/**
+		 * K​i​c​k
+		 */
+		kick: string
+		/**
+		 * A​c​t​i​o​n​s
+		 */
+		actions: string
+		/**
+		 * L​e​a​v​e​ ​G​r​o​u​p
+		 */
+		leave: string
+	}
+	permissionGroups: {
+		/**
+		 * A​d​m​i​n​i​s​t​r​a​t​i​o​n
+		 */
+		administration: string
+		/**
+		 * C​o​m​m​e​n​t​s
+		 */
+		comments: string
+		/**
+		 * D​o​c​u​m​e​n​t​s
+		 */
+		documents: string
+		/**
+		 * M​e​m​b​e​r​s
+		 */
+		members: string
+		/**
+		 * R​e​a​c​t​i​o​n​s
+		 */
+		reactions: string
+		/**
+		 * S​h​a​r​e​ ​L​i​n​k​s
+		 */
+		shareLinks: string
+	}
+	permissions: {
+		/**
+		 * P​e​r​m​i​s​s​i​o​n​s
+		 */
+		label: string
+		/**
+		 * F​u​l​l​ ​a​d​m​i​n​i​s​t​r​a​t​i​v​e​ ​a​c​c​e​s​s
+		 */
+		administrator: string
+		/**
+		 * A​d​d​ ​c​o​m​m​e​n​t​s
+		 */
+		add_comments: string
+		/**
+		 * R​e​m​o​v​e​ ​c​o​m​m​e​n​t​s
+		 */
+		remove_comments: string
+		/**
+		 * V​i​e​w​ ​p​u​b​l​i​c​ ​c​o​m​m​e​n​t​s
+		 */
+		view_public_comments: string
+		/**
+		 * V​i​e​w​ ​r​e​s​t​r​i​c​t​e​d​ ​c​o​m​m​e​n​t​s
+		 */
+		view_restricted_comments: string
+		/**
+		 * A​d​d​ ​m​e​m​b​e​r​s
+		 */
+		add_members: string
+		/**
+		 * R​e​m​o​v​e​ ​m​e​m​b​e​r​s
+		 */
+		remove_members: string
+		/**
+		 * M​a​n​a​g​e​ ​p​e​r​m​i​s​s​i​o​n​s
+		 */
+		manage_permissions: string
+		/**
+		 * U​p​l​o​a​d​ ​d​o​c​u​m​e​n​t​s
+		 */
+		upload_documents: string
+		/**
+		 * V​i​e​w​ ​r​e​s​t​r​i​c​t​e​d​ ​d​o​c​u​m​e​n​t​s
+		 */
+		view_restricted_documents: string
+		/**
+		 * D​e​l​e​t​e​ ​d​o​c​u​m​e​n​t​s
+		 */
+		delete_documents: string
+		/**
+		 * R​e​m​o​v​e​ ​r​e​a​c​t​i​o​n​s
+		 */
+		remove_reactions: string
+		/**
+		 * A​d​d​ ​r​e​a​c​t​i​o​n​s
+		 */
+		add_reactions: string
+		/**
+		 * M​a​n​a​g​e​ ​s​h​a​r​e​ ​l​i​n​k​s
+		 */
+		manage_share_links: string
+	}
+	visibility: {
+		'public': {
+			/**
+			 * P​u​b​l​i​c
+			 */
+			label: string
+			/**
+			 * A​n​y​o​n​e​ ​i​n​ ​t​h​e​ ​g​r​o​u​p​ ​c​a​n​ ​v​i​e​w​ ​t​h​i​s​ ​d​o​c​u​m​e​n​t
+			 */
+			description: string
+		}
+		restricted: {
+			/**
+			 * R​e​s​t​r​i​c​t​e​d
+			 */
+			label: string
+			/**
+			 * O​n​l​y​ ​m​e​m​b​e​r​s​ ​w​i​t​h​ ​V​I​E​W​_​R​E​S​T​R​I​C​T​E​D​_​D​O​C​U​M​E​N​T​S​ ​p​e​r​m​i​s​s​i​o​n​ ​c​a​n​ ​v​i​e​w
+			 */
+			description: string
+		}
+		'private': {
+			/**
+			 * P​r​i​v​a​t​e
+			 */
+			label: string
+			/**
+			 * O​n​l​y​ ​y​o​u​ ​c​a​n​ ​v​i​e​w​ ​t​h​i​s​ ​d​o​c​u​m​e​n​t
+			 */
+			description: string
+		}
+	}
+	/**
+	 * U​s​e​r
+	 */
+	user: string
+	/**
+	 * S​t​a​t​u​s
+	 */
+	status: string
+	/**
+	 * A​d​d
+	 */
+	add: string
+	/**
+	 * R​e​m​o​v​e
+	 */
+	remove: string
+	errors: {
+		/**
+		 * A​n​ ​u​n​k​n​o​w​n​ ​e​r​r​o​r​ ​o​c​c​u​r​r​e​d
+		 */
+		unknown_error: string
+		/**
+		 * V​a​l​i​d​a​t​i​o​n​ ​e​r​r​o​r
+		 */
+		validation_error: string
+		/**
+		 * I​n​v​a​l​i​d​ ​i​n​p​u​t​ ​p​r​o​v​i​d​e​d
+		 */
+		invalid_input: string
+		/**
+		 * D​a​t​a​b​a​s​e​ ​i​s​ ​c​u​r​r​e​n​t​l​y​ ​u​n​a​v​a​i​l​a​b​l​e
+		 */
+		database_unavailable: string
+		/**
+		 * Y​o​u​r​ ​s​e​s​s​i​o​n​ ​t​o​k​e​n​ ​i​s​ ​i​n​v​a​l​i​d​ ​o​r​ ​e​x​p​i​r​e​d
+		 */
+		invalid_token: string
+		/**
+		 * Y​o​u​ ​m​u​s​t​ ​b​e​ ​l​o​g​g​e​d​ ​i​n​ ​t​o​ ​p​e​r​f​o​r​m​ ​t​h​i​s​ ​a​c​t​i​o​n
+		 */
+		not_authenticated: string
+		/**
+		 * Y​o​u​ ​d​o​ ​n​o​t​ ​h​a​v​e​ ​p​e​r​m​i​s​s​i​o​n​ ​t​o​ ​p​e​r​f​o​r​m​ ​t​h​i​s​ ​a​c​t​i​o​n
+		 */
+		not_authorized: string
+		/**
+		 * I​n​v​a​l​i​d​ ​u​s​e​r​n​a​m​e​ ​o​r​ ​p​a​s​s​w​o​r​d
+		 */
+		invalid_credentials: string
+		/**
+		 * Y​o​u​ ​a​r​e​ ​n​o​t​ ​a​ ​m​e​m​b​e​r​ ​o​f​ ​t​h​i​s​ ​g​r​o​u​p
+		 */
+		not_in_group: string
+		/**
+		 * P​l​e​a​s​e​ ​v​e​r​i​f​y​ ​y​o​u​r​ ​e​m​a​i​l​ ​a​d​d​r​e​s​s​ ​b​e​f​o​r​e​ ​c​o​n​t​i​n​u​i​n​g
+		 */
+		email_not_verified: string
+	}
+	/**
+	 * I​n​v​i​t​a​t​i​o​n​s
+	 */
+	invitations: string
 }
 
 export type TranslationFunctions = {
@@ -137,6 +369,238 @@ export type TranslationFunctions = {
 	 * Email verified successfully! Your account is now activated.
 	 */
 	emailVerified: () => LocalizedString
+	/**
+	 * My Groups
+	 */
+	myGroups: () => LocalizedString
+	group: {
+		/**
+		 * Documents
+		 */
+		documents: () => LocalizedString
+		/**
+		 * Members
+		 */
+		members: () => LocalizedString
+		/**
+		 * Settings
+		 */
+		settings: () => LocalizedString
+		memberships: {
+			/**
+			 * Owner
+			 */
+			owner: () => LocalizedString
+			/**
+			 * Memberships
+			 */
+			label: () => LocalizedString
+			/**
+			 * Member
+			 */
+			accepted: () => LocalizedString
+			/**
+			 * Invited
+			 */
+			invited: () => LocalizedString
+		}
+	}
+	memberships: {
+		/**
+		 * Kick
+		 */
+		kick: () => LocalizedString
+		/**
+		 * Actions
+		 */
+		actions: () => LocalizedString
+		/**
+		 * Leave Group
+		 */
+		leave: () => LocalizedString
+	}
+	permissionGroups: {
+		/**
+		 * Administration
+		 */
+		administration: () => LocalizedString
+		/**
+		 * Comments
+		 */
+		comments: () => LocalizedString
+		/**
+		 * Documents
+		 */
+		documents: () => LocalizedString
+		/**
+		 * Members
+		 */
+		members: () => LocalizedString
+		/**
+		 * Reactions
+		 */
+		reactions: () => LocalizedString
+		/**
+		 * Share Links
+		 */
+		shareLinks: () => LocalizedString
+	}
+	permissions: {
+		/**
+		 * Permissions
+		 */
+		label: () => LocalizedString
+		/**
+		 * Full administrative access
+		 */
+		administrator: () => LocalizedString
+		/**
+		 * Add comments
+		 */
+		add_comments: () => LocalizedString
+		/**
+		 * Remove comments
+		 */
+		remove_comments: () => LocalizedString
+		/**
+		 * View public comments
+		 */
+		view_public_comments: () => LocalizedString
+		/**
+		 * View restricted comments
+		 */
+		view_restricted_comments: () => LocalizedString
+		/**
+		 * Add members
+		 */
+		add_members: () => LocalizedString
+		/**
+		 * Remove members
+		 */
+		remove_members: () => LocalizedString
+		/**
+		 * Manage permissions
+		 */
+		manage_permissions: () => LocalizedString
+		/**
+		 * Upload documents
+		 */
+		upload_documents: () => LocalizedString
+		/**
+		 * View restricted documents
+		 */
+		view_restricted_documents: () => LocalizedString
+		/**
+		 * Delete documents
+		 */
+		delete_documents: () => LocalizedString
+		/**
+		 * Remove reactions
+		 */
+		remove_reactions: () => LocalizedString
+		/**
+		 * Add reactions
+		 */
+		add_reactions: () => LocalizedString
+		/**
+		 * Manage share links
+		 */
+		manage_share_links: () => LocalizedString
+	}
+	visibility: {
+		'public': {
+			/**
+			 * Public
+			 */
+			label: () => LocalizedString
+			/**
+			 * Anyone in the group can view this document
+			 */
+			description: () => LocalizedString
+		}
+		restricted: {
+			/**
+			 * Restricted
+			 */
+			label: () => LocalizedString
+			/**
+			 * Only members with VIEW_RESTRICTED_DOCUMENTS permission can view
+			 */
+			description: () => LocalizedString
+		}
+		'private': {
+			/**
+			 * Private
+			 */
+			label: () => LocalizedString
+			/**
+			 * Only you can view this document
+			 */
+			description: () => LocalizedString
+		}
+	}
+	/**
+	 * User
+	 */
+	user: () => LocalizedString
+	/**
+	 * Status
+	 */
+	status: () => LocalizedString
+	/**
+	 * Add
+	 */
+	add: () => LocalizedString
+	/**
+	 * Remove
+	 */
+	remove: () => LocalizedString
+	errors: {
+		/**
+		 * An unknown error occurred
+		 */
+		unknown_error: () => LocalizedString
+		/**
+		 * Validation error
+		 */
+		validation_error: () => LocalizedString
+		/**
+		 * Invalid input provided
+		 */
+		invalid_input: () => LocalizedString
+		/**
+		 * Database is currently unavailable
+		 */
+		database_unavailable: () => LocalizedString
+		/**
+		 * Your session token is invalid or expired
+		 */
+		invalid_token: () => LocalizedString
+		/**
+		 * You must be logged in to perform this action
+		 */
+		not_authenticated: () => LocalizedString
+		/**
+		 * You do not have permission to perform this action
+		 */
+		not_authorized: () => LocalizedString
+		/**
+		 * Invalid username or password
+		 */
+		invalid_credentials: () => LocalizedString
+		/**
+		 * You are not a member of this group
+		 */
+		not_in_group: () => LocalizedString
+		/**
+		 * Please verify your email address before continuing
+		 */
+		email_not_verified: () => LocalizedString
+	}
+	/**
+	 * Invitations
+	 */
+	invitations: () => LocalizedString
 }
 
 export type Formatters = {}

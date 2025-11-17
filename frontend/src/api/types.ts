@@ -6,6 +6,22 @@
 */
 
 /**
+ * Types of custom application exceptions.
+ */
+export type AppErrorCode =
+  | "unknown_error"
+  | "validation_error"
+  | "invalid_input"
+  | "database_unavailable"
+  | "invalid_token"
+  | "not_authenticated"
+  | "not_authorized"
+  | "invalid_credentials"
+  | "not_in_group"
+  | "email_not_verified"
+  | "membership_not_found"
+  | "owner_cannot_leave_group";
+/**
  * Visibility levels for comments.
  */
 export type Visibility = "private" | "restricted" | "public";
@@ -41,6 +57,14 @@ export type Permission =
   | "manage_share_links";
 
 /**
+ * Base class for all custom exceptions in the application.
+ */
+export interface AppError {
+  status_code: number;
+  error_code: AppErrorCode;
+  detail: string;
+}
+/**
  * Comment entity for annotations and discussions.
  */
 export interface Comment {
@@ -48,7 +72,7 @@ export interface Comment {
   updated_at?: string;
   id?: number;
   visibility: Visibility;
-  document_id: number;
+  document_id: string;
   user_id: number;
   parent_id?: number | null;
   content?: string | null;
@@ -58,7 +82,7 @@ export interface Comment {
 }
 export interface CommentCreate {
   visibility: Visibility;
-  document_id: number;
+  document_id: string;
   parent_id?: number | null;
   content?: string | null;
   annotation?: {
@@ -67,6 +91,8 @@ export interface CommentCreate {
 }
 export interface CommentFilter {
   visibility: Visibility;
+  user_id: number;
+  document_id: string;
 }
 export interface CommentRead {
   created_at?: string;
@@ -107,32 +133,35 @@ export interface CommentUpdate {
 export interface Document {
   created_at?: string;
   updated_at?: string;
-  id?: number;
+  id?: string;
+  name: string;
   s3_key: string;
   size_bytes?: number;
   visibility?: Visibility1;
   view_mode?: ViewMode;
   secret?: string;
-  group_id: number;
+  group_id: string;
 }
 export interface DocumentCreate {
   visibility: Visibility;
-  group_id: number;
+  name: string;
+  group_id: string;
 }
 export interface DocumentFilter {
   size_bytes: number;
-  group_id: number;
+  group_id: string;
 }
 export interface DocumentRead {
   created_at?: string;
   updated_at?: string;
-  id: number;
+  id: string;
   s3_key: string;
-  group_id: number;
+  name: string;
+  group_id: string;
   visibility: Visibility;
 }
 export interface DocumentTransfer {
-  group_id: number;
+  group_id: string;
 }
 /**
  * The payload of a client facing JWT, signed with the global secret.
@@ -150,7 +179,7 @@ export interface GlobalJWTPayload {
 export interface Group {
   created_at?: string;
   updated_at?: string;
-  id?: number;
+  id?: string;
   name: string;
   secret?: string;
   default_permissions?: Permission[];
@@ -165,24 +194,19 @@ export interface GroupCreate {
 export interface GroupFilter {
   name: string;
   member_count: number;
-}
-export interface GroupMembershipFilter {
-  user_id: number;
-}
-export interface GroupMembershipRead {
-  permissions: Permission[];
-  user: UserRead;
-  is_owner: boolean;
   accepted: boolean;
-  group_id: number;
 }
 export interface GroupRead {
   created_at?: string;
   updated_at?: string;
-  id: number;
+  id: string;
   name: string;
   member_count: number;
   owner: UserRead | null;
+  default_permissions: Permission[];
+}
+export interface GroupTransfer {
+  user_id: number;
 }
 export interface GroupUpdate {
   name?: string | null;
@@ -195,10 +219,28 @@ export interface Membership {
   created_at?: string;
   updated_at?: string;
   user_id: number;
-  group_id: number;
+  group_id: string;
   permissions?: Permission[];
   is_owner?: boolean;
   accepted?: boolean;
+}
+export interface MembershipCreate {
+  user_id: number;
+}
+export interface MembershipFilter {
+  user_id: number;
+  group_id: string;
+  accepted: boolean;
+}
+export interface MembershipPermissionUpdate {
+  permissions: Permission[];
+}
+export interface MembershipRead {
+  permissions: Permission[];
+  user: UserRead;
+  group: GroupRead;
+  is_owner: boolean;
+  accepted: boolean;
 }
 export interface PaginatedBase {
   data: unknown[];
@@ -207,6 +249,7 @@ export interface PaginatedBase {
   limit: number;
   filters?: Filter[];
   order_by?: string[];
+  excluded_fields?: string[];
 }
 export interface Filter {
   field: string;
@@ -228,12 +271,18 @@ export interface ShareLinkRead {
   expires_at?: string | null;
   label?: string | null;
   token: string;
+  author: UserRead;
+  group_id: string;
 }
 export interface ShareLinkUpdate {
   permissions?: Permission[] | null;
   expires_at?: string | null;
   label?: string | null;
   rotate_token?: boolean | null;
+}
+export interface Sort {
+  field: string;
+  direction: "asc" | "desc";
 }
 /**
  * A token object that contains the access and refresh tokens.
@@ -266,6 +315,7 @@ export interface UserFilter {
   username: string;
   first_name: string;
   last_name: string;
+  group_id: string;
 }
 /**
  * The inner payload of a JWT, signed with the user's secret.
@@ -274,13 +324,6 @@ export interface UserJWTPayload {
   sub: string;
   exp?: string | null;
   iat?: string | null;
-}
-export interface UserMembershipRead {
-  permissions: Permission[];
-  group: GroupRead;
-  is_owner: boolean;
-  accepted: boolean;
-  user_id: number;
 }
 export interface UserPrivate {
   created_at?: string;
