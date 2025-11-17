@@ -112,11 +112,21 @@ async def create_document(
 
 @router.get("/{document_id}", response_model=DocumentRead)
 async def get_document(
-    _: BasicAuthentication,
-    document: Document = Resource(Document, param_alias="document_id", guards=[Guard.document_access()]),
+    _: User = Authenticate(guards=[Guard.document_access()]),
+    document: Document = Resource(Document, param_alias="document_id"),
 ) -> DocumentRead:
     """Get a document by ID."""
     return document
+
+@router.get("/{document_id}/file")
+async def get_document_file(
+    s3: S3,
+    _: User = Authenticate(guards=[Guard.document_access()]),
+    document: Document = Resource(Document, param_alias="document_id"),
+) -> Response:
+    """Download the document file from S3 and return it."""
+    file_content = s3.download(document.s3_key)
+    return Response(content=file_content, media_type="application/pdf")
 
 @router.get("/", response_model=Paginated[DocumentRead], response_class=ExcludableFieldsJSONResponse)
 async def list_documents(
