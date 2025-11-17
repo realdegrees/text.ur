@@ -17,7 +17,7 @@ export const load: PageLoad = async ({ fetch, params, url }) => {
 			]
 		}
 	);
-	
+
 	if (!result.success) {
 		throw new Error(`Failed to load memberships: ${result.error.detail}`);
 	}

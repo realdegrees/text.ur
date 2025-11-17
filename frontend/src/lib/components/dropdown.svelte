@@ -46,17 +46,6 @@
 
 	let arrowRef = $state<HTMLElement>();
 
-	function getArrowPosition() {
-		if (!arrowRef || !dropdownRef) return { left: 0 };
-
-		const dropdownRect = dropdownRef.getBoundingClientRect();
-		const arrowRect = arrowRef.getBoundingClientRect();
-
-		return {
-			left: arrowRect.left - dropdownRect.left + arrowRect.width / 2
-		};
-	}
-
 	// Close dropdown when clicking outside
 	function handleClickOutside(event: MouseEvent) {
 		if (dropdownRef && !dropdownRef.contains(event.target as Node)) {
@@ -78,7 +67,8 @@
 </script>
 
 <div class="relative" bind:this={dropdownRef}>
-	{#if allowSelection} <!-- Check the allowSelection flag -->
+	{#if allowSelection}
+		<!-- Check the allowSelection flag -->
 		<button
 			class="bg-surface hover:bg-surface-variant flex cursor-pointer items-center justify-between gap-1 rounded-sm"
 			onclick={toggleDropdown}

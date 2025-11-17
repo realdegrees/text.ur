@@ -14,11 +14,11 @@
 </script>
 
 <div
-	class="bg-background text-text h-5.5 flex flex-row items-center rounded text-xs shadow-inner shadow-black/30"
+	class="flex h-5.5 flex-row items-center rounded bg-background text-xs text-text shadow-inner shadow-black/30"
 	in:scale
 	out:scale
 >
-	<p class="whitespace-nowrap p-1.5">{label}</p>
+	<p class="p-1.5 whitespace-nowrap">{label}</p>
 	{#if showRemove}
 		<button
 			onclick={() => onRemove?.(item)}

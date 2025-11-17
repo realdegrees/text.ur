@@ -119,7 +119,7 @@
 		<h2 class="w-full text-left text-2xl">{$LL.myGroups()}</h2>
 		<a
 			href="/dashboard/groups/create"
-			class="bg-primary text-text hover:bg-primary/80 flex flex-row items-center gap-1 rounded-md px-3 py-1 text-sm transition-all "
+			class="flex flex-row items-center gap-1 rounded-md bg-primary px-3 py-1 text-sm text-text transition-all hover:bg-primary/80"
 			title="Create new group"
 		>
 			<AddIcon class="h-4 w-4" />
@@ -130,14 +130,14 @@
 	<InfiniteScrollList data={filteredData} {loadMore} step={2} onSelect={handleSelect}>
 		{#snippet itemSnippet(membership: Omit<MembershipRead, 'user'>)}
 			<div
-				class="group flex w-full cursor-pointer flex-col gap-1 rounded-md bg-inset px-3 py-2.5 shadow-inner shadow-black/30 transition-all hover:bg-primary m-1"
+				class="group m-1 flex w-full cursor-pointer flex-col gap-1 rounded-md bg-inset px-3 py-2.5 shadow-inner shadow-black/30 transition-all hover:bg-primary"
 				class:bg-primary={membership.group.id === page.params.groupid}
 				class:shadow-inner-sym-[5px]={membership.group.id === page.params.groupid}
 			>
 				<h3 class="truncate text-left text-sm font-semibold">{membership.group.name}</h3>
-				<p class="truncate text-xs opacity-70 text-left">
+				<p class="truncate text-left text-xs opacity-70">
 					{membership.group.owner?.username}
-                </p>
+				</p>
 			</div>
 		{/snippet}
 	</InfiniteScrollList>
@@ -160,22 +160,26 @@
 				<div class="flex flex-row gap-1.5">
 					<button
 						onclick={(e) => acceptInvitation(invitation.group.id, e)}
-						class="rounded bg-green-500/30 p-1.5 shadow-inner shadow-black/30 transition-all hover:bg-green-500/40 hover:cursor-pointer"
+						class="rounded bg-green-500/30 p-1.5 shadow-inner shadow-black/30 transition-all hover:cursor-pointer hover:bg-green-500/40"
 						title="Accept invitation"
 					>
 						<CheckIcon class="h-4 w-4" />
 					</button>
-                    <button
-                        onclick={(e) => {
-                            if (confirm("Are you sure you want to reject this invitation? You will not be able to rejoin unless invited again.")) {
-                                rejectInvitation(invitation.group.id, e);
-                            }
-                        }}
-                        class="rounded bg-red-500/30 p-1.5 shadow-inner shadow-black/30 transition-all hover:bg-red-500/40 hover:cursor-pointer"
-                        title="Reject invitation"
-                    >
-                        <CloseIcon class="h-4 w-4" />
-                    </button>
+					<button
+						onclick={(e) => {
+							if (
+								confirm(
+									'Are you sure you want to reject this invitation? You will not be able to rejoin unless invited again.'
+								)
+							) {
+								rejectInvitation(invitation.group.id, e);
+							}
+						}}
+						class="rounded bg-red-500/30 p-1.5 shadow-inner shadow-black/30 transition-all hover:cursor-pointer hover:bg-red-500/40"
+						title="Reject invitation"
+					>
+						<CloseIcon class="h-4 w-4" />
+					</button>
 				</div>
 			</div>
 		{/snippet}

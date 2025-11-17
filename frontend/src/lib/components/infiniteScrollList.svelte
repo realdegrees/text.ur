@@ -16,7 +16,10 @@
 	}: {
 		itemSnippet: Snippet<[ActualItem]>;
 		data: Paginated<Item, ExcludedFields>;
-		loadMore: (offset: number, limit: number) => Promise<Paginated<Item, ExcludedFields> | undefined>;
+		loadMore: (
+			offset: number,
+			limit: number
+		) => Promise<Paginated<Item, ExcludedFields> | undefined>;
 		step?: number;
 		autoLoad?: boolean;
 		onSelect?: (item: ActualItem) => void;

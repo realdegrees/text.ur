@@ -131,7 +131,7 @@
 			notification(result.error);
 			return;
 		}
-		
+
 		notification('success', 'Document uploaded successfully');
 		goto(`/dashboard/documents/${result.data.id}`);
 	}
@@ -154,7 +154,7 @@
 		<!-- File Upload Section -->
 		<div class="flex flex-col gap-2">
 			<div class="text-sm font-semibold text-text/70">Document File</div>
-			<p class="text-text/50 text-xs">
+			<p class="text-xs text-text/50">
 				Upload a PDF file (max {MAX_FILE_SIZE_MB}MB)
 			</p>
 
@@ -179,23 +179,23 @@
 						disabled={isLoading}
 					/>
 					<div class="flex flex-col items-center gap-4 p-8">
-						<DragDropIcon class="text-text/40 h-16 w-16" />
+						<DragDropIcon class="h-16 w-16 text-text/40" />
 						<div class="flex flex-col items-center gap-2">
 							<p class="text-lg font-semibold">Drag and drop your PDF file here</p>
-							<p class="text-text/60 text-sm">or click to browse</p>
+							<p class="text-sm text-text/60">or click to browse</p>
 						</div>
-						<p class="text-text/50 text-xs">Maximum file size: {MAX_FILE_SIZE_MB}MB</p>
+						<p class="text-xs text-text/50">Maximum file size: {MAX_FILE_SIZE_MB}MB</p>
 					</div>
 				</div>
 			{:else}
 				<!-- Selected File Display -->
 				<div
-					class="border-text/20 bg-text/5 flex flex-row items-center gap-4 rounded-lg border p-4"
+					class="flex flex-row items-center gap-4 rounded-lg border border-text/20 bg-text/5 p-4"
 				>
-					<DocumentIcon class="text-primary h-8 w-8" />
+					<DocumentIcon class="h-8 w-8 text-primary" />
 					<div class="flex flex-1 flex-col gap-1">
 						<p class="font-semibold">{selectedFile.name}</p>
-						<p class="text-text/60 text-sm">{formatFileSize(selectedFile.size)}</p>
+						<p class="text-sm text-text/60">{formatFileSize(selectedFile.size)}</p>
 					</div>
 					<button
 						type="button"
@@ -225,13 +225,13 @@
 		<!-- Visibility Section -->
 		<div class="flex flex-col gap-2">
 			<div class="text-sm font-semibold text-text/70">Visibility Settings</div>
-			<p class="text-text/50 text-xs">Choose who can view this document</p>
+			<p class="text-xs text-text/50">Choose who can view this document</p>
 
 			<div class="flex flex-col gap-2">
 				{#each visibilityOptions as option (option.value)}
 					{@const isSelected = selectedVisibility === option.value}
 					<label
-						class="bg-inset hover:bg-text/10 flex cursor-pointer flex-row items-start gap-3 rounded-lg p-4 transition-all"
+						class="flex cursor-pointer flex-row items-start gap-3 rounded-lg bg-inset p-4 transition-all hover:bg-text/10"
 						style={isSelected ? 'background-color: rgba(var(--primary-rgb), 0.1);' : ''}
 					>
 						<input
@@ -245,7 +245,7 @@
 						/>
 						<div class="flex flex-col gap-1">
 							<span class="font-semibold">{option.label}</span>
-							<span class="text-text/70 text-sm">{option.description}</span>
+							<span class="text-sm text-text/70">{option.description}</span>
 						</div>
 					</label>
 				{/each}
@@ -256,14 +256,14 @@
 		<div class="flex flex-row justify-end gap-2">
 			<a
 				href="/dashboard/groups/{groupId}/documents"
-				class="bg-text/10 hover:bg-text/20 rounded-md px-6 py-2 transition-all"
+				class="rounded-md bg-text/10 px-6 py-2 transition-all hover:bg-text/20"
 			>
 				Cancel
 			</a>
 			<button
 				type="submit"
 				disabled={isLoading || !selectedFile}
-				class="bg-primary text-background hover:bg-primary/80 disabled:bg-text/30 flex flex-row items-center gap-2 rounded-md px-6 py-2 transition-all disabled:cursor-not-allowed"
+				class="flex flex-row items-center gap-2 rounded-md bg-primary px-6 py-2 text-background transition-all hover:bg-primary/80 disabled:cursor-not-allowed disabled:bg-text/30"
 			>
 				{#if isLoading}
 					<Loading class="h-5 w-5" />

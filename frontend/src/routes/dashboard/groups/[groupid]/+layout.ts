@@ -6,7 +6,10 @@ export const load: LayoutLoad = async ({ fetch, params, parent }) => {
 	const data = await parent();
 	const membership = data.memberships.data.find(({ group }) => group.id === params.groupid);
 	if (!membership) {
-		const result = await api.get<MembershipRead>(`/groups/${params.groupid}/memberships/${data.sessionUser.id}`, { fetch });
+		const result = await api.get<MembershipRead>(
+			`/groups/${params.groupid}/memberships/${data.sessionUser.id}`,
+			{ fetch }
+		);
 		if (!result.success) {
 			throw new Error(`Failed to load membership for group: ${result.error.detail}`);
 		}

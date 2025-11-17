@@ -26,7 +26,10 @@
 	}: {
 		columns: ColumnConfig<ActualItem>[];
 		data: Paginated<Item, ExcludedFields>;
-		loadMore: (offset: number, limit: number) => Promise<Paginated<Item, ExcludedFields> | undefined>;
+		loadMore: (
+			offset: number,
+			limit: number
+		) => Promise<Paginated<Item, ExcludedFields> | undefined>;
 		step?: number;
 		autoLoad?: boolean;
 		selectable?: boolean;
@@ -60,7 +63,8 @@
 	});
 
 	function toggleSelectAll() {
-		const currentlyAllSelected = scroll.items.length > 0 && scroll.items.every((item) => selectedItems.has(item));
+		const currentlyAllSelected =
+			scroll.items.length > 0 && scroll.items.every((item) => selectedItems.has(item));
 		if (currentlyAllSelected) {
 			selectedItems.clear();
 		} else {

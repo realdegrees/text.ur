@@ -29,7 +29,7 @@ export const load: LayoutLoad = async ({ fetch, parent, params }) => {
 
 	if (membershipsResult.success) {
 		memberships = membershipsResult.data;
-	} else {		
+	} else {
 		notification(membershipsResult.error);
 		return {
 			...(await parent()),
@@ -39,7 +39,7 @@ export const load: LayoutLoad = async ({ fetch, parent, params }) => {
 
 	if (invitesResult.success) {
 		invites = invitesResult.data;
-	} else {		
+	} else {
 		notification(invitesResult.error);
 		return {
 			...(await parent()),
@@ -57,10 +57,9 @@ export const load: LayoutLoad = async ({ fetch, parent, params }) => {
 			throw new Error(`Failed to load membership for selected group: ${result.error.detail}`);
 		}
 		memberships.data.unshift(result.data);
-	}	
+	}
 
 	console.log(`Found ${memberships.data.length} memberships and ${invites.data.length} invites`);
-	
 
 	return {
 		...(await parent()),

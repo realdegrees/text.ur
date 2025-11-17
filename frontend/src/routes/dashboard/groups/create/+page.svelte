@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { GroupCreate, GroupRead, Permission } from '$api/types';
 	import { permissionSchema } from '$api/schemas';
-	import { goto, invalidate, invalidateAll } from '$app/navigation';
+	import { goto } from '$app/navigation';
 	import LL from '$i18n/i18n-svelte';
 	import AddIcon from '~icons/material-symbols/add-2-rounded';
 	import GroupIcon from '~icons/material-symbols/group-outline';
@@ -11,8 +11,6 @@
 	import Dropdown from '$lib/components/dropdown.svelte';
 	import Badge from '$lib/components/badge.svelte';
 	import { scale } from 'svelte/transition';
-
-	let { data } = $props();
 
 	let groupName: string = $state('');
 	let selectedPermissions: Permission[] = $state([]);
@@ -61,7 +59,7 @@
 <div class="flex h-full w-full flex-col gap-4 p-6">
 	<!-- Header Section -->
 	<div class="flex flex-row items-center gap-3">
-		<a href="/dashboard" class="text-text/70 hover:text-text transition-colors">Dashboard</a>
+		<a href="/dashboard" class="text-text/70 transition-colors hover:text-text">Dashboard</a>
 		<span class="text-text/50">/</span>
 		<h1 class="text-2xl font-bold">Create New Group</h1>
 	</div>
@@ -95,14 +93,14 @@
 				<h2 class="text-xl font-semibold">Group Details</h2>
 			</div>
 
-			<label for="groupName" class="text-text/70 text-sm font-semibold">Group Name *</label>
+			<label for="groupName" class="text-sm font-semibold text-text/70">Group Name *</label>
 			<input
 				id="groupName"
 				type="text"
 				bind:value={groupName}
 				required
 				placeholder="Enter group name"
-				class="border-text/20 bg-text/5 focus:border-text/50 rounded-md border px-4 py-2 transition-colors focus:outline-none"
+				class="rounded-md border border-text/20 bg-text/5 px-4 py-2 transition-colors focus:border-text/50 focus:outline-none"
 				disabled={isLoading}
 			/>
 		</div>
@@ -113,7 +111,7 @@
 		<div class="flex flex-col gap-4">
 			<h2 class="text-xl font-semibold">Default Member Permissions</h2>
 
-			<p class="text-text/70 text-sm">
+			<p class="text-sm text-text/70">
 				Select the default permissions that new members will have when joining this group.
 			</p>
 
@@ -144,7 +142,7 @@
 							{#snippet icon()}
 								{#if availablePermissions.filter((p) => !selectedPermissions.includes(p)).length > 0}
 									<AddIcon
-										class="w-5.5 bg-background text-text h-full rounded shadow-inner shadow-black/20 transition-all hover:bg-green-500/30"
+										class="h-full w-5.5 rounded bg-background text-text shadow-inner shadow-black/20 transition-all hover:bg-green-500/30"
 									/>
 								{/if}
 							{/snippet}
@@ -161,13 +159,13 @@
 
 		<!-- Submit Button -->
 		<div class="flex flex-row justify-end gap-2">
-			<a href="/dashboard" class="bg-text/10 hover:bg-text/20 rounded-md px-6 py-2 transition-all">
+			<a href="/dashboard" class="rounded-md bg-text/10 px-6 py-2 transition-all hover:bg-text/20">
 				Cancel
 			</a>
 			<button
 				type="submit"
 				disabled={isLoading || !groupName.trim()}
-				class="bg-primary text-background hover:bg-primary/80 disabled:bg-text/30 flex flex-row items-center gap-2 rounded-md px-6 py-2 transition-all disabled:cursor-not-allowed"
+				class="flex flex-row items-center gap-2 rounded-md bg-primary px-6 py-2 text-background transition-all hover:bg-primary/80 disabled:cursor-not-allowed disabled:bg-text/30"
 			>
 				{#if isLoading}
 					<Loading class="h-5 w-5" />
@@ -182,5 +180,5 @@
 </div>
 
 {#snippet permissionItem(perm: Permission)}
-	<p class="text-text p-1 text-left">{$LL.permissions[perm]?.() || perm}</p>
+	<p class="p-1 text-left text-text">{$LL.permissions[perm]?.() || perm}</p>
 {/snippet}

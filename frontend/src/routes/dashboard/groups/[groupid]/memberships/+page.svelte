@@ -171,7 +171,7 @@
 			{#if selected.length > 0}
 				{#if validatePermissions(data.membership, ['remove_members'])}
 					<button
-						class="bg-inset rounded px-1 py-1.5 font-semibold shadow-inner shadow-black/30 transition hover:cursor-pointer hover:bg-red-500/30"
+						class="rounded bg-inset px-1 py-1.5 font-semibold shadow-inner shadow-black/30 transition hover:cursor-pointer hover:bg-red-500/30"
 						onclick={() => selected.forEach(async ({ user: { id } }) => kickMember(id))}
 					>
 						Kick
@@ -190,7 +190,7 @@
 					>
 						{#snippet icon()}
 							<div
-								class="bg-inset rounded px-1 py-1.5 font-semibold shadow-inner shadow-black/30 transition hover:cursor-pointer hover:bg-green-500/30"
+								class="rounded bg-inset px-1 py-1.5 font-semibold shadow-inner shadow-black/30 transition hover:cursor-pointer hover:bg-green-500/30"
 							>
 								Add Permission
 							</div>
@@ -214,7 +214,7 @@
 					>
 						{#snippet icon()}
 							<div
-								class="bg-inset rounded px-1 py-1.5 font-semibold shadow-inner shadow-black/30 transition hover:cursor-pointer hover:bg-orange-500/30"
+								class="rounded bg-inset px-1 py-1.5 font-semibold shadow-inner shadow-black/30 transition hover:cursor-pointer hover:bg-orange-500/30"
 							>
 								Remove Permission
 							</div>
@@ -280,14 +280,14 @@
 </div>
 
 {#snippet permissionItem(perm: Permission)}
-	<p class="text-text p-1 text-left">{$LL.permissions[perm]?.() || perm}</p>
+	<p class="p-1 text-left text-text">{$LL.permissions[perm]?.() || perm}</p>
 {/snippet}
 
 {#snippet usernameSnippet(membership: Omit<MembershipRead, 'group'>)}
-	<div class="text-text flex flex-row items-center">
+	<div class="flex flex-row items-center text-text">
 		<p class="font-medium">{membership.user.username || 'Unknown User'}</p>
 		{#if membership.user.first_name || membership.user.last_name}
-			<p class="text-text/70 ml-1">
+			<p class="ml-1 text-text/70">
 				({membership.user.first_name || ''}
 				{membership.user.last_name || ''})
 			</p>
@@ -346,7 +346,7 @@
 					{#snippet icon()}
 						{#if validatePermissions( data.membership, ['manage_permissions'] ) && availablePermissions.filter((p) => !membership.permissions.includes(p)).length > 0}
 							<AddIcon
-								class="w-5.5 bg-background text-text h-full rounded shadow-inner shadow-black/20 transition-all hover:bg-green-500/30"
+								class="h-full w-5.5 rounded bg-background text-text shadow-inner shadow-black/20 transition-all hover:bg-green-500/30"
 							/>
 						{/if}
 					{/snippet}
@@ -360,19 +360,29 @@
 {/snippet}
 
 {#snippet removeSnippet(membership: Omit<MembershipRead, 'group'>)}
-	{@const useRemoveButton = 
-	validatePermissions(data.membership, ['remove_members']) && 
-	!membership.is_owner && 
-	!(membership.permissions.includes('administrator') || membership.permissions.includes('manage_permissions'))}
+	{@const useRemoveButton =
+		validatePermissions(data.membership, ['remove_members']) &&
+		!membership.is_owner &&
+		!(
+			membership.permissions.includes('administrator') ||
+			membership.permissions.includes('manage_permissions')
+		)}
 
-	{@const useLeaveButton =
-		data.sessionUser!.id === membership.user.id && !membership.is_owner}
-	
-	{#if useLeaveButton || useRemoveButton }
+	{@const useLeaveButton = data.sessionUser!.id === membership.user.id && !membership.is_owner}
+
+	{#if useLeaveButton || useRemoveButton}
 		<button
 			onclick={async () => {
-				if (confirm(useLeaveButton ? `Are you sure you want to leave the group?` : `Are you sure you want to kick ${membership.user.username} from the group?`)) {
-					const success = useLeaveButton ? await leaveGroup() : await kickMember(membership.user.id);
+				if (
+					confirm(
+						useLeaveButton
+							? `Are you sure you want to leave the group?`
+							: `Are you sure you want to kick ${membership.user.username} from the group?`
+					)
+				) {
+					const success = useLeaveButton
+						? await leaveGroup()
+						: await kickMember(membership.user.id);
 					if (success) {
 						data.memberships = {
 							...data.memberships,
@@ -385,7 +395,7 @@
 					}
 				}
 			}}
-			class="text-text h-full w-fit rounded rounded-r bg-red-500/10 p-1 shadow-black/20 transition-all hover:cursor-pointer hover:bg-red-500/30 hover:shadow-inner"
+			class="h-full w-fit rounded rounded-r bg-red-500/10 p-1 text-text shadow-black/20 transition-all hover:cursor-pointer hover:bg-red-500/30 hover:shadow-inner"
 			aria-label="Kick {membership.user.username} from the group"
 		>
 			{useLeaveButton ? $LL.memberships.leave() : $LL.memberships.kick()}

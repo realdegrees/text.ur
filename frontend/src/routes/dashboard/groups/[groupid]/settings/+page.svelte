@@ -8,7 +8,13 @@
 	import { notification } from '$lib/stores/notificationStore';
 	import { validatePermissions } from '$api/validatePermissions';
 	import { goto, invalidateAll } from '$app/navigation';
-	import type { GroupUpdate, GroupTransfer, Permission, UserRead, MembershipRead } from '$api/types';
+	import type {
+		GroupUpdate,
+		GroupTransfer,
+		Permission,
+		UserRead,
+		MembershipRead
+	} from '$api/types';
 	import type { Paginated } from '$api/pagination';
 	import AdvancedInput from '$lib/components/advancedInput.svelte';
 	import Dropdown from '$lib/components/dropdown.svelte';
@@ -91,16 +97,13 @@
 	}
 
 	async function fetchMemberOptions(search: string): Promise<UserRead[]> {
-		const response = await api.get<Paginated<MembershipRead>, 'group'>(
-			`/memberships`,
-			{
-				filters: [
-					{ field: 'group_id', operator: '==', value: group.id },
-					{ field: 'accepted', operator: '==', value: 'true' },
-					{ field: 'user_id', operator: '!=', value: data.sessionUser!.id.toString() }
-				]
-			}
-		);
+		const response = await api.get<Paginated<MembershipRead>, 'group'>(`/memberships`, {
+			filters: [
+				{ field: 'group_id', operator: '==', value: group.id },
+				{ field: 'accepted', operator: '==', value: 'true' },
+				{ field: 'user_id', operator: '!=', value: data.sessionUser!.id.toString() }
+			]
+		});
 
 		if (response.success) {
 			const users = response.data.data.map((m) => m.user);
@@ -164,7 +167,11 @@
 					class="flex flex-wrap items-center gap-1.5 rounded-md border border-text/20 bg-text/5 p-3"
 				>
 					{#each defaultPermissions as perm (perm)}
-						<Badge item={perm} label={$LL.permissions[perm]?.() || perm} onRemove={removeDefaultPermission} />
+						<Badge
+							item={perm}
+							label={$LL.permissions[perm]?.() || perm}
+							onRemove={removeDefaultPermission}
+						/>
 					{/each}
 
 					{#key defaultPermissions.length}
@@ -182,7 +189,7 @@
 								{#snippet icon()}
 									{#if availablePermissions.filter((p) => !defaultPermissions.includes(p)).length > 0}
 										<AddIcon
-											class="w-5.5 bg-background text-text h-full rounded shadow-inner shadow-black/20 transition-all hover:bg-green-500/30"
+											class="h-full w-5.5 rounded bg-background text-text shadow-inner shadow-black/20 transition-all hover:bg-green-500/30"
 										/>
 									{/if}
 								{/snippet}
@@ -209,7 +216,9 @@
 
 		<!-- Transfer Ownership (Owner only) -->
 		{#if isOwner}
-			<div class="mt-8 flex flex-col gap-4 rounded-md border border-orange-500/30 bg-orange-500/5 p-4">
+			<div
+				class="mt-8 flex flex-col gap-4 rounded-md border border-orange-500/30 bg-orange-500/5 p-4"
+			>
 				<h2 class="text-lg font-semibold text-orange-500">Transfer Ownership</h2>
 				<p class="text-sm text-text/70">
 					Transfer ownership of this group to another member. You will lose owner privileges.
@@ -340,5 +349,5 @@
 </div>
 
 {#snippet permissionItem(perm: Permission)}
-	<p class="text-text p-1 text-left">{$LL.permissions[perm]?.() || perm}</p>
+	<p class="p-1 text-left text-text">{$LL.permissions[perm]?.() || perm}</p>
 {/snippet}

@@ -44,7 +44,7 @@
 		stringify?: {
 			option: Option extends string ? never : (item: Option) => string;
 			hint?: Option extends string ? never : (item: Option) => string;
-		}
+		};
 		onSubmit?: (query: string, option: Option | undefined) => void;
 		name?: string;
 		label?: string;
@@ -79,13 +79,18 @@
 			if (!effectiveFetchOptions) return { prefix: '', suffix: '' };
 			if (hideOnBlur && !focused) return { prefix: '', suffix: value.length ? '' : placeholder };
 			if (!value.length) return { prefix: '', suffix: placeholder };
-			if (typeof selectedOptionText === 'string' && selectedOptionText.toLowerCase() === value.toLowerCase()) {
+			if (
+				typeof selectedOptionText === 'string' &&
+				selectedOptionText.toLowerCase() === value.toLowerCase()
+			) {
 				return { prefix: '', suffix: fullMatchHint };
 			}
 			if (options[selectedIndex] && typeof selectedOptionText === 'string') {
 				const split = selectedOptionText.toLowerCase().split(value.toLocaleLowerCase());
 				const prefix = split.length > 1 ? selectedOptionText.slice(0, split[0].length) : '';
-				const suffix = selectedOptionText.slice(prefix.length + value.length) + (stringify?.hint?.(options[selectedIndex]?.value) ?? '');
+				const suffix =
+					selectedOptionText.slice(prefix.length + value.length) +
+					(stringify?.hint?.(options[selectedIndex]?.value) ?? '');
 				return {
 					prefix,
 					suffix: suffix + ` ⇥ Select${options.length > 1 ? ' - ⇅ Cycle' : ''}`

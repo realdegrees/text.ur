@@ -85,10 +85,10 @@
 {#snippet nameSnippet(document: DocumentRead)}
 	<button
 		onclick={() => handleDocumentClick(document)}
-		class="text-text flex w-full flex-row items-center gap-2 text-left transition-colors hover:text-primary"
+		class="flex w-full flex-row items-center gap-2 text-left text-text transition-colors hover:text-primary"
 	>
 		<DocumentIcon class="h-5 w-5" />
-		<p class="font-semibold text-sm">{document.name}</p>
+		<p class="text-sm font-semibold">{document.name}</p>
 	</button>
 {/snippet}
 
@@ -110,7 +110,7 @@
 	<div class="flex flex-col gap-0.5">
 		<p class="text-sm">{formatDate(document.created_at)}</p>
 		{#if document.updated_at && document.updated_at !== document.created_at}
-			<p class="text-text/70 text-xs">Updated: {formatDate(document.updated_at)}</p>
+			<p class="text-xs text-text/70">Updated: {formatDate(document.updated_at)}</p>
 		{/if}
 	</div>
 {/snippet}

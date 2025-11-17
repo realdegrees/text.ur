@@ -22,7 +22,12 @@
 	const menuItems: MenuItem[] = [
 		{ path: '/documents', i18nKey: $LL.group.documents, icon: DocumentIcon, condition: true },
 		{ path: '/memberships', i18nKey: $LL.group.members, icon: PeopleIcon, condition: true },
-		{ path: '/settings', i18nKey: $LL.group.settings, icon: SettingsIcon, condition: validatePermissions(data.membership, ['administrator']) }
+		{
+			path: '/settings',
+			i18nKey: $LL.group.settings,
+			icon: SettingsIcon,
+			condition: validatePermissions(data.membership, ['administrator'])
+		}
 	];
 
 	function isActive(itemPath: string): boolean {

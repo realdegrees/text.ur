@@ -7,8 +7,8 @@ import Warning from '~icons/line-md/alert-twotone-loop';
 import Locked from '~icons/material-symbols/lock-outline';
 import type { AppError } from '$api/types';
 import { appErrorCodeSchema } from '$api/schemas';
-import { get } from 'svelte/store'
-import LL from '$i18n/i18n-svelte'
+import { get } from 'svelte/store';
+import LL from '$i18n/i18n-svelte';
 
 // Define the notification store
 export const notificationStore = writable<
@@ -37,11 +37,13 @@ export function notification(
 ): void;
 export function notification(
 	notificationTypeOrError: NotificationType | AppError,
-	messageOrConfig?: string | {
-		Icon?: Component<SVGAttributes<SVGSVGElement>>;
-		color?: string;
-		duration?: number;
-	},
+	messageOrConfig?:
+		| string
+		| {
+				Icon?: Component<SVGAttributes<SVGSVGElement>>;
+				color?: string;
+				duration?: number;
+		  },
 	config?: {
 		Icon?: Component<SVGAttributes<SVGSVGElement>>;
 		color?: string;
@@ -51,13 +53,14 @@ export function notification(
 	const finalConfig = { duration: 5000, ...config };
 	let notificationType: NotificationType;
 	let message: string;
-	
+
 	if (appErrorCodeSchema.safeParse(notificationTypeOrError).success) {
 		const appError = notificationTypeOrError as AppError;
-		notificationType = "error";
-		message = get(LL).errors[appError.error_code]?.() || appError.detail || "An unknown error occurred.";
-		
-		if (typeof messageOrConfig === "object") {
+		notificationType = 'error';
+		message =
+			get(LL).errors[appError.error_code]?.() || appError.detail || 'An unknown error occurred.';
+
+		if (typeof messageOrConfig === 'object') {
 			Object.assign(finalConfig, messageOrConfig);
 		}
 	} else {
@@ -68,11 +71,11 @@ export function notification(
 	const id = nextId++;
 
 	if (!finalConfig.Icon) {
-		if (notificationType === "error") {
+		if (notificationType === 'error') {
 			finalConfig.Icon = Locked;
-		} else if (notificationType === "success") {
+		} else if (notificationType === 'success') {
 			finalConfig.Icon = Success;
-		} else if (notificationType === "warning") {
+		} else if (notificationType === 'warning') {
 			finalConfig.Icon = Warning;
 		} else {
 			finalConfig.Icon = Error;
@@ -81,7 +84,7 @@ export function notification(
 
 	finalConfig.color =
 		finalConfig.color ||
-		(notificationType === "success" ? "green" : notificationType === "warning" ? "orange" : "red");
+		(notificationType === 'success' ? 'green' : notificationType === 'warning' ? 'orange' : 'red');
 
 	notificationStore.update((notifications) => [
 		...notifications,
