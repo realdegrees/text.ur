@@ -110,6 +110,14 @@ async def create_document(
     s3.upload(s3_key, file.file, content_type=file.content_type)
     return document
 
+@router.get("/{document_id}", response_model=DocumentRead)
+async def get_document(
+    _: BasicAuthentication,
+    document: Document = Resource(Document, param_alias="document_id", guards=[Guard.document_access()]),
+) -> DocumentRead:
+    """Get a document by ID."""
+    return document
+
 @router.get("/", response_model=Paginated[DocumentRead], response_class=ExcludableFieldsJSONResponse)
 async def list_documents(
     _: BasicAuthentication,
