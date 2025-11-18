@@ -43,7 +43,9 @@ export const commentCreateSchema = z.object({
 export const commentFilterSchema = z.object({
     visibility: visibilitySchema,
     user_id: z.number(),
-    document_id: z.string()
+    document_id: z.string(),
+    parent_id: z.number(),
+    annotation: z.record(z.string(), z.unknown())
 });
 
 export const userReadSchema = z.object({
@@ -287,7 +289,7 @@ export const commentReadSchema: z.ZodSchema<CommentRead> = z.lazy(() => z.object
     id: z.number(),
     visibility: visibilitySchema,
     user: userReadSchema.nullable(),
-    annotation: z.record(z.string(), z.unknown()),
+    annotation: z.record(z.string(), z.unknown()).nullable(),
     content: z.string().nullable(),
     replies: z.array(commentReadSchema),
     reactions: z.array(reactionReadSchema)

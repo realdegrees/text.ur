@@ -20,7 +20,7 @@
 	}
 
 	function handleDocumentClick(document: DocumentRead): void {
-		goto(`/dashboard/documents/${document.id}`);
+		goto(`/documents/${document.id}`);
 	}
 </script>
 

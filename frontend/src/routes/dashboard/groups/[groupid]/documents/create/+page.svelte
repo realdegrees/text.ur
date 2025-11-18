@@ -133,7 +133,7 @@
 		}
 
 		notification('success', 'Document uploaded successfully');
-		goto(`/dashboard/documents/${result.data.id}`);
+		goto(`/documents/${result.data.id}`);
 	}
 </script>
 

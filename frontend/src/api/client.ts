@@ -431,6 +431,96 @@ class ApiClient {
 	}
 
 	/**
+	 * Download a file (GET) and return the result as a Blob.
+	 * Uses the same filters/sort and optional fetch override as other GET helpers.
+	 */
+	/**
+	 * Download a file (GET) and return the response as a Blob.
+	 * The method always returns a Blob on success (or an error on failure).
+	 */
+	async download(
+		input: string | URL,
+		init?: Omit<RequestInit, 'method' | 'body'> & { fetch?: typeof fetch }
+	): Promise<ApiGetResult<Blob>> {
+		if (!browser && !init?.fetch) {
+			throw new Error(
+				'API client requires a fetch function when used in server context. Pass event.fetch as the third argument.'
+			);
+		}
+
+		const { fetch: fetchFnOverride, ...cleanedInit } = init || {};
+		const actualFetch = fetchFnOverride ?? fetch!;
+
+		let url: string;
+		if (input instanceof Request) {
+			url = this.resolveUrl(input.url);
+		} else {
+			url = this.resolveUrl(input);
+		}
+
+		// No filters/sort for downloads; leave URL unchanged.
+
+		if (browser) {
+			try {
+				await this.ensureValidToken();
+			} catch (e) {
+				console.log('Failed to refresh token:', e);
+			}
+		}
+
+		const requestInit: RequestInit = {
+			...cleanedInit,
+			credentials: cleanedInit.credentials || 'include'
+		};
+
+		const response = await actualFetch(url, { ...requestInit, method: 'GET' });
+
+		if (!response.ok) {
+			// Try parse error body as json and return structured error
+			try {
+				const json = await response.json();
+				const errorData = appErrorSchema.safeParse(json);
+
+				if (errorData.success) {
+					return { success: false, error: errorData.data };
+				}
+			} catch {
+				// ignore JSON parse failures
+			}
+
+			return {
+				success: false,
+				error: {
+					error_code: 'unknown_error',
+					detail: response.statusText,
+					status_code: response.status
+				}
+			};
+		}
+
+		// Convert response to a Blob for download. Some server-side fetch
+		// implementations may not implement `response.blob()`; fall back to
+		// `arrayBuffer()` and construct a Blob if available.
+		let blob: Blob | Uint8Array;
+		if (typeof response.blob === 'function') {
+			blob = await response.blob();
+		} else {
+			// Fallback: use arrayBuffer and create a Blob if `Blob` is available
+			const arrayBuffer = await response.arrayBuffer();
+			if (typeof (globalThis as any).Blob !== 'undefined') {
+				blob = new (globalThis as any).Blob([arrayBuffer], { type: response.headers.get('content-type') || undefined });
+			} else {
+				// As a last resort, return the raw bytes in a Uint8Array and
+				// cast to Blob for the Api contract - callers on the server can
+				// still use the bytes. This is rare but keeps behavior stable.
+				blob = new Uint8Array(arrayBuffer);
+			}
+		}
+
+		return { success: true, data: blob as Blob };
+	}
+
+	/**
 	 * POST request wrapper for creating resources with automatic JSON headers.
 	 */
 	async post<T>(

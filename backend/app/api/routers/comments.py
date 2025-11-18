@@ -35,7 +35,7 @@ async def list_comments(
     """Get all comments that the user can access."""
     return comments
 
-@router.post("/create", response_model=CommentRead)
+@router.post("/", response_model=CommentRead)
 async def create_comment(
     db: Database, 
     user: User = Authenticate([Guard.document_access({Permission.ADD_COMMENTS})]), 

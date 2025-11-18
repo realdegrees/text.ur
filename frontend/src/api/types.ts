@@ -93,6 +93,10 @@ export interface CommentFilter {
   visibility: Visibility;
   user_id: number;
   document_id: string;
+  parent_id: number;
+  annotation: {
+    [k: string]: unknown;
+  };
 }
 export interface CommentRead {
   created_at?: string;
@@ -102,7 +106,7 @@ export interface CommentRead {
   user: UserRead | null;
   annotation: {
     [k: string]: unknown;
-  };
+  } | null;
   content: string | null;
   replies: CommentRead[];
   reactions: ReactionRead[];

@@ -10,11 +10,11 @@
 	<!-- left column (groups) -->
 	<div class="flex h-full flex-col gap-2 p-2 pb-0 sm:w-[200px] md:w-[300px] lg:w-[400px]">
 		<div class="shrink-0">
-			<MembershipList data={data.invites} sessionUser={data.sessionUser!} accepted={false} />
+			<MembershipList data={data.invites} sessionUser={data.sessionUser} accepted={false} />
 		</div>
 		<MembershipList
 			data={data.memberships}
-			sessionUser={data.sessionUser!}
+			sessionUser={data.sessionUser}
 			accepted={true}
 			onSelect={(membership) => {
 				const currentPage = page.url.pathname.split('/').pop();

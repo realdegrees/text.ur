@@ -24,7 +24,7 @@ class CommentRead(BaseModel):
     id: int
     visibility: Visibility
     user: "UserRead | None"
-    annotation: dict
+    annotation: dict | None
     content: str | None
     replies: list["CommentRead"]
     reactions: list["ReactionRead"]

@@ -119,11 +119,11 @@
 		<h2 class="w-full text-left text-2xl">{$LL.myGroups()}</h2>
 		<a
 			href="/dashboard/groups/create"
-			class="flex flex-row items-center gap-1 rounded-md bg-primary px-3 py-1 text-sm text-text transition-all hover:bg-primary/80"
+			class="flex flex-row items-center gap-1 rounded-md bg-inset shadow-black/30 shadow-inner px-3 py-1 text-sm transition-all hover:bg-green-500/20"
 			title="Create new group"
 		>
-			<AddIcon class="h-4 w-4" />
-			<p>New</p>
+			<AddIcon class="h-4 w-4 text-text" />
+			<p class="text-text">New</p>
 		</a>
 	</div>
 	<hr class="border-text/50" />

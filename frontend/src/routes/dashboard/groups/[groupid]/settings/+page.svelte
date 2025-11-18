@@ -101,7 +101,7 @@
 			filters: [
 				{ field: 'group_id', operator: '==', value: group.id },
 				{ field: 'accepted', operator: '==', value: 'true' },
-				{ field: 'user_id', operator: '!=', value: data.sessionUser!.id.toString() }
+				{ field: 'user_id', operator: '!=', value: data.sessionUser.id.toString() }
 			]
 		});
 

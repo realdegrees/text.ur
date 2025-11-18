@@ -36,6 +36,7 @@ from models.filter import DocumentFilter
 from models.pagination import Paginated
 from models.tables import Comment, Document, Group, Membership, User
 from sqlmodel import select
+from starlette.responses import StreamingResponse
 from util.api_router import APIRouter
 from util.queries import Guard
 from util.response import ExcludableFieldsJSONResponse
@@ -118,15 +119,23 @@ async def get_document(
     """Get a document by ID."""
     return document
 
+def slugify(text: str) -> str:
+    """Generate a safe filename from an S3 key."""
+    # Make the text safe for urls by replacing unsafe characters
+    return "".join(c if c.isalnum() or c in (' ', '.', '_') else '_' for c in text).rstrip()
+
 @router.get("/{document_id}/file")
 async def get_document_file(
     s3: S3,
     _: User = Authenticate(guards=[Guard.document_access()]),
     document: Document = Resource(Document, param_alias="document_id"),
-) -> Response:
+ ) -> StreamingResponse:
     """Download the document file from S3 and return it."""
-    file_content = s3.download(document.s3_key)
-    return Response(content=file_content, media_type="application/pdf")
+    # Use the streaming helper to get an iterator of bytes from S3.
+    iterator = s3.download_stream(document.s3_key)
+
+    headers = {"Content-Disposition": f"attachment; filename=\"{slugify(document.name)}.pdf\""}
+    return StreamingResponse(iterator, media_type="application/pdf", headers=headers)
 
 @router.get("/", response_model=Paginated[DocumentRead], response_class=ExcludableFieldsJSONResponse)
 async def list_documents(

@@ -13,14 +13,14 @@ export const load: LayoutLoad = async ({ fetch, parent, params }) => {
 		fetch,
 		filters: [
 			{ field: 'accepted', operator: '==', value: 'true' },
-			{ field: 'user_id', operator: '==', value: sessionUser!.id.toString() }
+			{ field: 'user_id', operator: '==', value: sessionUser.id.toString() }
 		]
 	});
 	const invitesResult = await api.get<Paginated<MembershipRead>, 'user'>('/memberships', {
 		fetch,
 		filters: [
 			{ field: 'accepted', operator: '==', value: 'false' },
-			{ field: 'user_id', operator: '==', value: sessionUser!.id.toString() }
+			{ field: 'user_id', operator: '==', value: sessionUser.id.toString() }
 		]
 	});
 
@@ -50,7 +50,7 @@ export const load: LayoutLoad = async ({ fetch, parent, params }) => {
 	if (params.groupid && !memberships.data.find(({ group }) => group.id === params.groupid)) {
 		// If the selected group is not in the list, fetch it directly from the API and add it to the list
 		const result = await api.get<MembershipRead>(
-			`/groups/${params.groupid}/memberships/${sessionUser!.id}`,
+			`/groups/${params.groupid}/memberships/${sessionUser.id}`,
 			{ fetch }
 		);
 		if (!result.success) {

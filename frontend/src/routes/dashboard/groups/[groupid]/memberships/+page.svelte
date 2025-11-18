@@ -368,7 +368,7 @@
 			membership.permissions.includes('manage_permissions')
 		)}
 
-	{@const useLeaveButton = data.sessionUser!.id === membership.user.id && !membership.is_owner}
+	{@const useLeaveButton = data.sessionUser.id === membership.user.id && !membership.is_owner}
 
 	{#if useLeaveButton || useRemoveButton}
 		<button
