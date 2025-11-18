@@ -5,7 +5,7 @@
 
 	// Props
 	interface Props {
-		pdfSource: Blob | string;
+		pdfSource: Blob;
 		onAnnotationCreate?: (annotation: Annotation) => void;
 		onAnnotationSelect?: (comment: CommentRead) => void;
 		comments: CommentRead[];
@@ -102,22 +102,7 @@
 
 		try {
 			isLoading = true;
-			error = '';
-
-			let pdfData: any;
-
-			if (pdfSource instanceof Blob) {
-				pdfData = await pdfSource.arrayBuffer();
-			} else if (typeof pdfSource === 'string') {
-				if (pdfSource.startsWith('data:application/pdf;base64,')) {
-					const base64 = pdfSource.split(',')[1];
-					pdfData = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
-				} else {
-					pdfData = pdfSource;
-				}
-			}
-
-			const loadingTask = pdfjsLib.getDocument(pdfData);
+			const loadingTask = pdfjsLib.getDocument(pdfSource.arrayBuffer());
 			pdfDocument = await loadingTask.promise;
 			totalPages = pdfDocument.numPages;
 
@@ -282,49 +267,49 @@
 		selectionInfo = null;
 	}
 
-  // Merge overlapping or adjacent highlight boxes
-  function mergeHighlightBoxes(
-    boxes: { x: number; y: number; width: number; height: number }[],
-    overlapThreshold: number = 20
-  ) {
-    if (boxes.length === 0) return [];
+	// Merge overlapping or adjacent highlight boxes
+	function mergeHighlightBoxes(
+		boxes: { x: number; y: number; width: number; height: number }[],
+		overlapThreshold: number = 20
+	) {
+		if (boxes.length === 0) return [];
 
-    // Sort boxes by y position first, then x position
-    const sorted = [...boxes].sort((a, b) => {
-      const yDiff = a.y - b.y;
-      if (Math.abs(yDiff) > overlapThreshold) return yDiff;
-      return a.x - b.x;
-    });
+		// Sort boxes by y position first, then x position
+		const sorted = [...boxes].sort((a, b) => {
+			const yDiff = a.y - b.y;
+			if (Math.abs(yDiff) > overlapThreshold) return yDiff;
+			return a.x - b.x;
+		});
 
-    const merged: typeof boxes = [];
-    let current = { ...sorted[0] };
+		const merged: typeof boxes = [];
+		let current = { ...sorted[0] };
 
-    for (let i = 1; i < sorted.length; i++) {
-      const box = sorted[i];
+		for (let i = 1; i < sorted.length; i++) {
+			const box = sorted[i];
 
-      // Check if boxes are on the same line (y positions are close)
-      const onSameLine = Math.abs(box.y - current.y) <= overlapThreshold;
+			// Check if boxes are on the same line (y positions are close)
+			const onSameLine = Math.abs(box.y - current.y) <= overlapThreshold;
 
-      // Check if boxes overlap or are adjacent horizontally
-      const xOverlap = box.x <= current.x + current.width + overlapThreshold;
+			// Check if boxes overlap or are adjacent horizontally
+			const xOverlap = box.x <= current.x + current.width + overlapThreshold;
 
-      if (onSameLine && xOverlap) {
-        // Merge boxes
-        const rightEdge = Math.max(current.x + current.width, box.x + box.width);
-        current.width = rightEdge - current.x;
-        current.height = Math.max(current.height, box.height);
-      } else {
-        // Boxes don't overlap, save current and start new
-        merged.push(current);
-        current = { ...box };
-      }
-    }
+			if (onSameLine && xOverlap) {
+				// Merge boxes
+				const rightEdge = Math.max(current.x + current.width, box.x + box.width);
+				current.width = rightEdge - current.x;
+				current.height = Math.max(current.height, box.height);
+			} else {
+				// Boxes don't overlap, save current and start new
+				merged.push(current);
+				current = { ...box };
+			}
+		}
 
-    // Don't forget the last box
-    merged.push(current);
+		// Don't forget the last box
+		merged.push(current);
 
-    return merged;
-  }
+		return merged;
+	}
 
 	// Page navigation
 	function goToPage(pageNum: number) {
@@ -543,9 +528,9 @@
 							aria-label={`Annotation: ${annotation.text}`}
 						>
 							{#each scaledBoxes as box, boxIdx (`${comment.id}-${boxIdx}`)}
-              {@const margin = 3}
+								{@const margin = 3}
 								<div
-									class="absolute cursor-pointer rounded-sm transition-opacity group-hover:border-2 border-black"
+									class="absolute cursor-pointer rounded-sm border-black transition-opacity group-hover:border-2"
 									style:left="{box.x - margin}px"
 									style:top="{box.y - margin}px"
 									style:width="{box.width + margin * 2}px"
@@ -555,7 +540,7 @@
 								></div>
 							{/each}
 
-							<div
+							<!-- <div
 								class="absolute"
 								style:left="-20px"
 								style:top="{lowerLeftBox.y + lowerLeftBox.height}px"
@@ -572,11 +557,10 @@
 								>
 									{comment.content ?? 'No comment'}
 								</div>
-							</div>
+							</div> -->
 						</button>
 					{/each}
 				</div>
-
 			</div>
 		</div>
 	{/if}
