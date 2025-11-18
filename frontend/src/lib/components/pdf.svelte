@@ -2,6 +2,10 @@
 	import { onMount, onDestroy } from 'svelte';
 	import { browser } from '$app/environment';
 	import type { CommentRead } from '$api/types';
+	import type { Annotation } from '$types/pdf';
+	import { mergeHighlightBoxes } from '$lib/util/pdfUtils';
+	import TextLayer from './pdf/TextLayer.svelte';
+	import HighlightLayer from './pdf/HighlightLayer.svelte';
 
 	// Props
 	interface Props {
@@ -9,11 +13,14 @@
 		onAnnotationCreate?: (annotation: Annotation) => void;
 		comments: CommentRead[];
 		currentPage?: number;
-		textLayerHeight?: number;
-		textLayerWidth?: number;
-		toolbarHeight?: number;
+		scale?: number;
+		highlightColor?: string;
 		hoveredCommentId?: number | null;
 		focusedCommentId?: number | null;
+		totalPages?: number;
+		pageDataArray?: Array<{ pageNumber: number; width: number; height: number }>;
+		pdfContainerRef?: HTMLDivElement | null;
+		onZoomChange?: (scale: number) => void;
 	}
 
 	let {
@@ -21,25 +28,15 @@
 		onAnnotationCreate = () => {},
 		comments = [],
 		currentPage = $bindable(1),
-		textLayerHeight = $bindable(0),
-		textLayerWidth = $bindable(0),
-		toolbarHeight = $bindable(0),
+		scale = $bindable(1.5),
+		highlightColor = $bindable('#FFFF00'),
 		hoveredCommentId = $bindable(null),
-		focusedCommentId = $bindable(null)
+		focusedCommentId = $bindable(null),
+		totalPages = $bindable(0),
+		pageDataArray = $bindable([]),
+		pdfContainerRef = $bindable(null),
+		onZoomChange = () => {}
 	}: Props = $props();
-
-	interface Annotation {
-		pageNumber: number;
-		text: string;
-		boundingBoxes: {
-			x: number;
-			y: number;
-			width: number;
-			height: number;
-		}[];
-		color: string;
-		timestamp: number;
-	}
 
 	interface SelectionInfo {
 		text: string;
@@ -66,39 +63,28 @@
 		id: string;
 	}
 
+	// Page data structure
+	interface PageData {
+		pageNumber: number;
+		canvas: HTMLCanvasElement | null;
+		textLayerRef: HTMLDivElement | null;
+		textLayerItems: TextLayerItem[];
+		width: number;
+		height: number;
+	}
+
 	// State
-	let canvasRef: HTMLCanvasElement | null = $state(null);
 	let containerRef: HTMLDivElement | null = $state(null);
-	let textLayerRef: HTMLDivElement | null = $state(null);
-	let toolbarRef: HTMLDivElement | null = $state(null);
 	let pdfDocument: any = $state(null);
-	let totalPages: number = $state(0);
-	let scale: number = $state(1.5);
 	let isLoading: boolean = $state(true);
 	let error: string = $state('');
-
-	// Text layer state
-	let textLayerItems: TextLayerItem[] = $state([]);
+	let pages: PageData[] = $state([]);
 
 	// Selection state
 	let selectionInfo: SelectionInfo | null = $state(null);
 
-	// Mouse tracking for hover detection
-	let mouseX: number = $state(0);
-	let mouseY: number = $state(0);
-
-	// Annotations
-	let highlightColor: string = $state('#FFFF00');
-
 	// PDF.js library
 	let pdfjsLib: any = $state(null);
-
-	// Derived toolbar height test
-	$effect(() => {
-		if (toolbarRef) {
-			toolbarHeight = toolbarRef.getBoundingClientRect().height;
-		}
-	});
 
 	// PDF.js worker setup
 	onMount(async () => {
@@ -115,18 +101,38 @@
 		}
 	});
 
-	// Load PDF from Blob or base64
+	// Track if initial render is complete
+	let initialRenderComplete = $state(false);
+
+	// Load PDF from Blob
 	async function loadPDF() {
 		if (!pdfjsLib) return;
 
 		try {
 			isLoading = true;
+			initialRenderComplete = false;
 			const arrayBuffer = await pdfSource.arrayBuffer();
 			const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
 			pdfDocument = await loadingTask.promise;
 			totalPages = pdfDocument.numPages;
 
-			await renderPage(currentPage);
+			// Initialize page data array
+			pages = Array.from({ length: totalPages }, (_, i) => ({
+				pageNumber: i + 1,
+				canvas: null,
+				textLayerRef: null,
+				textLayerItems: [],
+				width: 0,
+				height: 0
+			}));
+
+			// Wait for Svelte to render the DOM with the canvases
+			// Use a longer timeout to ensure canvas bindings are ready
+			await new Promise((resolve) => setTimeout(resolve, 100));
+
+			// Render all pages
+			await renderAllPages();
+			initialRenderComplete = true;
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Failed to load PDF';
 			console.error('PDF loading error:', err);
@@ -135,15 +141,40 @@
 		}
 	}
 
-	// Render a specific page
-	async function renderPage(pageNum: number) {
-		if (!pdfDocument || !canvasRef || !pdfjsLib) return;
+	// Render all pages sequentially to avoid canvas conflicts
+	async function renderAllPages() {
+		if (!pdfDocument) return;
+
+		// Render pages sequentially to avoid "Cannot use the same canvas" error
+		for (let i = 0; i < totalPages; i++) {
+			// Wait for canvas to be available
+			let attempts = 0;
+			while (!pages[i]?.canvas && attempts < 20) {
+				await new Promise((resolve) => setTimeout(resolve, 50));
+				attempts++;
+			}
+
+			if (!pages[i]?.canvas) {
+				console.warn(`Canvas for page ${i + 1} not available after waiting`);
+				continue;
+			}
+
+			await renderPage(i);
+		}
+	}
+
+	// Render a specific page by index
+	async function renderPage(pageIndex: number) {
+		if (!pdfDocument || !pdfjsLib) return;
 
 		try {
-			const page = await pdfDocument.getPage(pageNum);
+			const pageData = pages[pageIndex];
+			if (!pageData || !pageData.canvas) return;
+
+			const page = await pdfDocument.getPage(pageData.pageNumber);
 			const viewport = page.getViewport({ scale });
 
-			const canvas = canvasRef;
+			const canvas = pageData.canvas;
 			const context = canvas.getContext('2d');
 			if (!context) return;
 
@@ -151,9 +182,12 @@
 			canvas.height = viewport.height;
 			canvas.width = viewport.width;
 
-			// Update text layer dimensions
-			textLayerWidth = viewport.width;
-			textLayerHeight = viewport.height;
+			// Update page dimensions
+			pageData.width = viewport.width;
+			pageData.height = viewport.height;
+
+			// Clear canvas before rendering
+			context.clearRect(0, 0, canvas.width, canvas.height);
 
 			// Render PDF page
 			const renderContext = {
@@ -161,18 +195,23 @@
 				viewport: viewport
 			};
 
-			await page.render(renderContext).promise;
+			const renderTask = page.render(renderContext);
+			await renderTask.promise;
 
 			// Render text layer for selection
-			await renderTextLayer(page, viewport);
-		} catch (err) {
-			console.error('Page rendering error:', err);
+			await renderTextLayer(pageIndex, page, viewport);
+		} catch (err: any) {
+			// Ignore cancelled render errors when zooming
+			if (err?.name !== 'RenderingCancelledException') {
+				console.error('Page rendering error:', err);
+			}
 		}
 	}
 
 	// Render text layer for text selection
-	async function renderTextLayer(page: any, viewport: any) {
-		if (!textLayerRef) return;
+	async function renderTextLayer(pageIndex: number, page: any, viewport: any) {
+		const pageData = pages[pageIndex];
+		if (!pageData) return;
 
 		try {
 			const textContent = await page.getTextContent();
@@ -192,7 +231,7 @@
 				const top = tx[5] - fontHeight * fontAscent;
 
 				items.push({
-					id: `text-${currentPage}-${index}`,
+					id: `text-${pageData.pageNumber}-${index}`,
 					text: item.str,
 					left,
 					top,
@@ -202,42 +241,44 @@
 				});
 			});
 
-			textLayerItems = items;
+			pageData.textLayerItems = items;
 		} catch (err) {
 			console.error('Text layer rendering error:', err);
 		}
 	}
 
 	// Handle mouse move to detect which highlight is being hovered
-	function handleMouseMove(event: MouseEvent) {
-		if (!textLayerRef) return;
+	function handleMouseMove(event: MouseEvent, pageIndex: number) {
+		const pageData = pages[pageIndex];
+		if (!pageData?.textLayerRef) return;
 
-		const rect = textLayerRef.getBoundingClientRect();
-		mouseX = event.clientX - rect.left;
-		mouseY = event.clientY - rect.top;
+		const rect = pageData.textLayerRef.getBoundingClientRect();
+		const localMouseX = event.clientX - rect.left;
+		const localMouseY = event.clientY - rect.top;
 
 		// Check which highlight (if any) the mouse is over
 		const currentPageComments = comments.filter(
-			({ annotation }) => (annotation as unknown as Annotation)?.pageNumber === currentPage
+			({ annotation }) => (annotation as unknown as Annotation)?.pageNumber === pageData.pageNumber
 		);
 
 		let foundHover = false;
 		for (const comment of currentPageComments) {
 			const annotation = comment.annotation as unknown as Annotation;
 			const scaledBoxes = annotation.boundingBoxes.map((box) => ({
-				x: box.x * textLayerWidth,
-				y: box.y * textLayerHeight,
-				width: box.width * textLayerWidth,
-				height: box.height * textLayerHeight
+				x: box.x * pageData.width,
+				y: box.y * pageData.height,
+				width: box.width * pageData.width,
+				height: box.height * pageData.height
 			}));
 
 			// Check if mouse is over any box with margin
 			const margin = 3;
-			const isOver = scaledBoxes.some(box =>
-				mouseX >= box.x - margin &&
-				mouseX <= box.x + box.width + margin &&
-				mouseY >= box.y - margin &&
-				mouseY <= box.y + box.height + margin
+			const isOver = scaledBoxes.some(
+				(box) =>
+					localMouseX >= box.x - margin &&
+					localMouseX <= box.x + box.width + margin &&
+					localMouseY >= box.y - margin &&
+					localMouseY <= box.y + box.height + margin
 			);
 
 			if (isOver) {
@@ -253,7 +294,7 @@
 	}
 
 	// Handle text selection
-	function handleTextSelection() {
+	function handleTextSelection(pageIndex: number) {
 		const selection = window.getSelection();
 		if (!selection || selection.isCollapsed || !selection.rangeCount) {
 			return;
@@ -270,23 +311,29 @@
 
 		if (!containerRect) return;
 
+		const pageData = pages[pageIndex];
+		if (!pageData) return;
+
 		selectionInfo = {
 			text: selectedText,
 			boundingBox: boundingBox,
-			pageNumber: currentPage
+			pageNumber: pageData.pageNumber
 		};
 
-		createHighlight();
+		createHighlight(pageIndex);
 	}
 
 	// Create highlight annotation
-	function createHighlight() {
+	function createHighlight(pageIndex: number) {
 		if (!selectionInfo) return;
 
 		const selection = window.getSelection();
 		if (!selection || !selection.rangeCount) return;
 
-		const textLayerRect = textLayerRef?.getBoundingClientRect();
+		const pageData = pages[pageIndex];
+		if (!pageData?.textLayerRef || pageData.width === 0 || pageData.height === 0) return;
+
+		const textLayerRect = pageData.textLayerRef.getBoundingClientRect();
 		if (!textLayerRect) return;
 
 		// Get all client rects for the selection (handles multi-line)
@@ -310,19 +357,24 @@
 
 		// Normalize coordinates (convert to 0-1 range relative to page)
 		const normalizedBoxes = mergedBoxes.map((box) => ({
-			x: box.x / textLayerWidth,
-			y: box.y / textLayerHeight,
-			width: box.width / textLayerWidth,
-			height: box.height / textLayerHeight
+			x: box.x / pageData.width,
+			y: box.y / pageData.height,
+			width: box.width / pageData.width,
+			height: box.height / pageData.height
 		}));
 
 		const annotation: Annotation = {
-			pageNumber: currentPage,
+			pageNumber: pageData.pageNumber,
 			text: selectionInfo.text,
 			boundingBoxes: normalizedBoxes,
 			color: highlightColor,
 			timestamp: Date.now()
 		};
+
+		// Update current page to match the page where highlight was created
+		if (currentPage !== pageData.pageNumber) {
+			currentPage = pageData.pageNumber;
+		}
 
 		onAnnotationCreate(annotation);
 
@@ -331,84 +383,35 @@
 		selectionInfo = null;
 	}
 
-	// Merge overlapping or adjacent highlight boxes
-	function mergeHighlightBoxes(
-		boxes: { x: number; y: number; width: number; height: number }[]
-	) {
-		if (boxes.length === 0) return [];
 
-		// Sort boxes by y position first, then x position
-		const sorted = [...boxes].sort((a, b) => {
-			const yDiff = a.y - b.y;
-			if (Math.abs(yDiff) > 5) return yDiff; // Use smaller threshold for line detection
-			return a.x - b.x;
-		});
+	// Scroll to a specific page
+	export function scrollToPage(pageNum: number) {
+		if (pageNum < 1 || pageNum > totalPages || !pdfContainerRef) return;
 
-		const merged: typeof boxes = [];
-		let current = { ...sorted[0] };
-
-		for (let i = 1; i < sorted.length; i++) {
-			const box = sorted[i];
-
-			// Check if boxes are on the same line (y positions are very close)
-			// Use the average height as a more reliable threshold
-			const avgHeight = (current.height + box.height) / 2;
-			const onSameLine = Math.abs(box.y - current.y) <= avgHeight * 0.3;
-
-			// Check if boxes overlap or are adjacent horizontally (with small gap tolerance)
-			const xGap = box.x - (current.x + current.width);
-			const xOverlap = xGap <= 10; // Allow small gaps between words
-
-			if (onSameLine && xOverlap) {
-				// Merge boxes horizontally
-				const rightEdge = Math.max(current.x + current.width, box.x + box.width);
-				const leftEdge = Math.min(current.x, box.x);
-				const topEdge = Math.min(current.y, box.y);
-				const bottomEdge = Math.max(current.y + current.height, box.y + box.height);
-
-				current.x = leftEdge;
-				current.y = topEdge;
-				current.width = rightEdge - leftEdge;
-				current.height = bottomEdge - topEdge;
-			} else {
-				// Boxes are on different lines or not adjacent, save current and start new
-				merged.push(current);
-				current = { ...box };
-			}
-		}
-
-		// Don't forget the last box
-		merged.push(current);
-
-		return merged;
-	}
-
-	// Page navigation
-	function goToPage(pageNum: number) {
-		if (pageNum >= 1 && pageNum <= totalPages) {
-			currentPage = pageNum;
-			renderPage(pageNum);
+		const pageElement = pdfContainerRef.querySelector(`[data-page-number="${pageNum}"]`);
+		if (pageElement) {
+			pageElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
 		}
 	}
 
-	function nextPage() {
-		goToPage(currentPage + 1);
-	}
+	// Update page data array for comments positioning
+	$effect(() => {
+		if (pages.length > 0) {
+			pageDataArray = pages.map((p) => ({
+				pageNumber: p.pageNumber,
+				width: p.width,
+				height: p.height
+			}));
+		}
+	});
 
-	function previousPage() {
-		goToPage(currentPage - 1);
-	}
-
-	// Zoom controls
-	function zoomIn() {
-		scale = Math.min(scale + 0.25, 3);
-		renderPage(currentPage);
-	}
-
-	function zoomOut() {
-		scale = Math.max(scale - 0.25, 0.5);
-		renderPage(currentPage);
-	}
+	// Re-render all pages when scale changes (but not on initial load)
+	$effect(() => {
+		if (pdfDocument && pages.length > 0 && scale && initialRenderComplete) {
+			renderAllPages();
+			onZoomChange(scale);
+		}
+	});
 
 	// Watch for PDF source changes
 	$effect(() => {
@@ -428,7 +431,7 @@
 
 <div
 	bind:this={containerRef}
-	class="pdf-highlighter-container relative flex h-full w-full flex-col items-center rounded-lg bg-gray-100 shadow-lg"
+	class="pdf-highlighter-container relative flex h-full w-fit flex-col rounded-lg bg-gray-100 shadow-lg"
 >
 	{#if isLoading}
 		<div class="absolute inset-0 flex items-center justify-center bg-white">
@@ -464,15 +467,12 @@
 	{/if}
 
 	{#if !isLoading && !error && pdfDocument}
-		<!-- Toolbar -->
-		<div
-			bind:this={toolbarRef}
-			class="toolbar flex items-center justify-between gap-4 border-b border-gray-200 bg-white px-4 py-3"
-		>
+		<!-- PDF Controls Header -->
+		<div class="flex items-center justify-between border-b border-gray-200 bg-white px-4 py-3">
 			<!-- Page navigation -->
 			<div class="flex items-center gap-2">
 				<button
-					onclick={previousPage}
+					onclick={() => scrollToPage(currentPage - 1)}
 					disabled={currentPage <= 1}
 					class="rounded bg-gray-100 px-3 py-1.5 text-sm font-medium transition-colors hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50"
 					aria-label="Previous page"
@@ -483,7 +483,7 @@
 					Page {currentPage} / {totalPages}
 				</span>
 				<button
-					onclick={nextPage}
+					onclick={() => scrollToPage(currentPage + 1)}
 					disabled={currentPage >= totalPages}
 					class="rounded bg-gray-100 px-3 py-1.5 text-sm font-medium transition-colors hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50"
 					aria-label="Next page"
@@ -495,7 +495,9 @@
 			<!-- Zoom controls -->
 			<div class="flex items-center gap-2">
 				<button
-					onclick={zoomOut}
+					onclick={() => {
+						scale = Math.max(scale - 0.25, 0.5);
+					}}
 					class="rounded bg-gray-100 px-3 py-1.5 text-sm font-medium transition-colors hover:bg-gray-200"
 					aria-label="Zoom out"
 				>
@@ -505,140 +507,53 @@
 					{Math.round(scale * 100)}%
 				</span>
 				<button
-					onclick={zoomIn}
+					onclick={() => {
+						scale = Math.min(scale + 0.25, 3);
+					}}
 					class="rounded bg-gray-100 px-3 py-1.5 text-sm font-medium transition-colors hover:bg-gray-200"
 					aria-label="Zoom in"
 				>
 					+
 				</button>
 			</div>
-
-			<!-- Color picker -->
-			<div class="flex items-center gap-2">
-				<p class="text-sm text-gray-700">Highlight:</p>
-				<input
-					type="color"
-					bind:value={highlightColor}
-					class="h-8 w-8 cursor-pointer rounded"
-					aria-label="Highlight color"
-				/>
-			</div>
-
-			<!-- Annotations count -->
-			<div class="text-sm text-gray-700">
-				{comments.length}
-				{comments.length === 1 ? 'highlight' : 'highlights'}
-			</div>
 		</div>
 
-		<!-- PDF viewer -->
+		<!-- PDF pages -->
 		<div
-			class="pdf-viewer flex h-full w-full justify-center bg-gray-100"
-			onwheel={(e) => {
-				// prevent default behaviour if ctrl key is pressed
-				// adjust pdf zoom based on scroll direction
-				if (e.ctrlKey) {
-					e.preventDefault();
-					if (e.deltaY < 0) {
-						zoomIn();
-					} else {
-						zoomOut();
-					}
-				}
-			}}
+			bind:this={pdfContainerRef}
+			class="pdf-pages flex w-full flex-col items-center gap-4 bg-gray-100 p-4"
 		>
-			<div class="relative inline-block min-w-min">
-				<!-- PDF Canvas -->
-				<canvas bind:this={canvasRef} class="block"></canvas>
-
-				<!-- Text Layer (for selection) -->
+			{#each pages as pageData, pageIndex (pageData.pageNumber)}
 				<div
-					bind:this={textLayerRef}
-					class="text-layer pointer-events-auto absolute left-0 top-0"
-					style:width="{textLayerWidth}px"
-					style:height="{textLayerHeight}px"
-					onmouseup={handleTextSelection}
-					onmousemove={handleMouseMove}
-					onmouseleave={() => hoveredCommentId = null}
-					role="textbox"
-					tabindex="0"
-					aria-label="PDF text content"
+					class="page-container relative bg-white shadow-lg"
+					data-page-number={pageData.pageNumber}
 				>
-					{#each textLayerItems as item (item.id)}
-						<div
-							class="pointer-events-auto absolute origin-top-left cursor-text select-text whitespace-pre text-transparent"
-							style:left="{item.left}px"
-							style:top="{item.top}px"
-							style:font-size="{item.fontSize}px"
-							style:font-family={item.fontFamily}
-							style:transform="rotate({item.angle}rad)"
-						>
-							{item.text}
-						</div>
-					{/each}
-				</div>
+					<!-- PDF Canvas -->
+					<canvas bind:this={pageData.canvas} class="block"></canvas>
 
-				<!-- Annotations Layer -->
-				<div class="annotations-layer pointer-events-none absolute left-0 top-0 h-full w-full">
-					{#each comments.filter(({ annotation }) => annotation?.pageNumber === currentPage) as comment (comment.id)}
-						{@const annotation = comment.annotation as unknown as Annotation}
-						{@const scaledBoxes = annotation.boundingBoxes.map((box) => ({
-							x: box.x * textLayerWidth,
-							y: box.y * textLayerHeight,
-							width: box.width * textLayerWidth,
-							height: box.height * textLayerHeight
-						}))}
-						{@const isHovered = hoveredCommentId === comment.id}
-						{@const isFocused = focusedCommentId === comment.id}
-						{@const isActive = isHovered || isFocused}
-						<div class="annotation-group pointer-events-none">
-							{#each scaledBoxes as box, boxIdx (`${comment.id}-${boxIdx}`)}
-								{@const margin = 0.8}
-								<div
-									class="absolute rounded-sm transition-all duration-200"
-									class:border-2={isActive}
-									style:left="{box.x - margin}px"
-									style:top="{box.y - margin}px"
-									style:width="{box.width + margin * 2}px"
-									style:height="{box.height + margin * 2}px"
-									style:background-color={annotation.color}
-									style:opacity={isActive ? "0.4" : "0.25"}
-									style:border-color={isActive ? annotation.color : "transparent"}
-								></div>
-							{/each}
-						</div>
-					{/each}
+					<!-- Text Layer (for selection) -->
+					<TextLayer
+						bind:textLayerRef={pageData.textLayerRef}
+						textLayerItems={pageData.textLayerItems}
+						textLayerWidth={pageData.width}
+						textLayerHeight={pageData.height}
+						onTextSelection={() => handleTextSelection(pageIndex)}
+						onMouseMove={(e) => handleMouseMove(e, pageIndex)}
+						onMouseLeave={() => (hoveredCommentId = null)}
+					/>
+
+					<!-- Annotations Layer -->
+					<HighlightLayer
+						{comments}
+						currentPage={pageData.pageNumber}
+						textLayerWidth={pageData.width}
+						textLayerHeight={pageData.height}
+						{hoveredCommentId}
+						{focusedCommentId}
+					/>
 				</div>
-			</div>
+			{/each}
 		</div>
 	{/if}
 </div>
 
-<style>
-	.text-layer {
-		line-height: 1;
-	}
-
-	.text-layer :global(::selection) {
-		background: rgba(0, 123, 255, 0.3);
-	}
-
-	/* Scrollbar styling */
-	.pdf-viewer::-webkit-scrollbar {
-		width: 12px;
-		height: 12px;
-	}
-
-	.pdf-viewer::-webkit-scrollbar-track {
-		background: #f1f1f1;
-	}
-
-	.pdf-viewer::-webkit-scrollbar-thumb {
-		background: #888;
-		border-radius: 6px;
-	}
-
-	.pdf-viewer::-webkit-scrollbar-thumb:hover {
-		background: #555;
-	}
-</style>
