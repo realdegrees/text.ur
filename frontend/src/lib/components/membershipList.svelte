@@ -11,7 +11,7 @@
 	import AddIcon from '~icons/material-symbols/add-circle-outline';
 
 	interface Props {
-		data?: Paginated<MembershipRead, 'user'>;
+		data: Paginated<MembershipRead, 'user'>;
 		sessionUser: UserRead;
 		accepted: boolean;
 		onSelect?: (membership: Omit<MembershipRead, 'user'>) => void;
@@ -19,23 +19,6 @@
 
 	let { data, sessionUser, accepted, onSelect }: Props = $props();
 
-	const filteredData = $derived.by((): Paginated<MembershipRead, 'user'> => {
-		if (!data) {
-			return {
-				data: [],
-				total: 0,
-				offset: 0,
-				limit: 0
-			};
-		}
-
-		const filtered = data.data.filter((membership) => membership.accepted === accepted);
-		return {
-			...data,
-			data: filtered,
-			total: filtered.length
-		};
-	});
 
 	/**
 	 * Load more memberships with pagination.
@@ -127,7 +110,7 @@
 		</a>
 	</div>
 	<hr class="border-text/50" />
-	<InfiniteScrollList data={filteredData} {loadMore} step={2} onSelect={handleSelect}>
+	<InfiniteScrollList data={data} {loadMore} step={2} onSelect={handleSelect}>
 		{#snippet itemSnippet(membership: Omit<MembershipRead, 'user'>)}
 			<div
 				class="group m-1 flex w-full cursor-pointer flex-col gap-1 rounded-md bg-inset px-3 py-2.5 shadow-inner shadow-black/30 transition-all hover:bg-primary"
@@ -141,12 +124,12 @@
 			</div>
 		{/snippet}
 	</InfiniteScrollList>
-{:else if filteredData.total > 0}
+{:else if data.total > 0}
 	<div class="flex flex-row items-center justify-between">
 		<h2 class="w-full text-left text-xl">{$LL.invitations()}</h2>
 	</div>
 	<hr class="border-text/50" />
-	<InfiniteScrollList data={filteredData} {loadMore} step={50}>
+	<InfiniteScrollList data={data} {loadMore} step={50}>
 		{#snippet itemSnippet(invitation: Omit<MembershipRead, 'user'>)}
 			<div
 				class="flex w-full flex-row items-center justify-between gap-2 rounded-md bg-inset px-3 py-2.5 shadow-inner shadow-black/30"

@@ -1,7 +1,7 @@
 import { api } from '$api/client';
 import type { DocumentRead, MembershipRead } from '$api/types';
-import { goto } from '$app/navigation';
 import { notification } from '$lib/stores/notificationStore';
+import { redirect } from '@sveltejs/kit';
 import type { PageLoad } from './$types';
 
 export const load: PageLoad = async ({ params, parent, fetch }) => {
@@ -12,11 +12,11 @@ export const load: PageLoad = async ({ params, parent, fetch }) => {
 	});
 	if (!documentResult.success) {
 		notification(documentResult.error);
-		throw goto('/dashboard');
+		throw redirect(303, '/dashboard');
 	}
 	if (!documentResult.data) {
 		notification('error', 'Document not found.'); // TODO i18n
-		throw goto('/dashboard');
+		throw redirect(303, '/dashboard');
 	}
 
 	// Fetch user group membership
@@ -26,12 +26,12 @@ export const load: PageLoad = async ({ params, parent, fetch }) => {
 	);
 	if (!membershipResult.success) {
 		notification(membershipResult.error);
-		throw goto('/dashboard');
+		throw redirect(303, '/dashboard');
 	}
 	const membership = membershipResult.data;
 	if (!membership) {
 		notification('error', 'You are not a member of the group that owns this document.'); // TODO i18n
-		throw goto('/dashboard');
+		throw redirect(303, '/dashboard');
 	}
 
 	// TODO establish a websocket connection to the document for real-time editing,

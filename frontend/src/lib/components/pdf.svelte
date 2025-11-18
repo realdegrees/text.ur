@@ -7,15 +7,25 @@
 	interface Props {
 		pdfSource: Blob;
 		onAnnotationCreate?: (annotation: Annotation) => void;
-		onAnnotationSelect?: (comment: CommentRead) => void;
 		comments: CommentRead[];
+		currentPage?: number;
+		textLayerHeight?: number;
+		textLayerWidth?: number;
+		toolbarHeight?: number;
+		hoveredCommentId?: number | null;
+		focusedCommentId?: number | null;
 	}
 
 	let {
 		pdfSource,
 		onAnnotationCreate = () => {},
-		onAnnotationSelect = () => {},
-		comments = []
+		comments = [],
+		currentPage = $bindable(1),
+		textLayerHeight = $bindable(0),
+		textLayerWidth = $bindable(0),
+		toolbarHeight = $bindable(0),
+		hoveredCommentId = $bindable(null),
+		focusedCommentId = $bindable(null)
 	}: Props = $props();
 
 	interface Annotation {
@@ -60,26 +70,35 @@
 	let canvasRef: HTMLCanvasElement | null = $state(null);
 	let containerRef: HTMLDivElement | null = $state(null);
 	let textLayerRef: HTMLDivElement | null = $state(null);
+	let toolbarRef: HTMLDivElement | null = $state(null);
 	let pdfDocument: any = $state(null);
-	let currentPage: number = $state(1);
 	let totalPages: number = $state(0);
 	let scale: number = $state(1.5);
 	let isLoading: boolean = $state(true);
 	let error: string = $state('');
 
 	// Text layer state
-	let textLayerWidth: number = $state(0);
-	let textLayerHeight: number = $state(0);
 	let textLayerItems: TextLayerItem[] = $state([]);
 
 	// Selection state
 	let selectionInfo: SelectionInfo | null = $state(null);
+
+	// Mouse tracking for hover detection
+	let mouseX: number = $state(0);
+	let mouseY: number = $state(0);
 
 	// Annotations
 	let highlightColor: string = $state('#FFFF00');
 
 	// PDF.js library
 	let pdfjsLib: any = $state(null);
+
+	// Derived toolbar height test
+	$effect(() => {
+		if (toolbarRef) {
+			toolbarHeight = toolbarRef.getBoundingClientRect().height;
+		}
+	});
 
 	// PDF.js worker setup
 	onMount(async () => {
@@ -102,7 +121,8 @@
 
 		try {
 			isLoading = true;
-			const loadingTask = pdfjsLib.getDocument(pdfSource.arrayBuffer());
+			const arrayBuffer = await pdfSource.arrayBuffer();
+			const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
 			pdfDocument = await loadingTask.promise;
 			totalPages = pdfDocument.numPages;
 
@@ -188,6 +208,50 @@
 		}
 	}
 
+	// Handle mouse move to detect which highlight is being hovered
+	function handleMouseMove(event: MouseEvent) {
+		if (!textLayerRef) return;
+
+		const rect = textLayerRef.getBoundingClientRect();
+		mouseX = event.clientX - rect.left;
+		mouseY = event.clientY - rect.top;
+
+		// Check which highlight (if any) the mouse is over
+		const currentPageComments = comments.filter(
+			({ annotation }) => (annotation as unknown as Annotation)?.pageNumber === currentPage
+		);
+
+		let foundHover = false;
+		for (const comment of currentPageComments) {
+			const annotation = comment.annotation as unknown as Annotation;
+			const scaledBoxes = annotation.boundingBoxes.map((box) => ({
+				x: box.x * textLayerWidth,
+				y: box.y * textLayerHeight,
+				width: box.width * textLayerWidth,
+				height: box.height * textLayerHeight
+			}));
+
+			// Check if mouse is over any box with margin
+			const margin = 3;
+			const isOver = scaledBoxes.some(box =>
+				mouseX >= box.x - margin &&
+				mouseX <= box.x + box.width + margin &&
+				mouseY >= box.y - margin &&
+				mouseY <= box.y + box.height + margin
+			);
+
+			if (isOver) {
+				hoveredCommentId = comment.id;
+				foundHover = true;
+				break;
+			}
+		}
+
+		if (!foundHover) {
+			hoveredCommentId = null;
+		}
+	}
+
 	// Handle text selection
 	function handleTextSelection() {
 		const selection = window.getSelection();
@@ -269,15 +333,14 @@
 
 	// Merge overlapping or adjacent highlight boxes
 	function mergeHighlightBoxes(
-		boxes: { x: number; y: number; width: number; height: number }[],
-		overlapThreshold: number = 20
+		boxes: { x: number; y: number; width: number; height: number }[]
 	) {
 		if (boxes.length === 0) return [];
 
 		// Sort boxes by y position first, then x position
 		const sorted = [...boxes].sort((a, b) => {
 			const yDiff = a.y - b.y;
-			if (Math.abs(yDiff) > overlapThreshold) return yDiff;
+			if (Math.abs(yDiff) > 5) return yDiff; // Use smaller threshold for line detection
 			return a.x - b.x;
 		});
 
@@ -287,19 +350,28 @@
 		for (let i = 1; i < sorted.length; i++) {
 			const box = sorted[i];
 
-			// Check if boxes are on the same line (y positions are close)
-			const onSameLine = Math.abs(box.y - current.y) <= overlapThreshold;
+			// Check if boxes are on the same line (y positions are very close)
+			// Use the average height as a more reliable threshold
+			const avgHeight = (current.height + box.height) / 2;
+			const onSameLine = Math.abs(box.y - current.y) <= avgHeight * 0.3;
 
-			// Check if boxes overlap or are adjacent horizontally
-			const xOverlap = box.x <= current.x + current.width + overlapThreshold;
+			// Check if boxes overlap or are adjacent horizontally (with small gap tolerance)
+			const xGap = box.x - (current.x + current.width);
+			const xOverlap = xGap <= 10; // Allow small gaps between words
 
 			if (onSameLine && xOverlap) {
-				// Merge boxes
+				// Merge boxes horizontally
 				const rightEdge = Math.max(current.x + current.width, box.x + box.width);
-				current.width = rightEdge - current.x;
-				current.height = Math.max(current.height, box.height);
+				const leftEdge = Math.min(current.x, box.x);
+				const topEdge = Math.min(current.y, box.y);
+				const bottomEdge = Math.max(current.y + current.height, box.y + box.height);
+
+				current.x = leftEdge;
+				current.y = topEdge;
+				current.width = rightEdge - leftEdge;
+				current.height = bottomEdge - topEdge;
 			} else {
-				// Boxes don't overlap, save current and start new
+				// Boxes are on different lines or not adjacent, save current and start new
 				merged.push(current);
 				current = { ...box };
 			}
@@ -344,6 +416,7 @@
 			loadPDF();
 		}
 	});
+
 
 	// Cleanup
 	onDestroy(() => {
@@ -393,6 +466,7 @@
 	{#if !isLoading && !error && pdfDocument}
 		<!-- Toolbar -->
 		<div
+			bind:this={toolbarRef}
 			class="toolbar flex items-center justify-between gap-4 border-b border-gray-200 bg-white px-4 py-3"
 		>
 			<!-- Page navigation -->
@@ -484,6 +558,8 @@
 					style:width="{textLayerWidth}px"
 					style:height="{textLayerHeight}px"
 					onmouseup={handleTextSelection}
+					onmousemove={handleMouseMove}
+					onmouseleave={() => hoveredCommentId = null}
 					role="textbox"
 					tabindex="0"
 					aria-label="PDF text content"
@@ -512,53 +588,25 @@
 							width: box.width * textLayerWidth,
 							height: box.height * textLayerHeight
 						}))}
-						{@const lowerLeftBox = scaledBoxes.reduce((prev, curr) => {
-							const prevBottom = prev.y + prev.height;
-							const currBottom = curr.y + curr.height;
-							if (currBottom > prevBottom || (currBottom === prevBottom && curr.x < prev.x)) {
-								return curr;
-							}
-							return prev;
-						})}
-						<button
-							class="annotation-group group pointer-events-auto"
-							title={annotation.text}
-							onclick={() => onAnnotationSelect(comment)}
-							onkeydown={(e) => e.key === 'Enter' && onAnnotationSelect(comment)}
-							aria-label={`Annotation: ${annotation.text}`}
-						>
+						{@const isHovered = hoveredCommentId === comment.id}
+						{@const isFocused = focusedCommentId === comment.id}
+						{@const isActive = isHovered || isFocused}
+						<div class="annotation-group pointer-events-none">
 							{#each scaledBoxes as box, boxIdx (`${comment.id}-${boxIdx}`)}
-								{@const margin = 3}
+								{@const margin = 0.8}
 								<div
-									class="absolute cursor-pointer rounded-sm border-black transition-opacity group-hover:border-2"
+									class="absolute rounded-sm transition-all duration-200"
+									class:border-2={isActive}
 									style:left="{box.x - margin}px"
 									style:top="{box.y - margin}px"
 									style:width="{box.width + margin * 2}px"
 									style:height="{box.height + margin * 2}px"
 									style:background-color={annotation.color}
-									style:opacity="0.25"
+									style:opacity={isActive ? "0.4" : "0.25"}
+									style:border-color={isActive ? annotation.color : "transparent"}
 								></div>
 							{/each}
-
-							<!-- <div
-								class="absolute"
-								style:left="-20px"
-								style:top="{lowerLeftBox.y + lowerLeftBox.height}px"
-							>
-								<div
-									class="absolute w-0.5 bg-gray-400"
-									style:height="{20}px"
-									style:top="0"
-									style:left="20px"
-								></div>
-								<div
-									class="rounded border border-gray-300 bg-white p-2 text-sm text-gray-700 shadow-md"
-									style:position="relative"
-								>
-									{comment.content ?? 'No comment'}
-								</div>
-							</div> -->
-						</button>
+						</div>
 					{/each}
 				</div>
 			</div>
