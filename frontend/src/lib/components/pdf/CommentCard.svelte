@@ -2,6 +2,8 @@
 	import type { CommentRead } from '$api/types';
 	import type { Annotation } from '$types/pdf';
 	import DeleteIcon from '~icons/material-symbols/delete-outline';
+	import { fly, scale } from 'svelte/transition';
+	import { quintOut } from 'svelte/easing';
 
 	interface Props {
 		comment: CommentRead;
@@ -9,6 +11,7 @@
 		expanded: boolean;
 		showDeleteConfirm: boolean;
 		top: number;
+		hoverDelayMs?: number;
 		onClick?: (event: MouseEvent) => void;
 		onMouseEnter?: () => void;
 		onMouseLeave?: () => void;
@@ -23,6 +26,7 @@
 		expanded,
 		showDeleteConfirm,
 		top,
+		hoverDelayMs = 200,
 		onClick = () => {},
 		onMouseEnter = () => {},
 		onMouseLeave = () => {},
@@ -30,17 +34,46 @@
 		onDeleteConfirm = () => {},
 		onDeleteCancel = () => {}
 	}: Props = $props();
+
+	let lastHoverTime = $state(0);
+	let leaveTimer: ReturnType<typeof setTimeout> | null = $state(null);
+
+	function handleMouseEnter() {
+		// Clear any pending leave timer
+		if (leaveTimer) {
+			clearTimeout(leaveTimer);
+			leaveTimer = null;
+		}
+		lastHoverTime = Date.now();
+		onMouseEnter();
+	}
+
+	function handleMouseLeave() {
+		const timeSinceHover = Date.now() - lastHoverTime;
+		const remainingDelay = Math.max(0, hoverDelayMs - timeSinceHover);
+
+		if (remainingDelay > 0) {
+			// Delay the leave event
+			leaveTimer = setTimeout(() => {
+				onMouseLeave();
+				leaveTimer = null;
+			}, remainingDelay);
+		} else {
+			// No delay needed
+			onMouseLeave();
+		}
+	}
 </script>
 
 {#if expanded}
 	<!-- Expanded comment card -->
 	<div
 		data-comment-id={comment.id}
-		class="absolute left-0 right-4 z-10 rounded-lg border-l-4 bg-white px-4 py-3 shadow-lg transition-all duration-200"
+		class="absolute left-0 right-4 z-20 rounded-lg border-l-4 bg-white px-4 py-3 shadow-lg"
 		style:top="{top}px"
 		style:border-left-color={annotation.color}
-		onmouseenter={onMouseEnter}
-		onmouseleave={onMouseLeave}
+		onmouseenter={handleMouseEnter}
+		onmouseleave={handleMouseLeave}
 		onclick={onClick}
 		onkeydown={(e) => {
 			if (e.key === 'Enter' || e.key === ' ') {
@@ -50,6 +83,8 @@
 		}}
 		role="button"
 		tabindex="0"
+		in:fly={{ x: -20, duration: 250, easing: quintOut }}
+		out:fly={{ x: -20, duration: 200, easing: quintOut }}
 	>
 		{#if showDeleteConfirm}
 			<!-- Delete confirmation -->
@@ -115,11 +150,11 @@
 	<!-- Collapsed indicator badge -->
 	<div
 		data-comment-id={comment.id}
-		class="absolute right-4 z-10 cursor-pointer rounded-full px-2.5 py-1 shadow-md transition-all duration-200 hover:scale-105 hover:shadow-lg"
+		class="absolute right-4 z-10 cursor-pointer rounded-full px-2.5 py-1 shadow-md hover:scale-105 hover:shadow-lg"
 		style:top="{top}px"
 		style:background-color={annotation.color}
-		onmouseenter={onMouseEnter}
-		onmouseleave={onMouseLeave}
+		onmouseenter={handleMouseEnter}
+		onmouseleave={handleMouseLeave}
 		onclick={onClick}
 		onkeydown={(e) => {
 			if (e.key === 'Enter' || e.key === ' ') {
@@ -130,6 +165,8 @@
 		role="button"
 		tabindex="0"
 		title="Click to view comment"
+		in:scale={{ duration: 200, start: 0.8, easing: quintOut }}
+		out:scale={{ duration: 150, start: 0.8, easing: quintOut }}
 	>
 		<span class="text-xs font-semibold text-gray-800">
 			{comment.user?.username?.[0]?.toUpperCase() ?? '?'}

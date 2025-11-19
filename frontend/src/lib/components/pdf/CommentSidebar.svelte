@@ -4,6 +4,8 @@
 	import CommentCard from './CommentCard.svelte';
 	import CommentGroup from './CommentGroup.svelte';
 	import { browser } from '$app/environment';
+	import { draw } from 'svelte/transition';
+	import { quintOut } from 'svelte/easing';
 
 	interface Props {
 		comments: CommentRead[];
@@ -12,6 +14,7 @@
 		scrollContainerRef: HTMLDivElement | null;
 		hoveredCommentId?: number | null;
 		focusedCommentId?: number | null;
+		hoverDelayMs?: number;
 		onCommentDelete?: (commentId: number) => Promise<void>;
 	}
 
@@ -22,6 +25,7 @@
 		scrollContainerRef = null,
 		hoveredCommentId = $bindable(null),
 		focusedCommentId = $bindable(null),
+		hoverDelayMs = 200,
 		onCommentDelete = async () => {}
 	}: Props = $props();
 
@@ -35,7 +39,9 @@
 		annotation: Annotation;
 		idealTop: number;
 		actualTop: number;
+		highlightTop: number;
 		highlightBottom: number;
+		highlightLeftX: number;
 		highlightRightX: number;
 	}
 
@@ -43,7 +49,9 @@
 		id: string;
 		comments: CommentRead[];
 		actualTop: number;
+		highlightTop: number;
 		highlightBottom: number;
+		highlightLeftX: number;
 		highlightRightX: number;
 	}
 
@@ -66,25 +74,35 @@
 	}
 
 	// Get highlight position
-	function getHighlightBottomPosition(
+	function getHighlightPosition(
 		annotation: Annotation
-	): { rightX: number; bottom: number } {
+	): { leftX: number; rightX: number; top: number; bottom: number } {
 		if (!annotation?.boundingBoxes || annotation.boundingBoxes.length === 0) {
-			return { rightX: 0, bottom: 0 };
+			return { leftX: 0, rightX: 0, top: 0, bottom: 0 };
 		}
 
 		const pageData = pageDataArray.find((p) => p.pageNumber === annotation.pageNumber);
 		if (!pageData || pageData.width === 0 || pageData.height === 0) {
-			return { rightX: 0, bottom: 0 };
+			return { leftX: 0, rightX: 0, top: 0, bottom: 0 };
 		}
 
-		if (!pdfContainerRef || !sidebarRef) return { rightX: 0, bottom: 0 };
+		if (!pdfContainerRef || !sidebarRef) return { leftX: 0, rightX: 0, top: 0, bottom: 0 };
+
+		// Find the topmost box
+		const topBox = annotation.boundingBoxes.reduce((prev, curr) => {
+			return curr.y < prev.y ? curr : prev;
+		});
 
 		// Find the bottommost box
 		const bottomBox = annotation.boundingBoxes.reduce((prev, curr) => {
 			const prevBottom = prev.y + prev.height;
 			const currBottom = curr.y + curr.height;
 			return currBottom > prevBottom ? curr : prev;
+		});
+
+		// Find the leftmost box
+		const leftBox = annotation.boundingBoxes.reduce((prev, curr) => {
+			return curr.x < prev.x ? curr : prev;
 		});
 
 		// Find the rightmost box
@@ -97,21 +115,30 @@
 		const pageElement = pdfContainerRef.querySelector(
 			`[data-page-number="${annotation.pageNumber}"]`
 		);
-		if (!pageElement) return { rightX: 0, bottom: 0 };
+		if (!pageElement) return { leftX: 0, rightX: 0, top: 0, bottom: 0 };
 
 		const pageOffsetTop = getPageOffsetTop(annotation.pageNumber);
 		const sidebarRect = sidebarRef.getBoundingClientRect();
 		const pageRect = pageElement.getBoundingClientRect();
 
+		// Calculate left edge of highlight relative to sidebar
+		const highlightLeftWithinPage = leftBox.x * pageData.width;
+		const highlightLeftX = pageRect.left - sidebarRect.left + highlightLeftWithinPage;
+
 		// Calculate right edge of highlight relative to sidebar
 		const highlightRightWithinPage = (rightBox.x + rightBox.width) * pageData.width;
 		const highlightRightX = pageRect.left - sidebarRect.left + highlightRightWithinPage;
+
+		// Calculate top position
+		const highlightTop = pageOffsetTop + topBox.y * pageData.height;
 
 		// Calculate bottom position
 		const highlightBottom = pageOffsetTop + (bottomBox.y + bottomBox.height) * pageData.height;
 
 		return {
+			leftX: highlightLeftX,
 			rightX: highlightRightX,
+			top: highlightTop,
 			bottom: highlightBottom
 		};
 	}
@@ -129,15 +156,16 @@
 			const annotation = comment.annotation as unknown as Annotation;
 			if (!annotation?.pageNumber) continue;
 
-			const highlightPos = getHighlightBottomPosition(annotation);
-			const commentHeight = COMMENT_COLLAPSED_HEIGHT;
+			const highlightPos = getHighlightPosition(annotation);
 
 			positioned.push({
 				comment,
 				annotation,
-				idealTop: highlightPos.bottom - commentHeight,
+				idealTop: highlightPos.top,
 				actualTop: 0,
+				highlightTop: highlightPos.top,
 				highlightBottom: highlightPos.bottom,
+				highlightLeftX: highlightPos.leftX,
 				highlightRightX: highlightPos.rightX
 			});
 		}
@@ -165,7 +193,9 @@
 						id: currentGroup.map((c) => c.comment.id).join('-'),
 						comments: currentGroup.map((c) => c.comment),
 						actualTop: 0,
+						highlightTop: 0, // Will be set based on active comment
 						highlightBottom: 0, // Will be set based on active comment
+						highlightLeftX: 0,  // Will be set based on active comment
 						highlightRightX: 0  // Will be set based on active comment
 					});
 					currentGroup = [current];
@@ -179,20 +209,32 @@
 				id: currentGroup.map((c) => c.comment.id).join('-'),
 				comments: currentGroup.map((c) => c.comment),
 				actualTop: 0,
+				highlightTop: 0, // Will be set based on active comment
 				highlightBottom: 0, // Will be set based on active comment
+				highlightLeftX: 0,  // Will be set based on active comment
 				highlightRightX: 0  // Will be set based on active comment
 			});
 		}
 
 		// Set highlight positions based on active comment in each group
+		// This will be recalculated in the template based on hoveredCommentId
 		for (const group of groups) {
-			const activeCommentId = selectedCommentInGroup[group.id] || group.comments[0].id;
-			const positionedForActive = positioned.find((p) => p.comment.id === activeCommentId);
-			if (positionedForActive) {
-				group.highlightBottom = positionedForActive.highlightBottom;
-				group.highlightRightX = positionedForActive.highlightRightX;
+			// Just set defaults here, actual position determined by active comment in template
+			const firstPositioned = positioned.find((p) => p.comment.id === group.comments[0].id);
+			if (firstPositioned) {
+				group.highlightTop = firstPositioned.highlightTop;
+				group.highlightBottom = firstPositioned.highlightBottom;
+				group.highlightLeftX = firstPositioned.highlightLeftX;
+				group.highlightRightX = firstPositioned.highlightRightX;
 			}
 		}
+
+		// Store positioned data for later lookup
+		groups.forEach((g) => {
+			(g as any).positionedData = positioned.filter((p) =>
+				g.comments.some((c) => c.id === p.comment.id)
+			);
+		});
 
 		// Apply collision detection to groups
 		for (let i = 0; i < groups.length; i++) {
@@ -315,32 +357,48 @@
 <div bind:this={sidebarRef} class="comment-sidebar relative flex-1 overflow-visible bg-gray-50 pr-4">
 	{#each commentGroups as group (group.id)}
 		{@const isGroupExpanded =
-			group.comments.some((c) => c.id === focusedCommentId) || hoveredGroupId === group.id}
-		{@const isGroupHovered = hoveredGroupId === group.id}
+			group.comments.some((c) => c.id === focusedCommentId) ||
+			group.comments.some((c) => c.id === hoveredCommentId) ||
+			hoveredGroupId === group.id}
+		{@const isGroupHovered = hoveredGroupId === group.id || group.comments.some((c) => c.id === hoveredCommentId)}
 		{@const groupHeight = isGroupExpanded ? COMMENT_HEIGHT : COMMENT_COLLAPSED_HEIGHT}
 		{@const groupBottom = group.actualTop + groupHeight}
 		{@const sidebarWidth = sidebarRef?.getBoundingClientRect().width || 0}
 		{@const commentLeftEdge = sidebarWidth - 16}
 
-		{@const activeCommentId = selectedCommentInGroup[group.id] || group.comments[0].id}
+		{@const activeCommentId =
+			hoveredCommentId && group.comments.some((c) => c.id === hoveredCommentId)
+				? hoveredCommentId
+				: selectedCommentInGroup[group.id] || group.comments[0].id}
 		{@const activeComment = group.comments.find((c) => c.id === activeCommentId) || group.comments[0]}
 		{@const activeAnnotation = activeComment.annotation as unknown as Annotation}
 
+		{@const activePositioned = (group as any).positionedData?.find(
+			(p: any) => p.comment.id === activeCommentId
+		)}
+		{@const activeHighlightTop = activePositioned?.highlightTop || group.highlightTop}
+		{@const activeHighlightLeftX = activePositioned?.highlightLeftX || group.highlightLeftX}
+
 		<!-- Connection line (only when expanded and highlight is visible) -->
-		{#if (isGroupExpanded || isGroupHovered) && group.highlightRightX > 0}
+		{#if (isGroupExpanded || isGroupHovered) && activeHighlightLeftX > 0}
+			{@const isFocused = group.comments.some((c) => c.id === focusedCommentId)}
 			<svg
-				class="pointer-events-none absolute left-0 top-0 z-0 overflow-visible"
+				class="pointer-events-none absolute left-0 top-0 z-10 overflow-visible transition-all duration-300"
 				style:width="{sidebarWidth + 500}px"
-				style:height="{Math.max(groupBottom, group.highlightBottom) + 50}px"
+				style:height="{Math.max(group.actualTop, activeHighlightTop) + 50}px"
+				style:filter={isFocused ? 'drop-shadow(0 2px 6px rgba(0, 0, 0, 0.2))' : 'drop-shadow(0 1px 3px rgba(0, 0, 0, 0.1))'}
 			>
 				<line
-					x1={group.highlightRightX}
-					y1={group.highlightBottom}
+					x1={activeHighlightLeftX}
+					y1={activeHighlightTop}
 					x2={commentLeftEdge}
-					y2={groupBottom}
+					y2={group.actualTop}
 					stroke={activeAnnotation.color}
-					stroke-width="2"
-					stroke-opacity="0.6"
+					stroke-width={isFocused ? '4' : '3'}
+					stroke-opacity={isFocused ? '0.9' : '0.7'}
+					class="transition-all duration-300"
+					in:draw={{ duration: 300, easing: quintOut }}
+					out:draw={{ duration: 200, easing: quintOut }}
 				/>
 			</svg>
 		{/if}
@@ -355,6 +413,7 @@
 				{isGroupHovered}
 				selectedCommentId={groupSelectedId}
 				deleteConfirmId={deleteConfirmId}
+				{hoverDelayMs}
 				onGroupClick={(e) => handleGroupClick(group.id, e)}
 				onGroupMouseEnter={() => handleGroupMouseEnter(group.id)}
 				onGroupMouseLeave={handleGroupMouseLeave}
@@ -378,6 +437,7 @@
 				{expanded}
 				{showDeleteConfirm}
 				top={group.actualTop}
+				{hoverDelayMs}
 				onClick={(e) => handleCommentClick(comment.id, e)}
 				onMouseEnter={() => handleMouseEnter(comment.id)}
 				onMouseLeave={handleMouseLeave}
@@ -392,5 +452,11 @@
 <style>
 	.comment-sidebar {
 		min-height: 100%;
+		position: relative;
+	}
+
+	/* Ensure connection lines can extend beyond sidebar bounds */
+	.comment-sidebar :global(svg) {
+		overflow: visible;
 	}
 </style>

@@ -40,15 +40,16 @@
 				{#each scaledBoxes as box, boxIdx (`${comment.id}-${boxIdx}`)}
 					{@const margin = 1}
 					<div
-						class="absolute rounded-sm transition-all duration-200"
-						class:border-2={isActive}
+						class="absolute rounded-sm transition-all duration-300"
 						style:left="{box.x - margin}px"
 						style:top="{box.y - margin}px"
 						style:width="{box.width + margin * 2}px"
 						style:height="{box.height + margin * 2}px"
 						style:background-color={annotation.color}
 						style:opacity={isActive ? '0.5' : '0.3'}
-						style:border-color={isActive ? annotation.color : 'transparent'}
+						style:border={isActive ? `2px solid ${annotation.color}` : 'none'}
+						style:box-shadow={isFocused ? `0 4px 12px rgba(0, 0, 0, 0.15), 0 0 0 3px ${annotation.color}40` : isHovered ? `0 2px 8px rgba(0, 0, 0, 0.1)` : 'none'}
+						style:box-sizing="border-box"
 					></div>
 				{/each}
 			</div>

@@ -2,6 +2,8 @@
 	import type { CommentRead } from '$api/types';
 	import type { Annotation } from '$types/pdf';
 	import DeleteIcon from '~icons/material-symbols/delete-outline';
+	import { fly, scale } from 'svelte/transition';
+	import { quintOut } from 'svelte/easing';
 
 	interface Props {
 		comments: CommentRead[];
@@ -10,6 +12,7 @@
 		isGroupHovered: boolean;
 		selectedCommentId?: number | null;
 		deleteConfirmId: number | null;
+		hoverDelayMs?: number;
 		onGroupClick?: (event: MouseEvent) => void;
 		onGroupMouseEnter?: () => void;
 		onGroupMouseLeave?: () => void;
@@ -26,6 +29,7 @@
 		isGroupHovered,
 		selectedCommentId = null,
 		deleteConfirmId,
+		hoverDelayMs = 200,
 		onGroupClick = () => {},
 		onGroupMouseEnter = () => {},
 		onGroupMouseLeave = () => {},
@@ -34,6 +38,35 @@
 		onDeleteConfirm = () => {},
 		onDeleteCancel = () => {}
 	}: Props = $props();
+
+	let lastHoverTime = $state(0);
+	let leaveTimer: ReturnType<typeof setTimeout> | null = $state(null);
+
+	function handleGroupMouseEnter() {
+		// Clear any pending leave timer
+		if (leaveTimer) {
+			clearTimeout(leaveTimer);
+			leaveTimer = null;
+		}
+		lastHoverTime = Date.now();
+		onGroupMouseEnter();
+	}
+
+	function handleGroupMouseLeave() {
+		const timeSinceHover = Date.now() - lastHoverTime;
+		const remainingDelay = Math.max(0, hoverDelayMs - timeSinceHover);
+
+		if (remainingDelay > 0) {
+			// Delay the leave event
+			leaveTimer = setTimeout(() => {
+				onGroupMouseLeave();
+				leaveTimer = null;
+			}, remainingDelay);
+		} else {
+			// No delay needed
+			onGroupMouseLeave();
+		}
+	}
 
 	// If no comment is selected, default to first comment
 	let activeComment = $derived.by(() => {
@@ -50,11 +83,11 @@
 {#if isGroupExpanded || isGroupHovered}
 	<!-- Expanded view with tabs -->
 	<div
-		class="absolute left-0 right-4 z-10 overflow-visible rounded-lg border-l-4 bg-white shadow-lg transition-all duration-200"
+		class="absolute left-0 right-4 z-20 overflow-visible rounded-lg border-l-4 bg-white shadow-lg"
 		style:top="{top}px"
 		style:border-left-color={activeAnnotation.color}
-		onmouseenter={onGroupMouseEnter}
-		onmouseleave={onGroupMouseLeave}
+		onmouseenter={handleGroupMouseEnter}
+		onmouseleave={handleGroupMouseLeave}
 		onclick={onGroupClick}
 		onkeydown={(e) => {
 			if (e.key === 'Enter' || e.key === ' ') {
@@ -64,6 +97,8 @@
 		}}
 		role="button"
 		tabindex="0"
+		in:fly={{ x: -20, duration: 250, easing: quintOut }}
+		out:fly={{ x: -20, duration: 200, easing: quintOut }}
 	>
 		<!-- Tabs row -->
 		{#if comments.length > 1}
@@ -169,8 +204,8 @@
 	<div
 		class="absolute right-4 z-10 flex gap-1"
 		style:top="{top}px"
-		onmouseenter={onGroupMouseEnter}
-		onmouseleave={onGroupMouseLeave}
+		onmouseenter={handleGroupMouseEnter}
+		onmouseleave={handleGroupMouseLeave}
 		onclick={onGroupClick}
 		onkeydown={(e) => {
 			if (e.key === 'Enter' || e.key === ' ') {
@@ -180,6 +215,8 @@
 		}}
 		role="button"
 		tabindex="0"
+		in:scale={{ duration: 200, start: 0.8, easing: quintOut }}
+		out:scale={{ duration: 150, start: 0.8, easing: quintOut }}
 	>
 		{#each comments as comment (comment.id)}
 			{@const annotation = comment.annotation as unknown as Annotation}
