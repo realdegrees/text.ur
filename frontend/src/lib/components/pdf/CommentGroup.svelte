@@ -102,7 +102,7 @@
 	>
 		<!-- Tabs row -->
 		{#if comments.length > 1}
-			<div class="flex gap-1 border-b border-gray-200 px-3 pt-2">
+			<div class="flex flex-wrap gap-1 border-b border-gray-200 px-3 pt-2">
 				{#each comments as comment (comment.id)}
 					{@const annotation = comment.annotation as unknown as Annotation}
 					{@const isActive = activeComment.id === comment.id}
@@ -200,9 +200,9 @@
 		</div>
 	</div>
 {:else}
-	<!-- Collapsed indicators in a row -->
+	<!-- Collapsed indicators that can wrap -->
 	<div
-		class="absolute right-4 z-10 flex gap-1"
+		class="absolute right-4 z-10 flex max-w-full flex-wrap gap-1"
 		style:top="{top}px"
 		onmouseenter={handleGroupMouseEnter}
 		onmouseleave={handleGroupMouseLeave}

@@ -437,7 +437,7 @@
 				{expanded}
 				{showDeleteConfirm}
 				top={group.actualTop}
-				{hoverDelayMs}
+				hoverDelayMs={hoverDelayMs}
 				onClick={(e) => handleCommentClick(comment.id, e)}
 				onMouseEnter={() => handleMouseEnter(comment.id)}
 				onMouseLeave={handleMouseLeave}

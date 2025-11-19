@@ -34,7 +34,7 @@
 	<!-- Expanded comment card -->
 	<div
 		data-comment-id={comment.id}
-		class="absolute left-0 right-4 rounded border-l-4 bg-white px-3 py-2 shadow-md transition-all duration-200"
+		class="absolute left-0 right-4 rounded border-l-4 bg-white px-3 py-2 shadow-md transition-all duration-200 grid gap-2"
 		style:top="{actualTop}px"
 		style:border-left-color={annotation.color}
 		onmouseenter={onMouseEnter}
@@ -72,30 +72,32 @@
 			</div>
 		{:else}
 			<!-- Normal comment display -->
-			<div class="mb-1 flex items-center justify-between">
-				<span class="text-xs font-medium text-gray-600">
-					{comment.user?.username ?? 'Anonymous'}
-				</span>
-				<button
-					onclick={onDeleteClick}
-					class="text-gray-400 hover:text-red-600"
-					aria-label="Delete comment"
-				>
-					<DeleteIcon class="h-4 w-4" />
-				</button>
+			<div class="grid gap-2">
+				<div class="flex items-center justify-between gap-2">
+					<span class="text-xs font-medium text-gray-600 wrap-break-word min-w-0">
+						{comment.user?.username ?? 'Anonymous'}
+					</span>
+					<button
+						onclick={onDeleteClick}
+						class="text-gray-400 hover:text-red-600 shrink-0"
+						aria-label="Delete comment"
+					>
+						<DeleteIcon class="h-4 w-4" />
+					</button>
+				</div>
+				{#if comment.content}
+					<p class="text-sm text-gray-800 leading-snug wrap-break-word">{comment.content}</p>
+				{:else}
+					<p class="text-xs italic text-gray-400">No comment added</p>
+				{/if}
 			</div>
-			{#if comment.content}
-				<p class="text-sm text-gray-800 leading-snug">{comment.content}</p>
-			{:else}
-				<p class="text-xs italic text-gray-400">No comment added</p>
-			{/if}
 		{/if}
 	</div>
 {:else}
 	<!-- Collapsed badge indicator -->
 	<div
 		data-comment-id={comment.id}
-		class="absolute right-4 rounded-full px-2 py-1 shadow-sm transition-all duration-200 cursor-pointer hover:shadow-md"
+		class="absolute right-4 rounded-full px-2 py-1 shadow-sm transition-all duration-200 cursor-pointer hover:shadow-md max-w-full"
 		style:top="{actualTop}px"
 		style:background-color={annotation.color}
 		onmouseenter={onMouseEnter}
@@ -110,7 +112,7 @@
 		role="button"
 		tabindex="0"
 	>
-		<span class="text-xs font-medium text-gray-800">
+		<span class="text-xs font-medium text-gray-800 wrap-break-word">
 			{comment.user?.username ?? 'Anonymous'}
 		</span>
 	</div>

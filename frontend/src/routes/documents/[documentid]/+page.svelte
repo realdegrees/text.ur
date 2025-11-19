@@ -164,10 +164,10 @@
 
 	<!--Content Section - Single Scroll Container-->
 	<div class="flex-1 overflow-y-auto" bind:this={documentScrollRef}>
-		<div class="relative flex min-h-full flex-row items-start justify-center gap-4 px-4" style="overflow-x: visible;">
+		<div class="relative flex min-h-full flex-row items-start justify-between gap-2" style="overflow-x: visible;">
 			{#if documentFile}
 				<!--Comment Sidebar (Left Column)-->
-				<div class="flex-1 max-w-md overflow-visible">
+				<div class="flex-1 max-w-md w-full overflow-visible">
 					<CommentSidebar
 						comments={commentsWithAnnotation}
 						{pageDataArray}
