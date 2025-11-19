@@ -2,9 +2,9 @@
 	import { onMount, onDestroy } from 'svelte';
 	import { browser } from '$app/environment';
 	import type { CommentRead } from '$api/types';
-	import type { Annotation } from '$types/pdf';
+	import type { Annotation, TextLayerItem } from '$types/pdf';
 	import { mergeHighlightBoxes } from '$lib/util/pdfUtils';
-	import TextLayer, { type TextLayerItem } from './TextLayer.svelte';
+	import TextLayer from './TextLayer.svelte';
 	import HighlightLayer from './HighlightLayer.svelte';
 
 	interface Props {
@@ -132,7 +132,7 @@
 			console.log(`PdfViewer: Cancelling existing render task for page ${pageIndex + 1}`);
 			try {
 				pageData.renderTask.cancel();
-			} catch (e) {
+			} catch {
 				// Ignore cancellation errors
 			}
 			pageData.renderTask = null;

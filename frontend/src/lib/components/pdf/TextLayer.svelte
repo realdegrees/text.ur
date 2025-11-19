@@ -1,13 +1,5 @@
 <script lang="ts">
-	export interface TextLayerItem {
-		text: string;
-		left: number;
-		top: number;
-		fontSize: number;
-		fontFamily: string;
-		angle: number;
-		id: string;
-	}
+	import type { TextLayerItem } from '$types/pdf';
 
 	interface Props {
 		textLayerRef?: HTMLDivElement | null;

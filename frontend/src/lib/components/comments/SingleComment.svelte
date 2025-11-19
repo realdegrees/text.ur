@@ -51,6 +51,8 @@
 	>
 		{#if showDeleteConfirm}
 			<!-- Delete confirmation -->
+			<!-- svelte-ignore a11y_click_events_have_key_events -->
+			<!-- svelte-ignore a11y_no_static_element_interactions -->
 			<div class="flex flex-col gap-2" onclick={(e) => e.stopPropagation()}>
 				<p class="text-xs font-semibold text-red-600">Delete this comment?</p>
 				<div class="flex gap-2">

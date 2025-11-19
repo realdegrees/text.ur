@@ -1,4 +1,17 @@
 /**
+ * Represents a text item in the PDF text layer
+ */
+export interface TextLayerItem {
+	text: string;
+	left: number;
+	top: number;
+	fontSize: number;
+	fontFamily: string;
+	angle: number;
+	id: string;
+}
+
+/**
  * Represents a PDF annotation with text selection and bounding boxes
  */
 export interface Annotation {
@@ -21,5 +34,7 @@ export interface BoundingBox {
 
 /**
  * Represents a bounding box in pixel coordinates
+ * (Same as BoundingBox but semantically represents scaled/absolute coordinates)
  */
-export interface ScaledBoundingBox extends BoundingBox {}
+export type ScaledBoundingBox = BoundingBox;
+
