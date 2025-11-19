@@ -2,22 +2,17 @@
 	import { api, type ApiGetResult } from '$api/client';
 	import type { Paginated } from '$api/pagination.js';
 	import type { CommentCreate, CommentRead } from '$api/types.js';
-	import { validatePermissions } from '$api/validatePermissions';
+	import type { Annotation } from '$types/pdf';
 	import { notification } from '$lib/stores/notificationStore';
-	import PdfViewer from '$lib/components/pdf.svelte';
-	import PdfToolbar from '$lib/components/pdf/PdfToolbar.svelte';
-	import CommentsList from '$lib/components/comments/CommentsList.svelte';
+	import PdfViewer from '$lib/components/pdf/PdfViewer.svelte';
+	import CommentSidebar from '$lib/components/pdf/CommentSidebar.svelte';
+	import ControlsPanel from '$lib/components/pdf/ControlsPanel.svelte';
 	import { onMount } from 'svelte';
 
 	let { data } = $props();
-
-	let isAdmin = $derived.by((): boolean => {
-		return validatePermissions(data.membership, ['administrator']);
-	});
 	let commentsWithAnnotation = $state<CommentRead[]>([]);
 
 	// PDF viewer state
-	let pdfViewerRef: PdfViewer | null = $state(null);
 	let documentScrollRef: HTMLDivElement | null = $state(null);
 	let pdfContainerRef: HTMLDivElement | null = $state(null);
 	let currentPage = $state(1);
@@ -63,8 +58,6 @@
 	// Interaction state
 	let focusedCommentId = $state<number | null>(null);
 	let hoveredCommentId = $state<number | null>(null);
-	let deleteConfirmId = $state<number | null>(null);
-
 
 	// Handle comment deletion
 	async function handleCommentDelete(commentId: number): Promise<void> {
@@ -74,6 +67,33 @@
 			return;
 		}
 		commentsWithAnnotation = commentsWithAnnotation.filter((c) => c.id !== commentId);
+	}
+
+	// Handle highlight creation
+	async function handleHighlightCreate(annotation: Annotation): Promise<void> {
+		const commentCreateResult = await api.post<CommentRead>('/comments', {
+			document_id: data.document.id,
+			annotation: annotation as unknown as { [k: string]: unknown },
+			visibility: data.document.visibility
+		} satisfies CommentCreate);
+
+		if (!commentCreateResult.success) {
+			notification(commentCreateResult.error);
+			return;
+		}
+
+		commentsWithAnnotation = [...commentsWithAnnotation, commentCreateResult.data];
+	}
+
+	// Page navigation
+	function scrollToPage(pageNum: number) {
+		if (pageNum < 1 || pageNum > totalPages || !pdfContainerRef) return;
+
+		const pageElement = pdfContainerRef.querySelector(`[data-page-number="${pageNum}"]`);
+		if (pageElement && documentScrollRef) {
+			const scrollTop = pageElement.getBoundingClientRect().top - documentScrollRef.getBoundingClientRect().top + documentScrollRef.scrollTop;
+			documentScrollRef.scrollTo({ top: scrollTop, behavior: 'smooth' });
+		}
 	}
 
 	const fetchComments = async (): Promise<void> => {
@@ -129,112 +149,75 @@
 		documentFile = result.data;
 	};
 
-	// Handle click outside to clear focus
-	function handleDocumentClick(event: MouseEvent) {
-		const target = event.target as HTMLElement;
-
-		// Check if click is on a comment card, badge, or highlight
-		const isCommentClick = target.closest('[data-comment-id]');
-		const isHighlightClick = target.closest('.annotation-group');
-
-		// If not clicking on a comment or highlight, clear focus
-		if (!isCommentClick && !isHighlightClick) {
-			focusedCommentId = null;
-			deleteConfirmId = null;
-		}
-	}
-
 	onMount(() => {
 		fetchComments();
 		loadDocumentFile();
-
-		// Add global click listener for focus management
-		document.addEventListener('click', handleDocumentClick);
-
-		return () => {
-			document.removeEventListener('click', handleDocumentClick);
-		};
 	});
 </script>
 
 <!--Wrapper Flex Col-->
 <section class="flex h-full w-full flex-col gap-1">
 	<!--Header Section-->
-	<section></section>
+	<section class="border-b border-gray-200 bg-white px-4 py-2">
+		<h1 class="text-xl font-semibold text-gray-800">{data.document.name}</h1>
+	</section>
 
 	<!--Content Section - Single Scroll Container-->
 	<div class="flex-1 overflow-y-auto" bind:this={documentScrollRef}>
-		<div class="flex min-h-full flex-row items-start">
-			<!--Comments Section-->
-			<div class="relative flex-1 bg-gray-50 pr-4">
-				<CommentsList
-					comments={commentsWithAnnotation}
-					documentScrollRef={documentScrollRef}
-					pdfContainerRef={pdfContainerRef}
-					{pageDataArray}
-					bind:focusedCommentId
-					bind:hoveredCommentId
-					bind:deleteConfirmId
-					onDelete={handleCommentDelete}
-				/>
-			</div>
-
-			<!--PDF Section-->
-			<div class="flex shrink-0 items-start justify-center">
-				<!-- Inline PDF viewer component. Uses `annotationsToShow` (transformed from `commentsWithAnnotation`). -->
-				{#if documentFile}
-					<PdfViewer
-						bind:this={pdfViewerRef}
-						bind:pdfContainerRef
-						pdfSource={documentFile}
+		<div class="flex min-h-full flex-row items-start justify-center gap-4 px-4">
+			{#if documentFile}
+				<!--Comment Sidebar (Left Column)-->
+				<div class="flex-1 max-w-md">
+					<CommentSidebar
 						comments={commentsWithAnnotation}
-						bind:currentPage
-						bind:scale
-						bind:highlightColor
-						bind:totalPages
-						bind:pageDataArray
+						{pageDataArray}
+						{pdfContainerRef}
+						scrollContainerRef={documentScrollRef}
 						bind:hoveredCommentId
 						bind:focusedCommentId
-						onAnnotationCreate={async (annotation) => {
-							const commentCreateResult = await api.post<CommentRead>('/comments', {
-								document_id: data.document.id,
-								annotation: annotation as unknown as { [k: string]: unknown },
-								visibility: data.document.visibility
-							} satisfies CommentCreate);
-							if (!commentCreateResult.success) {
-								notification(commentCreateResult.error);
-								return;
-							}
-
-							commentsWithAnnotation = [...commentsWithAnnotation, commentCreateResult.data];
-						}}
+						onCommentDelete={handleCommentDelete}
 					/>
-				{:else}
-					<p>Loading document...</p>
-				{/if}
-			</div>
+				</div>
 
-			<!--Tools & Meta Section-->
-			<div class="flex flex-1 flex-col items-start justify-start gap-4">
-				<!--Toolbar Section-->
-				<section class="w-full">
-					<PdfToolbar bind:highlightColor commentsCount={commentsWithAnnotation.length} />
-				</section>
+				<!--PDF Viewer (Center Column)-->
+				<div class="shrink-0">
+					<PdfViewer
+						pdfSource={documentFile}
+						comments={commentsWithAnnotation}
+						bind:scale
+						bind:highlightColor
+						bind:hoveredCommentId
+						bind:focusedCommentId
+						bind:totalPages
+						bind:currentPage
+						bind:pdfContainerRef
+						onHighlightCreate={handleHighlightCreate}
+						onPageDataUpdate={(data) => (pageDataArray = data)}
+					/>
+				</div>
 
-				<!--Document Settings Section-->
-				{#if isAdmin}
-					<section>
-						<!--TODO add document settings like visibility mode for admins only-->
-					</section>
-				{/if}
-
-				<!--Active Users Section-->
-				<section>
-					<!--TODO show users currently connected to the document websocket-->
-				</section>
-
-				<!--TODO maybe add more stuff here-->
-			</div>
+				<!--Controls Panel (Right Column)-->
+				<div class="flex-1 max-w-md">
+					<ControlsPanel
+						bind:highlightColor
+						commentsCount={commentsWithAnnotation.length}
+						bind:scale
+						{currentPage}
+						{totalPages}
+						onZoomIn={() => (scale = Math.min(scale + 0.25, 3))}
+						onZoomOut={() => (scale = Math.max(scale - 0.25, 0.5))}
+						onPagePrev={() => scrollToPage(currentPage - 1)}
+						onPageNext={() => scrollToPage(currentPage + 1)}
+					/>
+				</div>
+			{:else}
+				<div class="flex w-full items-center justify-center py-20">
+					<div class="text-center">
+						<div class="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-b-2 border-blue-600"></div>
+						<p class="text-gray-600">Loading document...</p>
+					</div>
+				</div>
+			{/if}
 		</div>
 	</div>
 

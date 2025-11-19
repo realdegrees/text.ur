@@ -1,5 +1,5 @@
 <script lang="ts">
-	export interface TextLayerItem {
+	interface TextLayerItem {
 		text: string;
 		left: number;
 		top: number;
@@ -9,32 +9,30 @@
 		id: string;
 	}
 
-	interface Props {
-		textLayerRef?: HTMLDivElement | null;
-		textLayerItems: TextLayerItem[];
-		width: number;
-		height: number;
-		onTextSelection?: () => void;
-		onMouseMove?: (event: MouseEvent) => void;
-		onMouseLeave?: () => void;
-	}
-
 	let {
 		textLayerRef = $bindable(null),
 		textLayerItems = [],
-		width,
-		height,
-		onTextSelection = () => {},
-		onMouseMove = () => {},
-		onMouseLeave = () => {}
-	}: Props = $props();
+		textLayerWidth,
+		textLayerHeight,
+		onTextSelection,
+		onMouseMove,
+		onMouseLeave
+	}: {
+		textLayerRef?: HTMLDivElement | null;
+		textLayerItems: TextLayerItem[];
+		textLayerWidth: number;
+		textLayerHeight: number;
+		onTextSelection: () => void;
+		onMouseMove: (event: MouseEvent) => void;
+		onMouseLeave: () => void;
+	} = $props();
 </script>
 
 <div
 	bind:this={textLayerRef}
 	class="text-layer pointer-events-auto absolute left-0 top-0"
-	style:width="{width}px"
-	style:height="{height}px"
+	style:width="{textLayerWidth}px"
+	style:height="{textLayerHeight}px"
 	onmouseup={onTextSelection}
 	onmousemove={onMouseMove}
 	onmouseleave={onMouseLeave}
