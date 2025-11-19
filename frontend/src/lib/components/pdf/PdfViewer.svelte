@@ -4,6 +4,7 @@
 	import type { CommentRead } from '$api/types';
 	import type { Annotation, TextLayerItem } from '$types/pdf';
 	import { mergeHighlightBoxes } from '$lib/util/pdfUtils';
+	import { commentStore } from '$lib/stores/commentStore';
 	import TextLayer from './TextLayer.svelte';
 	import HighlightLayer from './HighlightLayer.svelte';
 
@@ -17,7 +18,6 @@
 		totalPages?: number;
 		currentPage?: number;
 		pdfContainerRef?: HTMLDivElement | null;
-		onHighlightCreate?: (annotation: Annotation) => void;
 		onPageDataUpdate?: (
 			pageData: Array<{ pageNumber: number; width: number; height: number }>
 		) => void;
@@ -33,7 +33,6 @@
 		totalPages = $bindable(0),
 		currentPage = $bindable(1),
 		pdfContainerRef = $bindable(null),
-		onHighlightCreate = () => {},
 		onPageDataUpdate = () => {}
 	}: Props = $props();
 
@@ -258,7 +257,7 @@
 	}
 
 	// Handle text selection and highlight creation
-	function handleTextSelection(pageIndex: number) {
+	async function handleTextSelection(pageIndex: number) {
 		const selection = window.getSelection();
 		if (!selection || selection.isCollapsed || !selection.rangeCount) return;
 
@@ -306,7 +305,8 @@
 			timestamp: Date.now()
 		};
 
-		onHighlightCreate(annotation);
+		// Create comment with annotation directly via store
+		await commentStore.create({ annotation });
 
 		// Clear selection
 		window.getSelection()?.removeAllRanges();

@@ -3,11 +3,9 @@
   Presentational component to render the body of a single comment with edit/reply/nested replies.
   Extracted to avoid duplicated UI between CommentCard.svelte and CommentGroup.svelte.
   */
-	import type { CommentRead, CommentCreate, CommentUpdate } from '$api/types';
+	import type { CommentRead } from '$api/types';
 	import type { Annotation } from '$types/pdf';
-	import type { Paginated } from '$api/pagination';
-	import { api } from '$api/client';
-	import { notification } from '$lib/stores/notificationStore';
+	import { commentStore } from '$lib/stores/commentStore';
 	import CommentBody from './CommentBody.svelte';
 	import DeleteIcon from '~icons/material-symbols/delete-outline';
 	import EditIcon from '~icons/material-symbols/edit-outline';
@@ -20,31 +18,26 @@
 		comment: CommentRead;
 		annotation: Annotation | null;
 		showDeleteConfirm: boolean;
-		currentUserId?: number | null;
 		depth?: number;
-		documentId?: string;
 		isExpanded?: boolean;
 		onDeleteClick?: (event: MouseEvent) => void;
 		onDeleteConfirm?: (event: MouseEvent) => void;
 		onDeleteCancel?: (event: MouseEvent) => void;
-		onUpdate?: (commentId: number, data: CommentUpdate) => Promise<void>;
-		onCreate?: (data: CommentCreate) => Promise<void>;
 	}
 
 	let {
 		comment,
 		annotation = null,
 		showDeleteConfirm = false,
-		currentUserId = null,
 		depth = 0,
-		documentId = '',
 		isExpanded = false,
 		onDeleteClick = () => {},
 		onDeleteConfirm = () => {},
-		onDeleteCancel = () => {},
-		onUpdate = async () => {},
-		onCreate = async () => {}
+		onDeleteCancel = () => {}
 	}: Props = $props();
+
+	// Get currentUserId from store
+	const currentUserId = commentStore.getCurrentUserId();
 
 	// Edit/reply state
 	let isEditing = $state(false);
@@ -74,7 +67,7 @@
 	// Show "Load more replies" button for nested comments (depth >= 1) that haven't loaded replies yet
 	// Only show if we haven't already loaded replies and there are no displayed replies from backend
 	let shouldShowLoadMoreButton = $derived(
-		depth >= 1 && !hasLoadedReplies && !isLoadingReplies && displayedReplies.length === 0 && documentId
+		depth >= 1 && !hasLoadedReplies && !isLoadingReplies && displayedReplies.length === 0
 	);
 
 	// Format timestamp
@@ -109,7 +102,7 @@
 		if (isSaving) return;
 		isSaving = true;
 		try {
-			await onUpdate(comment.id, { content: editContent.trim() });
+			await commentStore.update(comment.id, { content: editContent.trim() });
 			isEditing = false;
 		} finally {
 			isSaving = false;
@@ -130,12 +123,10 @@
 		if (isSaving || !replyContent.trim()) return;
 		isSaving = true;
 		try {
-			await onCreate({
-				document_id: '', // Will be filled by parent
-				parent_id: comment.id,
+			await commentStore.create({
+				parentId: comment.id,
 				content: replyContent.trim(),
-				visibility: 'public',
-				annotation: null
+				visibility: 'public'
 			});
 			isReplying = false;
 			replyContent = '';
@@ -150,24 +141,12 @@
 
 	// Load replies for this comment
 	async function loadReplies() {
-		if (isLoadingReplies || !documentId) return;
+		if (isLoadingReplies) return;
 
 		isLoadingReplies = true;
 
 		try {
-			const result = await api.get<Paginated<CommentRead, never>>(`/comments?limit=50`, {
-				filters: [
-					{ field: 'parent_id', operator: '==', value: comment.id.toString() },
-					{ field: 'document_id', operator: '==', value: documentId }
-				]
-			});
-
-			if (!result.success) {
-				notification(result.error);
-				return;
-			}
-
-			loadedReplies = result.data.data;
+			loadedReplies = await commentStore.loadReplies(comment.id);
 			hasLoadedReplies = true;
 		} catch (err) {
 			console.error('Failed to load replies:', err);
@@ -178,7 +157,7 @@
 
 	// Load replies when comment is expanded (only at depth 0)
 	$effect(() => {
-		if (depth === 0 && isExpanded && !hasLoadedReplies && documentId) {
+		if (depth === 0 && isExpanded && !hasLoadedReplies) {
 			loadReplies();
 		}
 	});
@@ -366,12 +345,8 @@
 						comment={reply}
 						annotation={(reply.annotation as unknown as Annotation) || null}
 						showDeleteConfirm={false}
-						{currentUserId}
 						depth={depth + 1}
-						{documentId}
 						isExpanded={false}
-						{onUpdate}
-						{onCreate}
 						onDeleteClick={(_e: MouseEvent) => {
 							/* Nested deletes handled by parent */
 						}}

@@ -1,6 +1,7 @@
 <script lang="ts">
-	import type { CommentRead, CommentCreate, CommentUpdate } from '$api/types';
+	import type { CommentRead } from '$api/types';
 	import type { Annotation } from '$types/pdf';
+	import { commentStore } from '$lib/stores/commentStore';
 	import CommentCard from './CommentCard.svelte';
 	import CommentGroup from './CommentGroup.svelte';
 	import { browser } from '$app/environment';
@@ -14,12 +15,7 @@
 		scrollContainerRef: HTMLDivElement | null;
 		hoveredCommentId?: number | null;
 		focusedCommentId?: number | null;
-		currentUserId?: number | null;
-		documentId?: string;
 		hoverDelayMs?: number;
-		onCommentDelete?: (commentId: number) => Promise<void>;
-		onCommentUpdate?: (commentId: number, data: CommentUpdate) => Promise<void>;
-		onCommentCreate?: (data: CommentCreate) => Promise<void>;
 	}
 
 	let {
@@ -29,12 +25,7 @@
 		scrollContainerRef = null,
 		hoveredCommentId = $bindable(null),
 		focusedCommentId = $bindable(null),
-		currentUserId = null,
-		documentId = '',
-		hoverDelayMs = 200,
-		onCommentDelete = async () => {},
-		onCommentUpdate = async () => {},
-		onCommentCreate = async () => {}
+		hoverDelayMs = 200
 	}: Props = $props();
 
 	let sidebarRef: HTMLDivElement | null = $state(null);
@@ -327,7 +318,7 @@
 
 	async function handleDeleteConfirm(commentId: number, event: MouseEvent) {
 		event.stopPropagation();
-		await onCommentDelete(commentId);
+		await commentStore.delete(commentId);
 		focusedCommentId = null;
 		hoveredCommentId = null;
 		deleteConfirmId = null;
@@ -425,8 +416,6 @@
 				{isGroupHovered}
 				selectedCommentId={groupSelectedId}
 				{deleteConfirmId}
-				{currentUserId}
-				{documentId}
 				{hoverDelayMs}
 				onGroupClick={(e) => handleGroupClick(group.id, e)}
 				onGroupMouseEnter={() => handleGroupMouseEnter(group.id)}
@@ -438,8 +427,6 @@
 				onDeleteClick={handleDeleteClick}
 				onDeleteConfirm={handleDeleteConfirm}
 				onDeleteCancel={handleDeleteCancel}
-				onUpdate={onCommentUpdate}
-				onCreate={onCommentCreate}
 			/>
 		{:else}
 			{@const comment = group.comments[0]}
@@ -453,8 +440,6 @@
 				{expanded}
 				{showDeleteConfirm}
 				top={group.actualTop}
-				{currentUserId}
-				{documentId}
 				{hoverDelayMs}
 				onClick={(e) => handleCommentClick(comment.id, e)}
 				onMouseEnter={() => handleMouseEnter(comment.id)}
@@ -462,8 +447,6 @@
 				onDeleteClick={(e) => handleDeleteClick(comment.id, e)}
 				onDeleteConfirm={(e) => handleDeleteConfirm(comment.id, e)}
 				onDeleteCancel={handleDeleteCancel}
-				onUpdate={onCommentUpdate}
-				onCreate={onCommentCreate}
 			/>
 		{/if}
 	{/each}

@@ -1,16 +1,14 @@
 <script lang="ts">
-	import { api, type ApiGetResult } from '$api/client';
-	import type { Paginated } from '$api/pagination.js';
-	import type { CommentCreate, CommentRead, CommentUpdate } from '$api/types.js';
-	import type { Annotation } from '$types/pdf';
+	import { api } from '$api/client';
 	import { notification } from '$lib/stores/notificationStore';
+	import { commentStore } from '$lib/stores/commentStore';
 	import PdfViewer from '$lib/components/pdf/PdfViewer.svelte';
 	import CommentSidebar from '$lib/components/pdf/CommentSidebar.svelte';
 	import ControlsPanel from '$lib/components/pdf/ControlsPanel.svelte';
-	import { onMount } from 'svelte';
+	import { onMount, onDestroy } from 'svelte';
 
 	let { data } = $props();
-	let commentsWithAnnotation = $state<CommentRead[]>([]);
+	let commentsWithAnnotation = $state($commentStore);
 
 	// PDF viewer state
 	let documentScrollRef: HTMLDivElement | null = $state(null);
@@ -59,131 +57,13 @@
 	let focusedCommentId = $state<number | null>(null);
 	let hoveredCommentId = $state<number | null>(null);
 
-	// Recursively find and update a comment in a tree
-	function updateCommentInTree(
-		comments: CommentRead[],
-		commentId: number,
-		updater: (comment: CommentRead) => CommentRead
-	): CommentRead[] {
-		return comments.map((comment) => {
-			if (comment.id === commentId) {
-				return updater(comment);
-			}
-			if (comment.replies && comment.replies.length > 0) {
-				return {
-					...comment,
-					replies: updateCommentInTree(comment.replies, commentId, updater)
-				};
-			}
-			return comment;
+	// Subscribe to comment store updates
+	$effect(() => {
+		const unsubscribe = commentStore.subscribe((comments) => {
+			commentsWithAnnotation = comments;
 		});
-	}
-
-	// Recursively find and delete a comment from a tree
-	function deleteCommentFromTree(comments: CommentRead[], commentId: number): CommentRead[] {
-		return comments
-			.filter((comment) => comment.id !== commentId)
-			.map((comment) => {
-				if (comment.replies && comment.replies.length > 0) {
-					return {
-						...comment,
-						replies: deleteCommentFromTree(comment.replies, commentId)
-					};
-				}
-				return comment;
-			});
-	}
-
-	// Recursively add a reply to a comment in a tree
-	function addReplyToTree(
-		comments: CommentRead[],
-		parentId: number,
-		newReply: CommentRead
-	): CommentRead[] {
-		return comments.map((comment) => {
-			if (comment.id === parentId) {
-				return {
-					...comment,
-					replies: [...(comment.replies || []), newReply]
-				};
-			}
-			if (comment.replies && comment.replies.length > 0) {
-				return {
-					...comment,
-					replies: addReplyToTree(comment.replies, parentId, newReply)
-				};
-			}
-			return comment;
-		});
-	}
-
-	// Handle comment deletion
-	async function handleCommentDelete(commentId: number): Promise<void> {
-		const deleteCommentResult = await api.delete(`/comments/${commentId}`);
-		if (!deleteCommentResult.success) {
-			notification(deleteCommentResult.error);
-			return;
-		}
-		// Remove from local state (works for both top-level and nested)
-		commentsWithAnnotation = deleteCommentFromTree(commentsWithAnnotation, commentId);
-	}
-
-	// Handle comment update
-	async function handleCommentUpdate(commentId: number, updateData: CommentUpdate): Promise<void> {
-		const updateResult = await api.update(`/comments/${commentId}`, updateData);
-		if (!updateResult.success) {
-			notification(updateResult.error);
-			return;
-		}
-		// Update locally without refetching
-		commentsWithAnnotation = updateCommentInTree(commentsWithAnnotation, commentId, (comment) => ({
-			...comment,
-			content: updateData.content ?? comment.content,
-			visibility: updateData.visibility ?? comment.visibility,
-			annotation: updateData.annotation ?? comment.annotation,
-			updated_at: new Date().toISOString()
-		}));
-	}
-
-	// Handle comment creation (replies)
-	async function handleCommentCreate(commentData: CommentCreate): Promise<void> {
-		const createResult = await api.post<CommentRead>('/comments', {
-			...commentData,
-			document_id: data.document.id,
-			visibility: data.document.visibility
-		});
-		if (!createResult.success) {
-			notification(createResult.error);
-			return;
-		}
-		// Add reply to local state without refetching
-		if (commentData.parent_id && createResult.data) {
-			commentsWithAnnotation = addReplyToTree(
-				commentsWithAnnotation,
-				commentData.parent_id,
-				createResult.data
-			);
-		} else if (createResult.data && !commentData.parent_id) {
-			// Top-level comment (shouldn't happen in sidebar, but handle it)
-			commentsWithAnnotation = [...commentsWithAnnotation, createResult.data];
-		}
-	}
-
-	// Handle highlight creation
-	async function handleHighlightCreate(annotation: Annotation): Promise<void> {
-		const commentCreateResult = await api.post<CommentRead>('/comments', {
-			document_id: data.document.id,
-			annotation: annotation as unknown as { [k: string]: unknown },
-			visibility: data.document.visibility
-		} satisfies CommentCreate);
-
-		if (!commentCreateResult.success) {
-			notification(commentCreateResult.error);
-			return;
-		}
-
-		commentsWithAnnotation = [...commentsWithAnnotation, commentCreateResult.data];
-	}
+		return unsubscribe;
+	});
 
 	// Page navigation
 	function scrollToPage(pageNum: number) {
@@ -199,49 +79,6 @@
 		}
 	}
 
-	const fetchComments = async (): Promise<void> => {
-		const limit = 50;
-		let offset = 0;
-		let result: ApiGetResult<Paginated<CommentRead, 'document'>>;
-
-		while (true) {
-			result = await api.get<Paginated<CommentRead, 'document'>>(
-				`/comments?offset=${offset}&limit=${limit}`,
-				{
-					filters: [
-						{
-							field: 'parent_id',
-							operator: 'exists',
-							value: 'false'
-						},
-						{
-							field: 'annotation',
-							operator: 'exists',
-							value: 'true'
-						},
-						{
-							field: 'document_id',
-							operator: '==',
-							value: data.document.id.toString()
-						}
-					]
-				}
-			);
-
-			if (!result.success) {
-				notification(result.error);
-				return;
-			}
-
-			if (result.data.total <= result.data.offset + result.data.limit) {
-				commentsWithAnnotation = [...commentsWithAnnotation, ...result.data.data];
-				break;
-			} else {
-				commentsWithAnnotation = [...commentsWithAnnotation, ...result.data.data];
-				offset += limit;
-			}
-		}
-	};
 	let documentFile = $state<Blob | null>(null);
 	const loadDocumentFile = async (): Promise<void> => {
 		const result = await api.download(`/documents/${data.document.id}/file`);
@@ -252,9 +89,13 @@
 		documentFile = result.data;
 	};
 
-	onMount(() => {
-		fetchComments();
+	onMount(async () => {
+		await commentStore.initialize(data.document.id, data.sessionUser.id);
 		loadDocumentFile();
+	});
+
+	onDestroy(() => {
+		commentStore.clear();
 	});
 </script>
 
@@ -281,11 +122,6 @@
 						scrollContainerRef={documentScrollRef}
 						bind:hoveredCommentId
 						bind:focusedCommentId
-						currentUserId={data.sessionUser.id}
-						documentId={data.document.id}
-						onCommentDelete={handleCommentDelete}
-						onCommentUpdate={handleCommentUpdate}
-						onCommentCreate={handleCommentCreate}
 					/>
 				</div>
 
@@ -301,7 +137,6 @@
 						bind:totalPages
 						bind:currentPage
 						bind:pdfContainerRef
-						onHighlightCreate={handleHighlightCreate}
 						onPageDataUpdate={(data) => (pageDataArray = data)}
 					/>
 				</div>

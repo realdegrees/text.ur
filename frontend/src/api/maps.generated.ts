@@ -27,9 +27,6 @@ export const ExclusionMaps = {
     user_id: 'user',
     group_id: 'group',
   },
-  ShareLinkFilter: {
-    author_id: 'author',
-  },
 } as const;
 
 export type ExclusionMaps = typeof ExclusionMaps;
@@ -38,12 +35,11 @@ export type ExclusionMaps = typeof ExclusionMaps;
  * Get the filter model type for a given read model type.
  * Auto-generated mapping: XxxRead -> XxxFilter
  */
-export type GetFilterModel<T> = 
+export type GetFilterModel<T> =
 	T extends Types.CommentRead ? Types.CommentFilter :
 	T extends Types.DocumentRead ? Types.DocumentFilter :
 	T extends Types.GroupRead ? Types.GroupFilter :
 	T extends Types.MembershipRead ? Types.MembershipFilter :
-	T extends Types.ShareLinkRead ? Types.ShareLinkFilter :
 	T extends Types.UserRead ? Types.UserFilter :
 	Types.Filter;
 
@@ -51,11 +47,10 @@ export type GetFilterModel<T> =
  * Map from Filter types to their string names in ExclusionMaps.
  * Auto-generated from backend filter models.
  */
-export type FilterTypeToName<T> = 
+export type FilterTypeToName<T> =
 	T extends Types.CommentFilter ? 'CommentFilter' :
 	T extends Types.DocumentFilter ? 'DocumentFilter' :
 	T extends Types.GroupFilter ? 'GroupFilter' :
 	T extends Types.MembershipFilter ? 'MembershipFilter' :
-	T extends Types.ShareLinkFilter ? 'ShareLinkFilter' :
 	T extends Types.UserFilter ? 'UserFilter' :
 	never;
