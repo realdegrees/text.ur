@@ -19,7 +19,6 @@
 
 	let { data, sessionUser, accepted, onSelect }: Props = $props();
 
-
 	/**
 	 * Load more memberships with pagination.
 	 */
@@ -102,7 +101,7 @@
 		<h2 class="w-full text-left text-2xl">{$LL.myGroups()}</h2>
 		<a
 			href="/dashboard/groups/create"
-			class="flex flex-row items-center gap-1 rounded-md bg-inset shadow-black/30 shadow-inner px-3 py-1 text-sm transition-all hover:bg-green-500/20"
+			class="flex flex-row items-center gap-1 rounded-md bg-inset px-3 py-1 text-sm shadow-inner shadow-black/30 transition-all hover:bg-green-500/20"
 			title="Create new group"
 		>
 			<AddIcon class="h-4 w-4 text-text" />
@@ -110,7 +109,7 @@
 		</a>
 	</div>
 	<hr class="border-text/50" />
-	<InfiniteScrollList data={data} {loadMore} step={2} onSelect={handleSelect}>
+	<InfiniteScrollList {data} {loadMore} step={2} onSelect={handleSelect}>
 		{#snippet itemSnippet(membership: Omit<MembershipRead, 'user'>)}
 			<div
 				class="group m-1 flex w-full cursor-pointer flex-col gap-1 rounded-md bg-inset px-3 py-2.5 shadow-inner shadow-black/30 transition-all hover:bg-primary"
@@ -129,7 +128,7 @@
 		<h2 class="w-full text-left text-xl">{$LL.invitations()}</h2>
 	</div>
 	<hr class="border-text/50" />
-	<InfiniteScrollList data={data} {loadMore} step={50}>
+	<InfiniteScrollList {data} {loadMore} step={50}>
 		{#snippet itemSnippet(invitation: Omit<MembershipRead, 'user'>)}
 			<div
 				class="flex w-full flex-row items-center justify-between gap-2 rounded-md bg-inset px-3 py-2.5 shadow-inner shadow-black/30"

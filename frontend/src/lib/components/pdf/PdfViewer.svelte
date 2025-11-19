@@ -18,7 +18,9 @@
 		currentPage?: number;
 		pdfContainerRef?: HTMLDivElement | null;
 		onHighlightCreate?: (annotation: Annotation) => void;
-		onPageDataUpdate?: (pageData: Array<{ pageNumber: number; width: number; height: number }>) => void;
+		onPageDataUpdate?: (
+			pageData: Array<{ pageNumber: number; width: number; height: number }>
+		) => void;
 	}
 
 	let {
@@ -191,7 +193,9 @@
 			await renderTextLayer(pageIndex, page, viewport);
 
 			pageData.status = 'ready';
-			console.log(`PdfViewer: Page ${pageIndex + 1} rendered successfully at ${viewport.width}x${viewport.height}, scale=${scale}`);
+			console.log(
+				`PdfViewer: Page ${pageIndex + 1} rendered successfully at ${viewport.width}x${viewport.height}, scale=${scale}`
+			);
 
 			// Update page data for parent component
 			updatePageDataArray();
@@ -375,7 +379,9 @@
 
 		// Only re-render if scale actually changed and we have a document
 		if (pdfDocument && pages.length > 0 && scale !== previousScale) {
-			console.log(`PdfViewer: Scale changed from ${previousScale} to ${scale}, re-rendering all pages`);
+			console.log(
+				`PdfViewer: Scale changed from ${previousScale} to ${scale}, re-rendering all pages`
+			);
 			previousScale = scale;
 
 			// Re-render all loaded pages
@@ -407,19 +413,34 @@
 	});
 </script>
 
-<div bind:this={pdfContainerRef} class="pdf-container flex flex-col items-center gap-4 bg-gray-100 p-4">
+<div
+	bind:this={pdfContainerRef}
+	class="pdf-container flex flex-col items-center gap-4 bg-gray-100 p-4"
+>
 	{#if isLoading}
 		<div class="flex items-center justify-center py-20">
 			<div class="text-center">
-				<div class="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-b-2 border-blue-600"></div>
+				<div
+					class="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-b-2 border-blue-600"
+				></div>
 				<p class="text-gray-600">Loading PDF...</p>
 			</div>
 		</div>
 	{:else if error}
 		<div class="flex items-center justify-center py-20">
 			<div class="max-w-md rounded-lg bg-red-50 p-6 text-center">
-				<svg class="mx-auto mb-4 h-16 w-16 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+				<svg
+					class="mx-auto mb-4 h-16 w-16 text-red-500"
+					fill="none"
+					stroke="currentColor"
+					viewBox="0 0 24 24"
+				>
+					<path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						stroke-width="2"
+						d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+					/>
 				</svg>
 				<h3 class="mb-2 text-lg font-semibold text-gray-900">Error Loading PDF</h3>
 				<p class="text-gray-600">{error}</p>
@@ -438,9 +459,14 @@
 
 				<!-- Loading placeholder overlay -->
 				{#if pageData.status === 'placeholder' || pageData.status === 'rendering'}
-					<div class="absolute inset-0 flex items-center justify-center bg-gray-200" style="min-width: 612px; min-height: 792px;">
+					<div
+						class="absolute inset-0 flex items-center justify-center bg-gray-200"
+						style="min-width: 612px; min-height: 792px;"
+					>
 						<div class="text-center">
-							<div class="mx-auto mb-2 h-8 w-8 animate-spin rounded-full border-b-2 border-gray-400"></div>
+							<div
+								class="mx-auto mb-2 h-8 w-8 animate-spin rounded-full border-b-2 border-gray-400"
+							></div>
 							<p class="text-sm text-gray-500">Loading page {pageData.pageNumber}...</p>
 						</div>
 						<!-- Shimmer effect -->

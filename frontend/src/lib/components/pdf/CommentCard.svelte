@@ -69,7 +69,7 @@
 	<!-- Expanded comment card -->
 	<div
 		data-comment-id={comment.id}
-		class="absolute left-4 right-2 z-20 rounded-lg border-l-4 bg-white px-4 py-3 shadow-lg"
+		class="absolute right-2 left-4 z-20 rounded-lg border-l-4 bg-white px-4 py-3 shadow-lg"
 		style:top="{top}px"
 		style:border-left-color={annotation.color}
 		onmouseenter={handleMouseEnter}
@@ -90,9 +90,9 @@
 			{comment}
 			{annotation}
 			{showDeleteConfirm}
-			onDeleteClick={onDeleteClick}
-			onDeleteConfirm={onDeleteConfirm}
-			onDeleteCancel={onDeleteCancel}
+			{onDeleteClick}
+			{onDeleteConfirm}
+			{onDeleteCancel}
 		/>
 	</div>
 {:else}

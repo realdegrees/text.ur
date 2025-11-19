@@ -224,7 +224,7 @@
 		<!-- Connection line from highlight to comment (only when expanded) -->
 		{#if expanded && highlightRightX > 0}
 			<svg
-				class="pointer-events-none absolute left-0 top-0 z-50 overflow-visible"
+				class="pointer-events-none absolute top-0 left-0 z-50 overflow-visible"
 				style:width="200vw"
 				style:height="{Math.max(commentBottom, horizontalLineY) + 20}px"
 			>

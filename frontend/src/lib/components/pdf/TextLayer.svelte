@@ -24,7 +24,7 @@
 
 <div
 	bind:this={textLayerRef}
-	class="text-layer pointer-events-auto absolute left-0 top-0"
+	class="text-layer pointer-events-auto absolute top-0 left-0"
 	style:width="{width}px"
 	style:height="{height}px"
 	onmouseup={onTextSelection}
@@ -36,7 +36,7 @@
 >
 	{#each textLayerItems as item (item.id)}
 		<div
-			class="pointer-events-auto absolute origin-top-left cursor-text select-text whitespace-pre text-transparent"
+			class="pointer-events-auto absolute origin-top-left cursor-text whitespace-pre text-transparent select-text"
 			style:left="{item.left}px"
 			style:top="{item.top}px"
 			style:font-size="{item.fontSize}px"

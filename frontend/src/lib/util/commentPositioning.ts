@@ -11,10 +11,7 @@ interface PositionedComment {
 /**
  * Calculate ideal vertical position for a comment based on its annotation
  */
-export function getIdealCommentTopPosition(
-	comment: CommentRead,
-	textLayerHeight: number
-): number {
+export function getIdealCommentTopPosition(comment: CommentRead, textLayerHeight: number): number {
 	const annotation = comment.annotation as unknown as Annotation;
 	if (!annotation || !annotation.boundingBoxes || annotation.boundingBoxes.length === 0) {
 		return 0;

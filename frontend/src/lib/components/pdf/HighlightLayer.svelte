@@ -11,7 +11,14 @@
 		focusedCommentId: number | null;
 	}
 
-	let { comments = [], pageNumber, width, height, hoveredCommentId, focusedCommentId }: Props = $props();
+	let {
+		comments = [],
+		pageNumber,
+		width,
+		height,
+		hoveredCommentId,
+		focusedCommentId
+	}: Props = $props();
 
 	// Filter comments for current page
 	let pageComments = $derived(
@@ -23,7 +30,7 @@
 </script>
 
 {#if width > 0 && height > 0}
-	<div class="annotations-layer pointer-events-none absolute left-0 top-0 h-full w-full">
+	<div class="annotations-layer pointer-events-none absolute top-0 left-0 h-full w-full">
 		{#each pageComments as comment (comment.id)}
 			{@const annotation = comment.annotation as unknown as Annotation}
 			{@const scaledBoxes = annotation.boundingBoxes.map((box) => ({
@@ -48,7 +55,11 @@
 						style:background-color={annotation.color}
 						style:opacity={isActive ? '0.5' : '0.3'}
 						style:border={isActive ? `2px solid ${annotation.color}` : 'none'}
-						style:box-shadow={isFocused ? `0 4px 12px rgba(0, 0, 0, 0.15), 0 0 0 3px ${annotation.color}40` : isHovered ? `0 2px 8px rgba(0, 0, 0, 0.1)` : 'none'}
+						style:box-shadow={isFocused
+							? `0 4px 12px rgba(0, 0, 0, 0.15), 0 0 0 3px ${annotation.color}40`
+							: isHovered
+								? `0 2px 8px rgba(0, 0, 0, 0.1)`
+								: 'none'}
 						style:box-sizing="border-box"
 					></div>
 				{/each}

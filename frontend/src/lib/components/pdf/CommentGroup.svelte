@@ -83,7 +83,7 @@
 {#if isGroupExpanded || isGroupHovered}
 	<!-- Expanded view with tabs -->
 	<div
-		class="absolute left-4 right-2 z-20 overflow-visible rounded-lg border-l-4 bg-white shadow-lg"
+		class="absolute right-2 left-4 z-20 overflow-visible rounded-lg border-l-4 bg-white shadow-lg"
 		style:top="{top}px"
 		style:border-left-color={activeAnnotation.color}
 		onmouseenter={handleGroupMouseEnter}
@@ -122,10 +122,7 @@
 							onCommentSelect(comment.id);
 						}}
 					>
-						<div
-							class="h-2.5 w-2.5 rounded-full"
-							style:background-color={annotation.color}
-						></div>
+						<div class="h-2.5 w-2.5 rounded-full" style:background-color={annotation.color}></div>
 						<span>{comment.user?.username?.[0]?.toUpperCase() ?? '?'}</span>
 					</button>
 				{/each}
@@ -133,21 +130,21 @@
 		{/if}
 
 		<!-- Active comment content -->
-			<div class="px-4 py-3">
-			  <CommentBody
+		<div class="px-4 py-3">
+			<CommentBody
 				comment={activeComment}
 				annotation={activeAnnotation}
 				showDeleteConfirm={deleteConfirmId === activeComment.id}
 				onDeleteClick={(e) => onDeleteClick(activeComment.id, e)}
 				onDeleteConfirm={(e) => onDeleteConfirm(activeComment.id, e)}
-				onDeleteCancel={onDeleteCancel}
-			  />
+				{onDeleteCancel}
+			/>
 		</div>
 	</div>
 {:else}
 	<!-- Collapsed indicators that can wrap -->
 	<div
-		class="absolute left-4 right-2 z-10 flex max-w-full flex-wrap justify-end gap-1"
+		class="absolute right-2 left-4 z-10 flex max-w-full flex-wrap justify-end gap-1"
 		style:top="{top}px"
 		onmouseenter={handleGroupMouseEnter}
 		onmouseleave={handleGroupMouseLeave}

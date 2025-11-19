@@ -91,7 +91,10 @@
 
 		const pageElement = pdfContainerRef.querySelector(`[data-page-number="${pageNum}"]`);
 		if (pageElement && documentScrollRef) {
-			const scrollTop = pageElement.getBoundingClientRect().top - documentScrollRef.getBoundingClientRect().top + documentScrollRef.scrollTop;
+			const scrollTop =
+				pageElement.getBoundingClientRect().top -
+				documentScrollRef.getBoundingClientRect().top +
+				documentScrollRef.scrollTop;
 			documentScrollRef.scrollTo({ top: scrollTop, behavior: 'smooth' });
 		}
 	}
@@ -164,11 +167,14 @@
 
 	<!--Content Section - Single Scroll Container-->
 	<div class="flex-1 overflow-y-auto" bind:this={documentScrollRef}>
-		<div class="relative flex min-h-full flex-row items-start justify-center" style="overflow-x: visible;">
-		{#if documentFile}
-			<!--Comment Sidebar (Left Column)-->
-			<div class="flex-1 overflow-visible">
-				<CommentSidebar
+		<div
+			class="relative flex min-h-full flex-row items-start justify-center"
+			style="overflow-x: visible;"
+		>
+			{#if documentFile}
+				<!--Comment Sidebar (Left Column)-->
+				<div class="flex-1 overflow-visible">
+					<CommentSidebar
 						comments={commentsWithAnnotation}
 						{pageDataArray}
 						{pdfContainerRef}
@@ -196,9 +202,9 @@
 					/>
 				</div>
 
-			<!--Controls Panel (Right Column)-->
-			<div class="flex-1">
-				<ControlsPanel
+				<!--Controls Panel (Right Column)-->
+				<div class="flex-1">
+					<ControlsPanel
 						bind:highlightColor
 						commentsCount={commentsWithAnnotation.length}
 						bind:scale
@@ -213,7 +219,9 @@
 			{:else}
 				<div class="flex w-full items-center justify-center py-20">
 					<div class="text-center">
-						<div class="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-b-2 border-blue-600"></div>
+						<div
+							class="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-b-2 border-blue-600"
+						></div>
 						<p class="text-gray-600">Loading document...</p>
 					</div>
 				</div>

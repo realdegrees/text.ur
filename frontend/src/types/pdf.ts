@@ -37,4 +37,3 @@ export interface BoundingBox {
  * (Same as BoundingBox but semantically represents scaled/absolute coordinates)
  */
 export type ScaledBoundingBox = BoundingBox;
-

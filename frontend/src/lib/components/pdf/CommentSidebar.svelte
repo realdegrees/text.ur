@@ -74,9 +74,12 @@
 	}
 
 	// Get highlight position
-	function getHighlightPosition(
-		annotation: Annotation
-	): { leftX: number; rightX: number; top: number; bottom: number } {
+	function getHighlightPosition(annotation: Annotation): {
+		leftX: number;
+		rightX: number;
+		top: number;
+		bottom: number;
+	} {
 		if (!annotation?.boundingBoxes || annotation.boundingBoxes.length === 0) {
 			return { leftX: 0, rightX: 0, top: 0, bottom: 0 };
 		}
@@ -195,8 +198,8 @@
 						actualTop: 0,
 						highlightTop: 0, // Will be set based on active comment
 						highlightBottom: 0, // Will be set based on active comment
-						highlightLeftX: 0,  // Will be set based on active comment
-						highlightRightX: 0  // Will be set based on active comment
+						highlightLeftX: 0, // Will be set based on active comment
+						highlightRightX: 0 // Will be set based on active comment
 					});
 					currentGroup = [current];
 				}
@@ -211,8 +214,8 @@
 				actualTop: 0,
 				highlightTop: 0, // Will be set based on active comment
 				highlightBottom: 0, // Will be set based on active comment
-				highlightLeftX: 0,  // Will be set based on active comment
-				highlightRightX: 0  // Will be set based on active comment
+				highlightLeftX: 0, // Will be set based on active comment
+				highlightRightX: 0 // Will be set based on active comment
 			});
 		}
 
@@ -239,7 +242,7 @@
 		// Apply collision detection to groups
 		for (let i = 0; i < groups.length; i++) {
 			const group = groups[i];
-			
+
 			// Calculate ideal top for group (average of all comments in group)
 			const avgIdealTop =
 				positioned
@@ -350,13 +353,17 @@
 	});
 </script>
 
-<div bind:this={sidebarRef} class="comment-sidebar relative flex-1 overflow-visible bg-gray-50 pr-2">
+<div
+	bind:this={sidebarRef}
+	class="comment-sidebar relative flex-1 overflow-visible bg-gray-50 pr-2"
+>
 	{#each commentGroups as group (group.id)}
 		{@const isGroupExpanded =
 			group.comments.some((c) => c.id === focusedCommentId) ||
 			group.comments.some((c) => c.id === hoveredCommentId) ||
 			hoveredGroupId === group.id}
-		{@const isGroupHovered = hoveredGroupId === group.id || group.comments.some((c) => c.id === hoveredCommentId)}
+		{@const isGroupHovered =
+			hoveredGroupId === group.id || group.comments.some((c) => c.id === hoveredCommentId)}
 		{@const sidebarWidth = sidebarRef?.getBoundingClientRect().width || 0}
 		{@const commentLeftEdge = sidebarWidth - 8}
 
@@ -364,7 +371,8 @@
 			hoveredCommentId && group.comments.some((c) => c.id === hoveredCommentId)
 				? hoveredCommentId
 				: selectedCommentInGroup[group.id] || group.comments[0].id}
-		{@const activeComment = group.comments.find((c) => c.id === activeCommentId) || group.comments[0]}
+		{@const activeComment =
+			group.comments.find((c) => c.id === activeCommentId) || group.comments[0]}
 		{@const activeAnnotation = activeComment.annotation as unknown as Annotation}
 
 		{@const activePositioned = (group as any).positionedData?.find(
@@ -377,10 +385,12 @@
 		{#if (isGroupExpanded || isGroupHovered) && activeHighlightLeftX > 0}
 			{@const isFocused = group.comments.some((c) => c.id === focusedCommentId)}
 			<svg
-				class="pointer-events-none absolute left-0 top-0 z-10 overflow-visible transition-all duration-300"
+				class="pointer-events-none absolute top-0 left-0 z-10 overflow-visible transition-all duration-300"
 				style:width="{sidebarWidth + 500}px"
 				style:height="{Math.max(group.actualTop, activeHighlightTop) + 50}px"
-				style:filter={isFocused ? 'drop-shadow(0 2px 6px rgba(0, 0, 0, 0.2))' : 'drop-shadow(0 1px 3px rgba(0, 0, 0, 0.1))'}
+				style:filter={isFocused
+					? 'drop-shadow(0 2px 6px rgba(0, 0, 0, 0.2))'
+					: 'drop-shadow(0 1px 3px rgba(0, 0, 0, 0.1))'}
 			>
 				<line
 					x1={activeHighlightLeftX}
@@ -406,7 +416,7 @@
 				{isGroupExpanded}
 				{isGroupHovered}
 				selectedCommentId={groupSelectedId}
-				deleteConfirmId={deleteConfirmId}
+				{deleteConfirmId}
 				{hoverDelayMs}
 				onGroupClick={(e) => handleGroupClick(group.id, e)}
 				onGroupMouseEnter={() => handleGroupMouseEnter(group.id)}
@@ -431,7 +441,7 @@
 				{expanded}
 				{showDeleteConfirm}
 				top={group.actualTop}
-				hoverDelayMs={hoverDelayMs}
+				{hoverDelayMs}
 				onClick={(e) => handleCommentClick(comment.id, e)}
 				onMouseEnter={() => handleMouseEnter(comment.id)}
 				onMouseLeave={handleMouseLeave}
