@@ -239,11 +239,7 @@
 		// Apply collision detection to groups
 		for (let i = 0; i < groups.length; i++) {
 			const group = groups[i];
-			const isGroupExpanded =
-				group.comments.some((c) => c.id === hoveredCommentId || c.id === focusedCommentId) ||
-				hoveredGroupId === group.id;
-			const groupHeight = isGroupExpanded ? COMMENT_HEIGHT : COMMENT_COLLAPSED_HEIGHT;
-
+			
 			// Calculate ideal top for group (average of all comments in group)
 			const avgIdealTop =
 				positioned
@@ -354,17 +350,15 @@
 	});
 </script>
 
-<div bind:this={sidebarRef} class="comment-sidebar relative flex-1 overflow-visible bg-gray-50 pr-4">
+<div bind:this={sidebarRef} class="comment-sidebar relative flex-1 overflow-visible bg-gray-50 pr-2">
 	{#each commentGroups as group (group.id)}
 		{@const isGroupExpanded =
 			group.comments.some((c) => c.id === focusedCommentId) ||
 			group.comments.some((c) => c.id === hoveredCommentId) ||
 			hoveredGroupId === group.id}
 		{@const isGroupHovered = hoveredGroupId === group.id || group.comments.some((c) => c.id === hoveredCommentId)}
-		{@const groupHeight = isGroupExpanded ? COMMENT_HEIGHT : COMMENT_COLLAPSED_HEIGHT}
-		{@const groupBottom = group.actualTop + groupHeight}
 		{@const sidebarWidth = sidebarRef?.getBoundingClientRect().width || 0}
-		{@const commentLeftEdge = sidebarWidth - 16}
+		{@const commentLeftEdge = sidebarWidth - 8}
 
 		{@const activeCommentId =
 			hoveredCommentId && group.comments.some((c) => c.id === hoveredCommentId)
