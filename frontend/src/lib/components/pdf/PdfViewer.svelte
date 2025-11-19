@@ -145,22 +145,25 @@
 			pageData.status = 'rendering';
 
 			const page = await pdfDocument.getPage(pageData.pageNumber);
+
+			// Get viewport - PDF.js will handle rotation automatically
 			const viewport = page.getViewport({ scale });
 
 			const canvas = pageData.canvas;
-			const context = canvas.getContext('2d');
+			const context = canvas.getContext('2d', { alpha: false });
 			if (!context) return;
 
-			// Set canvas dimensions
-			canvas.height = viewport.height;
+			// Set canvas pixel dimensions (not CSS dimensions)
 			canvas.width = viewport.width;
+			canvas.height = viewport.height;
 
 			// Update page dimensions
 			pageData.width = viewport.width;
 			pageData.height = viewport.height;
 
-			// Clear canvas
-			context.clearRect(0, 0, canvas.width, canvas.height);
+			// Fill with white background
+			context.fillStyle = 'white';
+			context.fillRect(0, 0, canvas.width, canvas.height);
 
 			// Render PDF page
 			const renderTask = page.render({
@@ -174,7 +177,7 @@
 			await renderTextLayer(pageIndex, page, viewport);
 
 			pageData.status = 'ready';
-			console.log(`PdfViewer: Page ${pageIndex + 1} rendered successfully`);
+			console.log(`PdfViewer: Page ${pageIndex + 1} rendered successfully at ${viewport.width}x${viewport.height}, scale=${scale}`);
 
 			// Update page data for parent component
 			updatePageDataArray();
@@ -345,9 +348,10 @@
 	}
 
 	// Re-render all pages when scale changes
-	let previousScale = scale;
+	let previousScale = $state(scale);
 	$effect(() => {
-		if (pdfDocument && pages.length > 0 && scale !== previousScale) {
+		if (pdfDocument && pages.length > 0 && scale !== previousScale && previousScale !== 0) {
+			console.log(`PdfViewer: Scale changed from ${previousScale} to ${scale}, re-rendering all pages`);
 			previousScale = scale;
 			// Re-render all loaded pages
 			for (let i = 0; i < pages.length; i++) {
@@ -356,12 +360,17 @@
 					renderPageProgressive(i);
 				}
 			}
+		} else if (previousScale === 0) {
+			previousScale = scale;
 		}
 	});
 
 	// Watch for PDF source changes
+	let previousPdfSource: Blob | null = null;
 	$effect(() => {
-		if (pdfSource && pdfjsLib) {
+		if (pdfSource && pdfjsLib && pdfSource !== previousPdfSource) {
+			console.log('PdfViewer: PDF source changed, loading new PDF');
+			previousPdfSource = pdfSource;
 			loadPDF();
 		}
 	});
@@ -394,7 +403,7 @@
 		</div>
 	{:else if pdfDocument}
 		{#each pages as pageData (pageData.pageNumber)}
-			<div class="page-wrapper relative bg-white shadow-lg" data-page-number={pageData.pageNumber} style="min-height: 792px; min-width: 612px;">
+			<div class="page-wrapper relative bg-white shadow-lg" data-page-number={pageData.pageNumber}>
 				<!-- Canvas for PDF rendering (always rendered) -->
 				<canvas
 					bind:this={pageData.canvas}
@@ -404,7 +413,7 @@
 
 				<!-- Loading placeholder overlay -->
 				{#if pageData.status === 'placeholder' || pageData.status === 'rendering'}
-					<div class="absolute inset-0 flex items-center justify-center bg-gray-200">
+					<div class="absolute inset-0 flex items-center justify-center bg-gray-200" style="min-width: 612px; min-height: 792px;">
 						<div class="text-center">
 							<div class="mx-auto mb-2 h-8 w-8 animate-spin rounded-full border-b-2 border-gray-400"></div>
 							<p class="text-sm text-gray-500">Loading page {pageData.pageNumber}...</p>
