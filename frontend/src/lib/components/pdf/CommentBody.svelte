@@ -51,23 +51,42 @@
 	let loadedReplies = $state<CommentRead[]>([]);
 	let hasLoadedReplies = $state(false);
 
+	// Delete state for nested replies
+	let deleteConfirmReplyId = $state<number | null>(null);
+
+	// Subscribe to cache version for reactivity
+	let cacheVersion = $state(0);
+	commentStore.subscribeToCacheVersion((v) => {
+		cacheVersion = v;
+	});
+
+	// Check for cached replies on mount or when comment/cache changes
+	// Also updates when cache is modified (create/delete operations)
+	$effect(() => {
+		// Read cacheVersion to trigger reactivity when cache changes
+		void cacheVersion;
+		const cachedReplies = commentStore.getCachedReplies(comment.id);
+		if (cachedReplies !== undefined) {
+			loadedReplies = cachedReplies;
+			if (cachedReplies.length > 0) {
+				hasLoadedReplies = true;
+			}
+		}
+	});
+
 	// Check if current user owns this comment
 	let isOwnComment = $derived(currentUserId !== null && comment.user?.id === currentUserId);
 
-	// Determine which replies to show
-	let displayedReplies = $derived.by(() => {
-		// If we've loaded replies async, use those
-		if (hasLoadedReplies) {
-			return loadedReplies;
-		}
-		// Otherwise use the comment's replies (for optimistic updates)
-		return comment.replies || [];
-	});
+	// Determine which replies to show (only use async loaded replies)
+	let displayedReplies = $derived(hasLoadedReplies ? loadedReplies : []);
 
-	// Show "Load more replies" button for nested comments (depth >= 1) that haven't loaded replies yet
-	// Only show if we haven't already loaded replies and there are no displayed replies from backend
+	// Show "Load more replies" button for any comment with unloaded replies at any depth
+	// Check: hasn't loaded, not loading, no displayed replies, and num_replies indicates there are replies
 	let shouldShowLoadMoreButton = $derived(
-		depth >= 1 && !hasLoadedReplies && !isLoadingReplies && displayedReplies.length === 0
+		!hasLoadedReplies &&
+			!isLoadingReplies &&
+			displayedReplies.length === 0 &&
+			comment.num_replies > 0
 	);
 
 	// Format timestamp
@@ -130,23 +149,20 @@
 			});
 			isReplying = false;
 			replyContent = '';
-			// Reload replies to show the new one
-			if (depth === 0) {
-				await loadReplies();
-			}
+			// Cache will be updated automatically, triggering reactivity
 		} finally {
 			isSaving = false;
 		}
 	}
 
 	// Load replies for this comment
-	async function loadReplies() {
+	async function loadReplies(forceRefresh: boolean = false) {
 		if (isLoadingReplies) return;
 
 		isLoadingReplies = true;
 
 		try {
-			loadedReplies = await commentStore.loadReplies(comment.id);
+			loadedReplies = await commentStore.loadReplies(comment.id, forceRefresh);
 			hasLoadedReplies = true;
 		} catch (err) {
 			console.error('Failed to load replies:', err);
@@ -155,10 +171,42 @@
 		}
 	}
 
-	// Load replies when comment is expanded (only at depth 0)
+	// Handle delete for nested replies
+	function handleReplyDeleteClick(replyId: number) {
+		deleteConfirmReplyId = replyId;
+	}
+
+	async function handleReplyDeleteConfirm(replyId: number) {
+		if (isSaving) return;
+		isSaving = true;
+		try {
+			await commentStore.delete(replyId, comment.id);
+			deleteConfirmReplyId = null;
+			// Cache will be updated automatically, triggering reactivity
+		} finally {
+			isSaving = false;
+		}
+	}
+
+	function handleReplyDeleteCancel() {
+		deleteConfirmReplyId = null;
+	}
+
+	// Reset loaded replies state when comment changes (for tab switching in groups)
+	let previousCommentId = $state(comment.id);
 	$effect(() => {
-		if (depth === 0 && isExpanded && !hasLoadedReplies) {
-			loadReplies();
+		if (comment.id !== previousCommentId) {
+			// Comment changed, check for cached replies or reset
+			const cachedReplies = commentStore.getCachedReplies(comment.id);
+			if (cachedReplies) {
+				loadedReplies = cachedReplies;
+				hasLoadedReplies = true;
+			} else {
+				hasLoadedReplies = false;
+				loadedReplies = [];
+			}
+			isLoadingReplies = false;
+			previousCommentId = comment.id;
 		}
 	});
 </script>
@@ -319,11 +367,11 @@
 		<!-- Load more replies button for nested comments -->
 		{#if shouldShowLoadMoreButton}
 			<button
-				onclick={loadReplies}
+				onclick={() => loadReplies()}
 				class="mt-2 flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-blue-600 transition-colors hover:bg-blue-50"
 			>
 				<ExpandMoreIcon class="h-3 w-3" />
-				Load replies
+				Load {comment.num_replies} {comment.num_replies === 1 ? 'reply' : 'replies'}
 			</button>
 		{/if}
 
@@ -344,18 +392,12 @@
 					<CommentBody
 						comment={reply}
 						annotation={(reply.annotation as unknown as Annotation) || null}
-						showDeleteConfirm={false}
+						showDeleteConfirm={deleteConfirmReplyId === reply.id}
 						depth={depth + 1}
 						isExpanded={false}
-						onDeleteClick={(_e: MouseEvent) => {
-							/* Nested deletes handled by parent */
-						}}
-						onDeleteConfirm={(_e: MouseEvent) => {
-							/* Nested deletes handled by parent */
-						}}
-						onDeleteCancel={(_e: MouseEvent) => {
-							/* Nested deletes handled by parent */
-						}}
+						onDeleteClick={() => handleReplyDeleteClick(reply.id)}
+						onDeleteConfirm={() => handleReplyDeleteConfirm(reply.id)}
+						onDeleteCancel={handleReplyDeleteCancel}
 					/>
 				{/each}
 			</div>

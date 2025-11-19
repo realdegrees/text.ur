@@ -408,13 +408,12 @@
 
 		<!-- Render group or single comment -->
 		{#if group.comments.length > 1}
-			{@const groupSelectedId = selectedCommentInGroup[group.id] || null}
 			<CommentGroup
 				comments={group.comments}
 				top={group.actualTop}
 				{isGroupExpanded}
 				{isGroupHovered}
-				selectedCommentId={groupSelectedId}
+				selectedCommentId={activeCommentId}
 				{deleteConfirmId}
 				{hoverDelayMs}
 				onGroupClick={(e) => handleGroupClick(group.id, e)}

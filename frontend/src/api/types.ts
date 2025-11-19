@@ -108,7 +108,6 @@ export interface CommentRead {
     [k: string]: unknown;
   } | null;
   content: string | null;
-  replies: CommentRead[];
   num_replies: number;
   reactions: ReactionRead[];
 }

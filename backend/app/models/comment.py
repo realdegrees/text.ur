@@ -26,7 +26,6 @@ class CommentRead(BaseModel):
     user: "UserRead | None"
     annotation: dict | None
     content: str | None
-    replies: list["CommentRead"]
     num_replies: int
     reactions: list["ReactionRead"]
 

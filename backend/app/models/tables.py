@@ -3,11 +3,11 @@ from typing import ClassVar, Optional
 from uuid import UUID, uuid4
 
 from nanoid import generate
-from sqlalchemy import Boolean, CheckConstraint, Column, String
+from sqlalchemy import Column, String
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.ext.hybrid import hybrid_property
-from sqlalchemy.orm import Mapped, column_property, declared_attr
+from sqlalchemy.orm import column_property, declared_attr
 from sqlmodel import Field, Relationship, func, select
 
 from models.base import BaseModel
@@ -108,11 +108,11 @@ class Group(BaseModel, table=True):
     )
 
     documents: list["Document"] = Relationship(
-        back_populates="group", sa_relationship_kwargs={"lazy": "noload"})
+        back_populates="group", sa_relationship_kwargs={"lazy": "noload", "cascade": "all, delete-orphan", "passive_deletes": True})
     memberships: list["Membership"] = Relationship(
-        back_populates="group", sa_relationship_kwargs={"lazy": "noload"})
+        back_populates="group", sa_relationship_kwargs={"lazy": "noload", "cascade": "all, delete-orphan", "passive_deletes": True})
     share_links: list["ShareLink"] = Relationship(
-        back_populates="group", sa_relationship_kwargs={"lazy": "noload"})
+        back_populates="group", sa_relationship_kwargs={"lazy": "noload", "cascade": "all, delete-orphan", "passive_deletes": True})
 
     def rotate_secret(self) -> None:
         """Rotate the group secret to invalidate existing tokens."""
@@ -142,7 +142,7 @@ class Document(BaseModel, table=True):
     group: Group = Relationship(back_populates="documents")
 
     comments: list["Comment"] = Relationship(
-        back_populates="document", sa_relationship_kwargs={"lazy": "noload"})
+        back_populates="document", sa_relationship_kwargs={"lazy": "noload", "cascade": "all, delete-orphan", "passive_deletes": True})
 
 
 class Comment(BaseModel, table=True):
@@ -169,22 +169,33 @@ class Comment(BaseModel, table=True):
     )
     replies: list["Comment"] = Relationship(
         back_populates="parent",
-        sa_relationship_kwargs={"lazy": "noload"}
+        sa_relationship_kwargs={"lazy": "selectin", "cascade": "all, delete-orphan", "passive_deletes": True}
     )
     reactions: list["Reaction"] = Relationship(
         back_populates="comment",
-        sa_relationship_kwargs={"lazy": "noload"}
+        sa_relationship_kwargs={"lazy": "noload", "cascade": "all, delete-orphan", "passive_deletes": True}
     )
 
     num_replies: ClassVar[int]
 
     @hybrid_property
     def num_replies(self) -> int:
-        """Count of replies to this comment."""
-        if self.replies is not None:
-            return len(self.replies)
-        return 0
+        """Return the number of replies to this comment (Python-side)."""
+        # Use the relationship to provide a Python-side count when replies
+        # are loaded; this avoids referencing the mapped class during mapping.
+        return len(self.replies or [])
 
+    @num_replies.expression
+    def num_replies(cls) -> select:
+        """Return SQL expression returning number of replies to this comment."""
+        # Now that the class is mapped, reference Comment to build a
+        # DB-level expression used in queries.
+        return (
+            select(func.count(Comment.id))
+            .where(Comment.parent_id == cls.id)
+            .correlate_except(Comment)
+            .scalar_subquery()
+        )
 
 class Reaction(BaseModel, table=True):
     """Reaction entity for user reactions to comments."""
