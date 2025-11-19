@@ -54,6 +54,7 @@
 		textLayerItems: TextLayerItem[];
 		width: number;
 		height: number;
+		renderTask: any | null; // Store the render task so we can cancel it
 	}
 
 	// State
@@ -99,7 +100,8 @@
 				textLayerRef: null,
 				textLayerItems: [],
 				width: 0,
-				height: 0
+				height: 0,
+				renderTask: null
 			}));
 
 			isLoading = false;
@@ -123,7 +125,18 @@
 		if (!pdfDocument || !pdfjsLib) return;
 
 		const pageData = pages[pageIndex];
-		if (!pageData || pageData.status === 'ready') return;
+		if (!pageData) return;
+
+		// Cancel any existing render task for this page
+		if (pageData.renderTask) {
+			console.log(`PdfViewer: Cancelling existing render task for page ${pageIndex + 1}`);
+			try {
+				pageData.renderTask.cancel();
+			} catch (e) {
+				// Ignore cancellation errors
+			}
+			pageData.renderTask = null;
+		}
 
 		console.log(`PdfViewer: Rendering page ${pageIndex + 1}`);
 
@@ -166,12 +179,13 @@
 			context.fillRect(0, 0, canvas.width, canvas.height);
 
 			// Render PDF page
-			const renderTask = page.render({
+			pageData.renderTask = page.render({
 				canvasContext: context,
 				viewport: viewport
 			});
 
-			await renderTask.promise;
+			await pageData.renderTask.promise;
+			pageData.renderTask = null;
 
 			// Render text layer
 			await renderTextLayer(pageIndex, page, viewport);
@@ -185,6 +199,7 @@
 			if (err?.name !== 'RenderingCancelledException') {
 				console.error(`Page ${pageIndex + 1} rendering error:`, err);
 			}
+			pageData.renderTask = null;
 			pageData.status = 'placeholder';
 		}
 	}
@@ -348,20 +363,29 @@
 	}
 
 	// Re-render all pages when scale changes
-	let previousScale = $state(scale);
+	let previousScale = $state(0);
+	let scaleInitialized = $state(false);
 	$effect(() => {
-		if (pdfDocument && pages.length > 0 && scale !== previousScale && previousScale !== 0) {
+		// Initialize previous scale on first run
+		if (!scaleInitialized) {
+			previousScale = scale;
+			scaleInitialized = true;
+			return;
+		}
+
+		// Only re-render if scale actually changed and we have a document
+		if (pdfDocument && pages.length > 0 && scale !== previousScale) {
 			console.log(`PdfViewer: Scale changed from ${previousScale} to ${scale}, re-rendering all pages`);
 			previousScale = scale;
+
 			// Re-render all loaded pages
 			for (let i = 0; i < pages.length; i++) {
 				if (pages[i].status === 'ready') {
-					pages[i].status = 'placeholder';
-					renderPageProgressive(i);
+					// Mark for re-render without changing status immediately
+					// This will trigger the render cancellation in renderPageProgressive
+					setTimeout(() => renderPageProgressive(i), 10);
 				}
 			}
-		} else if (previousScale === 0) {
-			previousScale = scale;
 		}
 	});
 
@@ -408,6 +432,7 @@
 				<canvas
 					bind:this={pageData.canvas}
 					class="block"
+					style="display: block;"
 					class:opacity-0={pageData.status === 'placeholder' || pageData.status === 'rendering'}
 				></canvas>
 

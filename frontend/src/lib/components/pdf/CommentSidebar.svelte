@@ -2,6 +2,7 @@
 	import type { CommentRead } from '$api/types';
 	import type { Annotation } from '$types/pdf';
 	import CommentCard from './CommentCard.svelte';
+	import CommentGroup from './CommentGroup.svelte';
 	import { browser } from '$app/environment';
 
 	interface Props {
@@ -26,6 +27,8 @@
 
 	let sidebarRef: HTMLDivElement | null = $state(null);
 	let deleteConfirmId = $state<number | null>(null);
+	let selectedCommentInGroup = $state<{ [groupId: string]: number }>({});
+	let hoveredGroupId = $state<string | null>(null);
 
 	interface PositionedComment {
 		comment: CommentRead;
@@ -36,9 +39,18 @@
 		highlightRightX: number;
 	}
 
+	interface CommentGroupData {
+		id: string;
+		comments: CommentRead[];
+		actualTop: number;
+		highlightBottom: number;
+		highlightRightX: number;
+	}
+
 	const COMMENT_HEIGHT = 80;
 	const COMMENT_COLLAPSED_HEIGHT = 32;
 	const MIN_GAP = 8;
+	const GROUP_THRESHOLD = 40; // Comments within 40px are grouped
 
 	// Get page offset from top of scroll container
 	function getPageOffsetTop(pageNumber: number): number {
@@ -104,12 +116,13 @@
 		};
 	}
 
-	// Calculate positioned comments with collision avoidance
-	let positionedComments = $derived.by((): PositionedComment[] => {
+	// Group comments and calculate positions with collision avoidance
+	let commentGroups = $derived.by((): CommentGroupData[] => {
 		if (!pdfContainerRef || !sidebarRef || !scrollContainerRef || pageDataArray.length === 0) {
 			return [];
 		}
 
+		// First, calculate ideal positions for all comments
 		const positioned: PositionedComment[] = [];
 
 		for (const comment of comments) {
@@ -117,8 +130,7 @@
 			if (!annotation?.pageNumber) continue;
 
 			const highlightPos = getHighlightBottomPosition(annotation);
-			const isExpanded = hoveredCommentId === comment.id || focusedCommentId === comment.id;
-			const commentHeight = isExpanded ? COMMENT_HEIGHT : COMMENT_COLLAPSED_HEIGHT;
+			const commentHeight = COMMENT_COLLAPSED_HEIGHT;
 
 			positioned.push({
 				comment,
@@ -133,24 +145,83 @@
 		// Sort by ideal position
 		positioned.sort((a, b) => a.idealTop - b.idealTop);
 
-		// Apply collision detection
+		// Group comments that are close together
+		const groups: CommentGroupData[] = [];
+		let currentGroup: PositionedComment[] = [];
+
 		for (let i = 0; i < positioned.length; i++) {
 			const current = positioned[i];
-			const isExpanded = hoveredCommentId === current.comment.id || focusedCommentId === current.comment.id;
-			const commentHeight = isExpanded ? COMMENT_HEIGHT : COMMENT_COLLAPSED_HEIGHT;
 
-			if (i === 0) {
-				current.actualTop = Math.max(0, current.idealTop);
+			if (currentGroup.length === 0) {
+				currentGroup.push(current);
 			} else {
-				const prev = positioned[i - 1];
-				const prevIsExpanded = hoveredCommentId === prev.comment.id || focusedCommentId === prev.comment.id;
-				const prevHeight = prevIsExpanded ? COMMENT_HEIGHT : COMMENT_COLLAPSED_HEIGHT;
-				const prevBottom = prev.actualTop + prevHeight + MIN_GAP;
-				current.actualTop = Math.max(current.idealTop, prevBottom);
+				const lastInGroup = currentGroup[currentGroup.length - 1];
+				// Check if current comment is close enough to group with previous
+				if (Math.abs(current.idealTop - lastInGroup.idealTop) <= GROUP_THRESHOLD) {
+					currentGroup.push(current);
+				} else {
+					// Start new group - store all positioned comments for later lookup
+					groups.push({
+						id: currentGroup.map((c) => c.comment.id).join('-'),
+						comments: currentGroup.map((c) => c.comment),
+						actualTop: 0,
+						highlightBottom: 0, // Will be set based on active comment
+						highlightRightX: 0  // Will be set based on active comment
+					});
+					currentGroup = [current];
+				}
 			}
 		}
 
-		return positioned;
+		// Add last group
+		if (currentGroup.length > 0) {
+			groups.push({
+				id: currentGroup.map((c) => c.comment.id).join('-'),
+				comments: currentGroup.map((c) => c.comment),
+				actualTop: 0,
+				highlightBottom: 0, // Will be set based on active comment
+				highlightRightX: 0  // Will be set based on active comment
+			});
+		}
+
+		// Set highlight positions based on active comment in each group
+		for (const group of groups) {
+			const activeCommentId = selectedCommentInGroup[group.id] || group.comments[0].id;
+			const positionedForActive = positioned.find((p) => p.comment.id === activeCommentId);
+			if (positionedForActive) {
+				group.highlightBottom = positionedForActive.highlightBottom;
+				group.highlightRightX = positionedForActive.highlightRightX;
+			}
+		}
+
+		// Apply collision detection to groups
+		for (let i = 0; i < groups.length; i++) {
+			const group = groups[i];
+			const isGroupExpanded =
+				group.comments.some((c) => c.id === hoveredCommentId || c.id === focusedCommentId) ||
+				hoveredGroupId === group.id;
+			const groupHeight = isGroupExpanded ? COMMENT_HEIGHT : COMMENT_COLLAPSED_HEIGHT;
+
+			// Calculate ideal top for group (average of all comments in group)
+			const avgIdealTop =
+				positioned
+					.filter((p) => group.comments.some((c) => c.id === p.comment.id))
+					.reduce((sum, p) => sum + p.idealTop, 0) / group.comments.length;
+
+			if (i === 0) {
+				group.actualTop = Math.max(0, avgIdealTop);
+			} else {
+				const prev = groups[i - 1];
+				const prevIsExpanded =
+					prev.comments.some((c) => c.id === hoveredCommentId || c.id === focusedCommentId) ||
+					hoveredGroupId === prev.id;
+				const prevHeight = prevIsExpanded ? COMMENT_HEIGHT : COMMENT_COLLAPSED_HEIGHT;
+				const prevBottom = prev.actualTop + prevHeight + MIN_GAP;
+				group.actualTop = Math.max(avgIdealTop, prevBottom);
+			}
+		}
+
+		return groups;
 	});
 
 	// Comment interaction handlers
@@ -165,6 +236,38 @@
 	}
 
 	function handleMouseLeave() {
+		hoveredCommentId = null;
+	}
+
+	// Group interaction handlers
+	function handleGroupClick(groupId: string, event: MouseEvent) {
+		event.stopPropagation();
+		const group = commentGroups.find((g) => g.id === groupId);
+		if (!group) return;
+
+		// If no comment is focused in this group, focus the first one
+		const focusedInGroup = group.comments.find((c) => c.id === focusedCommentId);
+		if (!focusedInGroup) {
+			focusedCommentId = group.comments[0].id;
+		} else {
+			// Toggle off
+			focusedCommentId = null;
+		}
+		deleteConfirmId = null;
+	}
+
+	function handleGroupMouseEnter(groupId: string) {
+		hoveredGroupId = groupId;
+		const group = commentGroups.find((g) => g.id === groupId);
+		if (!group) return;
+
+		// Set hovered to first comment in group or selected comment
+		const selected = selectedCommentInGroup[groupId];
+		hoveredCommentId = selected || group.comments[0].id;
+	}
+
+	function handleGroupMouseLeave() {
+		hoveredGroupId = null;
 		hoveredCommentId = null;
 	}
 
@@ -210,47 +313,79 @@
 </script>
 
 <div bind:this={sidebarRef} class="comment-sidebar relative flex-1 overflow-visible bg-gray-50 pr-4">
-	{#each positionedComments as { comment, annotation, actualTop, highlightBottom, highlightRightX } (comment.id)}
-		{@const expanded = hoveredCommentId === comment.id || focusedCommentId === comment.id}
-		{@const showDeleteConfirm = deleteConfirmId === comment.id}
-		{@const commentHeight = expanded ? COMMENT_HEIGHT : COMMENT_COLLAPSED_HEIGHT}
-		{@const commentBottom = actualTop + commentHeight}
+	{#each commentGroups as group (group.id)}
+		{@const isGroupExpanded =
+			group.comments.some((c) => c.id === focusedCommentId) || hoveredGroupId === group.id}
+		{@const isGroupHovered = hoveredGroupId === group.id}
+		{@const groupHeight = isGroupExpanded ? COMMENT_HEIGHT : COMMENT_COLLAPSED_HEIGHT}
+		{@const groupBottom = group.actualTop + groupHeight}
 		{@const sidebarWidth = sidebarRef?.getBoundingClientRect().width || 0}
 		{@const commentLeftEdge = sidebarWidth - 16}
 
+		{@const activeCommentId = selectedCommentInGroup[group.id] || group.comments[0].id}
+		{@const activeComment = group.comments.find((c) => c.id === activeCommentId) || group.comments[0]}
+		{@const activeAnnotation = activeComment.annotation as unknown as Annotation}
+
 		<!-- Connection line (only when expanded and highlight is visible) -->
-		{#if expanded && highlightRightX > 0}
+		{#if (isGroupExpanded || isGroupHovered) && group.highlightRightX > 0}
 			<svg
 				class="pointer-events-none absolute left-0 top-0 z-0 overflow-visible"
 				style:width="{sidebarWidth + 500}px"
-				style:height="{Math.max(commentBottom, highlightBottom) + 50}px"
+				style:height="{Math.max(groupBottom, group.highlightBottom) + 50}px"
 			>
 				<line
-					x1={highlightRightX}
-					y1={highlightBottom}
+					x1={group.highlightRightX}
+					y1={group.highlightBottom}
 					x2={commentLeftEdge}
-					y2={commentBottom}
-					stroke={annotation.color}
+					y2={groupBottom}
+					stroke={activeAnnotation.color}
 					stroke-width="2"
 					stroke-opacity="0.6"
 				/>
 			</svg>
 		{/if}
 
-		<!-- Comment Card -->
-		<CommentCard
-			{comment}
-			{annotation}
-			{expanded}
-			{showDeleteConfirm}
-			top={actualTop}
-			onClick={(e) => handleCommentClick(comment.id, e)}
-			onMouseEnter={() => handleMouseEnter(comment.id)}
-			onMouseLeave={handleMouseLeave}
-			onDeleteClick={(e) => handleDeleteClick(comment.id, e)}
-			onDeleteConfirm={(e) => handleDeleteConfirm(comment.id, e)}
-			onDeleteCancel={handleDeleteCancel}
-		/>
+		<!-- Render group or single comment -->
+		{#if group.comments.length > 1}
+			{@const groupSelectedId = selectedCommentInGroup[group.id] || null}
+			<CommentGroup
+				comments={group.comments}
+				top={group.actualTop}
+				{isGroupExpanded}
+				{isGroupHovered}
+				selectedCommentId={groupSelectedId}
+				deleteConfirmId={deleteConfirmId}
+				onGroupClick={(e) => handleGroupClick(group.id, e)}
+				onGroupMouseEnter={() => handleGroupMouseEnter(group.id)}
+				onGroupMouseLeave={handleGroupMouseLeave}
+				onCommentSelect={(commentId) => {
+					selectedCommentInGroup[group.id] = commentId;
+					hoveredCommentId = commentId;
+				}}
+				onDeleteClick={handleDeleteClick}
+				onDeleteConfirm={handleDeleteConfirm}
+				onDeleteCancel={handleDeleteCancel}
+			/>
+		{:else}
+			{@const comment = group.comments[0]}
+			{@const annotation = comment.annotation as unknown as Annotation}
+			{@const expanded = hoveredCommentId === comment.id || focusedCommentId === comment.id}
+			{@const showDeleteConfirm = deleteConfirmId === comment.id}
+
+			<CommentCard
+				{comment}
+				{annotation}
+				{expanded}
+				{showDeleteConfirm}
+				top={group.actualTop}
+				onClick={(e) => handleCommentClick(comment.id, e)}
+				onMouseEnter={() => handleMouseEnter(comment.id)}
+				onMouseLeave={handleMouseLeave}
+				onDeleteClick={(e) => handleDeleteClick(comment.id, e)}
+				onDeleteConfirm={(e) => handleDeleteConfirm(comment.id, e)}
+				onDeleteCancel={handleDeleteCancel}
+			/>
+		{/if}
 	{/each}
 </div>
 

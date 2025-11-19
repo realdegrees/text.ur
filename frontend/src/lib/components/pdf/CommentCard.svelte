@@ -63,6 +63,7 @@
 				}}
 				role="dialog"
 				aria-label="Delete confirmation"
+				tabindex="-1"
 			>
 				<p class="text-sm font-semibold text-red-600">Delete this highlight?</p>
 				<div class="flex gap-2">
