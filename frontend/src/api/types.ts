@@ -109,6 +109,7 @@ export interface CommentRead {
   } | null;
   content: string | null;
   replies: CommentRead[];
+  num_replies: number;
   reactions: ReactionRead[];
 }
 export interface UserRead {

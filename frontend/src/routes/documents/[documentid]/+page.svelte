@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { api, type ApiGetResult } from '$api/client';
 	import type { Paginated } from '$api/pagination.js';
-	import type { CommentCreate, CommentRead } from '$api/types.js';
+	import type { CommentCreate, CommentRead, CommentUpdate } from '$api/types.js';
 	import type { Annotation } from '$types/pdf';
 	import { notification } from '$lib/stores/notificationStore';
 	import PdfViewer from '$lib/components/pdf/PdfViewer.svelte';
@@ -59,6 +59,64 @@
 	let focusedCommentId = $state<number | null>(null);
 	let hoveredCommentId = $state<number | null>(null);
 
+	// Recursively find and update a comment in a tree
+	function updateCommentInTree(
+		comments: CommentRead[],
+		commentId: number,
+		updater: (comment: CommentRead) => CommentRead
+	): CommentRead[] {
+		return comments.map((comment) => {
+			if (comment.id === commentId) {
+				return updater(comment);
+			}
+			if (comment.replies && comment.replies.length > 0) {
+				return {
+					...comment,
+					replies: updateCommentInTree(comment.replies, commentId, updater)
+				};
+			}
+			return comment;
+		});
+	}
+
+	// Recursively find and delete a comment from a tree
+	function deleteCommentFromTree(comments: CommentRead[], commentId: number): CommentRead[] {
+		return comments
+			.filter((comment) => comment.id !== commentId)
+			.map((comment) => {
+				if (comment.replies && comment.replies.length > 0) {
+					return {
+						...comment,
+						replies: deleteCommentFromTree(comment.replies, commentId)
+					};
+				}
+				return comment;
+			});
+	}
+
+	// Recursively add a reply to a comment in a tree
+	function addReplyToTree(
+		comments: CommentRead[],
+		parentId: number,
+		newReply: CommentRead
+	): CommentRead[] {
+		return comments.map((comment) => {
+			if (comment.id === parentId) {
+				return {
+					...comment,
+					replies: [...(comment.replies || []), newReply]
+				};
+			}
+			if (comment.replies && comment.replies.length > 0) {
+				return {
+					...comment,
+					replies: addReplyToTree(comment.replies, parentId, newReply)
+				};
+			}
+			return comment;
+		});
+	}
+
 	// Handle comment deletion
 	async function handleCommentDelete(commentId: number): Promise<void> {
 		const deleteCommentResult = await api.delete(`/comments/${commentId}`);
@@ -66,7 +124,49 @@
 			notification(deleteCommentResult.error);
 			return;
 		}
-		commentsWithAnnotation = commentsWithAnnotation.filter((c) => c.id !== commentId);
+		// Remove from local state (works for both top-level and nested)
+		commentsWithAnnotation = deleteCommentFromTree(commentsWithAnnotation, commentId);
+	}
+
+	// Handle comment update
+	async function handleCommentUpdate(commentId: number, updateData: CommentUpdate): Promise<void> {
+		const updateResult = await api.update(`/comments/${commentId}`, updateData);
+		if (!updateResult.success) {
+			notification(updateResult.error);
+			return;
+		}
+		// Update locally without refetching
+		commentsWithAnnotation = updateCommentInTree(commentsWithAnnotation, commentId, (comment) => ({
+			...comment,
+			content: updateData.content ?? comment.content,
+			visibility: updateData.visibility ?? comment.visibility,
+			annotation: updateData.annotation ?? comment.annotation,
+			updated_at: new Date().toISOString()
+		}));
+	}
+
+	// Handle comment creation (replies)
+	async function handleCommentCreate(commentData: CommentCreate): Promise<void> {
+		const createResult = await api.post<CommentRead>('/comments', {
+			...commentData,
+			document_id: data.document.id,
+			visibility: data.document.visibility
+		});
+		if (!createResult.success) {
+			notification(createResult.error);
+			return;
+		}
+		// Add reply to local state without refetching
+		if (commentData.parent_id && createResult.data) {
+			commentsWithAnnotation = addReplyToTree(
+				commentsWithAnnotation,
+				commentData.parent_id,
+				createResult.data
+			);
+		} else if (createResult.data && !commentData.parent_id) {
+			// Top-level comment (shouldn't happen in sidebar, but handle it)
+			commentsWithAnnotation = [...commentsWithAnnotation, createResult.data];
+		}
 	}
 
 	// Handle highlight creation
@@ -181,7 +281,11 @@
 						scrollContainerRef={documentScrollRef}
 						bind:hoveredCommentId
 						bind:focusedCommentId
+						currentUserId={data.sessionUser.id}
+						documentId={data.document.id}
 						onCommentDelete={handleCommentDelete}
+						onCommentUpdate={handleCommentUpdate}
+						onCommentCreate={handleCommentCreate}
 					/>
 				</div>
 

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { CommentRead } from '$api/types';
+	import type { CommentRead, CommentCreate, CommentUpdate } from '$api/types';
 	import type { Annotation } from '$types/pdf';
 	import CommentBody from './CommentBody.svelte';
 	import { fly, scale } from 'svelte/transition';
@@ -12,6 +12,8 @@
 		isGroupHovered: boolean;
 		selectedCommentId?: number | null;
 		deleteConfirmId: number | null;
+		currentUserId?: number | null;
+		documentId?: string;
 		hoverDelayMs?: number;
 		onGroupClick?: (event: MouseEvent) => void;
 		onGroupMouseEnter?: () => void;
@@ -20,6 +22,8 @@
 		onDeleteClick?: (commentId: number, event: MouseEvent) => void;
 		onDeleteConfirm?: (commentId: number, event: MouseEvent) => void;
 		onDeleteCancel?: (event: MouseEvent) => void;
+		onUpdate?: (commentId: number, data: CommentUpdate) => Promise<void>;
+		onCreate?: (data: CommentCreate) => Promise<void>;
 	}
 
 	let {
@@ -29,6 +33,8 @@
 		isGroupHovered,
 		selectedCommentId = null,
 		deleteConfirmId,
+		currentUserId = null,
+		documentId = '',
 		hoverDelayMs = 200,
 		onGroupClick = () => {},
 		onGroupMouseEnter = () => {},
@@ -36,7 +42,9 @@
 		onCommentSelect = () => {},
 		onDeleteClick = () => {},
 		onDeleteConfirm = () => {},
-		onDeleteCancel = () => {}
+		onDeleteCancel = () => {},
+		onUpdate = async () => {},
+		onCreate = async () => {}
 	}: Props = $props();
 
 	let lastHoverTime = $state(0);
@@ -135,9 +143,14 @@
 				comment={activeComment}
 				annotation={activeAnnotation}
 				showDeleteConfirm={deleteConfirmId === activeComment.id}
+				{currentUserId}
+				{documentId}
+				isExpanded={isGroupExpanded}
 				onDeleteClick={(e) => onDeleteClick(activeComment.id, e)}
 				onDeleteConfirm={(e) => onDeleteConfirm(activeComment.id, e)}
 				{onDeleteCancel}
+				{onUpdate}
+				{onCreate}
 			/>
 		</div>
 	</div>

@@ -86,7 +86,9 @@ const en = {
 		not_authorized: 'You do not have permission to perform this action',
 		invalid_credentials: 'Invalid username or password',
 		not_in_group: 'You are not a member of this group',
-		email_not_verified: 'Please verify your email address before continuing'
+		email_not_verified: 'Please verify your email address before continuing',
+		membership_not_found: 'Membership not found',
+		owner_cannot_leave_group: 'Group owner cannot leave the group'
 	},
 	invitations: 'Invitations'
 } satisfies BaseTranslation;

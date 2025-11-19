@@ -129,6 +129,9 @@
 		const pageData = pages[pageIndex];
 		if (!pageData) return;
 
+		// Skip if already ready or currently rendering
+		if (pageData.status === 'ready' || pageData.status === 'rendering') return;
+
 		// Cancel any existing render task for this page
 		if (pageData.renderTask) {
 			console.log(`PdfViewer: Cancelling existing render task for page ${pageIndex + 1}`);

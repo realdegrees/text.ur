@@ -57,8 +57,9 @@ export function notification(
 	if (appErrorCodeSchema.safeParse(notificationTypeOrError).success) {
 		const appError = notificationTypeOrError as AppError;
 		notificationType = 'error';
+		const errorTranslations = get(LL).errors as Record<string, (() => string) | undefined>;
 		message =
-			get(LL).errors[appError.error_code]?.() || appError.detail || 'An unknown error occurred.';
+			errorTranslations[appError.error_code]?.() || appError.detail || 'An unknown error occurred.';
 
 		if (typeof messageOrConfig === 'object') {
 			Object.assign(finalConfig, messageOrConfig);

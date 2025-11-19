@@ -27,6 +27,7 @@ class CommentRead(BaseModel):
     annotation: dict | None
     content: str | None
     replies: list["CommentRead"]
+    num_replies: int
     reactions: list["ReactionRead"]
 
 class CommentUpdate(SQLModel):

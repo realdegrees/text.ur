@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { CommentRead } from '$api/types';
+	import type { CommentRead, CommentCreate, CommentUpdate } from '$api/types';
 	import type { Annotation } from '$types/pdf';
 	import CommentBody from './CommentBody.svelte';
 	import { fly, scale } from 'svelte/transition';
@@ -11,6 +11,8 @@
 		expanded: boolean;
 		showDeleteConfirm: boolean;
 		top: number;
+		currentUserId?: number | null;
+		documentId?: string;
 		hoverDelayMs?: number;
 		onClick?: (event: MouseEvent) => void;
 		onMouseEnter?: () => void;
@@ -18,6 +20,8 @@
 		onDeleteClick?: (event: MouseEvent) => void;
 		onDeleteConfirm?: (event: MouseEvent) => void;
 		onDeleteCancel?: (event: MouseEvent) => void;
+		onUpdate?: (commentId: number, data: CommentUpdate) => Promise<void>;
+		onCreate?: (data: CommentCreate) => Promise<void>;
 	}
 
 	let {
@@ -26,13 +30,17 @@
 		expanded,
 		showDeleteConfirm,
 		top,
+		currentUserId = null,
+		documentId = '',
 		hoverDelayMs = 800,
 		onClick = () => {},
 		onMouseEnter = () => {},
 		onMouseLeave = () => {},
 		onDeleteClick = () => {},
 		onDeleteConfirm = () => {},
-		onDeleteCancel = () => {}
+		onDeleteCancel = () => {},
+		onUpdate = async () => {},
+		onCreate = async () => {}
 	}: Props = $props();
 
 	let lastHoverTime = $state(0);
@@ -90,9 +98,14 @@
 			{comment}
 			{annotation}
 			{showDeleteConfirm}
+			{currentUserId}
+			{documentId}
+			isExpanded={expanded}
 			{onDeleteClick}
 			{onDeleteConfirm}
 			{onDeleteCancel}
+			{onUpdate}
+			{onCreate}
 		/>
 	</div>
 {:else}

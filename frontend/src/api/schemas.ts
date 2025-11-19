@@ -292,6 +292,7 @@ export const commentReadSchema: z.ZodSchema<CommentRead> = z.lazy(() => z.object
     annotation: z.record(z.string(), z.unknown()).nullable(),
     content: z.string().nullable(),
     replies: z.array(commentReadSchema),
+    num_replies: z.number(),
     reactions: z.array(reactionReadSchema)
 }));
 
