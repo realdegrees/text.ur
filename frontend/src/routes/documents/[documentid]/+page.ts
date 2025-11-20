@@ -4,7 +4,7 @@ import { notification } from '$lib/stores/notificationStore';
 import { redirect } from '@sveltejs/kit';
 import type { PageLoad } from './$types';
 
-export const load: PageLoad = async ({ params, parent, fetch, data }) => {
+export const load: PageLoad = async ({ params, parent, fetch }) => {
 	const { sessionUser } = await parent();
 	// Fetch document by param
 	const documentResult = await api.get<DocumentRead>(`/documents/${params.documentid}`, {
@@ -41,6 +41,5 @@ export const load: PageLoad = async ({ params, parent, fetch, data }) => {
 		document: documentResult.data,
 		membership: membership,
 		group: membership.group,
-		accessToken: data.accessToken // Pass through from server load
 	};
 };

@@ -99,8 +99,8 @@
 		// Load document file
 		loadDocumentFile();
 
-		// Connect to WebSocket for real-time updates (pass access token)
-		await documentWebSocket.connect(data.document.id, data.accessToken || undefined);
+		// Connect to WebSocket for real-time updates (uses httponly cookies for auth)
+		await documentWebSocket.connect(data.document.id);
 
 		// Subscribe to comment events from WebSocket
 		wsUnsubscribe = documentWebSocket.onCommentEvent((event) => {

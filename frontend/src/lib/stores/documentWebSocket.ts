@@ -21,8 +21,9 @@ class DocumentWebSocketStore {
 
 	/**
 	 * Initialize WebSocket connection for a document
+	 * Uses httponly cookies for authentication (no token needed)
 	 */
-	async connect(documentId: string, accessToken?: string): Promise<void> {
+	async connect(documentId: string): Promise<void> {
 		if (!browser) return;
 
 		// Disconnect any existing connection
@@ -31,14 +32,10 @@ class DocumentWebSocketStore {
 		this.documentId = documentId;
 
 		// Get connection ID from API client
-		const connectionId = api.getConnectionId();
 
 		const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
 		const host = env.PUBLIC_BACKEND_BASEURL.replace(/^https?:\/\//, '').replace(/\/$/, '');
-		const params = new URLSearchParams();
-		if (accessToken) params.set('token', accessToken);
-		if (connectionId) params.set('connection_id', connectionId);
-		const wsUrl = `${protocol}//${host}/api/documents/${documentId}/events/comments?${params.toString()}`;
+		const wsUrl = `${protocol}//${host}/api/documents/${documentId}/events/comments?connection_id=${api.getConnectionId()}`;
 
 		// Create manager
 		this.manager = new WebSocketManager({
