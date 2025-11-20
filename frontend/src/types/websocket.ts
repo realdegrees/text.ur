@@ -1,26 +1,3 @@
-import type { CommentRead } from '$api/types';
-
-/**
- * WebSocket event types matching backend Event model
- */
-export type EventType = 'create' | 'update' | 'delete' | 'custom';
-
-/**
- * Base WebSocket event structure
- */
-export interface WebSocketEvent<T = unknown> {
-	event_id: string;
-	published_at: string;
-	payload: T | null;
-	resource_id: number | null;
-	resource: string | null;
-	type: EventType;
-}
-
-/**
- * Comment-specific WebSocket events
- */
-export type CommentEvent = WebSocketEvent<CommentRead>;
 
 /**
  * WebSocket connection states

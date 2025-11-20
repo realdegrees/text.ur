@@ -59,8 +59,6 @@ export const load: LayoutLoad = async ({ fetch, parent, params }) => {
 		memberships.data.unshift(result.data);
 	}
 
-	console.log(`Found ${memberships.data.length} memberships and ${invites.data.length} invites`);
-
 	return {
 		...(await parent()),
 		memberships: memberships,

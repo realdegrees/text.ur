@@ -39,14 +39,6 @@ export const commentCreateSchema = z.object({
     annotation: z.record(z.string(), z.unknown()).optional().nullable()
 });
 
-export const commentFilterSchema = z.object({
-    visibility: visibilitySchema,
-    user_id: z.number(),
-    document_id: z.string(),
-    parent_id: z.number(),
-    annotation: z.record(z.string(), z.unknown())
-});
-
 export const userReadSchema = z.object({
     created_at: z.string().optional(),
     updated_at: z.string().optional(),
@@ -60,6 +52,14 @@ export const reactionReadSchema = z.object({
     type: reactionTypeSchema,
     user: userReadSchema,
     comment_id: z.number()
+});
+
+export const commentFilterSchema = z.object({
+    visibility: visibilitySchema,
+    user_id: z.number(),
+    document_id: z.string(),
+    parent_id: z.number(),
+    annotation: z.record(z.string(), z.unknown())
 });
 
 export const commentUpdateSchema = z.object({
@@ -303,4 +303,14 @@ export const paginatedBaseSchema = z.object({
     filters: z.array(filterSchema).optional(),
     order_by: z.array(z.string()).optional(),
     excluded_fields: z.array(z.string()).optional()
+});
+
+export const commentEventSchema = z.object({
+    event_id: z.string(),
+    published_at: z.string().optional(),
+    payload: commentReadSchema.nullable(),
+    resource_id: z.number().nullable(),
+    resource: z.string().nullable(),
+    type: z.union([z.literal("create"), z.literal("update"), z.literal("delete"), z.literal("custom")]),
+    originating_connection_id: z.string().optional().nullable()
 });

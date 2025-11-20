@@ -26,7 +26,6 @@
 	let { data } = $props();
 	let memberships = $derived(data.memberships);
 	let group = $derived(data.membership.group);
-	console.log(data.membership);
 
 	let selected = $state<Omit<MembershipRead, 'group'>[]>([]);
 	let username = $state('');
@@ -36,7 +35,6 @@
 
 	function handleSelectionChange(memberships: Omit<MembershipRead, 'group'>[]) {
 		selected = memberships;
-		console.log('Selected memberships:', memberships.length);
 	}
 
 	async function updateMembershipPermissions(
@@ -105,7 +103,6 @@
 			]
 		});
 		if (response.success) {
-			console.log(response.data);
 			return response.data.data;
 		}
 		return [];

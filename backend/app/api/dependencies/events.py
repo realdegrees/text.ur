@@ -119,7 +119,9 @@ class EventManager:
                 result = on_event(data)
                 if asyncio.iscoroutine(result):
                     await result
-            except Exception:
+            except Exception as e:
+                logger.error(f"Error in on_event callback: {e}", exc_info=True)
+                print(f"[events] ERROR in on_event: {e}")
                 to_remove.add(ws)
 
         # Cleanup disconnected clients

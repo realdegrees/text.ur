@@ -89,14 +89,17 @@ export interface CommentCreate {
     [k: string]: unknown;
   } | null;
 }
-export interface CommentFilter {
-  visibility: Visibility;
-  user_id: number;
-  document_id: string;
-  parent_id: number;
-  annotation: {
-    [k: string]: unknown;
-  };
+/**
+ * Comment WebSocket event - concrete type for frontend type generation.
+ */
+export interface CommentEvent {
+  event_id: string;
+  published_at?: string;
+  payload: CommentRead | null;
+  resource_id: number | null;
+  resource: string | null;
+  type: "create" | "update" | "delete" | "custom";
+  originating_connection_id?: string | null;
 }
 export interface CommentRead {
   created_at?: string;
@@ -124,6 +127,15 @@ export interface ReactionRead {
   type: ReactionType;
   user: UserRead;
   comment_id: number;
+}
+export interface CommentFilter {
+  visibility: Visibility;
+  user_id: number;
+  document_id: string;
+  parent_id: number;
+  annotation: {
+    [k: string]: unknown;
+  };
 }
 export interface CommentUpdate {
   visibility?: Visibility | null;

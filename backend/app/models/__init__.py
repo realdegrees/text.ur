@@ -13,6 +13,7 @@ from models.document import (
     DocumentTransfer,
 )
 from models.enums import AppErrorCode
+from models.event import CommentEvent, Event
 from models.filter import (
     CommentFilter,
     DocumentFilter,
@@ -39,6 +40,9 @@ from models.user import UserCreate, UserPrivate, UserRead, UserUpdate
 # ! Models that use TYPE_CHECKING for string type hints need to be imported and rebuilt here to avoid runtime errors
 
 AppError.model_rebuild()
+
+Event.model_rebuild()
+CommentEvent.model_rebuild()
 
 Document.model_rebuild()
 Group.model_rebuild()

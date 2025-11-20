@@ -80,18 +80,15 @@
 	// Load PDF from Blob
 	async function loadPDF() {
 		if (!pdfjsLib) {
-			console.log('PdfViewer: pdfjsLib not loaded yet');
 			return;
 		}
 
 		try {
-			console.log('PdfViewer: Starting PDF load');
 			isLoading = true;
 			const arrayBuffer = await pdfSource.arrayBuffer();
 			const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
 			pdfDocument = await loadingTask.promise;
 			totalPages = pdfDocument.numPages;
-			console.log(`PdfViewer: PDF loaded, ${totalPages} pages`);
 
 			// Initialize all pages with placeholder status
 			pages = Array.from({ length: totalPages }, (_, i) => ({
@@ -111,7 +108,6 @@
 			await new Promise((resolve) => setTimeout(resolve, 100));
 
 			// Start progressive loading: render first page immediately, then queue others
-			console.log('PdfViewer: Starting page rendering');
 			await renderPageProgressive(0);
 			queueRemainingPages();
 		} catch (err) {
@@ -133,7 +129,6 @@
 
 		// Cancel any existing render task for this page
 		if (pageData.renderTask) {
-			console.log(`PdfViewer: Cancelling existing render task for page ${pageIndex + 1}`);
 			try {
 				pageData.renderTask.cancel();
 			} catch {
@@ -142,12 +137,11 @@
 			pageData.renderTask = null;
 		}
 
-		console.log(`PdfViewer: Rendering page ${pageIndex + 1}`);
 
 		// Wait for canvas to be available
 		let attempts = 0;
 		while (!pageData.canvas && attempts < 30) {
-			await new Promise((resolve) => setTimeout(resolve, 50));
+			await new Promise((resolve) => setTimeout(resolve, 200));
 			attempts++;
 		}
 
@@ -156,7 +150,6 @@
 			return;
 		}
 
-		console.log(`PdfViewer: Canvas ready for page ${pageIndex + 1} after ${attempts} attempts`);
 
 		try {
 			pageData.status = 'rendering';
@@ -195,9 +188,6 @@
 			await renderTextLayer(pageIndex, page, viewport);
 
 			pageData.status = 'ready';
-			console.log(
-				`PdfViewer: Page ${pageIndex + 1} rendered successfully at ${viewport.width}x${viewport.height}, scale=${scale}`
-			);
 
 			// Update page data for parent component
 			updatePageDataArray();
@@ -382,9 +372,6 @@
 
 		// Only re-render if scale actually changed and we have a document
 		if (pdfDocument && pages.length > 0 && scale !== previousScale) {
-			console.log(
-				`PdfViewer: Scale changed from ${previousScale} to ${scale}, re-rendering all pages`
-			);
 			previousScale = scale;
 
 			// Re-render all loaded pages
@@ -402,7 +389,6 @@
 	let previousPdfSource: Blob | null = null;
 	$effect(() => {
 		if (pdfSource && pdfjsLib && pdfSource !== previousPdfSource) {
-			console.log('PdfViewer: PDF source changed, loading new PDF');
 			previousPdfSource = pdfSource;
 			loadPDF();
 		}

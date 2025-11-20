@@ -83,7 +83,9 @@ def Authenticate( # noqa: C901
         ws: WebSocket,
         db: Database,
     ) -> User | None:
-        token: str | None = ws.cookies.get(f"{token_type}_token")
+        # Try query parameter first (for cross-origin), then cookies
+        token: str | None = ws.query_params.get("token") or ws.cookies.get(f"{token_type}_token")
+        logger.info(f"[WS Auth] Token type: {token_type}, Token present: {token is not None}, Source: {'query' if ws.query_params.get('token') else 'cookie'}")
         return await dependency(db, ws, token)
 
     async def dependency_http(

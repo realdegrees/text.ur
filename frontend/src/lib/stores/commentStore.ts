@@ -1,9 +1,8 @@
 import { writable } from 'svelte/store';
 import { api } from '$api/client';
-import type { CommentRead, CommentCreate, CommentUpdate } from '$api/types';
+import type { CommentRead, CommentCreate, CommentUpdate, CommentEvent } from '$api/types';
 import type { Annotation } from '$types/pdf';
 import type { Paginated } from '$api/pagination';
-import type { CommentEvent } from '$types/websocket';
 import { notification } from './notificationStore';
 
 /**
@@ -173,7 +172,10 @@ class CommentStore {
 	/**
 	 * Update an existing comment in the local tree
 	 */
-	private updateCommentInTree(commentId: number, updater: (comment: CommentRead) => CommentRead): void {
+	private updateCommentInTree(
+		commentId: number,
+		updater: (comment: CommentRead) => CommentRead
+	): void {
 		// First, try to update in the root store
 		let found = false;
 		this.store.update((comments) => {
@@ -190,10 +192,10 @@ class CommentStore {
 		// If not found in root, search through all cached replies
 		if (!found) {
 			for (const [parentId, replies] of this.repliesCache.entries()) {
-				const updatedReplies = replies.map((reply) =>
-					reply.id === commentId ? updater(reply) : reply
-				);
-				if (updatedReplies !== replies) {
+				const index = replies.findIndex((reply) => reply.id === commentId);
+				if (index !== -1) {
+					const updatedReplies = [...replies];
+					updatedReplies[index] = updater(replies[index]);
 					this.repliesCache.set(parentId, updatedReplies);
 					this.incrementCacheVersion();
 					found = true;
@@ -331,8 +333,8 @@ class CommentStore {
 				this.updateCommentInTree(comment.id, () => comment);
 				break;
 
-			case 'delete':
-				// Remove comment from tree
+			case 'delete': // Remove comment from tree
+			{
 				const parentId = this.findParentId(comment.id);
 
 				if (parentId) {
@@ -356,6 +358,7 @@ class CommentStore {
 					this.store.update((comments) => comments.filter((c) => c.id !== comment.id));
 				}
 				break;
+			}
 
 			default:
 				console.warn('Unknown WebSocket event type:', event.type);

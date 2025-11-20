@@ -7,7 +7,7 @@ from api.dependencies.events import Events
 from api.dependencies.paginated.resources import PaginatedResource
 from api.dependencies.resource import Resource
 from api.routers.reactions import router as ReactionRouter
-from fastapi import Body, Response
+from fastapi import Body, Header, Response
 from models.comment import CommentCreate, CommentRead, CommentUpdate
 from models.enums import Permission
 from models.event import Event
@@ -46,6 +46,7 @@ async def create_comment(
     events: Events,
     user: User = Authenticate([Guard.document_access({Permission.ADD_COMMENTS})]),
     create: CommentCreate = Body(...),
+    x_connection_id: str | None = Header(None, alias="X-Connection-ID"),
 ) -> Comment:
     """Create a new comment."""
     comment = Comment(**create.model_dump())
@@ -63,7 +64,8 @@ async def create_comment(
         payload=comment_read,
         resource_id=comment.id,
         resource="comment",
-        type="create"
+        type="create",
+        originating_connection_id=x_connection_id  # Don't echo to originating connection
     )
     await events.publish(
         event.model_dump(mode="json"),
@@ -87,8 +89,9 @@ async def update_comment(
     db: Database,
     events: Events,
     comment: Comment = Resource(Comment, param_alias="comment_id"),
-    _: User = Authenticate([Guard.comment_access(None, only_owner=True)]),
+    user: User = Authenticate([Guard.comment_access(None, only_owner=True)]),
     update: CommentUpdate = Body(...),
+    x_connection_id: str | None = Header(None, alias="X-Connection-ID"),
 ) -> Comment:
     """Update a comment."""
     # Apply updates to the comment fields
@@ -105,7 +108,8 @@ async def update_comment(
         payload=comment_read,
         resource_id=comment.id,
         resource="comment",
-        type="update"
+        type="update",
+        originating_connection_id=x_connection_id  # Don't echo to originating connection
     )
     await events.publish(
         event.model_dump(mode="json"),
@@ -120,7 +124,8 @@ async def delete_comment(
     db: Database,
     events: Events,
     comment: Comment = Resource(Comment, param_alias="comment_id"),
-    _: User = Authenticate([Guard.comment_access({Permission.REMOVE_COMMENTS})]),
+    user: User = Authenticate([Guard.comment_access({Permission.REMOVE_COMMENTS})]),
+    x_connection_id: str | None = Header(None, alias="X-Connection-ID"),
 ) -> Response:
     """Delete a comment."""
     # Store document_id and comment_id before deletion
@@ -140,7 +145,8 @@ async def delete_comment(
         payload=comment_read,
         resource_id=comment_id,
         resource="comment",
-        type="delete"
+        type="delete",
+        originating_connection_id=x_connection_id  # Don't echo to originating connection
     )
     await events.publish(
         event.model_dump(mode="json"),
