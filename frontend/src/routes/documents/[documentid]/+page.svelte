@@ -38,7 +38,7 @@
 	}
 
 	function handleDragMove(deltaX: number) {
-		const newWidth = dragStartWidth + deltaX;
+		const newWidth = dragStartWidth - deltaX;
 		// Calculate minimum widths as 20% of available space (excluding controls)
 		const availableSpace = containerWidth - CONTROLS_WIDTH;
 		const minCommentWidth = availableSpace * 0.2;
@@ -233,63 +233,63 @@
 			style="overflow-x: visible;"
 			bind:this={containerRef}
 		>
-			{#if documentFile}
-				<!--Comment Sidebar (Left Column)-->
-				<div
-					class="overflow-visible shrink-0"
-					style="width: {commentSidebarWidth}px;"
-				>
-					<CommentSidebar
-						comments={commentsWithAnnotation}
-						{pageDataArray}
-						{pdfContainerRef}
-						scrollContainerRef={documentScrollRef}
-						{scale}
-						{isDragging}
-						bind:hoveredCommentId
-						bind:focusedCommentId
-					/>
-				</div>
+				{#if documentFile}
+					<!--Controls Panel (Left Column)-->
+					<div
+						class="sticky top-4 shrink-0 self-start"
+						style="width: {CONTROLS_WIDTH}px;"
+					>
+						<ControlsPanel
+							bind:highlightColor
+							commentsCount={commentsWithAnnotation.length}
+							bind:scale
+							{currentPage}
+							{totalPages}
+							onZoomIn={() => (scale = Math.min(scale + 0.25, 5))}
+							onZoomOut={() => (scale = Math.max(scale - 0.25, 0.1))}
+							onPagePrev={() => scrollToPage(currentPage - 1)}
+							onPageNext={() => scrollToPage(currentPage + 1)}
+						/>
+					</div>
 
-				<!--Resizable Divider-->
-				<ResizableDivider onDragStart={handleDragStart} onDragMove={handleDragMove} bind:isDragging />
+					<!--PDF Viewer (Center Column)--> 
+					<div
+						class="shrink-0"
+						style="width: {pdfContainerWidth}px;"
+					>
+						<PdfViewer
+							pdfSource={documentFile}
+							comments={commentsWithAnnotation}
+							bind:scale
+							bind:highlightColor
+							bind:hoveredCommentId
+							bind:focusedCommentId
+							bind:totalPages
+							bind:currentPage
+							bind:pdfContainerRef
+							onPageDataUpdate={(data) => (pageDataArray = data)}
+						/>
+					</div>
 
-				<!--PDF Viewer (Center Column)-->
-				<div
-					class="shrink-0"
-					style="width: {pdfContainerWidth}px;"
-				>
-					<PdfViewer
-						pdfSource={documentFile}
-						comments={commentsWithAnnotation}
-						bind:scale
-						bind:highlightColor
-						bind:hoveredCommentId
-						bind:focusedCommentId
-						bind:totalPages
-						bind:currentPage
-						bind:pdfContainerRef
-						onPageDataUpdate={(data) => (pageDataArray = data)}
-					/>
-				</div>
+					<!--Resizable Divider-->
+					<ResizableDivider onDragStart={handleDragStart} onDragMove={handleDragMove} bind:isDragging />
 
-				<!--Controls Panel (Right Column)-->
-				<div
-					class="sticky top-4 shrink-0 self-start"
-					style="width: {CONTROLS_WIDTH}px;"
-				>
-					<ControlsPanel
-						bind:highlightColor
-						commentsCount={commentsWithAnnotation.length}
-						bind:scale
-						{currentPage}
-						{totalPages}
-						onZoomIn={() => (scale = Math.min(scale + 0.25, 5))}
-						onZoomOut={() => (scale = Math.max(scale - 0.25, 0.1))}
-						onPagePrev={() => scrollToPage(currentPage - 1)}
-						onPageNext={() => scrollToPage(currentPage + 1)}
-					/>
-				</div>
+					<!--Comment Sidebar (Right Column)-->
+					<div
+						class="overflow-visible shrink-0"
+						style="width: {commentSidebarWidth}px;"
+					>
+						<CommentSidebar
+							comments={commentsWithAnnotation}
+							{pageDataArray}
+							{pdfContainerRef}
+							scrollContainerRef={documentScrollRef}
+							{scale}
+							{isDragging}
+							bind:hoveredCommentId
+							bind:focusedCommentId
+						/>
+					</div>
 			{:else}
 				<div class="flex w-full items-center justify-center py-20">
 					<div class="text-center">

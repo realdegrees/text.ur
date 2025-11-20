@@ -12,7 +12,6 @@
 	} = $props();
 
 	let isHovered = $state(false);
-	let isHandleHovered = $state(false);
 	let mouseY = $state(0);
 	let dividerRef: HTMLDivElement | null = $state(null);
 
@@ -20,14 +19,6 @@
 		if (!dividerRef) return;
 		const rect = dividerRef.getBoundingClientRect();
 		mouseY = e.clientY - rect.top;
-	}
-
-	function handleHandleMouseEnter() {
-		isHandleHovered = true;
-	}
-
-	function handleHandleMouseLeave() {
-		isHandleHovered = false;
 	}
 
 	function handleMouseDown(e: MouseEvent) {
@@ -76,7 +67,7 @@
 	aria-label="Resize sidebar"
 	style="min-height: 100vh;"
 >
-	{#if (isHovered || isHandleHovered || isDragging)}
+	{#if (isHovered || isDragging)}
 		<!-- Top circle with left chevron -->
 		<div
 			class="absolute left-1/2 -translate-x-1/2 w-6 h-6 bg-primary rounded-full shadow-lg flex items-center justify-center transition-opacity"
@@ -104,8 +95,8 @@
 			class="absolute left-1/2 -translate-x-1/2 w-14 h-14 bg-transparent rounded-full pointer-events-auto transition-opacity"
 			style="top: {mouseY - 15}px; opacity: 0;"
 			role="presentation"
-			onmouseenter={handleHandleMouseEnter}
-			onmouseleave={handleHandleMouseLeave}
+			onmouseenter={() => (isHovered = true)}
+			onmouseleave={() => (isHovered = false)}
 		></div>
 
 		<!-- Bottom circle with right chevron -->

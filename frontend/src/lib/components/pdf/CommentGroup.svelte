@@ -150,7 +150,7 @@
     {@const annotation = comments[0]?.annotation as unknown as Annotation}
     {@const badgeColor = annotation?.color ?? '#ccc'}
     <div
-      class="absolute left-4 right-2 z-10 flex max-w-full justify-end"
+      class="absolute left-4 z-10 flex max-w-full justify-start"
       style:top="{top}px"
       data-comment-group={comments.map((c) => c.id).join('-')}
       data-active-comment={activeComment.id}
