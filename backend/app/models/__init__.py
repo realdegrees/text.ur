@@ -19,6 +19,7 @@ from models.filter import (
     DocumentFilter,
     GroupFilter,
     MembershipFilter,
+    ShareLinkFilter,
     UserFilter,
 )
 from models.group import (
@@ -76,6 +77,7 @@ MembershipCreate.model_rebuild()
 ShareLinkCreate.model_rebuild()
 ShareLinkRead.model_rebuild()
 ShareLinkUpdate.model_rebuild()
+ShareLinkFilter.model_rebuild()
 
 UserCreate.model_rebuild()
 UserRead.model_rebuild()

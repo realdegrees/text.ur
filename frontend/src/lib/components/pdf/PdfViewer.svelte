@@ -404,22 +404,22 @@
 
 <div
 	bind:this={pdfContainerRef}
-	class="pdf-container flex flex-col items-center gap-4 bg-gray-100 p-4"
+	class="pdf-container flex flex-col items-center gap-4 bg-inset p-4"
 >
 	{#if isLoading}
 		<div class="flex items-center justify-center py-20">
 			<div class="text-center">
 				<div
-					class="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-b-2 border-blue-600"
+					class="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-b-2 border-primary"
 				></div>
-				<p class="text-gray-600">Loading PDF...</p>
+				<p class="text-text/60">Loading PDF...</p>
 			</div>
 		</div>
 	{:else if error}
 		<div class="flex items-center justify-center py-20">
-			<div class="max-w-md rounded-lg bg-red-50 p-6 text-center">
+			<div class="max-w-md rounded-lg bg-accent/10 p-6 text-center">
 				<svg
-					class="mx-auto mb-4 h-16 w-16 text-red-500"
+					class="mx-auto mb-4 h-16 w-16 text-accent"
 					fill="none"
 					stroke="currentColor"
 					viewBox="0 0 24 24"
@@ -431,8 +431,8 @@
 						d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
 					/>
 				</svg>
-				<h3 class="mb-2 text-lg font-semibold text-gray-900">Error Loading PDF</h3>
-				<p class="text-gray-600">{error}</p>
+				<h3 class="mb-2 text-lg font-semibold text-text">Error Loading PDF</h3>
+				<p class="text-text/60">{error}</p>
 			</div>
 		</div>
 	{:else if pdfDocument}
@@ -449,14 +449,14 @@
 				<!-- Loading placeholder overlay -->
 				{#if pageData.status === 'placeholder' || pageData.status === 'rendering'}
 					<div
-						class="absolute inset-0 flex items-center justify-center bg-gray-200"
+						class="absolute inset-0 flex items-center justify-center bg-inset"
 						style="min-width: 612px; min-height: 792px;"
 					>
 						<div class="text-center">
 							<div
-								class="mx-auto mb-2 h-8 w-8 animate-spin rounded-full border-b-2 border-gray-400"
+								class="mx-auto mb-2 h-8 w-8 animate-spin rounded-full border-b-2 border-primary"
 							></div>
-							<p class="text-sm text-gray-500">Loading page {pageData.pageNumber}...</p>
+							<p class="text-sm text-text/60">Loading page {pageData.pageNumber}...</p>
 						</div>
 						<!-- Shimmer effect -->
 						<div class="shimmer absolute inset-0 -z-10"></div>

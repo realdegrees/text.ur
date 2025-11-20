@@ -282,6 +282,11 @@ export interface ShareLinkCreate {
   expires_at?: string | null;
   label?: string | null;
 }
+export interface ShareLinkFilter {
+  label: string;
+  expires_at: string;
+  author_id: number;
+}
 export interface ShareLinkRead {
   id: number;
   permissions: Permission[];

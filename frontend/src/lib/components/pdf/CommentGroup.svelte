@@ -7,6 +7,7 @@
   import CommentBody from './CommentBody.svelte';
   import { fly, scale } from 'svelte/transition';
   import { quintOut } from 'svelte/easing';
+	import darkModeSvelte from '$lib/stores/darkMode.svelte';
 
   interface Props {
     comments: CommentRead[];
@@ -89,13 +90,18 @@
 {#if expanded || hovered}
   <!-- Expanded container used for both group and single comment expanded states -->
   <div
-    class="absolute left-4 right-2 z-20 overflow-visible rounded-lg border-l-4 bg-white shadow-lg"
+    class="absolute left-4 right-2 z-20 overflow-visible rounded-lg border-l-4 bg-inset shadow-lg"
     style:top="{top}px"
     style:border-left-color={activeAnnotation.color}
     onmouseenter={handleMouseEnter}
     onmouseleave={handleMouseLeave}
     onclick={onClick}
     onkeydown={(e) => {
+      // Don't prevent default if user is typing in an input/textarea
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
+        return;
+      }
       if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
         (onClick)(e as any);
@@ -107,21 +113,13 @@
     out:fly={{ x: -20, duration: 200, easing: quintOut }}
   >
     {#if comments.length > 1}
-      <div class="flex flex-wrap gap-1 border-b border-gray-200 px-3 pt-2">
+      <div class="flex flex-wrap gap-1 border-b border-text/10 px-3 pt-2">
         {#each comments as comment (comment.id)}
           {@const annotation = comment.annotation as unknown as Annotation}
           {@const isActive = activeComment.id === comment.id}
           <button
-            class="flex items-center gap-1.5 rounded-t-md px-2.5 py-1 text-xs font-medium transition-all"
-            class:bg-gray-100={!isActive}
-            class:text-gray-600={!isActive}
-            class:bg-white={isActive}
-            class:text-gray-900={isActive}
-            class:border-t={isActive}
-            class:border-x={isActive}
-            class:border-gray-300={isActive}
-            class:-mb-px={isActive}
-            style:border-bottom={isActive ? '2px solid white' : 'none'}
+            class="flex items-center gap-1.5 rounded-t-md px-2.5 py-1 text-xs font-medium transition-all {isActive ? 'bg-inset text-text border-t border-x border-text/20 -mb-px' : 'bg-background text-text/60'}"
+            style:border-bottom={isActive ? '2px solid var(--color-inset)' : 'none'}
             onclick={(e) => {
               e.stopPropagation();
               onCommentSelect(comment.id);
@@ -149,30 +147,27 @@
   <!-- Collapsed badge for either group (count) or single (initial) -->
     {@const annotation = comments[0]?.annotation as unknown as Annotation}
     {@const badgeColor = annotation?.color ?? '#ccc'}
-    {@const badgeTitle = comments.length === 1 ? (comments[0]?.user?.username ?? 'Anonymous') : `${comments.length} comments`}
     <div
       class="absolute left-4 right-2 z-10 flex max-w-full justify-end"
       style:top="{top}px"
       onmouseenter={handleMouseEnter}
       onmouseleave={handleMouseLeave}
-      onclick={onClick}
-      onkeydown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          onClick(e as any);
-        }
-      }}
       role="button"
       tabindex="0"
       in:scale={{ duration: 200, start: 0.8, easing: quintOut }}
       out:scale={{ duration: 150, start: 0.8, easing: quintOut }}
     >
       <div
-        class="cursor-pointer rounded-sm px-2.5 py-1 transition-all duration-200 hover:scale-105 hover:shadow-lg"
+        class="cursor-pointer rounded-sm px-2.5 py-1 transition-all duration-200 shadow-lg opacity-100"
         style:background-color={badgeColor}
-        title={badgeTitle}
       >
-        <span class="text-xs font-semibold text-gray-800">{comments.length == 1 ? comments[0]?.user?.username[0]?.toUpperCase() ?? '?' : comments.length}</span>
+        <span
+          class="font-bold text-inset shadow-black {darkModeSvelte.enabled ? '' : 'text-shadow-lg'}"
+        >
+          {comments.length === 1
+            ? comments[0]?.user?.username[0]?.toUpperCase() ?? "?"
+            : comments.length}
+        </span>
       </div>
     </div>
 {/if}

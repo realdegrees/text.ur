@@ -335,7 +335,7 @@
 
 <div
 	bind:this={sidebarRef}
-	class="comment-sidebar relative flex-1 overflow-visible bg-gray-50 pr-2"
+	class="comment-sidebar relative flex-1 overflow-visible bg-background pr-2"
 >
 	{#each commentGroups as group (group.id)}
 		{@const expanded =

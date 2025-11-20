@@ -201,6 +201,12 @@ export const shareLinkCreateSchema = z.object({
     label: z.string().optional().nullable()
 });
 
+export const shareLinkFilterSchema = z.object({
+    label: z.string(),
+    expires_at: z.string(),
+    author_id: z.number()
+});
+
 export const shareLinkReadSchema = z.object({
     id: z.number(),
     permissions: z.array(permissionSchema),

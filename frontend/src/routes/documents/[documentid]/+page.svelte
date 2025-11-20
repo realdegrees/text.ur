@@ -125,8 +125,8 @@
 <!--Wrapper Flex Col-->
 <section class="flex h-full w-full flex-col gap-1">
 	<!--Header Section-->
-	<section class="border-b border-gray-200 bg-white px-4 py-2">
-		<h1 class="text-xl font-semibold text-gray-800">{data.document.name}</h1>
+	<section class="border-b border-text/10 bg-background px-4 py-2">
+		<h1 class="text-xl font-semibold text-text">{data.document.name}</h1>
 	</section>
 
 	<!--Content Section - Single Scroll Container-->
@@ -182,9 +182,9 @@
 				<div class="flex w-full items-center justify-center py-20">
 					<div class="text-center">
 						<div
-							class="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-b-2 border-blue-600"
+							class="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-b-2 border-primary"
 						></div>
-						<p class="text-gray-600">Loading document...</p>
+						<p class="text-text/60">Loading document...</p>
 					</div>
 				</div>
 			{/if}
