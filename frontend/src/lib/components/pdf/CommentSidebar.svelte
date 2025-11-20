@@ -2,12 +2,8 @@
 	import type { CommentRead } from '$api/types';
 	import type { Annotation } from '$types/pdf';
 	import { commentStore } from '$lib/stores/commentStore';
-	import CommentCard from './CommentCard.svelte';
 	import CommentGroup from './CommentGroup.svelte';
 	import { browser } from '$app/environment';
-	import { draw } from 'svelte/transition';
-	import { quintOut } from 'svelte/easing';
-
 	interface Props {
 		comments: CommentRead[];
 		pageDataArray: Array<{ pageNumber: number; width: number; height: number }>;
@@ -264,25 +260,10 @@
 		return groups;
 	});
 
-	// Comment interaction handlers
-	function handleCommentClick(commentId: number, event: MouseEvent) {
-		event.stopPropagation();
-		focusedCommentId = focusedCommentId === commentId ? null : commentId;
-		deleteConfirmId = null;
-	}
-
-	function handleMouseEnter(commentId: number) {
-		hoveredCommentId = commentId;
-	}
-
-	function handleMouseLeave() {
-		hoveredCommentId = null;
-	}
-
 	// Group interaction handlers
 	function handleGroupClick(groupId: string, event: MouseEvent) {
 		event.stopPropagation();
-		const group = commentGroups.find((g) => g.id === groupId);
+		const group = commentGroups.find(({comments}) => comments.find((c) => c.id.toString() === groupId));
 		if (!group) return;
 
 		// If no comment is focused in this group, focus the first one
@@ -298,7 +279,7 @@
 
 	function handleGroupMouseEnter(groupId: string) {
 		hoveredGroupId = groupId;
-		const group = commentGroups.find((g) => g.id === groupId);
+		const group = commentGroups.find(({comments}) => comments.find((c) => c.id.toString() === groupId));
 		if (!group) return;
 
 		// Set hovered to first comment in group or selected comment
@@ -357,11 +338,11 @@
 	class="comment-sidebar relative flex-1 overflow-visible bg-gray-50 pr-2"
 >
 	{#each commentGroups as group (group.id)}
-		{@const isGroupExpanded =
+		{@const expanded =
 			group.comments.some((c) => c.id === focusedCommentId) ||
 			group.comments.some((c) => c.id === hoveredCommentId) ||
 			hoveredGroupId === group.id}
-		{@const isGroupHovered =
+		{@const hovered =
 			hoveredGroupId === group.id || group.comments.some((c) => c.id === hoveredCommentId)}
 		{@const sidebarWidth = sidebarRef?.getBoundingClientRect().width || 0}
 		{@const commentLeftEdge = sidebarWidth - 8}
@@ -381,15 +362,12 @@
 		{@const activeHighlightLeftX = activePositioned?.highlightLeftX || group.highlightLeftX}
 
 		<!-- Connection line (only when expanded and highlight is visible) -->
-		{#if (isGroupExpanded || isGroupHovered) && activeHighlightLeftX > 0}
-			{@const isFocused = group.comments.some((c) => c.id === focusedCommentId)}
+		{#if (expanded || hovered) && activeHighlightLeftX > 0}
 			<svg
-				class="pointer-events-none absolute top-0 left-0 z-10 overflow-visible transition-all duration-300"
+				class="pointer-events-none absolute left-0 top-0 z-10 overflow-visible transition-all duration-300"
 				style:width="{sidebarWidth + 500}px"
 				style:height="{Math.max(group.actualTop, activeHighlightTop) + 50}px"
-				style:filter={isFocused
-					? 'drop-shadow(0 2px 6px rgba(0, 0, 0, 0.2))'
-					: 'drop-shadow(0 1px 3px rgba(0, 0, 0, 0.1))'}
+				style:filter='drop-shadow(0 2px 6px rgba(0, 0, 0, 0.2))'
 			>
 				<line
 					x1={activeHighlightLeftX}
@@ -397,57 +375,33 @@
 					x2={commentLeftEdge}
 					y2={group.actualTop}
 					stroke={activeAnnotation.color}
-					stroke-width={isFocused ? '4' : '3'}
-					stroke-opacity={isFocused ? '0.9' : '0.7'}
+					stroke-width='4'
+					stroke-opacity='0.9'
 					class="transition-all duration-300"
-					in:draw={{ duration: 300, easing: quintOut }}
-					out:draw={{ duration: 200, easing: quintOut }}
 				/>
 			</svg>
 		{/if}
 
-		<!-- Render group or single comment -->
-		{#if group.comments.length > 1}
-			<CommentGroup
-				comments={group.comments}
-				top={group.actualTop}
-				{isGroupExpanded}
-				{isGroupHovered}
-				selectedCommentId={activeCommentId}
-				{deleteConfirmId}
-				{hoverDelayMs}
-				onGroupClick={(e) => handleGroupClick(group.id, e)}
-				onGroupMouseEnter={() => handleGroupMouseEnter(group.id)}
-				onGroupMouseLeave={handleGroupMouseLeave}
-				onCommentSelect={(commentId) => {
-					selectedCommentInGroup[group.id] = commentId;
-					hoveredCommentId = commentId;
-				}}
-				onDeleteClick={handleDeleteClick}
-				onDeleteConfirm={handleDeleteConfirm}
-				onDeleteCancel={handleDeleteCancel}
-			/>
-		{:else}
-			{@const comment = group.comments[0]}
-			{@const annotation = comment.annotation as unknown as Annotation}
-			{@const expanded = hoveredCommentId === comment.id || focusedCommentId === comment.id}
-			{@const showDeleteConfirm = deleteConfirmId === comment.id}
-
-			<CommentCard
-				{comment}
-				{annotation}
-				{expanded}
-				{showDeleteConfirm}
-				top={group.actualTop}
-				{hoverDelayMs}
-				onClick={(e) => handleCommentClick(comment.id, e)}
-				onMouseEnter={() => handleMouseEnter(comment.id)}
-				onMouseLeave={handleMouseLeave}
-				onDeleteClick={(e) => handleDeleteClick(comment.id, e)}
-				onDeleteConfirm={(e) => handleDeleteConfirm(comment.id, e)}
-				onDeleteCancel={handleDeleteCancel}
-			/>
-		{/if}
+		<!-- Render comment group -->
+		<CommentGroup
+			comments={group.comments.length > 1 ? group.comments : [group.comments[0]]}
+			top={group.actualTop}
+			{expanded}
+			{hovered}
+			selectedCommentId={activeCommentId}
+			{deleteConfirmId}
+			{hoverDelayMs}
+			onClick={(e: MouseEvent) => handleGroupClick(group.id, e)}
+			onMouseEnter={() => handleGroupMouseEnter(group.id)}
+			onMouseLeave={handleGroupMouseLeave}
+			onCommentSelect={(commentId: number) => {
+				selectedCommentInGroup[group.id] = commentId;
+				hoveredCommentId = commentId;
+			}}
+			onDeleteClick={handleDeleteClick}
+			onDeleteConfirm={handleDeleteConfirm}
+			onDeleteCancel={handleDeleteCancel}
+		/>
 	{/each}
 </div>
 

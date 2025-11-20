@@ -2,6 +2,7 @@
 	import { api } from '$api/client';
 	import { notification } from '$lib/stores/notificationStore';
 	import { commentStore } from '$lib/stores/commentStore';
+	import { documentWebSocket } from '$lib/stores/documentWebSocket';
 	import PdfViewer from '$lib/components/pdf/PdfViewer.svelte';
 	import CommentSidebar from '$lib/components/pdf/CommentSidebar.svelte';
 	import ControlsPanel from '$lib/components/pdf/ControlsPanel.svelte';
@@ -89,12 +90,34 @@
 		documentFile = result.data;
 	};
 
+	let wsUnsubscribe: (() => void) | null = null;
+
 	onMount(async () => {
+		// Initialize comment store
 		await commentStore.initialize(data.document.id, data.sessionUser.id);
+
+		// Load document file
 		loadDocumentFile();
+
+		// Connect to WebSocket for real-time updates
+		await documentWebSocket.connect(data.document.id);
+
+		// Subscribe to comment events from WebSocket
+		wsUnsubscribe = documentWebSocket.onCommentEvent((event) => {
+			commentStore.handleWebSocketEvent(event);
+		});
 	});
 
 	onDestroy(() => {
+		// Unsubscribe from WebSocket events
+		if (wsUnsubscribe) {
+			wsUnsubscribe();
+		}
+
+		// Clean up WebSocket connection
+		documentWebSocket.disconnect();
+
+		// Clear comment store
 		commentStore.clear();
 	});
 </script>

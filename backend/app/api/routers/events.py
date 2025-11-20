@@ -1,11 +1,11 @@
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path as PathLibPath
-from typing import Literal, Union
+from typing import Annotated, Literal, Union
 
 from api.dependencies.authentication import Authenticate
 from api.dependencies.database import Database
-from api.dependencies.events import Events
+from api.dependencies.events import EventManager, ProvideEvents
 from core.logger import get_logger
 from fastapi import HTTPException, Path, WebSocket, WebSocketDisconnect
 from jinja2 import Template
@@ -35,18 +35,19 @@ class EventModelConfig[T: SQLModel](dict):
 @dataclass
 class EventRouterConfig[CreateModel: SQLModel, ReadModel: SQLModel, UpdateModel: SQLModel, DeleteModel: SQLModel, CustomModel: SQLModel](dict):
     """Configuration for event models used in the event router."""
-    
+
     create: EventModelConfig[CreateModel] | None = None
+    read: EventModelConfig[ReadModel] | None = None
     update: EventModelConfig[UpdateModel] | None = None
     delete: EventModelConfig[DeleteModel] | None = None
     custom: EventModelConfig[CustomModel] | None = None
 
-def get_events_router[TableModel: SQLModel, RelatedResourceModel: BaseModel, CreateModel: SQLModel, UpdateModel: SQLModel, DeleteModel: SQLModel, CustomModel: SQLModel](  # noqa: C901
+def get_events_router[TableModel: SQLModel, RelatedResourceModel: BaseModel, CreateModel: SQLModel, ReadModel: SQLModel, UpdateModel: SQLModel, DeleteModel: SQLModel, CustomModel: SQLModel](  # noqa: C901
     channel: str,
     related_resource_model: RelatedResourceModel,
     table_model: TableModel,
     *,
-    config: EventRouterConfig[CreateModel, UpdateModel, DeleteModel, CustomModel],
+    config: EventRouterConfig[CreateModel, ReadModel, UpdateModel, DeleteModel, CustomModel],
     base_router: APIRouter,
 ) -> APIRouter:
     """Create a router with event endpoints for a resource.
@@ -78,7 +79,7 @@ def get_events_router[TableModel: SQLModel, RelatedResourceModel: BaseModel, Cre
     # TODO store the auth state in websocket.state and use it in the event manager to filter outgoing events individually like an endpoint would
     # Create the WebSocket handler function
     async def client_endpoint(  # noqa: C901
-        websocket: WebSocket, db: Database, events: Events, resource_id: int = Path(...), user: User = Authenticate(endpoint="ws")
+        websocket: WebSocket, db: Database, events: Annotated[EventManager, ProvideEvents(endpoint="ws")], resource_id: int = Path(...), user: User = Authenticate(endpoint="ws")
     ) -> None:
         """Connect a client to the event stream."""
         related_resource = db.get(related_resource_model, resource_id)
@@ -115,11 +116,11 @@ def get_events_router[TableModel: SQLModel, RelatedResourceModel: BaseModel, Cre
                 return bool(config.custom and config.custom.model)
             return False
 
-        def on_event(event: Event[TableModel]) -> bool:
+        async def on_event(event: Event[TableModel]) -> bool:
             """Validate outgoing event before sending to client."""
             if not is_user_eligible(event, "out"):
                 return
-            websocket.send_json(event.model_dump(mode="json"))
+            await websocket.send_json(event.model_dump(mode="json"))
             
         async def client_event_loop() -> None:
             while True:
@@ -228,7 +229,7 @@ def get_events_router[TableModel: SQLModel, RelatedResourceModel: BaseModel, Cre
                     type(None), None),
                 type=(Literal[tuple(event_types)], ...),
                 resource_id=(resource_id_type, ...),
-                __base__=Event
+                __base__=Event,
             )
             response_models.append(event_model)
 

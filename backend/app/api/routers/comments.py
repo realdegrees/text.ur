@@ -1,11 +1,16 @@
+from uuid import uuid4
+from datetime import datetime
+
 from api.dependencies.authentication import Authenticate, BasicAuthentication
 from api.dependencies.database import Database
+from api.dependencies.events import Events
 from api.dependencies.paginated.resources import PaginatedResource
 from api.dependencies.resource import Resource
 from api.routers.reactions import router as ReactionRouter
 from fastapi import Body, Response
 from models.comment import CommentCreate, CommentRead, CommentUpdate
 from models.enums import Permission
+from models.event import Event
 from models.filter import CommentFilter
 from models.pagination import Paginated
 from models.tables import Comment, User
@@ -37,8 +42,9 @@ async def list_comments(
 
 @router.post("/", response_model=CommentRead)
 async def create_comment(
-    db: Database, 
-    user: User = Authenticate([Guard.document_access({Permission.ADD_COMMENTS})]), 
+    db: Database,
+    events: Events,
+    user: User = Authenticate([Guard.document_access({Permission.ADD_COMMENTS})]),
     create: CommentCreate = Body(...),
 ) -> Comment:
     """Create a new comment."""
@@ -48,6 +54,21 @@ async def create_comment(
     db.add(comment)
     db.commit()
     db.refresh(comment)
+
+    # Broadcast creation event
+    comment_read = CommentRead.model_validate(comment)
+    event = Event[CommentRead](
+        event_id=uuid4(),
+        published_at=datetime.now(),
+        payload=comment_read,
+        resource_id=comment.id,
+        resource="comment",
+        type="create"
+    )
+    await events.publish(
+        event.model_dump(mode="json"),
+        channel=f"documents:{comment.document_id}:comments"
+    )
 
     return comment
 
@@ -64,6 +85,7 @@ async def read_comment(
 @router.put("/{comment_id}", response_model=CommentRead)
 async def update_comment(
     db: Database,
+    events: Events,
     comment: Comment = Resource(Comment, param_alias="comment_id"),
     _: User = Authenticate([Guard.comment_access(None, only_owner=True)]),
     update: CommentUpdate = Body(...),
@@ -73,18 +95,58 @@ async def update_comment(
     db.merge(comment)
     comment.sqlmodel_update(update.model_dump(exclude_unset=True))
     db.commit()
+    db.refresh(comment)
+
+    # Broadcast update event
+    comment_read = CommentRead.model_validate(comment)
+    event = Event[CommentRead](
+        event_id=uuid4(),
+        published_at=datetime.now(),
+        payload=comment_read,
+        resource_id=comment.id,
+        resource="comment",
+        type="update"
+    )
+    await events.publish(
+        event.model_dump(mode="json"),
+        channel=f"documents:{comment.document_id}:comments"
+    )
+
     return comment
 
 
 @router.delete("/{comment_id}")
 async def delete_comment(
     db: Database,
+    events: Events,
     comment: Comment = Resource(Comment, param_alias="comment_id"),
     _: User = Authenticate([Guard.comment_access({Permission.REMOVE_COMMENTS})]),
 ) -> Response:
     """Delete a comment."""
+    # Store document_id and comment_id before deletion
+    document_id = comment.document_id
+    comment_id = comment.id
+
+    # Get comment data before deletion
+    comment_read = CommentRead.model_validate(comment)
+
     db.delete(comment)
     db.commit()
+
+    # Broadcast delete event
+    event = Event[CommentRead](
+        event_id=uuid4(),
+        published_at=datetime.now(),
+        payload=comment_read,
+        resource_id=comment_id,
+        resource="comment",
+        type="delete"
+    )
+    await events.publish(
+        event.model_dump(mode="json"),
+        channel=f"documents:{document_id}:comments"
+    )
+
     return Response(status_code=204)
 
 tags = router.tags

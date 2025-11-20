@@ -52,6 +52,9 @@ events_router = get_events_router(
     base_router=router,
     config=EventRouterConfig(
         # TODO add global validation in/out for all events based on document access
+        read=EventModelConfig(model=CommentRead,
+                              validation_out=Guard.comment_access().predicate
+                              ),
         create=EventModelConfig(model=CommentRead,
                                 validation_in=Guard.comment_access().predicate,
                                 validation_out=Guard.comment_access().predicate

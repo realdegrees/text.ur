@@ -24,6 +24,7 @@ class CommentRead(BaseModel):
     id: int
     visibility: Visibility
     user: "UserRead | None"
+    parent_id: int | None
     annotation: dict | None
     content: str | None
     num_replies: int

@@ -288,6 +288,7 @@ export const commentReadSchema = z.object({
     id: z.number(),
     visibility: visibilitySchema,
     user: userReadSchema.nullable(),
+    parent_id: z.number().nullable(),
     annotation: z.record(z.string(), z.unknown()).nullable(),
     content: z.string().nullable(),
     num_replies: z.number(),

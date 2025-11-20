@@ -3,6 +3,7 @@ import { api } from '$api/client';
 import type { CommentRead, CommentCreate, CommentUpdate } from '$api/types';
 import type { Annotation } from '$types/pdf';
 import type { Paginated } from '$api/pagination';
+import type { CommentEvent } from '$types/websocket';
 import { notification } from './notificationStore';
 
 /**
@@ -282,6 +283,83 @@ class CommentStore {
 	 */
 	getCurrentUserId(): number | null {
 		return this.currentUserId;
+	}
+
+	/**
+	 * Handle incoming WebSocket events and update local state
+	 */
+	handleWebSocketEvent(event: CommentEvent): void {
+		if (!event.payload) {
+			console.warn('Received WebSocket event with no payload', event);
+			return;
+		}
+
+		const comment = event.payload;
+
+		switch (event.type) {
+			case 'create':
+				// Add new comment to local tree
+				if (comment.parent_id) {
+					// It's a reply - add to parent's cache
+					const cachedReplies = this.repliesCache.get(comment.parent_id) || [];
+
+					// Check if already exists (avoid duplicates from optimistic updates)
+					if (!cachedReplies.some((r) => r.id === comment.id)) {
+						this.repliesCache.set(comment.parent_id, [...cachedReplies, comment]);
+						this.incrementCacheVersion();
+
+						// Increment parent's num_replies
+						this.updateCommentInTree(comment.parent_id, (parent) => ({
+							...parent,
+							num_replies: parent.num_replies + 1
+						}));
+					}
+				} else {
+					// It's a root comment
+					this.store.update((comments) => {
+						// Check if already exists
+						if (comments.some((c) => c.id === comment.id)) {
+							return comments;
+						}
+						return [...comments, comment];
+					});
+				}
+				break;
+
+			case 'update':
+				// Update existing comment in tree
+				this.updateCommentInTree(comment.id, () => comment);
+				break;
+
+			case 'delete':
+				// Remove comment from tree
+				const parentId = this.findParentId(comment.id);
+
+				if (parentId) {
+					// Remove from parent's cached replies
+					const cachedReplies = this.repliesCache.get(parentId) || [];
+					this.repliesCache.set(
+						parentId,
+						cachedReplies.filter((reply) => reply.id !== comment.id)
+					);
+					this.incrementCacheVersion();
+
+					// Decrement parent's num_replies
+					this.updateCommentInTree(parentId, (parent) => ({
+						...parent,
+						num_replies: Math.max(0, parent.num_replies - 1)
+					}));
+				} else {
+					// Remove root comment
+					this.repliesCache.delete(comment.id);
+					this.incrementCacheVersion();
+					this.store.update((comments) => comments.filter((c) => c.id !== comment.id));
+				}
+				break;
+
+			default:
+				console.warn('Unknown WebSocket event type:', event.type);
+		}
 	}
 
 	/**

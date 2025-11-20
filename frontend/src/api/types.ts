@@ -104,6 +104,7 @@ export interface CommentRead {
   id: number;
   visibility: Visibility;
   user: UserRead | null;
+  parent_id: number | null;
   annotation: {
     [k: string]: unknown;
   } | null;

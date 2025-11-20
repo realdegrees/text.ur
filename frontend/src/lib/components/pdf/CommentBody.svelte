@@ -19,7 +19,6 @@
 		annotation: Annotation | null;
 		showDeleteConfirm: boolean;
 		depth?: number;
-		isExpanded?: boolean;
 		onDeleteClick?: (event: MouseEvent) => void;
 		onDeleteConfirm?: (event: MouseEvent) => void;
 		onDeleteCancel?: (event: MouseEvent) => void;
@@ -30,7 +29,6 @@
 		annotation = null,
 		showDeleteConfirm = false,
 		depth = 0,
-		isExpanded = false,
 		onDeleteClick = () => {},
 		onDeleteConfirm = () => {},
 		onDeleteCancel = () => {}
@@ -394,7 +392,6 @@
 						annotation={(reply.annotation as unknown as Annotation) || null}
 						showDeleteConfirm={deleteConfirmReplyId === reply.id}
 						depth={depth + 1}
-						isExpanded={false}
 						onDeleteClick={() => handleReplyDeleteClick(reply.id)}
 						onDeleteConfirm={() => handleReplyDeleteConfirm(reply.id)}
 						onDeleteCancel={handleReplyDeleteCancel}
