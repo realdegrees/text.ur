@@ -93,6 +93,8 @@
     class="absolute left-4 right-2 z-20 overflow-visible rounded-lg border-l-4 bg-inset shadow-lg"
     style:top="{top}px"
     style:border-left-color={activeAnnotation.color}
+    data-comment-group={comments.map((c) => c.id).join('-')}
+    data-active-comment={activeComment.id}
     onmouseenter={handleMouseEnter}
     onmouseleave={handleMouseLeave}
     onclick={onClick}
@@ -150,6 +152,8 @@
     <div
       class="absolute left-4 right-2 z-10 flex max-w-full justify-end"
       style:top="{top}px"
+      data-comment-group={comments.map((c) => c.id).join('-')}
+      data-active-comment={activeComment.id}
       onmouseenter={handleMouseEnter}
       onmouseleave={handleMouseLeave}
       role="button"

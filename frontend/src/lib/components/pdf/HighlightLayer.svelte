@@ -43,11 +43,12 @@
 			{@const isFocused = focusedCommentId === comment.id}
 			{@const isActive = isHovered || isFocused}
 
-			<div class="annotation-group pointer-events-none">
+			<div class="annotation-group pointer-events-none" data-comment-id={comment.id}>
 				{#each scaledBoxes as box, boxIdx (`${comment.id}-${boxIdx}`)}
 					{@const margin = 1}
 					<div
-						class="absolute rounded-sm transition-all duration-300"
+						class="absolute rounded-sm"
+						data-highlight-box
 						style:left="{box.x - margin}px"
 						style:top="{box.y - margin}px"
 						style:width="{box.width + margin * 2}px"

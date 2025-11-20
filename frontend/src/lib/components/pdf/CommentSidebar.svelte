@@ -9,6 +9,8 @@
 		pageDataArray: Array<{ pageNumber: number; width: number; height: number }>;
 		pdfContainerRef: HTMLDivElement | null;
 		scrollContainerRef: HTMLDivElement | null;
+		scale: number;
+		isDragging: boolean;
 		hoveredCommentId?: number | null;
 		focusedCommentId?: number | null;
 		hoverDelayMs?: number;
@@ -19,6 +21,8 @@
 		pageDataArray = [],
 		pdfContainerRef = null,
 		scrollContainerRef = null,
+		scale = 1,
+		isDragging = false,
 		hoveredCommentId = $bindable(null),
 		focusedCommentId = $bindable(null),
 		hoverDelayMs = 200
@@ -28,6 +32,17 @@
 	let deleteConfirmId = $state<number | null>(null);
 	let selectedCommentInGroup = $state<{ [groupId: string]: number }>({});
 	let hoveredGroupId = $state<string | null>(null);
+
+	// Store actual line positions calculated from DOM
+	interface LinePosition {
+		x1: number;
+		y1: number;
+		x2: number;
+		y2: number;
+		color: string;
+		commentId: number;
+	}
+	let linePositions = $state<Map<string, LinePosition>>(new Map());
 
 	interface PositionedComment {
 		comment: CommentRead;
@@ -116,22 +131,34 @@
 		if (!pageElement) return { leftX: 0, rightX: 0, top: 0, bottom: 0 };
 
 		const pageOffsetTop = getPageOffsetTop(annotation.pageNumber);
+
+		// Calculate scaled dimensions (these are deterministic, no DOM query race condition)
+		const scaledWidth = pageData.width * scale;
+		const scaledHeight = pageData.height * scale;
+
+		// Get sidebar position
 		const sidebarRect = sidebarRef.getBoundingClientRect();
-		const pageRect = pageElement.getBoundingClientRect();
 
-		// Calculate left edge of highlight relative to sidebar
-		const highlightLeftWithinPage = leftBox.x * pageData.width;
-		const highlightLeftX = pageRect.left - sidebarRect.left + highlightLeftWithinPage;
+		// Get PDF container position (parent of all pages)
+		const pdfContainerRect = pdfContainerRef.getBoundingClientRect();
 
-		// Calculate right edge of highlight relative to sidebar
-		const highlightRightWithinPage = (rightBox.x + rightBox.width) * pageData.width;
-		const highlightRightX = pageRect.left - sidebarRect.left + highlightRightWithinPage;
+		// Calculate page's left position relative to sidebar
+		// PDF container has padding (p-4 = 16px on each side)
+		const PDF_PADDING = 16;
+		const pageLeftRelativeToContainer = PDF_PADDING;
+		const pageLeftRelativeSidebar = pdfContainerRect.left - sidebarRect.left + pageLeftRelativeToContainer;
 
-		// Calculate top position
-		const highlightTop = pageOffsetTop + topBox.y * pageData.height;
+		// Calculate highlight positions within the page (using scaled dimensions)
+		const highlightLeftWithinPage = leftBox.x * scaledWidth;
+		const highlightRightWithinPage = (rightBox.x + rightBox.width) * scaledWidth;
 
-		// Calculate bottom position
-		const highlightBottom = pageOffsetTop + (bottomBox.y + bottomBox.height) * pageData.height;
+		// Calculate absolute positions relative to sidebar
+		const highlightLeftX = pageLeftRelativeSidebar + highlightLeftWithinPage;
+		const highlightRightX = pageLeftRelativeSidebar + highlightRightWithinPage;
+
+		// Calculate vertical positions
+		const highlightTop = pageOffsetTop + topBox.y * scaledHeight;
+		const highlightBottom = pageOffsetTop + (bottomBox.y + bottomBox.height) * scaledHeight;
 
 		return {
 			leftX: highlightLeftX,
@@ -143,6 +170,9 @@
 
 	// Group comments and calculate positions with collision avoidance
 	let commentGroups = $derived.by((): CommentGroupData[] => {
+		// Explicitly access scale to ensure reactivity when it changes
+		const currentScale = scale;
+
 		if (!pdfContainerRef || !sidebarRef || !scrollContainerRef || pageDataArray.length === 0) {
 			return [];
 		}
@@ -278,6 +308,9 @@
 	}
 
 	function handleGroupMouseEnter(groupId: string) {
+		// Don't expand comments during divider dragging
+		if (isDragging) return;
+
 		hoveredGroupId = groupId;
 		const group = commentGroups.find(({comments}) => comments.find((c) => c.id.toString() === groupId));
 		if (!group) return;
@@ -322,6 +355,104 @@
 		}
 	}
 
+	// Calculate line positions from actual DOM elements
+	$effect(() => {
+		if (!browser || !pdfContainerRef || !sidebarRef) return;
+
+		// Capture refs to avoid null checks in callback
+		const pdfContainer = pdfContainerRef;
+		const sidebar = sidebarRef;
+
+		// Access reactive dependencies to ensure recalculation
+		const currentScale = scale;
+		const currentHovered = hoveredCommentId;
+		const currentFocused = focusedCommentId;
+		const currentGroups = commentGroups;
+
+		// Use requestAnimationFrame to ensure DOM has updated
+		requestAnimationFrame(() => {
+			const newPositions = new Map<string, LinePosition>();
+
+			for (const group of currentGroups) {
+				// Determine active comment
+				const activeCommentId =
+					(currentHovered && group.comments.some((c) => c.id === currentHovered)
+						? currentHovered
+						: selectedCommentInGroup[group.id]) || group.comments[0].id;
+
+				const activeComment = group.comments.find((c) => c.id === activeCommentId);
+				if (!activeComment) continue;
+
+				const annotation = activeComment.annotation as unknown as Annotation;
+				if (!annotation) continue;
+
+				// Check if comment is expanded or hovered
+				const isExpanded =
+					group.comments.some((c) => c.id === currentFocused || c.id === currentHovered) ||
+					hoveredGroupId === group.id;
+
+				if (!isExpanded && !group.comments.some((c) => c.id === currentHovered)) continue;
+
+				// Query annotation group
+				const annotationGroup = pdfContainer.querySelector(
+					`[data-comment-id="${activeCommentId}"]`
+				);
+				if (!annotationGroup) continue;
+
+				// Find all highlight boxes within the annotation group
+				const highlightBoxes = annotationGroup.querySelectorAll('[data-highlight-box]');
+				if (highlightBoxes.length === 0) continue;
+
+				// Find the topmost-leftmost highlight box
+				let topmostLeftmostBox: Element | null = null;
+				let minTop = Infinity;
+				let minLeft = Infinity;
+
+				for (const box of highlightBoxes) {
+					const rect = box.getBoundingClientRect();
+					if (rect.top < minTop || (rect.top === minTop && rect.left < minLeft)) {
+						minTop = rect.top;
+						minLeft = rect.left;
+						topmostLeftmostBox = box;
+					}
+				}
+
+				if (!topmostLeftmostBox) continue;
+
+				// Query comment element
+				const commentEl = sidebar.querySelector(
+					`[data-active-comment="${activeCommentId}"]`
+				);
+				if (!commentEl) continue;
+
+				// Get bounding rects
+				const sidebarRect = sidebar.getBoundingClientRect();
+				const highlightRect = (topmostLeftmostBox as Element).getBoundingClientRect();
+				const commentRect = commentEl.getBoundingClientRect();
+
+				// Calculate line positions relative to sidebar
+				// Anchor to top-left of topmost-leftmost highlight box
+				const x1 = highlightRect.left - sidebarRect.left;
+				const y1 = highlightRect.top - sidebarRect.top;
+
+				// Anchor to center-center of comment
+				const x2 = commentRect.left - sidebarRect.left + commentRect.width / 2;
+				const y2 = commentRect.top - sidebarRect.top + commentRect.height / 2;
+
+				newPositions.set(group.id, {
+					x1,
+					y1,
+					x2,
+					y2,
+					color: annotation.color,
+					commentId: activeCommentId
+				});
+			}
+
+			linePositions = newPositions;
+		});
+	});
+
 	// Setup global click listener
 	$effect(() => {
 		if (browser) {
@@ -355,29 +486,24 @@
 			group.comments.find((c) => c.id === activeCommentId) || group.comments[0]}
 		{@const activeAnnotation = activeComment.annotation as unknown as Annotation}
 
-		{@const activePositioned = (group as any).positionedData?.find(
-			(p: any) => p.comment.id === activeCommentId
-		)}
-		{@const activeHighlightTop = activePositioned?.highlightTop || group.highlightTop}
-		{@const activeHighlightLeftX = activePositioned?.highlightLeftX || group.highlightLeftX}
+		{@const linePos = linePositions.get(group.id)}
 
-		<!-- Connection line (only when expanded and highlight is visible) -->
-		{#if (expanded || hovered) && activeHighlightLeftX > 0}
+		<!-- Connection line (drawn from actual DOM positions) -->
+		{#if (expanded || hovered) && linePos}
 			<svg
-				class="pointer-events-none absolute left-0 top-0 z-10 overflow-visible transition-all duration-300"
+				class="pointer-events-none absolute left-0 top-0 z-10 overflow-visible"
 				style:width="{sidebarWidth + 500}px"
-				style:height="{Math.max(group.actualTop, activeHighlightTop) + 50}px"
+				style:height="{Math.max(linePos.y1, linePos.y2) + 50}px"
 				style:filter='drop-shadow(0 2px 6px rgba(0, 0, 0, 0.2))'
 			>
 				<line
-					x1={activeHighlightLeftX}
-					y1={activeHighlightTop}
-					x2={commentLeftEdge}
-					y2={group.actualTop}
-					stroke={activeAnnotation.color}
+					x1={linePos.x1}
+					y1={linePos.y1}
+					x2={linePos.x2}
+					y2={linePos.y2}
+					stroke={linePos.color}
 					stroke-width='4'
 					stroke-opacity='0.9'
-					class="transition-all duration-300"
 				/>
 			</svg>
 		{/if}

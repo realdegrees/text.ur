@@ -55,6 +55,8 @@
 		textLayerItems: TextLayerItem[];
 		width: number;
 		height: number;
+		baseWidth: number; // Unscaled width (at scale=1)
+		baseHeight: number; // Unscaled height (at scale=1)
 		renderTask: any | null; // Store the render task so we can cancel it
 	}
 
@@ -99,6 +101,8 @@
 				textLayerItems: [],
 				width: 0,
 				height: 0,
+				baseWidth: 0,
+				baseHeight: 0,
 				renderTask: null
 			}));
 
@@ -118,14 +122,17 @@
 	}
 
 	// Render a specific page progressively
-	async function renderPageProgressive(pageIndex: number) {
+	async function renderPageProgressive(pageIndex: number, forceRerender: boolean = false) {
 		if (!pdfDocument || !pdfjsLib) return;
 
 		const pageData = pages[pageIndex];
 		if (!pageData) return;
 
-		// Skip if already ready or currently rendering
-		if (pageData.status === 'ready' || pageData.status === 'rendering') return;
+		// Skip if currently rendering (unless forcing re-render)
+		if (!forceRerender && pageData.status === 'rendering') return;
+
+		// Skip if already ready and not forcing (initial render)
+		if (!forceRerender && pageData.status === 'ready') return;
 
 		// Cancel any existing render task for this page
 		if (pageData.renderTask) {
@@ -152,9 +159,19 @@
 
 
 		try {
-			pageData.status = 'rendering';
+			// Only change status if not already ready (to avoid hiding during re-render)
+			if (pageData.status !== 'ready') {
+				pageData.status = 'rendering';
+			}
 
 			const page = await pdfDocument.getPage(pageData.pageNumber);
+
+			// Get base dimensions (unscaled) if not already set
+			if (pageData.baseWidth === 0 || pageData.baseHeight === 0) {
+				const baseViewport = page.getViewport({ scale: 1 });
+				pageData.baseWidth = baseViewport.width;
+				pageData.baseHeight = baseViewport.height;
+			}
 
 			// Get viewport - PDF.js will handle rotation automatically
 			const viewport = page.getViewport({ scale });
@@ -196,7 +213,10 @@
 				console.error(`Page ${pageIndex + 1} rendering error:`, err);
 			}
 			pageData.renderTask = null;
-			pageData.status = 'placeholder';
+			// Keep as 'ready' if it was already ready (failed re-render), otherwise set to placeholder
+			if (pageData.status !== 'ready') {
+				pageData.status = 'placeholder';
+			}
 		}
 	}
 
@@ -350,38 +370,48 @@
 	// Update page data array for parent
 	function updatePageDataArray() {
 		const data = pages
-			.filter((p) => p.width > 0 && p.height > 0)
+			.filter((p) => p.baseWidth > 0 && p.baseHeight > 0)
 			.map((p) => ({
 				pageNumber: p.pageNumber,
-				width: p.width,
-				height: p.height
+				width: p.baseWidth,
+				height: p.baseHeight
 			}));
 		onPageDataUpdate(data);
 	}
 
-	// Re-render all pages when scale changes
-	let previousScale = $state(0);
+	// Track the scale at which pages were last rendered
+	let renderedScale = $state(0);
 	let scaleInitialized = $state(false);
+	let renderTimeout: ReturnType<typeof setTimeout> | null = null;
+
+	// Calculate CSS scale transform for smooth preview during dragging
+	const cssScaleFactor = $derived.by(() => {
+		if (renderedScale === 0 || scale === 0) return 1;
+		return scale / renderedScale;
+	});
+
 	$effect(() => {
-		// Initialize previous scale on first run
+		// Initialize on first run
 		if (!scaleInitialized) {
-			previousScale = scale;
+			renderedScale = scale;
 			scaleInitialized = true;
 			return;
 		}
 
-		// Only re-render if scale actually changed and we have a document
-		if (pdfDocument && pages.length > 0 && scale !== previousScale) {
-			previousScale = scale;
-
-			// Re-render all loaded pages
-			for (let i = 0; i < pages.length; i++) {
-				if (pages[i].status === 'ready') {
-					// Mark for re-render without changing status immediately
-					// This will trigger the render cancellation in renderPageProgressive
-					setTimeout(() => renderPageProgressive(i), 10);
-				}
+		if (pdfDocument && pages.length > 0 && scale !== renderedScale) {
+			if (renderTimeout) {
+				clearTimeout(renderTimeout);
 			}
+
+			renderTimeout = setTimeout(() => {
+				for (let i = 0; i < pages.length; i++) {
+					if (pages[i].status === 'ready') {
+						renderPageProgressive(i, true);
+					}
+				}
+				renderedScale = scale;
+				renderTimeout = null;
+			}, 150);
 		}
 	});
 
@@ -402,10 +432,7 @@
 	});
 </script>
 
-<div
-	bind:this={pdfContainerRef}
-	class="pdf-container flex flex-col items-center gap-4 bg-inset p-4"
->
+<div bind:this={pdfContainerRef} class="pdf-container flex flex-col gap-4 bg-inset p-4 w-full">
 	{#if isLoading}
 		<div class="flex items-center justify-center py-20">
 			<div class="text-center">
@@ -437,20 +464,48 @@
 		</div>
 	{:else if pdfDocument}
 		{#each pages as pageData (pageData.pageNumber)}
-			<div class="page-wrapper relative bg-white shadow-lg" data-page-number={pageData.pageNumber}>
-				<!-- Canvas for PDF rendering (always rendered) -->
-				<canvas
-					bind:this={pageData.canvas}
-					class="block"
-					style="display: block;"
-					class:opacity-0={pageData.status === 'placeholder' || pageData.status === 'rendering'}
-				></canvas>
+			<div
+				class="page-wrapper relative w-full bg-white shadow-lg"
+				data-page-number={pageData.pageNumber}
+				style="width: {pageData.width * cssScaleFactor}px; height: {pageData.height * cssScaleFactor}px;"
+			>
+				<div
+					class="page-scale-wrapper"
+					style="transform: scale({cssScaleFactor}); transform-origin: top left; width: {pageData.width}px; height: {pageData.height}px;"
+				>
+					<canvas
+						bind:this={pageData.canvas}
+						class="block"
+						style="display: block;"
+						class:opacity-0={pageData.status === 'placeholder' || pageData.status === 'rendering'}
+					></canvas>
 
-				<!-- Loading placeholder overlay -->
+					{#if pageData.status === 'ready'}
+						<TextLayer
+							bind:textLayerRef={pageData.textLayerRef}
+							textLayerItems={pageData.textLayerItems}
+							width={pageData.width}
+							height={pageData.height}
+							onTextSelection={() => handleTextSelection(pages.indexOf(pageData))}
+							onMouseMove={(e) => handleMouseMove(e, pages.indexOf(pageData))}
+							onMouseLeave={() => (hoveredCommentId = null)}
+						/>
+
+						<HighlightLayer
+							{comments}
+							pageNumber={pageData.pageNumber}
+							width={pageData.width}
+							height={pageData.height}
+							{hoveredCommentId}
+							{focusedCommentId}
+						/>
+					{/if}
+				</div>
+
 				{#if pageData.status === 'placeholder' || pageData.status === 'rendering'}
 					<div
 						class="absolute inset-0 flex items-center justify-center bg-inset"
-						style="min-width: 612px; min-height: 792px;"
+						style="min-height: 400px;"
 					>
 						<div class="text-center">
 							<div
@@ -458,32 +513,8 @@
 							></div>
 							<p class="text-sm text-text/60">Loading page {pageData.pageNumber}...</p>
 						</div>
-						<!-- Shimmer effect -->
 						<div class="shimmer absolute inset-0 -z-10"></div>
 					</div>
-				{/if}
-
-				{#if pageData.status === 'ready'}
-					<!-- Text Layer (for selection) -->
-					<TextLayer
-						bind:textLayerRef={pageData.textLayerRef}
-						textLayerItems={pageData.textLayerItems}
-						width={pageData.width}
-						height={pageData.height}
-						onTextSelection={() => handleTextSelection(pages.indexOf(pageData))}
-						onMouseMove={(e) => handleMouseMove(e, pages.indexOf(pageData))}
-						onMouseLeave={() => (hoveredCommentId = null)}
-					/>
-
-					<!-- Highlight Layer -->
-					<HighlightLayer
-						{comments}
-						pageNumber={pageData.pageNumber}
-						width={pageData.width}
-						height={pageData.height}
-						{hoveredCommentId}
-						{focusedCommentId}
-					/>
 				{/if}
 			</div>
 		{/each}

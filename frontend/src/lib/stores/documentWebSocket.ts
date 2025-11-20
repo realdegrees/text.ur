@@ -11,7 +11,6 @@ import type { CommentEvent } from '$api/types';
  */
 class DocumentWebSocketStore {
 	private manager: WebSocketManager | null = null;
-	private documentId: string | null = null;
 
 	// Connection state
 	private stateStore = writable<ConnectionState>('disconnected');
@@ -28,8 +27,6 @@ class DocumentWebSocketStore {
 
 		// Disconnect any existing connection
 		this.disconnect();
-
-		this.documentId = documentId;
 
 		// Get connection ID from API client
 
@@ -62,7 +59,6 @@ class DocumentWebSocketStore {
 			this.manager.disconnect();
 			this.manager = null;
 		}
-		this.documentId = null;
 		this.stateStore.set('disconnected');
 	}
 
