@@ -6,7 +6,7 @@
 	import { permissionSchema } from '$api/schemas';
 	import { api } from '$api/client';
 	import { notification } from '$lib/stores/notificationStore';
-	import { validatePermissions } from '$api/validatePermissions';
+	import { sessionStore } from '$lib/runes/session.svelte.js';
 	import { goto, invalidateAll } from '$app/navigation';
 	import type {
 		GroupUpdate,
@@ -24,7 +24,7 @@
 
 	let { data } = $props();
 	let group = $derived(data.membership.group);
-	let isOwner = $derived(validatePermissions(data.membership, [], undefined));
+	let isOwner = $derived(sessionStore.validatePermissions(data.membership, []));
 	let defaultPermissions: Permission[] = $derived(group.default_permissions || []);
 
 	let transferUsername: string = $state('');

@@ -1,92 +1,278 @@
 <script lang="ts">
-  import type { PDFSlick } from '@pdfslick/core';
-  import { onDestroy, onMount } from 'svelte';
-    import "@pdfslick/core/dist/pdf_viewer.css";
+	import type { PDFSlick } from '@pdfslick/core';
+	import { onDestroy, onMount } from 'svelte';
+	import '@pdfslick/core/dist/pdf_viewer.css';
+	import AnnotationLayer from './AnnotationLayer.svelte';
+	import TextSelectionHandler from './TextSelectionHandler.svelte';
+	import CommentSidebar from './CommentSidebar.svelte';
+	import PdfControls from './PdfControls.svelte';
+	import ConnectionLine from './ConnectionLine.svelte';
+	import { documentStore } from '$lib/runes/document.svelte.js';
 
-  let container: HTMLDivElement | null = $state(null);
-  let pdfSlick: PDFSlick | null = $state(null);
-  let unsubscribe: (() => void) | null = $state(null);
+	interface Props {
+		document: ArrayBuffer;
+	}
 
-  let pageNumber = $state(1);
-  let numPages = $state(0);
+	let { document: pdfData }: Props = $props();
 
-  let { document: pdfData }: { document: ArrayBuffer } = $props();
+	// Zoom step - using additive approach for symmetric zoom in/out
+	const ZOOM_STEP = 0.2;
+	const MIN_SCALE = 0.25;
 
-  
+	let container: HTMLDivElement | null = $state(null);
+	let pdfAreaWrapper: HTMLDivElement | null = $state(null);
+	let sidebarContainer: HTMLDivElement | null = $state(null);
+	let pdfSlick: PDFSlick | null = $state(null);
+	let unsubscribe: (() => void) | null = $state(null);
 
-  const initialize = async () => {
-    if (!container) return;
-    /**
-     * This is all happening on client side, so we'll make sure we only load it there
-     */
-    const { create, PDFSlick } = await import('@pdfslick/core');
+	let pageNumber = $state(1);
+	let numPages = $state(0);
+	let scale = $state(1);
+	let scrollTop = $state(0);
+	let pdfWidth = $state(0);
+	let basePageWidth = $state(0);
+	let maxAvailableWidth = $state(0);
 
-    /**
-     * Create the PDF Slick store 
-     */
-    const store = create();
+	const updatePdfWidth = () => {
+		if (!container) return;
+		const page = container.querySelector('.page') as HTMLElement | null;
+		if (page) {
+			const pageRect = page.getBoundingClientRect();
+			pdfWidth = pageRect.width + 16;
 
-    pdfSlick = new PDFSlick({
-      container,
-      store,
-      options: {
-        scaleValue: 'page-fit'
-      }
-    });
+			if (scale > 0) {
+				basePageWidth = page.clientWidth / scale;
+			}
+		}
+	};
 
-    /**
-     * Load the PDF document
-     */
-    pdfSlick.loadDocument(pdfData);
-    store.setState({ pdfSlick });
+	const captureMaxAvailableWidth = () => {
+		if (!pdfAreaWrapper) return;
+		const parent = pdfAreaWrapper.parentElement;
+		if (parent) {
+			const available = parent.clientWidth - 48 - 288;
+			if (available > maxAvailableWidth) {
+				maxAvailableWidth = available;
+			}
+		}
+	};
 
-    /**
-     * Subscribe to state changes, and keep values of interest as reactive Svelte vars, 
-     * (or alternatively we could hook these or entire PDF state into a Svelte store)
-     * 
-     * Also keep reference of the unsubscribe function we call on component destroy
-     */
-    unsubscribe = store.subscribe((s) => {
-      pageNumber = s.pageNumber;
-      numPages = s.numPages;
-      console.log('PDFSlickState', s); // ! This PDFSlickState object holds a lot of info like zoom , curent page, total pages, etc. and updates on changes reactivley
-    });
-  }
+	let maxScale = $derived(
+		basePageWidth > 0 && maxAvailableWidth > 0
+			? (maxAvailableWidth - 16) / basePageWidth
+			: 10
+	);
 
-  onMount(initialize);
-  onDestroy(() => unsubscribe?.())
+	const initialize = async () => {
+		if (!container) return;
+
+		const { create, PDFSlick } = await import('@pdfslick/core');
+		const store = create();
+
+		pdfSlick = new PDFSlick({
+			container,
+			store,
+					options: {
+				scaleValue: 'page-height'
+					}
+		});
+
+		pdfSlick.loadDocument(pdfData);
+		store.setState({ pdfSlick });
+
+		unsubscribe = store.subscribe((s) => {
+			pageNumber = s.pageNumber;
+			numPages = s.numPages;
+
+			// Clamp incoming scale to respect the configured min/max values.
+			// This prevents modes like `page-height` from producing a scale
+			// that is larger than what's available in the UI.
+			const incomingScale = s.scale ?? 1;
+			const clampedScale = Math.min(Math.max(incomingScale, MIN_SCALE), maxScale);
+
+			// If the store attempted to set a scale above the computed max, force
+			// the pdf viewer to use the clamped value so UI and viewer stay in sync.
+			if (incomingScale !== clampedScale && pdfSlick) {
+				pdfSlick.currentScale = clampedScale;
+			}
+
+			scale = clampedScale;
+			requestAnimationFrame(() => {
+				updatePdfWidth();
+				captureMaxAvailableWidth();
+			});
+		});
+	};
+
+	const handleScroll = (e: Event) => {
+		const target = e.target as HTMLElement;
+		scrollTop = target.scrollTop;
+	};
+
+	// Forward wheel events from comments sidebar to PDF container
+	const handleCommentsWheel = (e: WheelEvent) => {
+		if (!container) return;
+		e.preventDefault();
+		if (e.ctrlKey) {
+			// Ctrl+wheel zooms the PDF
+			if (e.deltaY < 0) {
+				zoomIn();
+			} else {
+				zoomOut();
+			}
+		} else {
+			container.scrollTop += e.deltaY;
+		}
+	};
+
+	// Handle Ctrl+wheel zoom on PDF area
+	const handlePdfWheel = (e: WheelEvent) => {
+		if (e.ctrlKey) {
+			e.preventDefault();
+			if (e.deltaY < 0) {
+				zoomIn();
+			} else {
+				zoomOut();
+			}
+		}
+	};
+
+	const zoomIn = () => {
+		if (!pdfSlick) return;
+		pdfSlick.currentScale = scale + ZOOM_STEP;
+	};
+
+	const zoomOut = () => {
+		if (!pdfSlick) return;
+		pdfSlick.currentScale = scale - ZOOM_STEP;
+	};
+
+	const fitHeight = () => {
+		if (pdfSlick) pdfSlick.currentScaleValue = 'page-height';
+	};
+
+
+	const prevPage = () => pdfSlick?.gotoPage(Math.max(pageNumber - 1, 1));
+	const nextPage = () => pdfSlick?.gotoPage(Math.min(pageNumber + 1, numPages));
+
+	// Handle clicks outside of comments to unpin
+	const handleContainerClick = (e: MouseEvent) => {
+		const target = e.target as HTMLElement;
+		// Check if click was on a comment badge, highlight, or inside comment card
+		const isCommentRelated =
+			target.closest('[data-comment-badge]') ||
+			target.closest('.annotation-highlight') ||
+			target.closest('.comment-card');
+
+		if (!isCommentRelated && documentStore.pinnedComment) {
+			documentStore.setPinned(null);
+			documentStore.setCommentCardActive(false);
+			documentStore.setSelected(null);
+		}
+	};
+
+	// Handle Escape key to unpin
+	const handleContainerKeydown = (e: KeyboardEvent) => {
+		if (e.key === 'Escape' && documentStore.pinnedComment) {
+			documentStore.setPinned(null);
+			documentStore.setCommentCardActive(false);
+			documentStore.setSelected(null);
+		}
+	};
+
+	$effect(() => {
+		if (!pdfAreaWrapper?.parentElement) return;
+		const parent = pdfAreaWrapper.parentElement;
+		const resizeObserver = new ResizeObserver(() => {
+			const available = parent.clientWidth - 48 - 288;
+			maxAvailableWidth = available;
+		});
+		resizeObserver.observe(parent);
+		return () => resizeObserver.disconnect();
+	});
+
+	onMount(initialize);
+	onDestroy(() => unsubscribe?.());
 </script>
 
-<!-- ... -->
 
-<div class="absolute inset-0 bg-slate-200/70 pdfSlick">
+<!-- svelte-ignore a11y_no_static_element_interactions -->
+<div class="pdf-viewer-container flex h-full w-full bg-background" onclick={handleContainerClick} onkeydown={handleContainerKeydown}>
+	<PdfControls
+		{scale}
+		{maxScale}
+		{pageNumber}
+		{numPages}
+		onZoomIn={zoomIn}
+		onZoomOut={zoomOut}
+		onFitHeight={fitHeight}
+		onPrevPage={prevPage}
+		onNextPage={nextPage}
+	/>
 
-  <div class="flex-1 relative h-full" id="container">
-    <!--
-      The important part —
-      we use the reference to this `container` when creating PDF Slick instance above
-    -->
-    <div id="viewerContainer" class="pdfSlickContainer absolute inset-0 overflow-auto" bind:this={container}>
-      <div id="viewer" class="pdfSlickViewer pdfViewer"></div>
-    </div>
-  </div>
-
-  <!-- ... -->
-
-  <!-- Use `pdfSlick`, `pageNumber` and `numPages` to create PDF pagination -->
-  <div class="flex justify-center">
-    <button
-      onclick={() => pdfSlick?.gotoPage(Math.max(pageNumber - 1, 1))}
-      disabled={pageNumber <= 1}
+	<!-- PDF Viewer Area - shrinks to fit content when zoomed out -->
+	<div
+		class="relative h-full overflow-hidden bg-text/5 transition-[width] duration-150"
+		style="width: {pdfWidth > 0 ? `${pdfWidth}px` : '100%'}; max-width: 100%;"
+		bind:this={pdfAreaWrapper}
+	>
+		<div
+			id="viewerContainer"
+			class="pdfSlickContainer absolute inset-0 overflow-y-scroll overflow-x-hidden scrollbar-none"
+			bind:this={container}
+			onscroll={handleScroll}
+			onwheel={handlePdfWheel}
 		>
-      Show Previous Page
-    </button>
-    <button
-      onclick={() =>  pdfSlick?.gotoPage(Math.min(pageNumber + 1, numPages))}
-      disabled={pageNumber >= numPages}
-    >
-      Show Next Page
-    </button>
-  </div>
+			<div id="viewer" class="pdfSlickViewer pdfViewer"></div>
+		</div>
 
+		<!-- Annotation highlights are rendered into the PDF pages -->
+		<AnnotationLayer viewerContainer={container} {scale} />
+
+		<!-- Text selection handler for creating new annotations -->
+		<TextSelectionHandler viewerContainer={container} />
+	</div>
+
+	<!-- Right Sidebar - Comments (expands to fill remaining space) -->
+	<div
+		class="relative min-w-72 flex-1 overflow-hidden border-l border-text/10 bg-inset"
+		onwheel={handleCommentsWheel}
+		role="complementary"
+		bind:this={sidebarContainer}
+	>
+		<CommentSidebar viewerContainer={container} {scale} {scrollTop} />
+	</div>
+
+	<!-- Connection line between comment and highlight -->
+	<ConnectionLine pdfContainer={container} {sidebarContainer} />
 </div>
+
+<style>
+	/* Override PDF.js CSS variables to reduce spacing */
+	:global(.pdf-viewer-container) {
+		--page-margin: 4px 0;
+		--page-border: none;
+		--pdfViewer-padding-bottom: 0;
+	}
+
+	:global(.pdf-viewer-container .pdfViewer .page) {
+		margin: var(--page-margin);
+		border: var(--page-border);
+	}
+
+	:global(.pdf-viewer-container .pdfViewer) {
+		padding: 4px 8px;
+	}
+
+    
+	/* Improve clarity on high DPI displays by preferring crisp edges for
+	   canvas renderings when scaling occurs. This reduces perceived blur
+	   when the browser performs CSS scaling or when devicePixelRatio > 1. */
+	:global(.pdf-viewer-container .pdfViewer .canvasWrapper canvas) {
+		/* Use the best-available browser rendering hints for crisp text */
+		image-rendering: -webkit-optimize-contrast;
+		image-rendering: crisp-edges;
+		image-rendering: pixelated;
+	}
+
+</style>

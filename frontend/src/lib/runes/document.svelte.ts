@@ -1,27 +1,45 @@
 import { api } from '$api/client';
 import type { CommentCreate, CommentEvent, CommentRead, CommentUpdate, DocumentRead } from '$api/types';
+import type { Paginated } from '$api/pagination';
 import { notification } from '$lib/stores/notificationStore';
 import type { Annotation } from '$types/pdf';
 
 export interface CachedComment extends CommentRead {
 	replies?: CachedComment[];
-	// States
-	isActive?: boolean; // Is this comment currently active/selected/hovered
+	// Interaction state flags
+	isHighlightHovered?: boolean; // Mouse over the PDF highlight
+	isBadgeHovered?: boolean;     // Mouse over the comment badge
+	isSelected?: boolean;         // Currently selected/active comment
+	isPinned?: boolean;           // Clicked to stay open
+	isEditing?: boolean;          // In edit mode
 }
+
 const toCachedComment = (comment: CommentRead): CachedComment => ({
-	...comment,
-	isActive: false
+	...comment
 });
 
 /** Search the comment in root comments and replies recursively */
 const findComment = (inComments: CachedComment[], commentId: number): CachedComment | undefined => {
-	return (
-		inComments.find((c) => c.id === commentId) ??
-		findComment(
-			inComments.flatMap((c) => c.replies ?? []),
-			commentId
-		)
-	);
+	for (const c of inComments) {
+		if (c.id === commentId) return c;
+		if (c.replies) {
+			const found = findComment(c.replies, commentId);
+			if (found) return found;
+		}
+	}
+	return undefined;
+};
+
+/** Get all comments flattened (root + all nested replies) */
+const flattenComments = (inComments: CachedComment[]): CachedComment[] => {
+	const result: CachedComment[] = [];
+	for (const c of inComments) {
+		result.push(c);
+		if (c.replies) {
+			result.push(...flattenComments(c.replies));
+		}
+	}
+	return result;
 };
 
 const removeCommentRecursively = (fromComments: CachedComment[], commentId: number): CachedComment[] => {
@@ -35,19 +53,87 @@ const removeCommentRecursively = (fromComments: CachedComment[], commentId: numb
 
 const createDocumentStore = () => {
 	let comments: CachedComment[] = $state<CachedComment[]>([]);
-    const loadedDocument: DocumentRead | undefined = $state<DocumentRead | undefined>(undefined);
-	const pdfViewerRef: HTMLElement | null = $state<HTMLElement | null>(null);
-	const scrollContainerRef: HTMLElement | null = $state<HTMLElement | null>(null);
-	const commentSidebarRef: HTMLDivElement | null = $state<HTMLDivElement | null>(null);
+	let loadedDocument: DocumentRead | undefined = $state<DocumentRead | undefined>(undefined);
+	// Track if a comment card is actively being interacted with (badge hovered or tab clicked)
+	let isCommentCardActive: boolean = $state<boolean>(false);
+	let pdfViewerRef: HTMLElement | null = $state<HTMLElement | null>(null);
+	let scrollContainerRef: HTMLElement | null = $state<HTMLElement | null>(null);
+	let commentSidebarRef: HTMLDivElement | null = $state<HTMLDivElement | null>(null);
+
+	const setDocument = (document: DocumentRead) => {
+		loadedDocument = document;
+	};
+
+	const setCommentCardActive = (active: boolean) => {
+		isCommentCardActive = active;
+	};
+
+	const setPdfViewerRef = (ref: HTMLElement | null) => {
+		pdfViewerRef = ref;
+	};
+
+	const setScrollContainerRef = (ref: HTMLElement | null) => {
+		scrollContainerRef = ref;
+	};
+
+	const setCommentSidebarRef = (ref: HTMLDivElement | null) => {
+		commentSidebarRef = ref;
+	};
 
 	// Resets the store and loads root comments for a document
 	const setRootComments = async (rootComments: CommentRead[]): Promise<void> => {
 		comments = rootComments.map(toCachedComment);
 	};
 
-	// Sets a comment as active
-	const setActive = (commentId: number) => {
-		comments = comments.map((c) => (c.id === commentId ? { ...c, isActive: true } : { ...c }));
+	// Helper to update a flag on a specific comment (clears the flag on all others)
+	const setCommentFlag = (
+		commentId: number | null,
+		flag: 'isHighlightHovered' | 'isBadgeHovered' | 'isSelected' | 'isPinned' | 'isEditing'
+	) => {
+		const allComments = flattenComments(comments);
+		for (const c of allComments) {
+			c[flag] = c.id === commentId;
+		}
+		comments = [...comments]; // trigger reactivity
+	};
+
+	// Set highlight hovered state (when mouse is over PDF highlight)
+	const setHighlightHovered = (commentId: number | null) => {
+		setCommentFlag(commentId, 'isHighlightHovered');
+	};
+
+	// Set badge hovered state (when mouse is over comment badge)
+	const setBadgeHovered = (commentId: number | null) => {
+		setCommentFlag(commentId, 'isBadgeHovered');
+	};
+
+	// Set selected state
+	const setSelected = (commentId: number | null) => {
+		setCommentFlag(commentId, 'isSelected');
+	};
+
+	// Set pinned state
+	const setPinned = (commentId: number | null) => {
+		setCommentFlag(commentId, 'isPinned');
+	};
+
+	// Set editing state
+	const setEditing = (commentId: number | null) => {
+		setCommentFlag(commentId, 'isEditing');
+	};
+
+	// Clear all interaction state on all comments
+	const clearAllInteractionState = () => {
+		const allComments = flattenComments(comments);
+		for (const c of allComments) {
+			c.isHighlightHovered = false;
+			c.isBadgeHovered = false;
+			c.isSelected = false;
+			c.isPinned = false;
+			c.isEditing = false;
+		}
+		isCommentCardActive = false;
+		comments = [...comments]; // trigger reactivity
 	};
 
 	const updateComment = async (commentId: number, data: CommentUpdate) => {
@@ -64,27 +150,35 @@ const createDocumentStore = () => {
 	};
 
 	const createComment = async (options: {
-        annotation: Annotation;
-        parentId?: number;
-    }) => {
-        if (!loadedDocument) return;
+		annotation?: Annotation;
+		content?: string;
+		parentId?: number;
+	}): Promise<CachedComment | undefined> => {
+		if (!loadedDocument) return;
 		const result = await api.post<CommentRead>('/comments', {
-            annotation: options.annotation ? options.annotation as unknown as Record<string, unknown> : undefined, // TODO add validation
-            document_id: loadedDocument.id,
-            visibility: loadedDocument.view_mode
-        } satisfies CommentCreate);
+			annotation: options.annotation ? options.annotation as unknown as Record<string, unknown> : undefined,
+			content: options.content,
+			parent_id: options.parentId,
+			document_id: loadedDocument.id,
+			visibility: loadedDocument.view_mode
+		} satisfies CommentCreate);
 		if (!result.success) {
 			notification(result.error);
 			return;
 		}
+		const newComment = toCachedComment(result.data);
 		if (options.parentId) {
 			const parentComment = findComment(comments, options.parentId);
 			if (parentComment) {
 				parentComment.replies = parentComment.replies || [];
-				parentComment.replies.push(toCachedComment(result.data));
+				parentComment.replies.push(newComment);
 			}
+			comments = [...comments]; // trigger reactivity
+		} else {
+			// Root comment - add to top level
+			comments = [...comments, newComment];
 		}
-		comments = [...comments]; // trigger reactivity
+		return newComment;
 	};
 
 	const deleteComment = async (commentId: number) => {
@@ -95,6 +189,24 @@ const createDocumentStore = () => {
 		}
 
 		comments = removeCommentRecursively(comments, commentId);
+	};
+
+	const loadReplies = async (commentId: number): Promise<CachedComment[] | undefined> => {
+		const result = await api.get<Paginated<CommentRead>>('/comments', {
+			filters: [{ field: 'parent_id', operator: '==', value: commentId.toString() }]
+		});
+		if (!result.success) {
+			notification(result.error);
+			return;
+		}
+
+		const replies = result.data.data.map(toCachedComment);
+		const parentComment = findComment(comments, commentId);
+		if (parentComment) {
+			parentComment.replies = replies;
+			comments = [...comments]; // trigger reactivity
+		}
+		return replies;
 	};
 
 	const handleWebSocketEvent = (event: CommentEvent): void => {
@@ -138,18 +250,55 @@ const createDocumentStore = () => {
 		}
 	};
 
+	// Helper getters to find comments by state
+	const getHoveredComment = (): CachedComment | undefined => {
+		return flattenComments(comments).find(c => c.isHighlightHovered || c.isBadgeHovered);
+	};
+
+	const getSelectedComment = (): CachedComment | undefined => {
+		return flattenComments(comments).find(c => c.isSelected);
+	};
+
+	const getPinnedComment = (): CachedComment | undefined => {
+		return flattenComments(comments).find(c => c.isPinned);
+	};
+
+	const getEditingComment = (): CachedComment | undefined => {
+		return flattenComments(comments).find(c => c.isEditing);
+	};
 
 	return {
-        comments,
-		setActive,
+		get comments() { return comments; },
+		get loadedDocument() { return loadedDocument; },
+		get isCommentCardActive() { return isCommentCardActive; },
+		get pdfViewerRef() { return pdfViewerRef; },
+		get scrollContainerRef() { return scrollContainerRef; },
+		get commentSidebarRef() { return commentSidebarRef; },
+		// Helper getters
+		get hoveredComment() { return getHoveredComment(); },
+		get selectedComment() { return getSelectedComment(); },
+		get pinnedComment() { return getPinnedComment(); },
+		get editingComment() { return getEditingComment(); },
+		// Methods
+		setDocument,
+		setCommentCardActive,
+		setPdfViewerRef,
+		setScrollContainerRef,
+		setCommentSidebarRef,
 		setRootComments,
-		updateComment: updateComment,
+		// New flag setters
+		setHighlightHovered,
+		setBadgeHovered,
+		setSelected,
+		setPinned,
+		setEditing,
+		clearAllInteractionState,
+		// CRUD operations
+		updateComment,
 		create: createComment,
 		deleteComment,
-		pdfViewerRef,
-		scrollContainerRef,
-		commentSidebarRef,
-        handleWebSocketEvent
+		loadReplies,
+		handleWebSocketEvent
 	};
 };
 
