@@ -1,10 +1,12 @@
 <script lang="ts">
 	/**
-	 * Combined comment component that handles both grouped and single comment UIs.
+	 * Pure presenter component for comment groups.
+	 * Receives computed position from store and renders at that location.
 	 */
 	import type { CommentRead } from '$api/types';
 	import type { Annotation } from '$types/pdf';
 	import CommentBody from './CommentBody.svelte';
+	import CommentConnection from './CommentConnection.svelte';
 	import { fly, scale } from 'svelte/transition';
 	import { quintOut } from 'svelte/easing';
 	import darkModeSvelte from '$lib/stores/darkMode.svelte';
@@ -17,16 +19,15 @@
 		hoverDelayMs?: number;
 		expanded?: boolean;
 		hovered?: boolean;
-		onMouseEnter?: any;
-		onMouseLeave?: any;
-		onCommentSelect?: any;
-		onDeleteClick?: any;
-		onDeleteConfirm?: any;
-		onDeleteCancel?: any;
-		onClick?: any;
-		// DOM refs and interaction state passed from CommentSidebar
-		pdfContainerRef?: HTMLDivElement | null;
+		onMouseEnter?: () => void;
+		onMouseLeave?: () => void;
+		onCommentSelect?: (commentId: number) => void;
+		onDeleteClick?: (commentId: number, event: MouseEvent) => void;
+		onDeleteConfirm?: (commentId: number, event: MouseEvent) => void;
+		onDeleteCancel?: (event: MouseEvent) => void;
+		onClick?: (event: MouseEvent) => void;
 		sidebarRef?: HTMLDivElement | null;
+		cssScaleFactor?: number;
 		hoveredCommentId?: number | null;
 		selectedInGroup?: number | null;
 	}
@@ -46,17 +47,17 @@
 		onDeleteConfirm = () => {},
 		onDeleteCancel = () => {},
 		onClick = () => {},
-		pdfContainerRef = null,
 		sidebarRef = null,
+		cssScaleFactor = 1,
 		hoveredCommentId = null,
-		selectedInGroup = null,
+		selectedInGroup = null
 	}: Props = $props();
 
 	// Separate timers for group hover handling
 	let lastGroupHoverTime = $state(0);
 	let groupLeaveTimer: ReturnType<typeof setTimeout> | null = $state(null);
 
-	// Group hover handlers that respect hoverDelayMs (mirrors CommentGroup behavior)
+	// Group hover handlers that respect hoverDelayMs
 	function handleMouseEnter() {
 		if (groupLeaveTimer) {
 			clearTimeout(groupLeaveTimer);
@@ -89,9 +90,6 @@
 		return comments[0];
 	});
 
-	// Fixed vertical offset handled by connection component.
-	import CommentConnection from './CommentConnection.svelte';
-
 	// Determine active comment id used by connection (hovered in group takes precedence)
 	let activeCommentId = $derived.by(() => {
 		return (
@@ -103,38 +101,40 @@
 		);
 	});
 
-	let activeAnnotation = $derived(activeComment.annotation as unknown as Annotation);
+	let activeAnnotation = $derived(activeComment?.annotation as unknown as Annotation);
+
+	// Bindable reference to the sidebar group element
+	let groupRef: HTMLElement | null = $state(null);
 </script>
 
-<!-- Connection mounted for the lifetime of the group so it can finish erase animation -->
+<!-- Connection mounted for the lifetime of the group -->
 <CommentConnection
-	commentIds={comments.map((c) => c.id)}
 	{activeCommentId}
-	{pdfContainerRef}
 	{sidebarRef}
+	{groupRef}
 	visible={expanded || hovered}
 	color={activeAnnotation?.color}
+	{cssScaleFactor}
 />
+
 {#if expanded || hovered}
-	<!-- Expanded container used for both group and single comment expanded states -->
+	<!-- Expanded container for both group and single comment -->
 	<div
-		class="bg-inset absolute left-4 right-2 z-20 overflow-visible rounded-lg border-l-4 shadow-lg"
+		class="comment-card bg-inset absolute left-4 right-2 z-20 overflow-visible rounded-lg border-l-4 shadow-lg"
 		style:top="{top}px"
-		style:border-left-color={activeAnnotation.color}
-		data-comment-group={comments.map((c) => c.id).join('-')}
-		data-active-comment={activeComment.id}
+		style:border-left-color={activeAnnotation?.color ?? '#ccc'}
+		bind:this={groupRef}
 		onmouseenter={handleMouseEnter}
 		onmouseleave={handleMouseLeave}
 		onclick={onClick}
 		onkeydown={(e) => {
-			// Don't prevent default if user is typing in an input/textarea
 			const target = e.target as HTMLElement;
 			if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
 				return;
 			}
 			if (e.key === 'Enter' || e.key === ' ') {
 				e.preventDefault();
-				onClick(e as any);
+				onClick(e as unknown as MouseEvent);
 			}
 		}}
 		role="button"
@@ -157,7 +157,7 @@
 							onCommentSelect(comment.id);
 						}}
 					>
-						<div class="h-2.5 w-2.5 rounded-full" style:background-color={annotation.color}></div>
+						<div class="h-2.5 w-2.5 rounded-full" style:background-color={annotation?.color ?? '#ccc'}></div>
 						<span>{comment.user?.username?.[0]?.toUpperCase() ?? '?'}</span>
 					</button>
 				{/each}
@@ -182,8 +182,7 @@
 	<div
 		class="absolute left-4 z-10 flex max-w-full justify-start"
 		style:top="{top}px"
-		data-comment-group={comments.map((c) => c.id).join('-')}
-		data-active-comment={activeComment.id}
+		bind:this={groupRef}
 		onmouseenter={handleMouseEnter}
 		onmouseleave={handleMouseLeave}
 		role="button"
@@ -192,7 +191,7 @@
 		out:scale={{ duration: 150, start: 0.8, easing: quintOut }}
 	>
 		<div
-			class="cursor-pointer rounded-sm px-2.5 py-1 opacity-100 shadow-lg transition-all duration-200"
+			class="cursor-pointer rounded-sm px-2 py-0.5 opacity-100 shadow-lg transition-all duration-200"
 			style:background-color={badgeColor}
 		>
 			<span
@@ -205,17 +204,3 @@
 		</div>
 	</div>
 {/if}
-
-<style>
-	:global(.comment-sidebar) :global(svg) {
-		overflow: visible;
-	}
-
-	:global {
-		@keyframes draw {
-			to {
-				stroke-dashoffset: 0;
-			}
-		}
-	}
-</style>

@@ -176,6 +176,7 @@ export interface DocumentRead {
   name: string;
   group_id: string;
   visibility: Visibility;
+  view_mode: Visibility;
 }
 export interface DocumentTransfer {
   group_id: string;

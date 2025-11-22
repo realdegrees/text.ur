@@ -23,11 +23,27 @@
 	// PDF viewer state
 	let documentScrollRef: HTMLDivElement | null = $state(null);
 	let pdfContainerRef: HTMLDivElement | null = $state(null);
+	let sidebarRef: HTMLDivElement | null = $state(null);
 	let currentPage = $state(1);
 	let totalPages = $state(0);
 	let scale = $state(1.5);
+	let cssScaleFactor = $state(1);
+	let documentScrollTop = $state(0);
 	let highlightColor = $state('#FFFF00');
+
+	// Page data array is provided by commentStore; keep a local reactive copy
 	let pageDataArray = $state<Array<{ pageNumber: number; width: number; height: number }>>([]);
+	let pageDataCacheVersion = $state(0);
+
+	commentStore.subscribeToCacheVersion((v) => {
+		pageDataCacheVersion = v;
+	});
+
+	$effect(() => {
+		// Update local copy when the store's page data changes
+		void pageDataCacheVersion;
+		pageDataArray = commentStore.getPageDataArray() ?? [];
+	});
 
 	// Handle divider drag
 	let dragStartWidth = $state(0);
@@ -60,6 +76,22 @@
 		observer.observe(containerRef);
 
 		return () => observer.disconnect();
+	});
+
+	// Register the scroll container in the comment store
+	$effect(() => {
+		if (documentScrollRef) commentStore.registerScrollContainerRef(documentScrollRef);
+		return () => {
+			commentStore.registerScrollContainerRef(null);
+		};
+	});
+
+	// Register PDF container ref
+	$effect(() => {
+		if (pdfContainerRef) commentStore.registerPdfContainerRef(pdfContainerRef);
+		return () => {
+			commentStore.registerPdfContainerRef(null);
+		};
 	});
 
 	// Initialize sidebar width from localStorage or center it
@@ -121,12 +153,15 @@
 	function handleDocumentScroll() {
 		if (!documentScrollRef || !pdfContainerRef) return;
 
+		// Update scroll top state
+		documentScrollTop = documentScrollRef.scrollTop;
+
 		const scrollRect = documentScrollRef.getBoundingClientRect();
 		const scrollCenter = scrollRect.top + scrollRect.height / 2;
 
 		// Find which page is currently centered in viewport
 		for (let i = 0; i < pageDataArray.length; i++) {
-			const pageElement = pdfContainerRef.querySelector(`[data-page-number="${i + 1}"]`);
+			const pageElement = commentStore.getPageElement(i + 1);
 			if (pageElement) {
 				const pageRect = pageElement.getBoundingClientRect();
 				if (pageRect.top <= scrollCenter && pageRect.bottom >= scrollCenter) {
@@ -167,7 +202,7 @@
 	function scrollToPage(pageNum: number) {
 		if (pageNum < 1 || pageNum > totalPages || !pdfContainerRef) return;
 
-		const pageElement = pdfContainerRef.querySelector(`[data-page-number="${pageNum}"]`);
+		const pageElement = commentStore.getPageElement(pageNum);
 		if (pageElement && documentScrollRef) {
 			const scrollTop =
 				pageElement.getBoundingClientRect().top -
@@ -196,7 +231,7 @@
 		// Load document file
 		loadDocumentFile();
 
-		// Connect to WebSocket for real-time updates (uses httponly cookies for auth)
+		// Connect to WebSocket for real-time updates
 		await documentWebSocket.connect(data.document.id);
 
 		// Subscribe to comment events from WebSocket
@@ -217,6 +252,34 @@
 		// Clear comment store
 		commentStore.clear();
 	});
+
+	// ===== CORE LAYOUT ORCHESTRATION =====
+	// This is the single point where we trigger layout recomputation.
+	// Called whenever any layout-affecting dependency changes.
+	$effect(() => {
+		// Dependencies that affect layout
+		void scale;
+		void hoveredCommentId;
+		void focusedCommentId;
+		void isDragging;
+		void documentScrollTop;
+		void cssScaleFactor;
+		void pageDataCacheVersion;
+
+		// Must have required refs before computing
+		if (!sidebarRef || !pdfContainerRef || !documentScrollRef) {
+			return;
+		}
+
+		// Recompute layout synchronously (no debouncing for smooth scaling)
+		commentStore.recomputeLayout({
+			scale,
+			sidebarRef,
+			hoveredCommentId,
+			focusedCommentId,
+			isDragging
+		});
+	});
 </script>
 
 <!--Wrapper Flex Col-->
@@ -233,63 +296,62 @@
 			style="overflow-x: visible;"
 			bind:this={containerRef}
 		>
-				{#if documentFile}
-					<!--Controls Panel (Left Column)-->
-					<div
-						class="sticky top-4 shrink-0 self-start"
-						style="width: {CONTROLS_WIDTH}px;"
-					>
-						<ControlsPanel
-							bind:highlightColor
-							commentsCount={commentsWithAnnotation.length}
-							bind:scale
-							{currentPage}
-							{totalPages}
-							onZoomIn={() => (scale = Math.min(scale + 0.25, 5))}
-							onZoomOut={() => (scale = Math.max(scale - 0.25, 0.1))}
-							onPagePrev={() => scrollToPage(currentPage - 1)}
-							onPageNext={() => scrollToPage(currentPage + 1)}
-						/>
-					</div>
+			{#if documentFile}
+				<!--Controls Panel (Left Column)-->
+				<div
+					class="sticky top-4 shrink-0 self-start"
+					style="width: {CONTROLS_WIDTH}px;"
+				>
+					<ControlsPanel
+						bind:highlightColor
+						commentsCount={commentsWithAnnotation.length}
+						bind:scale
+						{currentPage}
+						{totalPages}
+						onZoomIn={() => (scale = Math.min(scale + 0.25, 5))}
+						onZoomOut={() => (scale = Math.max(scale - 0.25, 0.1))}
+						onPagePrev={() => scrollToPage(currentPage - 1)}
+						onPageNext={() => scrollToPage(currentPage + 1)}
+					/>
+				</div>
 
-					<!--PDF Viewer (Center Column)--> 
-					<div
-						class="shrink-0"
-						style="width: {pdfContainerWidth}px;"
-					>
-						<PdfViewer
-							pdfSource={documentFile}
-							comments={commentsWithAnnotation}
-							bind:scale
-							bind:highlightColor
-							bind:hoveredCommentId
-							bind:focusedCommentId
-							bind:totalPages
-							bind:currentPage
-							bind:pdfContainerRef
-							onPageDataUpdate={(data) => (pageDataArray = data)}
-						/>
-					</div>
+				<!--PDF Viewer (Center Column)-->
+				<div
+					class="shrink-0"
+					style="width: {pdfContainerWidth}px;"
+				>
+					<PdfViewer
+						pdfSource={documentFile}
+						comments={commentsWithAnnotation}
+						bind:scale
+						bind:highlightColor
+						bind:hoveredCommentId
+						bind:focusedCommentId
+						bind:totalPages
+						bind:currentPage
+						bind:pdfContainerRef
+						bind:cssScaleFactor
+					/>
+				</div>
 
-					<!--Resizable Divider-->
-					<ResizableDivider onDragStart={handleDragStart} onDragMove={handleDragMove} bind:isDragging />
+				<!--Resizable Divider-->
+				<ResizableDivider onDragStart={handleDragStart} onDragMove={handleDragMove} bind:isDragging />
 
-					<!--Comment Sidebar (Right Column)-->
-					<div
-						class="overflow-visible shrink-0"
-						style="width: {commentSidebarWidth}px;"
-					>
-						<CommentSidebar
-							comments={commentsWithAnnotation}
-							{pageDataArray}
-							{pdfContainerRef}
-							scrollContainerRef={documentScrollRef}
-							{scale}
-							{isDragging}
-							bind:hoveredCommentId
-							bind:focusedCommentId
-						/>
-					</div>
+				<!--Comment Sidebar (Right Column)-->
+				<div
+					class="overflow-visible shrink-0"
+					style="width: {commentSidebarWidth}px;"
+					bind:this={sidebarRef}
+				>
+					<CommentSidebar
+						{cssScaleFactor}
+						{documentScrollTop}
+						comments={commentsWithAnnotation}
+						{isDragging}
+						bind:hoveredCommentId
+						bind:focusedCommentId
+					/>
+				</div>
 			{:else}
 				<div class="flex w-full items-center justify-center py-20">
 					<div class="text-center">

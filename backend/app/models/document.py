@@ -21,6 +21,7 @@ class DocumentRead(BaseModel):
     name: str
     group_id: str
     visibility: Visibility
+    view_mode: Visibility
 
 class DocumentTransfer(SQLModel):
     group_id: str

@@ -4,6 +4,7 @@
 	import type { CommentRead } from '$api/types';
 	import type { Annotation, TextLayerItem } from '$types/pdf';
 	import { mergeHighlightBoxes } from '$lib/util/pdfUtils';
+	import { computeScaledBoundingBoxes } from '$lib/util/positionUtils';
 	import { commentStore } from '$lib/stores/commentStore';
 	import TextLayer from './TextLayer.svelte';
 	import HighlightLayer from './HighlightLayer.svelte';
@@ -18,9 +19,13 @@
 		totalPages?: number;
 		currentPage?: number;
 		pdfContainerRef?: HTMLDivElement | null;
+		// The page data is now stored centrally in commentStore; an optional
+		// callback is kept for backwards compatibility but PdfViewer will
+		// also update the commentStore directly.
 		onPageDataUpdate?: (
 			pageData: Array<{ pageNumber: number; width: number; height: number }>
 		) => void;
+		cssScaleFactor?: number;
 	}
 
 	let {
@@ -34,6 +39,7 @@
 		currentPage = $bindable(1),
 		pdfContainerRef = $bindable(null),
 		onPageDataUpdate = () => {}
+		, cssScaleFactor = $bindable(1)
 	}: Props = $props();
 
 	interface TextItem {
@@ -57,6 +63,7 @@
 		height: number;
 		baseWidth: number; // Unscaled width (at scale=1)
 		baseHeight: number; // Unscaled height (at scale=1)
+		element: HTMLDivElement | null;
 		renderTask: any | null; // Store the render task so we can cancel it
 	}
 
@@ -66,6 +73,7 @@
 	let error: string = $state('');
 	let pages: PageData[] = $state([]);
 	let pdfjsLib: any = $state(null);
+
 
 	// PDF.js worker setup
 	onMount(async () => {
@@ -98,6 +106,7 @@
 				status: 'placeholder' as PageStatus,
 				canvas: null,
 				textLayerRef: null,
+				element: null,
 				textLayerItems: [],
 				width: 0,
 				height: 0,
@@ -109,7 +118,7 @@
 			isLoading = false;
 
 			// Wait for DOM to be ready
-			await new Promise((resolve) => setTimeout(resolve, 100));
+			await sleep(100);
 
 			// Start progressive loading: render first page immediately, then queue others
 			await renderPageProgressive(0);
@@ -118,6 +127,40 @@
 			error = err instanceof Error ? err.message : 'Failed to load PDF';
 			console.error('PDF loading error:', err);
 			isLoading = false;
+		}
+	}
+
+	/**
+	 * Sleep helper.
+	 */
+	function sleep(ms: number): Promise<void> {
+		return new Promise((resolve) => setTimeout(resolve, ms));
+	}
+
+	/**
+	 * Wait for the page to expose a canvas element (polling up to a limit).
+	 */
+	async function waitForCanvas(pageData: PageData): Promise<boolean> {
+		let attempts = 0;
+		while (!pageData.canvas && attempts < 50) {
+			await sleep(200);
+			attempts++;
+		}
+		if (!pageData.canvas) {
+			console.warn(`Canvas for page ${pageData.pageNumber} not available after ${attempts} attempts`);
+			return false;
+		}
+		return true;
+	}
+
+	/**
+	 * Ensure base (unscaled) page dimensions are set on the page data.
+	 */
+	function ensureBaseDimensions(page: any, pageData: PageData) {
+		if (pageData.baseWidth === 0 || pageData.baseHeight === 0) {
+			const baseViewport = page.getViewport({ scale: 1 });
+			pageData.baseWidth = baseViewport.width;
+			pageData.baseHeight = baseViewport.height;
 		}
 	}
 
@@ -144,19 +187,9 @@
 			pageData.renderTask = null;
 		}
 
-
-		// Wait for canvas to be available
-		let attempts = 0;
-		while (!pageData.canvas && attempts < 30) {
-			await new Promise((resolve) => setTimeout(resolve, 200));
-			attempts++;
-		}
-
-		if (!pageData.canvas) {
-			console.warn(`Canvas for page ${pageIndex + 1} not available after ${attempts} attempts`);
-			return;
-		}
-
+		// Wait for canvas to be available (polling)
+		const hasCanvas = await waitForCanvas(pageData);
+		if (!hasCanvas) return;
 
 		try {
 			// Only change status if not already ready (to avoid hiding during re-render)
@@ -167,16 +200,12 @@
 			const page = await pdfDocument.getPage(pageData.pageNumber);
 
 			// Get base dimensions (unscaled) if not already set
-			if (pageData.baseWidth === 0 || pageData.baseHeight === 0) {
-				const baseViewport = page.getViewport({ scale: 1 });
-				pageData.baseWidth = baseViewport.width;
-				pageData.baseHeight = baseViewport.height;
-			}
+			ensureBaseDimensions(page, pageData);
 
 			// Get viewport - PDF.js will handle rotation automatically
 			const viewport = page.getViewport({ scale });
 
-			const canvas = pageData.canvas;
+			const canvas = pageData.canvas as HTMLCanvasElement;
 			const context = canvas.getContext('2d', { alpha: false });
 			if (!context) return;
 
@@ -226,7 +255,7 @@
 			for (let i = 1; i < totalPages; i++) {
 				await renderPageProgressive(i);
 				// Small delay between pages to keep UI responsive
-				await new Promise((resolve) => setTimeout(resolve, 50));
+				await sleep(50);
 			}
 		}, 100);
 	}
@@ -238,9 +267,10 @@
 
 		try {
 			const textContent = await page.getTextContent();
-			const items: TextLayerItem[] = [];
-
-			textContent.items.forEach((item: TextItem, index: number) => {
+			/**
+			 * Build text-layer items from PDF.js text content.
+			 */
+			pageData.textLayerItems = textContent.items.map((item: TextItem, index: number) => {
 				const tx = pdfjsLib.Util.transform(viewport.transform, item.transform);
 				const style = textContent.styles?.[item.fontName];
 				const angle = Math.atan2(tx[1], tx[0]);
@@ -249,18 +279,16 @@
 				const left = tx[4];
 				const top = tx[5] - fontHeight * fontAscent;
 
-				items.push({
+				return {
 					id: `text-${pageData.pageNumber}-${index}`,
 					text: item.str,
 					left,
 					top,
 					fontSize: fontHeight,
-					fontFamily: style?.fontFamily || 'sans-serif',
+					fontFamily: style?.fontFamily || "sans-serif",
 					angle
-				});
+				} as TextLayerItem;
 			});
-
-			pageData.textLayerItems = items;
 		} catch (err) {
 			console.error('Text layer rendering error:', err);
 		}
@@ -339,12 +367,7 @@
 		let foundHover = false;
 		for (const comment of pageComments) {
 			const annotation = comment.annotation as unknown as Annotation;
-			const scaledBoxes = annotation.boundingBoxes.map((box) => ({
-				x: box.x * pageData.width,
-				y: box.y * pageData.height,
-				width: box.width * pageData.width,
-				height: box.height * pageData.height
-			}));
+			const scaledBoxes = computeScaledBoundingBoxes(annotation, { pageNumber: pageData.pageNumber, width: pageData.width, height: pageData.height }, 1);
 
 			const margin = 3;
 			const isOver = scaledBoxes.some(
@@ -367,7 +390,7 @@
 		}
 	}
 
-	// Update page data array for parent
+	// Update page data array for parent and commentStore
 	function updatePageDataArray() {
 		const data = pages
 			.filter((p) => p.baseWidth > 0 && p.baseHeight > 0)
@@ -376,18 +399,36 @@
 				width: p.baseWidth,
 				height: p.baseHeight
 			}));
+		// Backwards-compat: still call callback
 		onPageDataUpdate(data);
+		// Central store update to avoid duplication of the page data
+		commentStore.setPageDataArray(data);
 	}
+
+	// Register page elements with the comment store so other components can
+	// find pages without using `data-page-number` attributes.
+	$effect(() => {
+		for (const p of pages) {
+			if (p.element) {
+				commentStore.registerPageElement(p.pageNumber, p.element);
+			}
+		}
+		// Register the pdf container with the commentStore so other components
+		// can retrieve it without prop threading.
+		commentStore.registerPdfContainerRef(pdfContainerRef);
+
+		
+	});
 
 	// Track the scale at which pages were last rendered
 	let renderedScale = $state(0);
 	let scaleInitialized = $state(false);
 	let renderTimeout: ReturnType<typeof setTimeout> | null = null;
 
-	// Calculate CSS scale transform for smooth preview during dragging
-	const cssScaleFactor = $derived.by(() => {
-		if (renderedScale === 0 || scale === 0) return 1;
-		return scale / renderedScale;
+	// Calculate & export CSS scale transform for smooth preview during dragging
+	// Keep the exported value in sync with the internal computed value.
+	$effect(() => {
+		cssScaleFactor = renderedScale === 0 || scale === 0 ? 1 : scale / renderedScale;
 	});
 
 	$effect(() => {
@@ -466,7 +507,7 @@
 		{#each pages as pageData (pageData.pageNumber)}
 			<div
 				class="page-wrapper relative w-full bg-white shadow-lg"
-				data-page-number={pageData.pageNumber}
+				bind:this={pageData.element}
 				style="width: {pageData.width * cssScaleFactor}px; height: {pageData.height * cssScaleFactor}px;"
 			>
 				<div

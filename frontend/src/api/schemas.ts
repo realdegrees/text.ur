@@ -99,7 +99,8 @@ export const documentReadSchema = z.object({
     s3_key: z.string(),
     name: z.string(),
     group_id: z.string(),
-    visibility: visibilitySchema
+    visibility: visibilitySchema,
+    view_mode: visibilitySchema
 });
 
 export const documentTransferSchema = z.object({

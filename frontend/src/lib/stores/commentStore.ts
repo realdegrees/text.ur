@@ -2,36 +2,106 @@ import { writable } from 'svelte/store';
 import { api } from '$api/client';
 import type { CommentRead, CommentCreate, CommentUpdate, CommentEvent } from '$api/types';
 import type { Annotation } from '$types/pdf';
+import {
+	computeScaledBoundingBoxes,
+	computeHighlightScreenPosition,
+	groupCommentsByProximity,
+	resolveCollisions
+} from '$lib/util/positionUtils';
 import type { Paginated } from '$api/pagination';
 import { notification } from './notificationStore';
 
 /**
- * Centralized store for managing comment tree state and API operations
+ * Enhanced LocalComment with all computed UI metadata
+ */
+export interface LocalComment extends CommentRead {
+	// Page metadata for the page where the annotation lives
+	pageData: { pageNumber: number; width: number; height: number } | null;
+
+	// Scaled bounding boxes (normalized 0-1 → pixel coordinates at current scale)
+	scaledBoundingBoxes: Array<{ x: number; y: number; width: number; height: number }>;
+
+	// Screen-space positions relative to sidebar coordinate system
+	screenPosition: {
+		highlight: {
+			leftX: number;
+			rightX: number;
+			top: number;
+			bottom: number;
+		};
+		comment: {
+			idealTop: number;    // Where comment wants to be (aligned with highlight)
+			actualTop: number;   // Where comment is after collision avoidance
+		};
+	} | null;
+
+	// Grouping metadata
+	groupId: string | null;         // ID of group this comment belongs to
+	groupIndex: number;             // Position within group (0-based)
+	isGroupActive: boolean;         // Is this comment's group expanded/hovered
+
+	// DOM element references (registered by components)
+	pageElement: HTMLElement | null;
+	highlightElement: HTMLElement | null;
+}
+
+/**
+ * CommentGroup represents a cluster of comments that are positioned close together
+ */
+export interface CommentGroup {
+	id: string;
+	commentIds: number[];
+	activeCommentId: number;  // Which comment's highlight to show connection line to
+	idealTop: number;         // Average ideal position of all comments in group
+	actualTop: number;        // Final position after collision detection
+	isExpanded: boolean;      // Is the group showing full comment cards
+	isHovered: boolean;       // Is the group currently hovered
+	element?: HTMLElement | null;
+}
+
+/**
+ * Layout computation options
+ */
+interface LayoutOptions {
+	scale: number;
+	sidebarRef: HTMLElement | null;
+	hoveredCommentId: number | null;
+	focusedCommentId: number | null;
+	isDragging: boolean;
+}
+
+/**
+ * Centralized store for managing comment tree state and API operations.
+ * Handles all position computation and grouping logic.
  */
 class CommentStore {
-	private store = writable<CommentRead[]>([]);
+	// Core data
+	private store = writable<LocalComment[]>([]);
 	private documentId: string | null = null;
 	private currentUserId: number | null = null;
 	private repliesCache: Map<number, CommentRead[]> = new Map();
-	private cacheVersion = writable(0); // Incremented when cache changes
 
-	/**
-	 * Subscribe to comment changes
-	 */
+	// DOM references (registered by components)
+	private pageElementMap: Map<number, HTMLElement | null> = new Map();
+	private pdfContainerRef: HTMLElement | null = null;
+	private scrollContainerRef: HTMLElement | null = null;
+	private pageDataArrayValue: Array<{ pageNumber: number; width: number; height: number }> | null = null;
+
+	private highlightElementMap: WeakMap<HTMLElement, number> = new WeakMap();
+	private cacheVersion = writable(0);
+	private computedGroups = writable<CommentGroup[]>([]);
+	private currentLayoutOptions: LayoutOptions | null = null;
+
 	subscribe = this.store.subscribe;
+	subscribeToGroups = this.computedGroups.subscribe;
+	subscribeToCacheVersion = this.cacheVersion.subscribe;
 
-	/**
-	 * Initialize the store with document context and load root comments
-	 */
 	async initialize(documentId: string, currentUserId: number | null = null): Promise<void> {
 		this.documentId = documentId;
 		this.currentUserId = currentUserId;
 		await this.loadRootComments();
 	}
 
-	/**
-	 * Load all root-level comments (with annotations, no parent)
-	 */
 	private async loadRootComments(): Promise<void> {
 		if (!this.documentId) return;
 
@@ -64,13 +134,28 @@ class CommentStore {
 			offset += limit;
 		}
 
-		this.store.set(allComments);
+		// Convert to LocalComment with initial null values
+		this.store.set(
+			allComments.map((c) => this.createLocalComment(c))
+		);
 	}
 
 	/**
-	 * Subscribe to cache version changes (for reactivity)
+	 * Create a LocalComment from a CommentRead with default UI metadata
 	 */
-	subscribeToCacheVersion = this.cacheVersion.subscribe;
+	private createLocalComment(comment: CommentRead): LocalComment {
+		return {
+			...comment,
+			pageData: null,
+			scaledBoundingBoxes: [],
+			screenPosition: null,
+			groupId: null,
+			groupIndex: 0,
+			isGroupActive: false,
+			pageElement: null,
+			highlightElement: null
+		};
+	}
 
 	/**
 	 * Increment cache version to trigger reactivity
@@ -80,26 +165,189 @@ class CommentStore {
 	}
 
 	/**
-	 * Check if replies are already cached for a comment
+	 * CORE METHOD: Recompute all layout positions and grouping.
+	 * This is called by the parent component whenever layout-affecting state changes.
+	 * No batching/debouncing - runs synchronously for smooth scaling/resizing.
 	 */
-	hasRepliesCache(commentId: number): boolean {
-		return this.repliesCache.has(commentId);
+	recomputeLayout(options: LayoutOptions): void {
+		this.currentLayoutOptions = options;
+		const { scale, sidebarRef, hoveredCommentId, focusedCommentId } = options;
+
+		// Early exit if required refs aren't available
+		if (!sidebarRef || !this.pdfContainerRef || !this.scrollContainerRef || !this.pageDataArrayValue) {
+			return;
+		}
+
+		const pageDataArray = this.pageDataArrayValue;
+
+		// Step 1: Update all comment positions
+		this.store.update((comments) => {
+			return comments.map((comment) => {
+				const annotation = comment.annotation as unknown as Annotation;
+				if (!annotation?.pageNumber) return comment;
+
+				// Find page data
+				const pageData = pageDataArray.find((p) => p.pageNumber === annotation.pageNumber);
+				if (!pageData) return comment;
+
+				// Compute scaled bounding boxes
+				const scaledBoxes = computeScaledBoundingBoxes(annotation, pageData, scale);
+
+				// Compute screen position for highlight
+				const highlightScreenPos = computeHighlightScreenPosition({
+					annotation,
+					pageData,
+					scale,
+					pageElement: this.pageElementMap.get(annotation.pageNumber) ?? null,
+					highlightElement: comment.highlightElement,
+					pdfContainerRef: this.pdfContainerRef,
+					scrollContainerRef: this.scrollContainerRef,
+					sidebarRef,
+					scaledBoxes
+				});
+
+				// Update comment with new data
+				return {
+					...comment,
+					pageData,
+					scaledBoundingBoxes: scaledBoxes,
+					screenPosition: highlightScreenPos ? {
+						highlight: highlightScreenPos,
+						comment: {
+							idealTop: highlightScreenPos.top,
+							actualTop: highlightScreenPos.top // Will be updated after collision detection
+						}
+					} : null
+				};
+			});
+		});
+
+		// Step 2: Group comments by proximity
+		let currentComments: LocalComment[] = [];
+		this.store.subscribe((c) => { currentComments = c; })();
+
+		const groups = groupCommentsByProximity(currentComments, {
+			groupThreshold: 40,
+			hoveredCommentId,
+			focusedCommentId
+		});
+
+		// Step 3: Apply collision detection to groups
+		const resolvedGroups = resolveCollisions(groups, {
+			minGap: 8,
+		});
+
+		// Step 4: Update comments with final positions and group metadata
+		this.store.update((comments) => {
+			return comments.map((comment) => {
+				// Find which group this comment belongs to
+				const group = resolvedGroups.find((g) => g.commentIds.includes(comment.id));
+				if (!group) return comment;
+
+				// Update with group metadata and final position
+				return {
+					...comment,
+					groupId: group.id,
+					groupIndex: group.commentIds.indexOf(comment.id),
+					isGroupActive: group.isExpanded || group.isHovered,
+					screenPosition: comment.screenPosition ? {
+						...comment.screenPosition,
+						comment: {
+							...comment.screenPosition.comment,
+							actualTop: group.actualTop
+						}
+					} : null
+				};
+			});
+		});
+
+		// Step 5: Update computed groups
+		this.computedGroups.set(resolvedGroups);
 	}
 
+
 	/**
-	 * Get cached replies for a comment
+	 * Set page data array (called by PdfViewer when pages are rendered)
 	 */
+	setPageDataArray(pageData: Array<{ pageNumber: number; width: number; height: number }>): void {
+		if (!pageData || pageData.length === 0) return;
+		this.pageDataArrayValue = pageData;
+		this.incrementCacheVersion();
+
+		// Trigger recompute if we have layout options
+		if (this.currentLayoutOptions) {
+			this.recomputeLayout(this.currentLayoutOptions);
+		}
+	}
+
+	getPageDataArray(): Array<{ pageNumber: number; width: number; height: number }> | null {
+		return this.pageDataArrayValue;
+	}
+
+	registerPageElement(pageNumber: number, element: HTMLElement | null): void {
+		this.pageElementMap.set(pageNumber, element);
+	}
+
+	getPageElement(pageNumber: number): HTMLElement | null {
+		return this.pageElementMap.get(pageNumber) ?? null;
+	}
+
+	registerPdfContainerRef(element: HTMLElement | null): void {
+		this.pdfContainerRef = element;
+	}
+
+	getPdfContainerRef(): HTMLElement | null {
+		return this.pdfContainerRef;
+	}
+
+	registerScrollContainerRef(element: HTMLElement | null): void {
+		this.scrollContainerRef = element;
+	}
+
+	getScrollContainerRef(): HTMLElement | null {
+		return this.scrollContainerRef;
+	}
+
+	registerAnnotationHighlightElement(commentId: number, element: HTMLElement | null): void {
+		this.store.update((comments) =>
+			comments.map((c) => (c.id === commentId ? { ...c, highlightElement: element } : c))
+		);
+
+		if (element) {
+			this.highlightElementMap.set(element, commentId);
+		} else {
+			const existing = this.getLocalComment(commentId)?.highlightElement;
+			if (existing) this.highlightElementMap.delete(existing);
+		}
+	}
+
+	findCommentByHighlightElement(node: HTMLElement | null): number | null {
+		if (!node) return null;
+
+		let el: HTMLElement | null = node;
+		while (el) {
+			const id = this.highlightElementMap.get(el);
+			if (id !== undefined) return id;
+			el = el.parentElement;
+		}
+		return null;
+	}
+
+	getLocalComment(commentId: number): LocalComment | undefined {
+		let result: LocalComment | undefined;
+		this.store.subscribe((comments) => {
+			result = comments.find((c) => c.id === commentId);
+		})();
+		return result;
+	}
+
 	getCachedReplies(commentId: number): CommentRead[] | undefined {
 		return this.repliesCache.get(commentId);
 	}
 
-	/**
-	 * Load replies for a specific comment (uses cache if available)
-	 */
 	async loadReplies(commentId: number, forceRefresh: boolean = false): Promise<CommentRead[]> {
 		if (!this.documentId) return [];
 
-		// Return cached replies if available and not forcing refresh
 		if (!forceRefresh && this.repliesCache.has(commentId)) {
 			return this.repliesCache.get(commentId)!;
 		}
@@ -116,16 +364,11 @@ class CommentStore {
 			return [];
 		}
 
-		// Cache the replies
 		this.repliesCache.set(commentId, result.data.data);
 		this.incrementCacheVersion();
-
 		return result.data.data;
 	}
 
-	/**
-	 * Create a new comment (can be root or reply)
-	 */
 	async create(data: {
 		content?: string;
 		annotation?: Annotation;
@@ -151,63 +394,29 @@ class CommentStore {
 
 		// Update local state
 		if (data.parentId) {
-			// Add to parent's cached replies and increment num_replies
 			const cachedReplies = this.repliesCache.get(data.parentId) || [];
 			this.repliesCache.set(data.parentId, [...cachedReplies, result.data]);
 			this.incrementCacheVersion();
 
-			// Increment parent's num_replies count
 			this.updateCommentInTree(data.parentId, (comment) => ({
 				...comment,
 				num_replies: comment.num_replies + 1
 			}));
 		} else {
-			// Add as root comment
-			this.store.update((comments) => [...comments, result.data]);
+			this.store.update((comments) => [
+				...comments,
+				this.createLocalComment(result.data)
+			]);
+
+			// Recompute layout to position the new comment
+			if (this.currentLayoutOptions) {
+				this.recomputeLayout(this.currentLayoutOptions);
+			}
 		}
 
 		return result.data;
 	}
 
-	/**
-	 * Update an existing comment in the local tree
-	 */
-	private updateCommentInTree(
-		commentId: number,
-		updater: (comment: CommentRead) => CommentRead
-	): void {
-		// First, try to update in the root store
-		let found = false;
-		this.store.update((comments) => {
-			const updated = comments.map((comment) => {
-				if (comment.id === commentId) {
-					found = true;
-					return updater(comment);
-				}
-				return comment;
-			});
-			return updated;
-		});
-
-		// If not found in root, search through all cached replies
-		if (!found) {
-			for (const [parentId, replies] of this.repliesCache.entries()) {
-				const index = replies.findIndex((reply) => reply.id === commentId);
-				if (index !== -1) {
-					const updatedReplies = [...replies];
-					updatedReplies[index] = updater(replies[index]);
-					this.repliesCache.set(parentId, updatedReplies);
-					this.incrementCacheVersion();
-					found = true;
-					break;
-				}
-			}
-		}
-	}
-
-	/**
-	 * Update an existing comment
-	 */
 	async update(commentId: number, data: CommentUpdate): Promise<boolean> {
 		const result = await api.update(`/comments/${commentId}`, data);
 
@@ -216,7 +425,6 @@ class CommentStore {
 			return false;
 		}
 
-		// Update in local tree
 		this.updateCommentInTree(commentId, (comment) => ({
 			...comment,
 			content: data.content ?? comment.content,
@@ -228,22 +436,6 @@ class CommentStore {
 		return true;
 	}
 
-	/**
-	 * Find the parent ID of a comment by searching the cache
-	 */
-	private findParentId(commentId: number): number | null {
-		// Search through cached replies to find which parent contains this comment
-		for (const [parentId, replies] of this.repliesCache.entries()) {
-			if (replies.some((reply) => reply.id === commentId)) {
-				return parentId;
-			}
-		}
-		return null;
-	}
-
-	/**
-	 * Delete a comment
-	 */
 	async delete(commentId: number, parentId?: number): Promise<boolean> {
 		const result = await api.delete(`/comments/${commentId}`);
 
@@ -252,12 +444,9 @@ class CommentStore {
 			return false;
 		}
 
-		// If parentId not provided, try to find it
 		const actualParentId = parentId ?? this.findParentId(commentId);
 
-		// Update local state
 		if (actualParentId) {
-			// Remove from parent's cached replies
 			const cachedReplies = this.repliesCache.get(actualParentId) || [];
 			this.repliesCache.set(
 				actualParentId,
@@ -265,13 +454,11 @@ class CommentStore {
 			);
 			this.incrementCacheVersion();
 
-			// Decrement parent's num_replies count
 			this.updateCommentInTree(actualParentId, (comment) => ({
 				...comment,
 				num_replies: Math.max(0, comment.num_replies - 1)
 			}));
 		} else {
-			// Remove root comment from store and its cache
 			this.repliesCache.delete(commentId);
 			this.incrementCacheVersion();
 			this.store.update((comments) => comments.filter((comment) => comment.id !== commentId));
@@ -280,16 +467,49 @@ class CommentStore {
 		return true;
 	}
 
-	/**
-	 * Get current userId
-	 */
+	private updateCommentInTree(
+		commentId: number,
+		updater: (comment: CommentRead) => CommentRead
+	): void {
+		let found = false;
+		this.store.update((comments) => {
+			const updated = comments.map((comment) => {
+				if (comment.id === commentId) {
+					found = true;
+					return updater(comment) as LocalComment;
+				}
+				return comment;
+			});
+			return updated;
+		});
+
+		if (!found) {
+			for (const [parentId, replies] of this.repliesCache.entries()) {
+				const index = replies.findIndex((reply) => reply.id === commentId);
+				if (index !== -1) {
+					const updatedReplies = [...replies];
+					updatedReplies[index] = updater(replies[index]);
+					this.repliesCache.set(parentId, updatedReplies);
+					this.incrementCacheVersion();
+					break;
+				}
+			}
+		}
+	}
+
+	private findParentId(commentId: number): number | null {
+		for (const [parentId, replies] of this.repliesCache.entries()) {
+			if (replies.some((reply) => reply.id === commentId)) {
+				return parentId;
+			}
+		}
+		return null;
+	}
+
 	getCurrentUserId(): number | null {
 		return this.currentUserId;
 	}
 
-	/**
-	 * Handle incoming WebSocket events and update local state
-	 */
 	handleWebSocketEvent(event: CommentEvent): void {
 		if (!event.payload) {
 			console.warn('Received WebSocket event with no payload', event);
@@ -300,45 +520,40 @@ class CommentStore {
 
 		switch (event.type) {
 			case 'create':
-				// Add new comment to local tree
 				if (comment.parent_id) {
-					// It's a reply - add to parent's cache
 					const cachedReplies = this.repliesCache.get(comment.parent_id) || [];
-
-					// Check if already exists (avoid duplicates from optimistic updates)
 					if (!cachedReplies.some((r) => r.id === comment.id)) {
 						this.repliesCache.set(comment.parent_id, [...cachedReplies, comment]);
 						this.incrementCacheVersion();
 
-						// Increment parent's num_replies
 						this.updateCommentInTree(comment.parent_id, (parent) => ({
 							...parent,
 							num_replies: parent.num_replies + 1
 						}));
 					}
 				} else {
-					// It's a root comment
 					this.store.update((comments) => {
-						// Check if already exists
 						if (comments.some((c) => c.id === comment.id)) {
 							return comments;
 						}
-						return [...comments, comment];
+						return [...comments, this.createLocalComment(comment)];
 					});
+
+					// Recompute layout to position the new comment
+					if (this.currentLayoutOptions) {
+						this.recomputeLayout(this.currentLayoutOptions);
+					}
 				}
 				break;
 
 			case 'update':
-				// Update existing comment in tree
 				this.updateCommentInTree(comment.id, () => comment);
 				break;
 
-			case 'delete': // Remove comment from tree
-			{
+			case 'delete': {
 				const parentId = this.findParentId(comment.id);
 
 				if (parentId) {
-					// Remove from parent's cached replies
 					const cachedReplies = this.repliesCache.get(parentId) || [];
 					this.repliesCache.set(
 						parentId,
@@ -346,13 +561,11 @@ class CommentStore {
 					);
 					this.incrementCacheVersion();
 
-					// Decrement parent's num_replies
 					this.updateCommentInTree(parentId, (parent) => ({
 						...parent,
 						num_replies: Math.max(0, parent.num_replies - 1)
 					}));
 				} else {
-					// Remove root comment
 					this.repliesCache.delete(comment.id);
 					this.incrementCacheVersion();
 					this.store.update((comments) => comments.filter((c) => c.id !== comment.id));
@@ -365,16 +578,14 @@ class CommentStore {
 		}
 	}
 
-	/**
-	 * Clear the store
-	 */
 	clear(): void {
 		this.store.set([]);
 		this.repliesCache.clear();
 		this.documentId = null;
 		this.currentUserId = null;
+		this.computedGroups.set([]);
+		this.currentLayoutOptions = null;
 	}
 }
 
-// Export singleton instance
 export const commentStore = new CommentStore();
