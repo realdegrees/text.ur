@@ -3,6 +3,7 @@
 	import { parseAnnotation, type Annotation } from '$types/pdf';
 	import CommentBadge from './CommentBadge.svelte';
 	import { onMount } from 'svelte';
+	import { CLUSTER_THRESHOLD_PX, BADGE_HEIGHT_PX, INITIAL_RENDER_DELAY_MS } from './constants';
 
 	interface Props {
 		viewerContainer: HTMLDivElement | null;
@@ -11,11 +12,6 @@
 	}
 
 	let { viewerContainer, scale, scrollTop }: Props = $props();
-
-	// Clustering threshold in pixels - comments within this distance get merged
-	const CLUSTER_THRESHOLD = 60;
-	// Badge height for centering calculation
-	const BADGE_HEIGHT = 32;
 
 	// Force recalculation trigger
 	let renderTick = $state(0);
@@ -67,7 +63,7 @@
 		const yRelativeToContainer = annotationCenterInViewport - containerRect.top;
 
 		// Offset by half badge height to center the badge
-		return yRelativeToContainer - (BADGE_HEIGHT / 2);
+		return yRelativeToContainer - (BADGE_HEIGHT_PX / 2);
 	};
 
 	// Group comments by Y position proximity (clustering)
@@ -104,7 +100,7 @@
 			const item = positioned[i];
 			const lastClusterY = currentCluster.yPosition;
 
-			if (item.y - lastClusterY <= CLUSTER_THRESHOLD) {
+			if (item.y - lastClusterY <= CLUSTER_THRESHOLD_PX) {
 				// Merge into current cluster
 				currentCluster.comments.push(item.comment);
 			} else {
@@ -140,7 +136,7 @@
 		// Initial render after a delay to let PDF.js finish
 		const timeout = setTimeout(() => {
 			renderTick++;
-		}, 200);
+		}, INITIAL_RENDER_DELAY_MS);
 
 		return () => {
 			observer.disconnect();

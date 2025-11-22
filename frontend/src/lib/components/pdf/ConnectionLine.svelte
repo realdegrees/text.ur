@@ -9,15 +9,14 @@
 	let { pdfContainer, sidebarContainer }: Props = $props();
 
 	// Get the active comment to draw line for
-	let isCommentCardActive = $derived(documentStore.isCommentCardActive);
 	let selectedComment = $derived(documentStore.selectedComment);
 	let hoveredComment = $derived(documentStore.hoveredComment);
+	let pinnedComment = $derived(documentStore.pinnedComment);
 
 	// Determine which comment to draw the line for
+	// Priority: pinned > selected > hovered
 	let activeComment = $derived(
-		isCommentCardActive && selectedComment
-			? selectedComment
-			: hoveredComment
+		pinnedComment ?? selectedComment ?? hoveredComment
 	);
 
 	let activeCommentId = $derived(activeComment?.id ?? null);

@@ -8,16 +8,13 @@
 	import PdfControls from './PdfControls.svelte';
 	import ConnectionLine from './ConnectionLine.svelte';
 	import { documentStore } from '$lib/runes/document.svelte.js';
+	import { PDF_ZOOM_STEP, PDF_MIN_SCALE } from './constants';
 
 	interface Props {
 		document: ArrayBuffer;
 	}
 
 	let { document: pdfData }: Props = $props();
-
-	// Zoom step - using additive approach for symmetric zoom in/out
-	const ZOOM_STEP = 0.2;
-	const MIN_SCALE = 0.25;
 
 	let container: HTMLDivElement | null = $state(null);
 	let pdfAreaWrapper: HTMLDivElement | null = $state(null);
@@ -88,7 +85,7 @@
 			// This prevents modes like `page-height` from producing a scale
 			// that is larger than what's available in the UI.
 			const incomingScale = s.scale ?? 1;
-			const clampedScale = Math.min(Math.max(incomingScale, MIN_SCALE), maxScale);
+			const clampedScale = Math.min(Math.max(incomingScale, PDF_MIN_SCALE), maxScale);
 
 			// If the store attempted to set a scale above the computed max, force
 			// the pdf viewer to use the clamped value so UI and viewer stay in sync.
@@ -139,12 +136,12 @@
 
 	const zoomIn = () => {
 		if (!pdfSlick) return;
-		pdfSlick.currentScale = scale + ZOOM_STEP;
+		pdfSlick.currentScale = scale + PDF_ZOOM_STEP;
 	};
 
 	const zoomOut = () => {
 		if (!pdfSlick) return;
-		pdfSlick.currentScale = scale - ZOOM_STEP;
+		pdfSlick.currentScale = scale - PDF_ZOOM_STEP;
 	};
 
 	const fitHeight = () => {
@@ -200,6 +197,7 @@
 <div class="pdf-viewer-container flex h-full w-full bg-background" onclick={handleContainerClick} onkeydown={handleContainerKeydown}>
 	<PdfControls
 		{scale}
+		minScale={PDF_MIN_SCALE}
 		{maxScale}
 		{pageNumber}
 		{numPages}

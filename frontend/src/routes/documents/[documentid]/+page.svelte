@@ -2,18 +2,36 @@
 	import Pdf from '$lib/components/pdf/Pdf.svelte';
 	import { documentStore } from '$lib/runes/document.svelte.js';
 	import { sessionStore } from '$lib/runes/session.svelte.js';
+	import { documentWebSocket } from '$lib/stores/documentWebSocket';
 
 	let { data } = $props();
 	let { document, membership, rootComments, documentFile } = data;
 
+	// Initialize session and document stores (reactive to data changes)
 	$effect(() => {
-		// Initialize the session store with user and membership for permission checks
 		sessionStore.currentUser = data.sessionUser;
 		sessionStore.currentMembership = membership;
-
-		// Initialize the document store with the loaded document and comments
 		documentStore.setDocument(document);
 		documentStore.setRootComments(rootComments);
+	});
+
+	// WebSocket connection lifecycle (separate effect with cleanup)
+	$effect(() => {
+		let wsUnsubscribe: (() => void) | null = null;
+
+		// Connect to WebSocket for real-time comment updates
+		documentWebSocket.connect(document.id.toString()).then(() => {
+			wsUnsubscribe = documentWebSocket.onCommentEvent((event) => {
+				documentStore.handleWebSocketEvent(event);
+			});
+		});
+
+		// Cleanup when effect re-runs or component unmounts
+		return () => {
+			wsUnsubscribe?.();
+			documentWebSocket.disconnect();
+			documentStore.clearAllInteractionState();
+		};
 	});
 </script>
 

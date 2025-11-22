@@ -1,7 +1,8 @@
 <script lang="ts">
-	import { documentStore } from '$lib/runes/document.svelte.js';
-	import { parseAnnotation, type BoundingBox } from '$types/pdf';
+	import { documentStore, type CachedComment } from '$lib/runes/document.svelte.js';
+	import { parseAnnotation, type Annotation, type BoundingBox } from '$types/pdf';
 	import { SvelteMap } from 'svelte/reactivity';
+	import { RENDER_DEBOUNCE_MS, OPACITY_TRANSITION_MS } from './constants';
 
 	interface Props {
 		viewerContainer: HTMLDivElement | null;
@@ -11,16 +12,20 @@
 	let { viewerContainer, scale }: Props = $props();
 
 	// Get comments with valid parsed annotations from the store
+	// Only track annotation data, not interaction state (to avoid re-rendering on hover)
 	let commentsWithAnnotations = $derived(
 		documentStore.comments
-			.map(c => ({
+			.map((c: CachedComment) => ({
 				comment: c,
 				parsedAnnotation: parseAnnotation(c.annotation)
 			}))
-			.filter((c): c is { comment: typeof c.comment; parsedAnnotation: NonNullable<typeof c.parsedAnnotation> } =>
-				c.parsedAnnotation !== null
+			.filter((item): item is { comment: CachedComment; parsedAnnotation: Annotation } =>
+				item.parsedAnnotation !== null
 			)
 	);
+
+	// Stable key could be derived if needed; we intentionally do not use it here
+	// because comment events should not trigger setup/cleanup effects.
 
 	// Build a map of highlights per page
 	let highlightsByPage = $derived.by(() => {
@@ -45,16 +50,48 @@
 		return map;
 	});
 
-	// Get whether any comment card is active
-	let isCommentCardActive = $derived(documentStore.isCommentCardActive);
-	let hasSelectedComment = $derived(documentStore.selectedComment !== undefined);
+	// Get whether any comment is pinned (user actively interacting)
+	let pinnedComment = $derived(documentStore.pinnedComment);
+	// Get whether any comment badge is hovered (not just highlight hover)
+	let badgeHoveredComment = $derived(
+		documentStore.comments.find((c: CachedComment) => c.isBadgeHovered)
+	);
+
+	// Track pending render timeout for cleanup
+	let pendingRenderTimeout: ReturnType<typeof setTimeout> | null = null;
+	let observer: MutationObserver | null = null;
+
+	// Store event listener references for cleanup
+	type HighlightElement = HTMLDivElement & { _listeners?: { mouseenter: () => void; mouseleave: () => void; click: () => void } };
+
+	const cleanupHighlights = (container: HTMLDivElement) => {
+		container.querySelectorAll<HighlightElement>('.annotation-highlight').forEach(el => {
+			// Remove event listeners before removing element
+			if (el._listeners) {
+				el.removeEventListener('mouseenter', el._listeners.mouseenter);
+				el.removeEventListener('mouseleave', el._listeners.mouseleave);
+				el.removeEventListener('click', el._listeners.click);
+			}
+			el.remove();
+		});
+	};
+
+	// Debounced render to consolidate multiple rapid calls
+	const scheduleRender = () => {
+		if (pendingRenderTimeout) {
+			clearTimeout(pendingRenderTimeout);
+		}
+		pendingRenderTimeout = setTimeout(() => {
+			pendingRenderTimeout = null;
+			renderHighlights();
+		}, RENDER_DEBOUNCE_MS);
+	};
 
 	// Render highlights into the page elements
 	const renderHighlights = () => {
 		if (!viewerContainer) return;
 
-		// Remove existing highlights
-		viewerContainer.querySelectorAll('.annotation-highlight').forEach(el => el.remove());
+		// Do not remove all highlights here; we'll reconcile per-page instead.
 
 		// For each page with highlights
 		for (const [pageNum, highlights] of highlightsByPage) {
@@ -69,27 +106,49 @@
 			if (!textLayer) continue;
 
 			// Bounding boxes are normalized to 0-1 relative to text layer
-			// We'll append highlights to the text layer so they align perfectly
 			const textLayerRect = textLayer.getBoundingClientRect();
 
 			for (const highlight of highlights) {
 				const { box, color, key, commentId, isSelected } = highlight;
 
-				const div = document.createElement('div');
-				div.className = 'annotation-highlight';
-				div.dataset.commentId = String(commentId);
-				div.dataset.key = key;
+				// reuse an existing element if one already exists for this key
+				const existingEl = textLayer.querySelector<HighlightElement>(`.annotation-highlight[data-key="${key}"]`);
+				if (existingEl) {
+					// update position & visual attributes and keep event listeners
+					const left = box.x * textLayerRect.width;
+					const top = box.y * textLayerRect.height;
+					const width = box.width * textLayerRect.width;
+					const height = box.height * textLayerRect.height;
+					const shouldHideOthers = !!pinnedComment || !!badgeHoveredComment;
+					const isVisible = !shouldHideOthers || isSelected;
 
-				// Position relative to the text layer
-				// box coordinates are 0-1 relative to text layer
+					existingEl.style.left = `${left}px`;
+					existingEl.style.top = `${top}px`;
+					existingEl.style.width = `${width}px`;
+					existingEl.style.height = `${height}px`;
+					existingEl.style.backgroundColor = color;
+					existingEl.style.pointerEvents = isVisible ? 'auto' : 'none';
+					existingEl.style.opacity = isVisible ? '1' : '0';
+					existingEl.dataset.commentId = String(commentId);
+					continue;
+				}
+
+				// Position relative to the text layer (box coordinates are 0-1 relative)
 				const left = box.x * textLayerRect.width;
 				const top = box.y * textLayerRect.height;
 				const width = box.width * textLayerRect.width;
 				const height = box.height * textLayerRect.height;
 
-				// Determine visibility: only hide other highlights when actively interacting with comment card
-				const shouldHideOthers = isCommentCardActive && hasSelectedComment;
+				// Determine visibility: only hide other highlights when:
+				// - A comment is pinned (user clicked to keep it open), OR
+				// - A badge is being hovered (not just the highlight itself)
+				const shouldHideOthers = !!pinnedComment || !!badgeHoveredComment;
 				const isVisible = !shouldHideOthers || isSelected;
+
+				const div = document.createElement('div') as HighlightElement;
+				div.className = 'annotation-highlight';
+				div.dataset.commentId = String(commentId);
+				div.dataset.key = key;
 
 				div.style.cssText = `
 					position: absolute;
@@ -104,30 +163,47 @@
 					z-index: 5;
 					border-radius: 2px;
 					opacity: ${isVisible ? 1 : 0};
-					transition: opacity 0.5s ease-in-out;
+					transition: opacity ${OPACITY_TRANSITION_MS}ms ease-in-out;
 				`;
 
-				div.addEventListener('mouseenter', () => {
-					documentStore.setHighlightHovered(commentId);
-				});
-				div.addEventListener('mouseleave', () => {
-					documentStore.setHighlightHovered(null);
-				});
-				div.addEventListener('click', () => {
-					// Pin and select the comment when highlight is clicked
-					documentStore.setPinned(commentId);
-					documentStore.setCommentCardActive(true);
-					documentStore.setSelected(commentId);
-				});
+				// Create named listener functions for cleanup
+				const listeners = {
+					mouseenter: () => documentStore.setHighlightHovered(commentId),
+					mouseleave: () => documentStore.setHighlightHovered(null),
+					click: () => {
+						documentStore.setPinned(commentId);
+						documentStore.setCommentCardActive(true);
+						documentStore.setSelected(commentId);
+					}
+				};
 
-				// Append to text layer so it inherits the same coordinate space
+				// Store listeners on element for later cleanup
+				div._listeners = listeners;
+
+				div.addEventListener('mouseenter', listeners.mouseenter);
+				div.addEventListener('mouseleave', listeners.mouseleave);
+				div.addEventListener('click', listeners.click);
+
 				textLayer.appendChild(div);
 			}
+
+			// Remove highlights from this page that are no longer in the
+			// current highlights list (per-page cleanup to avoid global teardown)
+			const pageKeys = new Set(highlights.map(h => h.key));
+			textLayer.querySelectorAll<HighlightElement>('.annotation-highlight').forEach(el => {
+				const elKey = el.dataset.key;
+				if (!elKey) return;
+				if (!pageKeys.has(elKey)) {
+					if (el._listeners) {
+						el.removeEventListener('mouseenter', el._listeners.mouseenter);
+						el.removeEventListener('mouseleave', el._listeners.mouseleave);
+						el.removeEventListener('click', el._listeners.click);
+					}
+					el.remove();
+				}
+			});
 		}
 	};
-
-	// Watch for pages being rendered by observing DOM changes
-	let observer: MutationObserver | null = null;
 
 	const setupObserver = () => {
 		if (!viewerContainer) return;
@@ -148,8 +224,7 @@
 			});
 
 			if (shouldRerender) {
-				// Delay to let PDF.js finish
-				setTimeout(renderHighlights, 100);
+				scheduleRender();
 			}
 		});
 
@@ -158,27 +233,66 @@
 			subtree: true
 		});
 
-		// Initial render attempt with delay
-		setTimeout(renderHighlights, 200);
+		// Initial render
+		scheduleRender();
 	};
 
-	// Re-render when comments, scale, or container changes
+	// Re-render when comment content, scale, or container changes
+	// Use commentsKey to avoid re-rendering on interaction state changes
 	$effect(() => {
-		// Dependencies
-		void commentsWithAnnotations;
+		// Dependencies - only viewer/container/scale changes should re-run setup.
+		// Do NOT depend on `commentsKey` here: comment websocket events should not
+		// cause the observer / effect teardown and therefore should not cause a
+		// full highlight cleanup (that was causing flicker).
 		void scale;
-		void hasSelectedComment;
-		void isCommentCardActive;
 
 		if (viewerContainer) {
 			setupObserver();
-			// Also render after a delay for scale changes
-			const timeout = setTimeout(renderHighlights, 150);
+
 			return () => {
-				clearTimeout(timeout);
+				// Clean up all pending operations
+				if (pendingRenderTimeout) {
+					clearTimeout(pendingRenderTimeout);
+					pendingRenderTimeout = null;
+				}
 				observer?.disconnect();
+				observer = null;
+				// Clean up highlights when effect re-runs or component unmounts
+				if (viewerContainer) {
+					cleanupHighlights(viewerContainer);
+				}
 			};
 		}
+	});
+
+	// Update highlight visibility without full re-render
+	$effect(() => {
+		// Dependencies - interaction state
+		void pinnedComment;
+		void badgeHoveredComment;
+
+		if (!viewerContainer) return;
+
+		// Update visibility of existing highlights
+		const shouldHideOthers = !!pinnedComment || !!badgeHoveredComment;
+		const selectedId = pinnedComment?.id ?? badgeHoveredComment?.id ?? null;
+
+		viewerContainer.querySelectorAll<HTMLElement>('.annotation-highlight').forEach(el => {
+			const commentId = parseInt(el.dataset.commentId ?? '0', 10);
+			const isSelected = commentId === selectedId;
+			const isVisible = !shouldHideOthers || isSelected;
+
+			el.style.opacity = isVisible ? '1' : '0';
+			el.style.pointerEvents = isVisible ? 'auto' : 'none';
+		});
+	});
+
+	// Schedule a re-render when the highlights content changes (structural updates
+	// like new/updated/deleted comments). This deliberately does NOT tear down the
+	// observer or cleanup everything — it only schedules the incremental render.
+	$effect(() => {
+		void highlightsByPage;
+		if (viewerContainer) scheduleRender();
 	});
 </script>
 

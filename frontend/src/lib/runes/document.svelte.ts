@@ -1,5 +1,11 @@
 import { api } from '$api/client';
-import type { CommentCreate, CommentEvent, CommentRead, CommentUpdate, DocumentRead } from '$api/types';
+import type {
+	CommentCreate,
+	CommentEvent,
+	CommentRead,
+	CommentUpdate,
+	DocumentRead
+} from '$api/types';
 import type { Paginated } from '$api/pagination';
 import { notification } from '$lib/stores/notificationStore';
 import type { Annotation } from '$types/pdf';
@@ -8,10 +14,12 @@ export interface CachedComment extends CommentRead {
 	replies?: CachedComment[];
 	// Interaction state flags
 	isHighlightHovered?: boolean; // Mouse over the PDF highlight
-	isBadgeHovered?: boolean;     // Mouse over the comment badge
-	isSelected?: boolean;         // Currently selected/active comment
-	isPinned?: boolean;           // Clicked to stay open
-	isEditing?: boolean;          // In edit mode
+	isBadgeHovered?: boolean; // Mouse over the comment badge
+	isSelected?: boolean; // Currently selected/active comment
+	isPinned?: boolean; // Clicked to stay open
+	isEditing?: boolean; // In edit mode
+	// UI state
+	isRepliesCollapsed?: boolean; // Replies section is collapsed
 }
 
 const toCachedComment = (comment: CommentRead): CachedComment => ({
@@ -42,7 +50,10 @@ const flattenComments = (inComments: CachedComment[]): CachedComment[] => {
 	return result;
 };
 
-const removeCommentRecursively = (fromComments: CachedComment[], commentId: number): CachedComment[] => {
+const removeCommentRecursively = (
+	fromComments: CachedComment[],
+	commentId: number
+): CachedComment[] => {
 	return fromComments
 		.filter((c) => c.id !== commentId)
 		.map((c) => ({
@@ -122,6 +133,15 @@ const createDocumentStore = () => {
 		setCommentFlag(commentId, 'isEditing');
 	};
 
+	// Toggle replies collapsed state for a specific comment
+	const toggleRepliesCollapsed = (commentId: number) => {
+		const comment = findComment(comments, commentId);
+		if (comment) {
+			comment.isRepliesCollapsed = !comment.isRepliesCollapsed;
+			comments = [...comments]; // trigger reactivity
+		}
+	};
+
 	// Clear all interaction state on all comments
 	const clearAllInteractionState = () => {
 		const allComments = flattenComments(comments);
@@ -156,7 +176,9 @@ const createDocumentStore = () => {
 	}): Promise<CachedComment | undefined> => {
 		if (!loadedDocument) return;
 		const result = await api.post<CommentRead>('/comments', {
-			annotation: options.annotation ? options.annotation as unknown as Record<string, unknown> : undefined,
+			annotation: options.annotation
+				? (options.annotation as unknown as Record<string, unknown>)
+				: undefined,
 			content: options.content,
 			parent_id: options.parentId,
 			document_id: loadedDocument.id,
@@ -170,8 +192,14 @@ const createDocumentStore = () => {
 		if (options.parentId) {
 			const parentComment = findComment(comments, options.parentId);
 			if (parentComment) {
-				parentComment.replies = parentComment.replies || [];
-				parentComment.replies.push(newComment);
+				// Only add to replies array if replies are already loaded
+				// Otherwise, increment num_replies so the "Load replies" button updates
+				if (parentComment.replies) {
+					parentComment.replies.push(newComment);
+				} else if (parentComment.num_replies === 0) {
+					parentComment.replies = [toCachedComment(newComment)];
+				}
+				parentComment.num_replies = (parentComment.num_replies || 0) + 1;
 			}
 			comments = [...comments]; // trigger reactivity
 		} else {
@@ -222,8 +250,13 @@ const createDocumentStore = () => {
 				if (comment.parent_id) {
 					const parentComment = findComment(comments, comment.parent_id);
 					if (parentComment) {
-						parentComment.replies = parentComment.replies || [];
-						parentComment.replies.push(toCachedComment(comment));
+						// Only add to replies array if replies are already loaded unless the number of replies was 0 then we can safely add it
+						if (parentComment.replies) {
+							parentComment.replies.push(toCachedComment(comment));
+						} else if (parentComment.num_replies === 0) {
+							parentComment.replies = [toCachedComment(comment)];
+						}
+						parentComment.num_replies = (parentComment.num_replies || 0) + 1;
 					}
 					comments = [...comments]; // trigger reactivity
 				} else {
@@ -252,33 +285,53 @@ const createDocumentStore = () => {
 
 	// Helper getters to find comments by state
 	const getHoveredComment = (): CachedComment | undefined => {
-		return flattenComments(comments).find(c => c.isHighlightHovered || c.isBadgeHovered);
+		return flattenComments(comments).find((c) => c.isHighlightHovered || c.isBadgeHovered);
 	};
 
 	const getSelectedComment = (): CachedComment | undefined => {
-		return flattenComments(comments).find(c => c.isSelected);
+		return flattenComments(comments).find((c) => c.isSelected);
 	};
 
 	const getPinnedComment = (): CachedComment | undefined => {
-		return flattenComments(comments).find(c => c.isPinned);
+		return flattenComments(comments).find((c) => c.isPinned);
 	};
 
 	const getEditingComment = (): CachedComment | undefined => {
-		return flattenComments(comments).find(c => c.isEditing);
+		return flattenComments(comments).find((c) => c.isEditing);
 	};
 
 	return {
-		get comments() { return comments; },
-		get loadedDocument() { return loadedDocument; },
-		get isCommentCardActive() { return isCommentCardActive; },
-		get pdfViewerRef() { return pdfViewerRef; },
-		get scrollContainerRef() { return scrollContainerRef; },
-		get commentSidebarRef() { return commentSidebarRef; },
+		get comments() {
+			return comments;
+		},
+		get loadedDocument() {
+			return loadedDocument;
+		},
+		get isCommentCardActive() {
+			return isCommentCardActive;
+		},
+		get pdfViewerRef() {
+			return pdfViewerRef;
+		},
+		get scrollContainerRef() {
+			return scrollContainerRef;
+		},
+		get commentSidebarRef() {
+			return commentSidebarRef;
+		},
 		// Helper getters
-		get hoveredComment() { return getHoveredComment(); },
-		get selectedComment() { return getSelectedComment(); },
-		get pinnedComment() { return getPinnedComment(); },
-		get editingComment() { return getEditingComment(); },
+		get hoveredComment() {
+			return getHoveredComment();
+		},
+		get selectedComment() {
+			return getSelectedComment();
+		},
+		get pinnedComment() {
+			return getPinnedComment();
+		},
+		get editingComment() {
+			return getEditingComment();
+		},
 		// Methods
 		setDocument,
 		setCommentCardActive,
@@ -293,6 +346,7 @@ const createDocumentStore = () => {
 		setPinned,
 		setEditing,
 		clearAllInteractionState,
+		toggleRepliesCollapsed,
 		// CRUD operations
 		updateComment,
 		create: createComment,

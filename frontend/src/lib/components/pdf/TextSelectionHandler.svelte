@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { documentStore } from '$lib/runes/document.svelte.js';
 	import type { Annotation, BoundingBox } from '$types/pdf';
+	import { BOX_MERGE_MARGIN, BOX_VERTICAL_OVERLAP_THRESHOLD, DEFAULT_HIGHLIGHT_COLOR } from './constants';
 
 	interface Props {
 		viewerContainer: HTMLDivElement | null;
@@ -9,9 +10,6 @@
 	let { viewerContainer }: Props = $props();
 
 	let isCreating = $state(false);
-
-	// Margin to add around boxes to close small gaps (in normalized coordinates 0-1)
-	const MERGE_MARGIN = 0.005;
 
 	/**
 	 * Check if two boxes should be merged:
@@ -33,15 +31,15 @@
 		const overlapBottom = Math.min(aBottom, bBottom);
 		const verticalOverlap = overlapBottom - overlapTop;
 
-		// Boxes must have significant vertical overlap (at least 50% of smaller box height)
+		// Boxes must have significant vertical overlap
 		const minHeight = Math.min(a.height, b.height);
-		if (verticalOverlap < minHeight * 0.5) return false;
+		if (verticalOverlap < minHeight * BOX_VERTICAL_OVERLAP_THRESHOLD) return false;
 
 		// Check horizontal adjacency (with margin)
-		const aLeft = a.x - MERGE_MARGIN;
-		const aRight = a.x + a.width + MERGE_MARGIN;
-		const bLeft = b.x - MERGE_MARGIN;
-		const bRight = b.x + b.width + MERGE_MARGIN;
+		const aLeft = a.x - BOX_MERGE_MARGIN;
+		const aRight = a.x + a.width + BOX_MERGE_MARGIN;
+		const bLeft = b.x - BOX_MERGE_MARGIN;
+		const bRight = b.x + b.width + BOX_MERGE_MARGIN;
 
 		// Boxes must be horizontally adjacent or overlapping
 		return !(aRight < bLeft || bRight < aLeft);
@@ -183,7 +181,7 @@
 			const annotation: Annotation = {
 				text,
 				boundingBoxes: mergedBoxes,
-				color: 'rgba(255, 235, 59, 0.4)' // Default yellow highlight
+				color: DEFAULT_HIGHLIGHT_COLOR
 			};
 
 			const newComment = await documentStore.create({ annotation });

@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { untrack } from 'svelte';
 	import { documentStore, type CachedComment } from '$lib/runes/document.svelte.js';
 	import CommentCard from './CommentCard.svelte';
 	import CommentIcon from '~icons/material-symbols/comment-outline';
@@ -17,69 +16,48 @@
 
 	// Check if any comment in this cluster is hovered (via annotation highlight)
 	let hoveredCommentInGroup = $derived(
-		comments.find(c => c.isHighlightHovered)
+		comments.find((c) => c.isHighlightHovered)
 	);
 
 	// Check if any comment in this cluster is pinned
 	let pinnedCommentInGroup = $derived(
-		comments.find(c => c.isPinned)
+		comments.find((c) => c.isPinned)
 	);
 
-	// When a highlight is hovered, switch to that comment's tab
-	$effect(() => {
-		if (hoveredCommentInGroup) {
-			const idx = comments.findIndex(c => c.id === hoveredCommentInGroup.id);
-			if (idx !== -1) {
-				selectedIndex = idx;
-			}
-		}
-	});
-
-	// When a comment is pinned in this group, switch to that tab
-	$effect(() => {
+	// Derive selectedIndex from external state (highlight hover or pinned)
+	// This is read-only synchronization - no store writes here
+	let effectiveSelectedIndex = $derived.by(() => {
+		// Priority: pinned > hovered highlight > local selection
 		if (pinnedCommentInGroup) {
-			const idx = comments.findIndex(c => c.id === pinnedCommentInGroup.id);
-			if (idx !== -1) {
-				selectedIndex = idx;
-			}
+			const idx = comments.findIndex((c) => c.id === pinnedCommentInGroup.id);
+			if (idx !== -1) return idx;
 		}
+		if (hoveredCommentInGroup) {
+			const idx = comments.findIndex((c) => c.id === hoveredCommentInGroup.id);
+			if (idx !== -1) return idx;
+		}
+		return selectedIndex;
 	});
 
 	// Show expanded card when badge is hovered, highlight is hovered, or comment is pinned
 	let showCard = $derived(isHovered || !!hoveredCommentInGroup || !!pinnedCommentInGroup);
 
-	// Update the store's selected comment when this card is shown via badge hover
-	// Use untrack to prevent infinite loops when modifying store state
-	$effect(() => {
-		// Only track isHovered and selectedIndex as dependencies
-		const hovered = isHovered;
-		const idx = selectedIndex;
-
-		// Use untrack for store reads/writes to avoid circular dependencies
-		untrack(() => {
-			const comment = comments[idx];
-			if (hovered && comment) {
-				// Clear any existing pinned comment from other badges when this one is hovered
-				const pinned = documentStore.pinnedComment;
-				const pinnedInGroup = comments.find(c => c.isPinned);
-				if (pinned && !pinnedInGroup) {
-					documentStore.setPinned(null);
-				}
-				// Set active and selected when badge is hovered
-				documentStore.setCommentCardActive(true);
-				documentStore.setBadgeHovered(comment.id);
-				documentStore.setSelected(comment.id);
-			} else {
-				const pinnedInGroup = comments.find(c => c.isPinned);
-				const comment = comments[idx];
-				if (pinnedInGroup && comment) {
-					// Set active when pinned
-					documentStore.setCommentCardActive(true);
-					documentStore.setSelected(comment.id);
-				}
+	// Handle mouse enter - set store state
+	const handleMouseEnter = () => {
+		isHovered = true;
+		const comment = comments[effectiveSelectedIndex];
+		if (comment) {
+			// Clear any existing pinned comment from other badges when this one is hovered
+			const pinned = documentStore.pinnedComment;
+			const hasPinnedInGroup = comments.some((c) => c.isPinned);
+			if (pinned && !hasPinnedInGroup) {
+				documentStore.setPinned(null);
 			}
-		});
-	});
+			documentStore.setCommentCardActive(true);
+			documentStore.setBadgeHovered(comment.id);
+			documentStore.setSelected(comment.id);
+		}
+	};
 
 	// Clear selected comment when card closes (but not if pinned)
 	const handleMouseLeave = () => {
@@ -96,7 +74,7 @@
 
 	// Handle click to pin/unpin the comment
 	const handleClick = () => {
-		const currentComment = comments[selectedIndex];
+		const currentComment = comments[effectiveSelectedIndex];
 		if (currentComment) {
 			if (currentComment.isPinned) {
 				// Already pinned, unpin it
@@ -114,13 +92,15 @@
 
 	// Handler for when tab selection changes in CommentCard (user clicked a tab)
 	const handleSelectionChange = (index: number) => {
-		selectedIndex = index;
-		if (comments[index]) {
-			// Mark as active since user is interacting with the comment card
+		const comment = comments[index];
+		if (comment) {
+			// Update local state first so UI responds immediately
+			selectedIndex = index;
+			// Then update store state
 			documentStore.setCommentCardActive(true);
-			documentStore.setSelected(comments[index].id);
+			documentStore.setSelected(comment.id);
 			// Also pin to this comment when clicking tabs
-			documentStore.setPinned(comments[index].id);
+			documentStore.setPinned(comment.id);
 		}
 	};
 
@@ -138,11 +118,11 @@
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
 		class="relative z-50"
-		data-comment-badge={comments[selectedIndex]?.id}
+		data-comment-badge={comments[effectiveSelectedIndex]?.id}
 		data-badge-active="true"
 		onmouseleave={handleMouseLeave}
 	>
-		<CommentCard {comments} activeIndex={selectedIndex} onSelectionChange={handleSelectionChange} />
+		<CommentCard {comments} activeIndex={effectiveSelectedIndex} onSelectionChange={handleSelectionChange} />
 	</div>
 {:else}
 	<!-- Compact badge - only hover on badge itself triggers expansion -->
@@ -150,10 +130,10 @@
 		class="relative z-10 inline-block"
 		role="button"
 		tabindex="0"
-		data-comment-badge={comments[selectedIndex]?.id}
-		onmouseenter={() => (isHovered = true)}
+		data-comment-badge={comments[effectiveSelectedIndex]?.id}
+		onmouseenter={handleMouseEnter}
 		onmouseleave={handleMouseLeave}
-		onfocus={() => (isHovered = true)}
+		onfocus={handleMouseEnter}
 		onblur={handleMouseLeave}
 		onclick={handleClick}
 		onkeydown={handleKeydown}

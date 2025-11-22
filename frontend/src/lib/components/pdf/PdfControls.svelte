@@ -7,6 +7,7 @@
 
 	interface Props {
 		scale: number;
+		minScale: number;
 		maxScale: number;
 		pageNumber: number;
 		numPages: number;
@@ -19,6 +20,7 @@
 
 	let {
 		scale,
+		minScale,
 		maxScale,
 		pageNumber,
 		numPages,
@@ -43,7 +45,7 @@
 	<button
 		class="rounded p-2 text-text/70 transition-colors hover:bg-text/10 hover:text-text disabled:opacity-30 disabled:hover:bg-transparent"
 		onclick={onZoomOut}
-		disabled={scale <= 0.25}
+		disabled={scale <= minScale}
 		title="Zoom Out"
 	>
 		<ZoomOutIcon class="h-5 w-5" />
