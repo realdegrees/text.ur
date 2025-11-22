@@ -51,6 +51,7 @@
 		"vitest": "^4.0.7"
 	},
 	"dependencies": {
+		"@pdfslick/core": "^3.1.0",
 		"dompurify": "^3.3.0",
 		"json-schema-to-typescript": "^15.0.4",
 		"jwt-decode": "^4.0.0",
