@@ -55,9 +55,7 @@
 	};
 
 	let maxScale = $derived(
-		basePageWidth > 0 && maxAvailableWidth > 0
-			? (maxAvailableWidth - 16) / basePageWidth
-			: 10
+		basePageWidth > 0 && maxAvailableWidth > 0 ? (maxAvailableWidth - 16) / basePageWidth : 10
 	);
 
 	const initialize = async () => {
@@ -69,9 +67,9 @@
 		pdfSlick = new PDFSlick({
 			container,
 			store,
-					options: {
+			options: {
 				scaleValue: 'page-height'
-					}
+			}
 		});
 
 		pdfSlick.loadDocument(pdfData);
@@ -148,7 +146,6 @@
 		if (pdfSlick) pdfSlick.currentScaleValue = 'page-height';
 	};
 
-
 	const prevPage = () => pdfSlick?.gotoPage(Math.max(pageNumber - 1, 1));
 	const nextPage = () => pdfSlick?.gotoPage(Math.min(pageNumber + 1, numPages));
 
@@ -192,9 +189,12 @@
 	onDestroy(() => unsubscribe?.());
 </script>
 
-
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<div class="pdf-viewer-container flex h-full w-full bg-background" onclick={handleContainerClick} onkeydown={handleContainerKeydown}>
+<div
+	class="pdf-viewer-container flex h-full w-full bg-background"
+	onclick={handleContainerClick}
+	onkeydown={handleContainerKeydown}
+>
 	<PdfControls
 		{scale}
 		minScale={PDF_MIN_SCALE}
@@ -216,7 +216,7 @@
 	>
 		<div
 			id="viewerContainer"
-			class="pdfSlickContainer absolute inset-0 overflow-y-scroll overflow-x-hidden scrollbar-none"
+			class="pdfSlickContainer scrollbar-none absolute inset-0 overflow-x-hidden overflow-y-scroll"
 			bind:this={container}
 			onscroll={handleScroll}
 			onwheel={handlePdfWheel}
@@ -262,7 +262,6 @@
 		padding: 4px 8px;
 	}
 
-    
 	/* Improve clarity on high DPI displays by preferring crisp edges for
 	   canvas renderings when scaling occurs. This reduces perceived blur
 	   when the browser performs CSS scaling or when devicePixelRatio > 1. */
@@ -272,5 +271,4 @@
 		image-rendering: crisp-edges;
 		image-rendering: pixelated;
 	}
-
 </style>

@@ -1,8 +1,4 @@
-import type {
-	ConnectionState,
-	IWebSocketManager,
-	WebSocketConfig
-} from '$types/websocket';
+import type { ConnectionState, IWebSocketManager, WebSocketConfig } from '$types/websocket';
 
 /**
  * WebSocket manager with auto-reconnect and event handling

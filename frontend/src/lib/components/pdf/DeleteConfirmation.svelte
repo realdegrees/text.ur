@@ -11,14 +11,7 @@
 		onClose: () => void;
 	}
 
-	let {
-		isOpen,
-		disabled = false,
-		size = 'md',
-		onConfirm,
-		onOpen,
-		onClose
-	}: Props = $props();
+	let { isOpen, disabled = false, size = 'md', onConfirm, onOpen, onClose }: Props = $props();
 
 	let containerRef: HTMLDivElement | null = $state(null);
 
@@ -55,7 +48,10 @@
 			<span class="text-xs text-red-400">Delete?</span>
 			<button
 				class="rounded p-0.5 text-red-400 transition-colors hover:bg-red-500/20 hover:text-red-500"
-				onclick={(e) => { e.stopPropagation(); onConfirm?.(); }}
+				onclick={(e) => {
+					e.stopPropagation();
+					onConfirm?.();
+				}}
 				title="Confirm delete"
 				{disabled}
 			>
@@ -65,7 +61,10 @@
 	{:else}
 		<button
 			class="rounded {buttonPadding} text-text/40 transition-colors hover:bg-red-500/20 hover:text-red-500"
-			onclick={(e) => { e.stopPropagation(); onOpen?.(); }}
+			onclick={(e) => {
+				e.stopPropagation();
+				onOpen?.();
+			}}
 			title="Delete"
 			{disabled}
 		>

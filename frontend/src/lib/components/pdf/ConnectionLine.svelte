@@ -15,9 +15,7 @@
 
 	// Determine which comment to draw the line for
 	// Priority: pinned > selected > hovered
-	let activeComment = $derived(
-		pinnedComment ?? selectedComment ?? hoveredComment
-	);
+	let activeComment = $derived(pinnedComment ?? selectedComment ?? hoveredComment);
 
 	let activeCommentId = $derived(activeComment?.id ?? null);
 
@@ -123,10 +121,7 @@
 	});
 </script>
 
-<div
-	class="pointer-events-none absolute inset-0 z-40 overflow-visible"
-	bind:this={parentContainer}
->
+<div class="pointer-events-none absolute inset-0 z-40 overflow-visible" bind:this={parentContainer}>
 	{#if lineCoords}
 		<svg class="absolute inset-0 h-full w-full overflow-visible">
 			<!-- Main line -->
@@ -141,19 +136,9 @@
 				class="text-primary/60"
 			/>
 			<!-- Start dot (at badge) -->
-			<circle
-				cx={lineCoords.startX}
-				cy={lineCoords.startY}
-				r="4"
-				class="fill-primary/80"
-			/>
+			<circle cx={lineCoords.startX} cy={lineCoords.startY} r="4" class="fill-primary/80" />
 			<!-- End dot (at highlight) -->
-			<circle
-				cx={lineCoords.endX}
-				cy={lineCoords.endY}
-				r="4"
-				class="fill-primary/80"
-			/>
+			<circle cx={lineCoords.endX} cy={lineCoords.endY} r="4" class="fill-primary/80" />
 		</svg>
 	{/if}
 </div>

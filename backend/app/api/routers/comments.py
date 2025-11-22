@@ -1,5 +1,5 @@
-from uuid import uuid4
 from datetime import datetime
+from uuid import uuid4
 
 from api.dependencies.authentication import Authenticate, BasicAuthentication
 from api.dependencies.database import Database

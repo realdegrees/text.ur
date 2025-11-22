@@ -24,7 +24,7 @@
 	// Get comments with valid annotations
 	let commentsWithAnnotations = $derived(
 		documentStore.comments
-			.map(c => ({ ...c, parsedAnnotation: parseAnnotation(c.annotation) }))
+			.map((c) => ({ ...c, parsedAnnotation: parseAnnotation(c.annotation) }))
 			.filter((c): c is CommentWithAnnotation => c.parsedAnnotation !== null)
 	);
 
@@ -56,14 +56,14 @@
 		// Calculate the CENTER of the annotation box
 		const annotationTopInTextLayer = firstBox.y * textLayerRect.height;
 		const annotationHeight = firstBox.height * textLayerRect.height;
-		const annotationCenterY = annotationTopInTextLayer + (annotationHeight / 2);
+		const annotationCenterY = annotationTopInTextLayer + annotationHeight / 2;
 
 		// Position relative to container viewport
 		const annotationCenterInViewport = textLayerRect.top + annotationCenterY;
 		const yRelativeToContainer = annotationCenterInViewport - containerRect.top;
 
 		// Offset by half badge height to center the badge
-		return yRelativeToContainer - (BADGE_HEIGHT_PX / 2);
+		return yRelativeToContainer - BADGE_HEIGHT_PX / 2;
 	};
 
 	// Group comments by Y position proximity (clustering)
@@ -79,13 +79,11 @@
 		void renderTick;
 
 		const positioned = commentsWithAnnotations
-			.map(comment => ({
+			.map((comment) => ({
 				comment,
 				y: getCommentYPosition(comment)
 			}))
-			.filter((item): item is { comment: CommentWithAnnotation; y: number } =>
-				item.y !== null
-			)
+			.filter((item): item is { comment: CommentWithAnnotation; y: number } => item.y !== null)
 			.sort((a, b) => a.y - b.y);
 
 		if (positioned.length === 0) return [];
@@ -146,9 +144,9 @@
 </script>
 
 <div class="relative h-full">
-	{#each clusters as cluster (cluster.comments.map(c => c.id).join('-'))}
+	{#each clusters as cluster (cluster.comments.map((c) => c.id).join('-'))}
 		<div
-			class="absolute left-3 right-3 transition-transform duration-75"
+			class="absolute right-3 left-3 transition-transform duration-75"
 			style="top: {cluster.yPosition}px;"
 		>
 			<CommentBadge comments={cluster.comments} />
@@ -157,9 +155,7 @@
 
 	{#if clusters.length === 0 && commentsWithAnnotations.length === 0}
 		<div class="flex h-full items-center justify-center p-4">
-			<p class="text-center text-sm text-text/40">
-				Select text in the PDF to add a comment
-			</p>
+			<p class="text-center text-sm text-text/40">Select text in the PDF to add a comment</p>
 		</div>
 	{/if}
 </div>

@@ -19,8 +19,9 @@
 				comment: c,
 				parsedAnnotation: parseAnnotation(c.annotation)
 			}))
-			.filter((item): item is { comment: CachedComment; parsedAnnotation: Annotation } =>
-				item.parsedAnnotation !== null
+			.filter(
+				(item): item is { comment: CachedComment; parsedAnnotation: Annotation } =>
+					item.parsedAnnotation !== null
 			)
 	);
 
@@ -29,7 +30,16 @@
 
 	// Build a map of highlights per page
 	let highlightsByPage = $derived.by(() => {
-		const map = new SvelteMap<number, Array<{ commentId: number; box: BoundingBox; color: string; key: string; isSelected: boolean }>>();
+		const map = new SvelteMap<
+			number,
+			Array<{
+				commentId: number;
+				box: BoundingBox;
+				color: string;
+				key: string;
+				isSelected: boolean;
+			}>
+		>();
 
 		for (const { comment, parsedAnnotation } of commentsWithAnnotations) {
 			for (let idx = 0; idx < parsedAnnotation.boundingBoxes.length; idx++) {
@@ -62,10 +72,12 @@
 	let observer: MutationObserver | null = null;
 
 	// Store event listener references for cleanup
-	type HighlightElement = HTMLDivElement & { _listeners?: { mouseenter: () => void; mouseleave: () => void; click: () => void } };
+	type HighlightElement = HTMLDivElement & {
+		_listeners?: { mouseenter: () => void; mouseleave: () => void; click: () => void };
+	};
 
 	const cleanupHighlights = (container: HTMLDivElement) => {
-		container.querySelectorAll<HighlightElement>('.annotation-highlight').forEach(el => {
+		container.querySelectorAll<HighlightElement>('.annotation-highlight').forEach((el) => {
 			// Remove event listeners before removing element
 			if (el._listeners) {
 				el.removeEventListener('mouseenter', el._listeners.mouseenter);
@@ -95,7 +107,9 @@
 
 		// For each page with highlights
 		for (const [pageNum, highlights] of highlightsByPage) {
-			const pageElement = viewerContainer.querySelector(`[data-page-number="${pageNum}"]`) as HTMLElement | null;
+			const pageElement = viewerContainer.querySelector(
+				`[data-page-number="${pageNum}"]`
+			) as HTMLElement | null;
 			if (!pageElement) continue;
 
 			// Check if page has finished rendering (has a canvas with dimensions)
@@ -112,7 +126,9 @@
 				const { box, color, key, commentId, isSelected } = highlight;
 
 				// reuse an existing element if one already exists for this key
-				const existingEl = textLayer.querySelector<HighlightElement>(`.annotation-highlight[data-key="${key}"]`);
+				const existingEl = textLayer.querySelector<HighlightElement>(
+					`.annotation-highlight[data-key="${key}"]`
+				);
 				if (existingEl) {
 					// update position & visual attributes and keep event listeners
 					const left = box.x * textLayerRect.width;
@@ -189,8 +205,8 @@
 
 			// Remove highlights from this page that are no longer in the
 			// current highlights list (per-page cleanup to avoid global teardown)
-			const pageKeys = new Set(highlights.map(h => h.key));
-			textLayer.querySelectorAll<HighlightElement>('.annotation-highlight').forEach(el => {
+			const pageKeys = new Set(highlights.map((h) => h.key));
+			textLayer.querySelectorAll<HighlightElement>('.annotation-highlight').forEach((el) => {
 				const elKey = el.dataset.key;
 				if (!elKey) return;
 				if (!pageKeys.has(elKey)) {
@@ -213,11 +229,12 @@
 
 		observer = new MutationObserver((mutations) => {
 			// Check if any canvas was added or modified
-			const shouldRerender = mutations.some(mutation => {
+			const shouldRerender = mutations.some((mutation) => {
 				if (mutation.type === 'childList') {
 					return Array.from(mutation.addedNodes).some(
-						node => node instanceof HTMLElement &&
-						(node.tagName === 'CANVAS' || node.querySelector?.('canvas'))
+						(node) =>
+							node instanceof HTMLElement &&
+							(node.tagName === 'CANVAS' || node.querySelector?.('canvas'))
 					);
 				}
 				return false;
@@ -277,7 +294,7 @@
 		const shouldHideOthers = !!pinnedComment || !!badgeHoveredComment;
 		const selectedId = pinnedComment?.id ?? badgeHoveredComment?.id ?? null;
 
-		viewerContainer.querySelectorAll<HTMLElement>('.annotation-highlight').forEach(el => {
+		viewerContainer.querySelectorAll<HTMLElement>('.annotation-highlight').forEach((el) => {
 			const commentId = parseInt(el.dataset.commentId ?? '0', 10);
 			const isSelected = commentId === selectedId;
 			const isVisible = !shouldHideOthers || isSelected;

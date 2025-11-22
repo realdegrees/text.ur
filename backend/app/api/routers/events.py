@@ -80,7 +80,7 @@ def get_events_router[TableModel: SQLModel, RelatedResourceModel: BaseModel, Cre
     # TODO store the auth state in websocket.state and use it in the event manager to filter outgoing events individually like an endpoint would
     # Create the WebSocket handler function
     async def client_endpoint(  # noqa: C901
-        websocket: WebSocket, db: Database, events: Annotated[EventManager, ProvideEvents(endpoint="ws")], resource_id, user: User = Authenticate(endpoint="ws")
+        websocket: WebSocket, db: Database, events: Annotated[EventManager, ProvideEvents(endpoint="ws")], resource_id: str, user: User = Authenticate(endpoint="ws")
     ) -> None:
         """Connect a client to the event stream."""
         logger.info(f"[WS] Connection attempt for resource_id={resource_id}, user={user.id if user else None}")
@@ -147,7 +147,7 @@ def get_events_router[TableModel: SQLModel, RelatedResourceModel: BaseModel, Cre
 
             # Create a simple object to pass to validation
             class SimpleEvent:
-                def __init__(self, event_type: str, payload: dict):
+                def __init__(self, event_type: str, payload: dict) -> None:
                     self.type = event_type
                     self.payload = payload
 

@@ -123,7 +123,11 @@
 	const formatButtons = [
 		{ icon: BoldIcon, action: () => insertMarkdown('**'), title: 'Bold (Ctrl+B)' },
 		{ icon: ItalicIcon, action: () => insertMarkdown('*'), title: 'Italic (Ctrl+I)' },
-		{ icon: UnderlineIcon, action: () => insertMarkdown('<u>', '</u>'), title: 'Underline (Ctrl+U)' },
+		{
+			icon: UnderlineIcon,
+			action: () => insertMarkdown('<u>', '</u>'),
+			title: 'Underline (Ctrl+U)'
+		},
 		{ icon: StrikethroughIcon, action: () => insertMarkdown('~~'), title: 'Strikethrough' },
 		{ icon: ListBulletIcon, action: () => insertList(false), title: 'Bullet list' },
 		{ icon: ListNumberIcon, action: () => insertList(true), title: 'Numbered list' }
@@ -166,11 +170,14 @@
 <div class="flex flex-col rounded border border-text/20 bg-inset focus-within:border-primary">
 	<!-- Toolbar -->
 	<div class="flex items-center gap-0.5 border-b border-text/10 px-1 py-0.5">
-		{#each formatButtons as btn}
+		{#each formatButtons as btn (btn)}
 			<button
 				type="button"
 				class="rounded {sizeClasses.buttonPadding} text-text/50 transition-colors hover:bg-text/10 hover:text-text/70 disabled:opacity-30"
-				onclick={(e) => { e.stopPropagation(); btn.action(); }}
+				onclick={(e) => {
+					e.stopPropagation();
+					btn.action();
+				}}
 				title={btn.title}
 				{disabled}
 			>
@@ -188,7 +195,10 @@
 		{disabled}
 		{value}
 		oninput={handleInput}
-		onkeydown={(e) => { handleShortcuts(e); handleKeydown(e); }}
+		onkeydown={(e) => {
+			handleShortcuts(e);
+			handleKeydown(e);
+		}}
 		onclick={(e) => e.stopPropagation()}
 	></textarea>
 </div>

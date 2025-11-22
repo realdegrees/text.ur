@@ -46,7 +46,8 @@ export const load: PageLoad = async ({ params, parent, fetch }) => {
 					{ field: 'parent_id', operator: 'exists', value: 'false' },
 					{ field: 'annotation', operator: 'exists', value: 'true' },
 					{ field: 'document_id', operator: '==', value: documentResult.data.id }
-				], fetch
+				],
+				fetch
 			}
 		);
 

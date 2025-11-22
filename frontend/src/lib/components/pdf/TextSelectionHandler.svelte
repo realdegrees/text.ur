@@ -1,7 +1,11 @@
 <script lang="ts">
 	import { documentStore } from '$lib/runes/document.svelte.js';
 	import type { Annotation, BoundingBox } from '$types/pdf';
-	import { BOX_MERGE_MARGIN, BOX_VERTICAL_OVERLAP_THRESHOLD, DEFAULT_HIGHLIGHT_COLOR } from './constants';
+	import {
+		BOX_MERGE_MARGIN,
+		BOX_VERTICAL_OVERLAP_THRESHOLD,
+		DEFAULT_HIGHLIGHT_COLOR
+	} from './constants';
 
 	interface Props {
 		viewerContainer: HTMLDivElement | null;

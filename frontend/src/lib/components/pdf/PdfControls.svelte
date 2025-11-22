@@ -53,7 +53,6 @@
 
 	<div class="my-1 h-px w-6 bg-text/20"></div>
 
-
 	<button
 		class="rounded p-2 text-text/70 transition-colors hover:bg-text/10 hover:text-text"
 		onclick={onFitHeight}

@@ -15,14 +15,10 @@
 	let selectedIndex = $state(0);
 
 	// Check if any comment in this cluster is hovered (via annotation highlight)
-	let hoveredCommentInGroup = $derived(
-		comments.find((c) => c.isHighlightHovered)
-	);
+	let hoveredCommentInGroup = $derived(comments.find((c) => c.isHighlightHovered));
 
 	// Check if any comment in this cluster is pinned
-	let pinnedCommentInGroup = $derived(
-		comments.find((c) => c.isPinned)
-	);
+	let pinnedCommentInGroup = $derived(comments.find((c) => c.isPinned));
 
 	// Derive selectedIndex from external state (highlight hover or pinned)
 	// This is read-only synchronization - no store writes here
@@ -122,7 +118,11 @@
 		data-badge-active="true"
 		onmouseleave={handleMouseLeave}
 	>
-		<CommentCard {comments} activeIndex={effectiveSelectedIndex} onSelectionChange={handleSelectionChange} />
+		<CommentCard
+			{comments}
+			activeIndex={effectiveSelectedIndex}
+			onSelectionChange={handleSelectionChange}
+		/>
 	</div>
 {:else}
 	<!-- Compact badge - only hover on badge itself triggers expansion -->

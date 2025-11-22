@@ -1,4 +1,3 @@
-
 /**
  * WebSocket connection states
  */
