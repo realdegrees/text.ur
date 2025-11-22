@@ -15,7 +15,7 @@
 	import LL from '$i18n/i18n-svelte.js';
 	import { api } from '$api/client.js';
 	import type { Paginated } from '$api/pagination.js';
-	import { validatePermissions } from '$api/validatePermissions.js';
+	import { sessionStore } from '$lib/runes/session.svelte.js';
 	import { notification } from '$lib/stores/notificationStore.js';
 	import Dropdown from '$lib/components/dropdown.svelte';
 	import Badge from '$lib/components/badge.svelte';
@@ -26,7 +26,6 @@
 	let { data } = $props();
 	let memberships = $derived(data.memberships);
 	let group = $derived(data.membership.group);
-	console.log(data.membership);
 
 	let selected = $state<Omit<MembershipRead, 'group'>[]>([]);
 	let username = $state('');
@@ -36,7 +35,6 @@
 
 	function handleSelectionChange(memberships: Omit<MembershipRead, 'group'>[]) {
 		selected = memberships;
-		console.log('Selected memberships:', memberships.length);
 	}
 
 	async function updateMembershipPermissions(
@@ -105,7 +103,6 @@
 			]
 		});
 		if (response.success) {
-			console.log(response.data);
 			return response.data.data;
 		}
 		return [];
@@ -133,7 +130,7 @@
 <div class="h-screen p-4">
 	<div class="mb-4 flex w-full flex-row items-center justify-between gap-2">
 		<h1 class="text-2xl font-bold">Member Management</h1>
-		{#if validatePermissions(data.membership, ['add_members'])}
+		{#if sessionStore.validatePermissions(data.membership, ['add_members'])}
 			<!--INVITE-->
 			<div class="flex flex-row items-end gap-2">
 				<div class="w-64">
@@ -169,7 +166,7 @@
 				<p class="mr-2 font-semibold">{selected.length}/{data.memberships.total} Selected:</p>
 			{/if}
 			{#if selected.length > 0}
-				{#if validatePermissions(data.membership, ['remove_members'])}
+				{#if sessionStore.validatePermissions(data.membership, ['remove_members'])}
 					<button
 						class="rounded bg-inset px-1 py-1.5 font-semibold shadow-inner shadow-black/30 transition hover:cursor-pointer hover:bg-red-500/30"
 						onclick={() => selected.forEach(async ({ user: { id } }) => kickMember(id))}
@@ -177,7 +174,7 @@
 						Kick
 					</button>
 				{/if}
-				{#if validatePermissions(data.membership, ['manage_permissions'])}
+				{#if sessionStore.validatePermissions(data.membership, ['manage_permissions'])}
 					<Dropdown
 						items={availablePermissions}
 						onSelect={(perm) =>
@@ -324,7 +321,7 @@
 			<Badge
 				item={perm}
 				label={$LL.permissions[perm]?.() || perm}
-				showRemove={validatePermissions(data.membership, ['manage_permissions'])}
+				showRemove={sessionStore.validatePermissions(data.membership, ['manage_permissions'])}
 				onRemove={() => removePermissionFromMembership(membership, perm)}
 			/>
 		{/each}
@@ -339,12 +336,12 @@
 					showArrow={false}
 					show={false}
 					hideCurrentSelection={true}
-					allowSelection={validatePermissions(data.membership, {
+					allowSelection={sessionStore.validatePermissions(data.membership, {
 						or: ['manage_permissions', 'remove_members']
 					})}
 				>
 					{#snippet icon()}
-						{#if validatePermissions( data.membership, ['manage_permissions'] ) && availablePermissions.filter((p) => !membership.permissions.includes(p)).length > 0}
+						{#if sessionStore.validatePermissions( data.membership, ['manage_permissions'] ) && availablePermissions.filter((p) => !membership.permissions.includes(p)).length > 0}
 							<AddIcon
 								class="h-full w-5.5 rounded bg-background text-text shadow-inner shadow-black/20 transition-all hover:bg-green-500/30"
 							/>
@@ -361,14 +358,14 @@
 
 {#snippet removeSnippet(membership: Omit<MembershipRead, 'group'>)}
 	{@const useRemoveButton =
-		validatePermissions(data.membership, ['remove_members']) &&
+		sessionStore.validatePermissions(data.membership, ['remove_members']) &&
 		!membership.is_owner &&
 		!(
 			membership.permissions.includes('administrator') ||
 			membership.permissions.includes('manage_permissions')
 		)}
 
-	{@const useLeaveButton = data.sessionUser!.id === membership.user.id && !membership.is_owner}
+	{@const useLeaveButton = data.sessionUser.id === membership.user.id && !membership.is_owner}
 
 	{#if useLeaveButton || useRemoveButton}
 		<button

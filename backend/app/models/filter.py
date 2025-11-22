@@ -321,6 +321,8 @@ class CommentFilter(BaseFilterModel):
     visibility: Visibility = Field()
     user_id: int = Field()
     document_id: str = Field()
+    parent_id: int = Field()
+    annotation: dict = Field()
     
     @classmethod
     def get_filter_metadata(cls) -> dict[str, FilterMeta]:
@@ -329,6 +331,11 @@ class CommentFilter(BaseFilterModel):
             "visibility": FilterMeta(field=Comment.visibility),
             "user_id": FilterMeta(field=Comment.user_id, exclude=Comment.user),
             "document_id": FilterMeta(field=Comment.document_id, exclude=Comment.document),
+            "parent_id": FilterMeta(field=Comment.parent_id, exclude=Comment.parent, include_operators={"exists"}),
+            "has_annotations": FilterMeta(
+                field=Comment.annotation,
+                include_operators={"exists"},
+            ),
         }
 
 # ================================================================

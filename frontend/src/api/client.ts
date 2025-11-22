@@ -63,12 +63,20 @@ class TokenManager {
 }
 
 /**
+ * Generate a unique connection ID for this browser session
+ */
+function generateConnectionId(): string {
+	return `${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
+}
+
+/**
  * API client configuration and fetch wrapper with automatic authentication.
  */
 class ApiClient {
 	private baseUrl: string = env.PUBLIC_BACKEND_BASEURL;
 	private tokenManager = new TokenManager();
 	private refreshPromise: Promise<void> | null = null;
+	private connectionId: string = browser ? generateConnectionId() : '';
 
 	/**
 	 * Get the configured base URL.
@@ -139,9 +147,16 @@ class ApiClient {
 	}
 
 	/**
+	 * Get the connection ID for this session
+	 */
+	getConnectionId(): string {
+		return this.connectionId;
+	}
+
+	/**
 	 * Fetch wrapper with automatic authentication and type-safe filters.
 	 * Returns a type-safe result object with success/error discrimination.
-	 * 
+	 *
 	 * When fetching Paginated<T> with filters, the return type automatically
 	 * excludes fields based on the active filters.
 	 * You can also explicitly provide a field to exclude by passing a second
@@ -265,10 +280,14 @@ class ApiClient {
 
 		const requestInit: RequestInit = {
 			...cleanedInit,
-			credentials: cleanedInit.credentials || 'include'
+			credentials: cleanedInit.credentials || 'include',
+			headers: {
+				...cleanedInit.headers,
+				...(this.connectionId && { 'X-Connection-ID': this.connectionId })
+			}
 		};
 
-		
+
 		const response = await actualFetch(url, requestInit);
 
 		if (!response.ok) {
@@ -428,6 +447,82 @@ class ApiClient {
 				? Paginated<U, (ComputeExclusions<TFilter, TFilters> | TExclude) & PropertyKey>
 				: T
 		};
+	}
+
+	/**
+	 * Download a file (GET) and return the result as a Blob.
+	 * Uses the same filters/sort and optional fetch override as other GET helpers.
+	 */
+	/**
+	 * Download a file (GET) and return the response as a Blob.
+	 * The method always returns a Blob on success (or an error on failure).
+	 */
+	async download(
+		input: string | URL,
+		init?: Omit<RequestInit, 'method' | 'body'> & { fetch?: typeof fetch }
+	): Promise<ApiGetResult<ArrayBuffer>> {
+		if (!browser && !init?.fetch) {
+			throw new Error(
+				'API client requires a fetch function when used in server context. Pass event.fetch as the third argument.'
+			);
+		}
+
+		const { fetch: fetchFnOverride, ...cleanedInit } = init || {};
+		const actualFetch = fetchFnOverride ?? fetch!;
+
+		let url: string;
+		if (input instanceof Request) {
+			url = this.resolveUrl(input.url);
+		} else {
+			url = this.resolveUrl(input);
+		}
+
+		// No filters/sort for downloads; leave URL unchanged.
+
+		if (browser) {
+			try {
+				await this.ensureValidToken();
+			} catch (e) {
+				console.log('Failed to refresh token:', e);
+			}
+		}
+
+		const requestInit: RequestInit = {
+			...cleanedInit,
+			credentials: cleanedInit.credentials || 'include'
+		};
+
+		const response = await actualFetch(url, { ...requestInit, method: 'GET' });
+
+		if (!response.ok) {
+			// Try parse error body as json and return structured error
+			try {
+				const json = await response.json();
+				const errorData = appErrorSchema.safeParse(json);
+
+				if (errorData.success) {
+					return { success: false, error: errorData.data };
+				}
+			} catch {
+				// ignore JSON parse failures
+			}
+
+			return {
+				success: false,
+				error: {
+					error_code: 'unknown_error',
+					detail: response.statusText,
+					status_code: response.status
+				}
+			};
+		}
+
+		// Convert response to a Blob for download. Some server-side fetch
+		// implementations may not implement `response.blob()`; fall back to
+		// `arrayBuffer()` and construct a Blob if available.
+		const arrayBuffer: ArrayBuffer = await response.arrayBuffer();	
+
+		return { success: true, data: arrayBuffer };
 	}
 
 	/**

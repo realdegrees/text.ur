@@ -60,3 +60,18 @@
 	--tw-shadow: inset 0 0 --value([*]) -2px var(--tw-shadow-color);
 	box-shadow: var(--tw-shadow);
 }
+
+@theme {
+	--animate-fadeIn: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+	from {
+		opacity: 0;
+		transform: translateY(-4px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}

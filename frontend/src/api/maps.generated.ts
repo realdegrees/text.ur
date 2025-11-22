@@ -15,6 +15,7 @@ export const ExclusionMaps = {
   CommentFilter: {
     user_id: 'user',
     document_id: 'document',
+    parent_id: 'parent',
   },
   DocumentFilter: {
     group_id: 'group',

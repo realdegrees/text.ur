@@ -1,13 +1,14 @@
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path as PathLibPath
-from typing import Literal, Union
+from typing import Annotated, Literal, Union
+from uuid import uuid4
 
 from api.dependencies.authentication import Authenticate
 from api.dependencies.database import Database
-from api.dependencies.events import Events
+from api.dependencies.events import EventManager, ProvideEvents
 from core.logger import get_logger
-from fastapi import HTTPException, Path, WebSocket, WebSocketDisconnect
+from fastapi import HTTPException, WebSocket, WebSocketDisconnect
 from jinja2 import Template
 from models.base import BaseModel
 from models.event import Event
@@ -35,18 +36,19 @@ class EventModelConfig[T: SQLModel](dict):
 @dataclass
 class EventRouterConfig[CreateModel: SQLModel, ReadModel: SQLModel, UpdateModel: SQLModel, DeleteModel: SQLModel, CustomModel: SQLModel](dict):
     """Configuration for event models used in the event router."""
-    
+
     create: EventModelConfig[CreateModel] | None = None
+    read: EventModelConfig[ReadModel] | None = None
     update: EventModelConfig[UpdateModel] | None = None
     delete: EventModelConfig[DeleteModel] | None = None
     custom: EventModelConfig[CustomModel] | None = None
 
-def get_events_router[TableModel: SQLModel, RelatedResourceModel: BaseModel, CreateModel: SQLModel, UpdateModel: SQLModel, DeleteModel: SQLModel, CustomModel: SQLModel](  # noqa: C901
+def get_events_router[TableModel: SQLModel, RelatedResourceModel: BaseModel, CreateModel: SQLModel, ReadModel: SQLModel, UpdateModel: SQLModel, DeleteModel: SQLModel, CustomModel: SQLModel](  # noqa: C901
     channel: str,
     related_resource_model: RelatedResourceModel,
     table_model: TableModel,
     *,
-    config: EventRouterConfig[CreateModel, UpdateModel, DeleteModel, CustomModel],
+    config: EventRouterConfig[CreateModel, ReadModel, UpdateModel, DeleteModel, CustomModel],
     base_router: APIRouter,
 ) -> APIRouter:
     """Create a router with event endpoints for a resource.
@@ -78,15 +80,25 @@ def get_events_router[TableModel: SQLModel, RelatedResourceModel: BaseModel, Cre
     # TODO store the auth state in websocket.state and use it in the event manager to filter outgoing events individually like an endpoint would
     # Create the WebSocket handler function
     async def client_endpoint(  # noqa: C901
-        websocket: WebSocket, db: Database, events: Events, resource_id: int = Path(...), user: User = Authenticate(endpoint="ws")
+        websocket: WebSocket, db: Database, events: Annotated[EventManager, ProvideEvents(endpoint="ws")], resource_id: str, user: User = Authenticate(endpoint="ws")
     ) -> None:
         """Connect a client to the event stream."""
+        logger.info(f"[WS] Connection attempt for resource_id={resource_id}, user={user.id if user else None}")
+        logger.info(f"[WS] Cookies: {websocket.cookies}")
+
         related_resource = db.get(related_resource_model, resource_id)
-        
+
         if not related_resource:
+            logger.warning(f"[WS] Resource not found: {resource_id}")
             await websocket.close(code=1008)
             return
 
+        # Get or generate unique connection ID for this WebSocket connection
+        # Frontend sends connection_id as query param to match with HTTP requests
+        connection_id = websocket.query_params.get("connection_id") or str(uuid4())
+        websocket.state.connection_id = connection_id
+
+        logger.info(f"[WS] Accepting connection for resource_id={resource_id}, connection_id={connection_id}")
         await websocket.accept()
 
 
@@ -100,7 +112,8 @@ def get_events_router[TableModel: SQLModel, RelatedResourceModel: BaseModel, Cre
                 return True
             validation = getattr(type_config, f"validation_{direction}", None)
             if validation:
-                return validation(event, user)
+                # Validation expects the payload (Comment object), not the Event wrapper
+                return validation(event.payload, user)
             return True
 
         def has_required_models(event_type: str) -> bool:
@@ -115,11 +128,36 @@ def get_events_router[TableModel: SQLModel, RelatedResourceModel: BaseModel, Cre
                 return bool(config.custom and config.custom.model)
             return False
 
-        def on_event(event: Event[TableModel]) -> bool:
+        async def on_event(event_data: dict) -> None:
             """Validate outgoing event before sending to client."""
-            if not is_user_eligible(event, "out"):
+            # Don't validate - just parse event type and check eligibility
+            # The event was already validated when published
+            event_type = event_data.get("type")
+            payload = event_data.get("payload")
+            originating_connection_id = event_data.get("originating_connection_id")
+
+            if not event_type or payload is None:
+                logger.warning(f"Invalid event structure: {event_data}")
                 return
-            websocket.send_json(event.model_dump(mode="json"))
+
+            # Skip sending event back to the connection that triggered it
+            if originating_connection_id is not None and originating_connection_id == websocket.state.connection_id:
+                logger.debug(f"[WS] Skipping event echo for connection {websocket.state.connection_id}")
+                return
+
+            # Create a simple object to pass to validation
+            class SimpleEvent:
+                def __init__(self, event_type: str, payload: dict) -> None:
+                    self.type = event_type
+                    self.payload = payload
+
+            simple_event = SimpleEvent(event_type, payload)
+
+            if not is_user_eligible(simple_event, "out"):
+                return
+
+            logger.info(f"[WS] Sending event to client: type={event_type}, resource_id={event_data.get('resource_id')}")
+            await websocket.send_json(event_data)
             
         async def client_event_loop() -> None:
             while True:
@@ -228,7 +266,7 @@ def get_events_router[TableModel: SQLModel, RelatedResourceModel: BaseModel, Cre
                     type(None), None),
                 type=(Literal[tuple(event_types)], ...),
                 resource_id=(resource_id_type, ...),
-                __base__=Event
+                __base__=Event,
             )
             response_models.append(event_model)
 

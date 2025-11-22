@@ -89,10 +89,17 @@ export interface CommentCreate {
     [k: string]: unknown;
   } | null;
 }
-export interface CommentFilter {
-  visibility: Visibility;
-  user_id: number;
-  document_id: string;
+/**
+ * Comment WebSocket event - concrete type for frontend type generation.
+ */
+export interface CommentEvent {
+  event_id: string;
+  published_at?: string;
+  payload: CommentRead | null;
+  resource_id: number | null;
+  resource: string | null;
+  type: "create" | "update" | "delete" | "custom";
+  originating_connection_id?: string | null;
 }
 export interface CommentRead {
   created_at?: string;
@@ -100,11 +107,12 @@ export interface CommentRead {
   id: number;
   visibility: Visibility;
   user: UserRead | null;
+  parent_id: number | null;
   annotation: {
     [k: string]: unknown;
-  };
+  } | null;
   content: string | null;
-  replies: CommentRead[];
+  num_replies: number;
   reactions: ReactionRead[];
 }
 export interface UserRead {
@@ -119,6 +127,15 @@ export interface ReactionRead {
   type: ReactionType;
   user: UserRead;
   comment_id: number;
+}
+export interface CommentFilter {
+  visibility: Visibility;
+  user_id: number;
+  document_id: string;
+  parent_id: number;
+  annotation: {
+    [k: string]: unknown;
+  };
 }
 export interface CommentUpdate {
   visibility?: Visibility | null;
@@ -159,6 +176,7 @@ export interface DocumentRead {
   name: string;
   group_id: string;
   visibility: Visibility;
+  view_mode: Visibility;
 }
 export interface DocumentTransfer {
   group_id: string;
@@ -264,6 +282,11 @@ export interface ShareLinkCreate {
   permissions: Permission[];
   expires_at?: string | null;
   label?: string | null;
+}
+export interface ShareLinkFilter {
+  label: string;
+  expires_at: string;
+  author_id: number;
 }
 export interface ShareLinkRead {
   id: number;

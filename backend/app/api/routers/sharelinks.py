@@ -25,7 +25,7 @@ router = APIRouter(
 async def list_share_links(
     _: BasicAuthentication,
     share_links: Paginated[ShareLink] = PaginatedResource(
-        ShareLink, ShareLinkFilter, guards=[Guard.group_access()]
+        ShareLink, ShareLinkFilter, guards=[Guard.group_access(require_permissions={Permission.MANAGE_SHARE_LINKS})]
     )
 ) -> Paginated[ShareLinkRead]:
     """Get all group memberships."""
@@ -74,3 +74,7 @@ async def delete_share_link(
     db.delete(share_link)
     db.commit()
     return Response(status_code=204)
+
+# TODO probably add an endpoint to validate a share link 
+# (should maybe act like login and return a session token that identifies the temporary user and create a temporary db user so that everything else just works, 
+# then save the id of the temporary user in the frontend so that if the user ever makes an account with the same device, the account can be connected.)

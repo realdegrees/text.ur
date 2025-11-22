@@ -22,7 +22,7 @@ if cfg.DEBUG:
 # Create db connection
 _engine = create_engine(
     DATABASE_URL,
-    echo=DEBUG,
+    echo=False,
 )
 
 SessionFactory = sessionmaker(bind=_engine, class_=Session)

@@ -7,7 +7,7 @@
 	import type { LocalizedString } from 'typesafe-i18n';
 	import { fly } from 'svelte/transition';
 	import { page } from '$app/state';
-	import { validatePermissions } from '$api/validatePermissions.js';
+	import { sessionStore } from '$lib/runes/session.svelte.js';
 
 	let { data, children } = $props();
 	let group = $derived(data.membership.group);
@@ -26,7 +26,7 @@
 			path: '/settings',
 			i18nKey: $LL.group.settings,
 			icon: SettingsIcon,
-			condition: validatePermissions(data.membership, ['administrator'])
+			condition: sessionStore.validatePermissions(data.membership, ['administrator'])
 		}
 	];
 

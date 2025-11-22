@@ -1,3 +1,4 @@
+from collections.abc import Iterator
 from typing import Annotated, Any, BinaryIO
 
 import boto3
@@ -64,6 +65,36 @@ class S3Manager:
         """Download an object from S3."""
         response = self._client.get_object(Bucket=S3_BUCKET, Key=key)
         return response["Body"]
+
+    def download_stream(self, key: str, chunk_size: int = 8192) -> Iterator[bytes]:
+        """Return an iterator of bytes for the object, streaming in chunks.
+
+        This keeps streaming logic close to the S3 client (where it belongs)
+        while remaining framework-agnostic. Callers can forward the iterator
+        directly to `starlette.responses.StreamingResponse`.
+        """
+        response = self._client.get_object(Bucket=S3_BUCKET, Key=key)
+        body = response["Body"]
+
+        # boto3 "StreamingBody" exposes an `iter_chunks` method that yields
+        # bytes. Use it when available.
+        if hasattr(body, "iter_chunks"):
+            return body.iter_chunks(chunk_size)
+
+        # If only a file-like object with `read` is available, wrap it in a
+        # generator to yield chunks.
+        if hasattr(body, "read"):
+            def _reader() -> Iterator[bytes]:
+                chunk = body.read(chunk_size)
+                while chunk:
+                    yield chunk
+                    chunk = body.read(chunk_size)
+
+            return _reader()
+
+        # Otherwise, fall back to returning the full content as a single
+        # chunk. This keeps the signature consistent for callers.
+        return iter([response["Body"]])
 
 
 manager = S3Manager()

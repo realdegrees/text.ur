@@ -24,9 +24,10 @@ class CommentRead(BaseModel):
     id: int
     visibility: Visibility
     user: "UserRead | None"
-    annotation: dict
+    parent_id: int | None
+    annotation: dict | None
     content: str | None
-    replies: list["CommentRead"]
+    num_replies: int
     reactions: list["ReactionRead"]
 
 class CommentUpdate(SQLModel):
