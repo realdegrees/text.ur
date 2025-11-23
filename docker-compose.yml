@@ -12,6 +12,9 @@ services:
       - .env
     ports:
       - "8000:8000"
+    volumes:
+      - ./templates:/annotation-software/templates
+      # - ./logs:/annotation-software/logs
     depends_on:
       - pgbouncer
       - minio

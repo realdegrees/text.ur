@@ -12,10 +12,34 @@ on:
   push:
     branches:
       - develop
+    paths:
+      - "backend/app/**"
+      - "backend/tests/**"
+      - "frontend/src/**"
 
 jobs:
+  changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            backend:
+              - 'backend/app/**'
+              - 'backend/tests/**'
+            frontend:
+              - 'frontend/src/**'
+
   ruff:
     name: Ruff Linting
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
     runs-on: self-hosted
     steps:
       - name: Checkout code
@@ -37,6 +61,8 @@ jobs:
 
   eslint:
     name: ESLint
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
     runs-on: self-hosted
     steps:
       - name: Checkout code

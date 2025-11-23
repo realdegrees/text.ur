@@ -5,14 +5,36 @@ on:
     branches:
       - main
       - develop
+    paths:
+      - "backend/**"
+      - "frontend/**"
 
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
+  changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            backend:
+              - 'backend/**'
+            frontend:
+              - 'frontend/**'
+
   dockerize-backend:
     name: Dockerize Backend
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
     runs-on: self-hosted
     permissions:
       contents: read
@@ -54,6 +76,8 @@ jobs:
 
   dockerize-frontend:
     name: Dockerize Frontend
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
     runs-on: self-hosted
     permissions:
       contents: read
