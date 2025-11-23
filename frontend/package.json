@@ -44,6 +44,7 @@
 		"svelte-check": "^4.3.2",
 		"tailwindcss": "^4.1.13",
 		"ts-to-zod": "^5.0.1",
+		"typesafe-i18n": "^5.26.2",
 		"typescript": "^5.9.2",
 		"typescript-eslint": "^8.44.1",
 		"unplugin-icons": "^22.5.0",
@@ -57,7 +58,6 @@
 		"jwt-decode": "^4.0.0",
 		"marked": "^17.0.0",
 		"pdfjs-dist": "^5.4.394",
-		"typesafe-i18n": "^5.26.2",
 		"zod": "^4.1.12"
 	}
 }
