@@ -6,6 +6,7 @@ from typing import Annotated, Any
 
 from bs4 import BeautifulSoup
 from core.config import (
+    BACKEND_BASEURL,
     EMAIL_PRESIGN_SECRET,
     JINJA_ENV,
     SMTP_PASSWORD,
@@ -17,7 +18,9 @@ from core.config import (
 from core.logger import get_logger
 from fastapi import Depends, HTTPException
 from itsdangerous import URLSafeTimedSerializer
-from jinja2 import Environment, FileSystemLoader, select_autoescape
+from jinja2 import (
+    TemplateNotFound,
+)
 from util.api_router import APIRouter
 
 app_logger = get_logger("app")
@@ -66,16 +69,20 @@ class EmailManager:
                 "Emails will be printed to the mail logger only."
             )
 
-    def generate_verification_link(self, email: str, base_url: str, router: APIRouter, *, salt: str, confirm_route: str) -> str:
+    def generate_verification_link(self, email: str, router: APIRouter, *, salt: str, confirm_route: str) -> str:
             """Generate a signed verification link."""
             serializer = URLSafeTimedSerializer(EMAIL_PRESIGN_SECRET)
             token = serializer.dumps(email, salt=salt)
-            return f"{base_url}api{router.url_path_for(confirm_route, token=token)}"
+            return f"{BACKEND_BASEURL}/api{router.url_path_for(confirm_route, token=token)}"
         
     def send_email(self, target_email: str, subject: str, template: str, template_vars: dict[str, Any]) -> None:
         """Send an email with a templated HTML body."""
         # Render email body
-        html_body = JINJA_ENV.get_template(template).render(**template_vars)
+        try:
+            html_body = JINJA_ENV.get_template(template).render(**template_vars)
+        except TemplateNotFound as e:
+            mail_logger.error("Email template '%s' not found. Ensure templates directory exists and contains the template.", template)
+            raise HTTPException(status_code=500, detail=f"Email template '{template}' not found") from e
 
         # Build email
         msg: MIMEMultipart = MIMEMultipart("alternative")

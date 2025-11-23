@@ -55,7 +55,7 @@ async def register(request: Request, db: Database, mail: Mail, user_create: User
     # Send verification email
     try:
         verification_link = mail.generate_verification_link(
-            user.email, request.base_url, router, salt="email-verification", confirm_route="verify")
+            user.email, router, salt="email-verification", confirm_route="verify")
         mail.send_email(user.email, subject="Email Verification", template="register.jinja", template_vars={
             "verification_link": verification_link,
             "expiry_minutes": cfg.EMAIL_PRESIGN_EXPIRY // 60

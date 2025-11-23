@@ -78,6 +78,7 @@ JINJA_ENV = Environment(
     autoescape=select_autoescape(["html"])
 )
 FRONTEND_BASEURL = os.getenv("ORIGIN")
+BACKEND_BASEURL = os.getenv("PUBLIC_BACKEND_BASEURL", "http://localhost:8000")
 # Should be True in production (requires HTTPS)
 COOKIE_SECURE = os.getenv("COOKIE_SECURE", "True").lower() == "true"
 COOKIE_SAMESITE = os.getenv(

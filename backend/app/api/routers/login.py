@@ -101,7 +101,7 @@ async def reset_password(request: Request, db: Database, mail: Mail, email: str 
     user: User | None = db.exec(query).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    reset_link: str = mail.generate_verification_link(email, request.base_url, router, salt="password-reset", confirm_route="verify")
+    reset_link: str = mail.generate_verification_link(email, router, salt="password-reset", confirm_route="verify")
     try:
         template = cfg.JINJA_ENV.get_template("reset_password.jinja")
         html_body: str = template.render(
