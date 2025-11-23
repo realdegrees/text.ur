@@ -17,7 +17,8 @@ ENABLE_LOGGING = os.getenv("ENABLE_LOGGING", "False").lower() == "true"
 
 # DB
 PGBOUNCER_PORT: int | None = int(os.getenv("PGBOUNCER_PORT")) if os.getenv("PGBOUNCER_PORT") else None
-PGBOUNCER_ENABLE: bool = os.getenv("PGBOUNCER_ENABLE", "False").lower() == "true"
+PGBOUNCER_HOST: str | None = os.getenv("PGBOUNCER_HOST") if os.getenv("PGBOUNCER_HOST") else None
+ 
 
 POSTGRES_USER: str = os.getenv("POSTGRES_USER", "postgres")
 POSTGRES_PASSWORD: str = os.getenv("POSTGRES_PASSWORD", "dev")
@@ -26,7 +27,7 @@ POSTGRES_HOST: str = os.getenv("POSTGRES_HOST", "localhost")
 POSTGRES_PORT: int = int(os.getenv("POSTGRES_PORT", 5433))
 
 DATABASE_URL: str = (
-    f"postgresql+psycopg2://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}:{PGBOUNCER_PORT or POSTGRES_PORT}/{POSTGRES_DB}"
+    f"postgresql+psycopg2://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{PGBOUNCER_HOST or POSTGRES_HOST}:{PGBOUNCER_PORT or POSTGRES_PORT}/{POSTGRES_DB}"
 )
 
 # REDIS

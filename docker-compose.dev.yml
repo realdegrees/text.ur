@@ -1,30 +1,5 @@
 name: text.ur
 services:
-
-  backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: text.ur-backend
-    restart: always
-    ports:
-      - "8000:8000"
-    depends_on:
-      - pgbouncer
-      - minio
-      - redis
-
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    container_name: text.ur-frontend
-    restart: always
-    ports:
-      - "5173:5173"
-    depends_on:
-      - backend
-
   postgres:
     image: postgres:16
     container_name: text.ur-postgres
@@ -34,11 +9,11 @@ services:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_DB=${POSTGRES_DB}
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "${POSTGRES_PORT}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:?POSTGRES_USER is not set} -d ${POSTGRES_DB:?POSTGRES_DB is not set} || exit 1"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB} || exit 1"]
       interval: 10s
       timeout: 10s
       retries: 5
@@ -57,8 +32,7 @@ services:
       POOL_MODE: transaction
       ADMIN_USERS: postgres,dbuser
     depends_on:
-      postgres:
-        condition: service_healthy
+      - postgres
     ports:
       - "${PGBOUNCER_PORT}:5432"
     healthcheck:
@@ -74,8 +48,8 @@ services:
       - MINIO_REGION_NAME=${AWS_REGION}
       - S3_BUCKET=${S3_BUCKET}
     ports:
-      - "${AWS_ENDPOINT_PORT:-9000}:9000" # MinIO S3 Port
-      - "${MINIO_CONSOLE_PORT:-9001}:9001" # MinIO Console Port
+      - "${AWS_ENDPOINT_PORT}:9000" # MinIO S3 Port
+      - "${MINIO_CONSOLE_PORT}:9001" # MinIO Console Port
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - s3_data:/data
@@ -116,7 +90,7 @@ services:
       - REDIS_PORT=6379
       - REDIS_PASSWORD=${REDIS_PASSWORD}
     ports:
-      - "${REDIS_COMMANDER_PORT:-8081}:8081"
+      - "${REDIS_COMMANDER_PORT}:8081"
     depends_on:
       - redis
 
@@ -127,7 +101,7 @@ services:
     restart: always
     ports:
       - "${SMTP_PORT}:1025"   # SMTP port
-      - "${MAILHOG_PORT:-9005}:8025"   # Web UI
+      - "${MAILHOG_PORT}:8025"   # Web UI
     environment:
       MH_UI_BIND_ADDR: "0.0.0.0:8025"
       MH_API_BIND_ADDR: "0.0.0.0:8025"

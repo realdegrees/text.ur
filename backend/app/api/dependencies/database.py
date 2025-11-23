@@ -20,10 +20,12 @@ if cfg.DEBUG:
     logging.getLogger("sqlalchemy.engine").setLevel(logging.INFO)
     
 # Create db connection
+logger.info(f"Connecting to database at: {DATABASE_URL}")
 _engine = create_engine(
     DATABASE_URL,
     echo=False,
 )
+
 
 SessionFactory = sessionmaker(bind=_engine, class_=Session)
 

@@ -2,24 +2,38 @@ name: text.ur
 services:
 
   backend:
-    image: ghcr.io/realdegrees/text.ur/backend:latest
+    # image: ghcr.io/realdegrees/text.ur/backend:stable
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
     container_name: text.ur-backend
     restart: always
+    env_file:
+      - .env
     ports:
       - "8000:8000"
     depends_on:
       - pgbouncer
       - minio
       - redis
+    labels:
+      com.centurylinklabs.watchtower.scope: textur
 
   frontend:
-    image: ghcr.io/realdegrees/text.ur/frontend:latest
+    # image: ghcr.io/realdegrees/text.ur/frontend:stable
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
     container_name: text.ur-frontend
     restart: always
+    env_file:
+      - .env
     ports:
-      - "5173:5173"
+      - "3000:3000"
     depends_on:
       - backend
+    labels:
+      com.centurylinklabs.watchtower.scope: textur
 
   postgres:
     image: postgres:16
@@ -32,8 +46,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:?POSTGRES_USER is not set} -d ${POSTGRES_DB:?POSTGRES_DB is not set} || exit 1"]
-      interval: 10s
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB} || exit 1"]
       timeout: 10s
       retries: 5
       start_period: 30s
@@ -51,8 +64,7 @@ services:
       POOL_MODE: transaction
       ADMIN_USERS: postgres,dbuser
     depends_on:
-      postgres:
-        condition: service_healthy
+      - postgres
     healthcheck:
       test: ['CMD', 'pg_isready', '-h', 'postgres']
 
@@ -66,8 +78,8 @@ services:
       - MINIO_REGION_NAME=${AWS_REGION}
       - S3_BUCKET=${S3_BUCKET}
     ports:
-      - "${AWS_ENDPOINT_PORT:-9000}:9000" # MinIO S3 Port
-      - "${MINIO_CONSOLE_PORT:-9001}:9001" # MinIO Console Port
+      - "${AWS_ENDPOINT_PORT}:9000" # MinIO S3 Port
+      - "${MINIO_CONSOLE_PORT}:9001" # MinIO Console Port
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - s3_data:/data
@@ -112,21 +124,25 @@ services:
     depends_on:
       - redis
 
-  # Only for development to mock actual emails
-  mailhog:
-    image: mailhog/mailhog:v1.0.1
-    container_name: text.ur-mailhog
+  # Automatically restarts containers in the defined scope when a new image is available
+  watchtower:
+    image: docker.io/containrrr/watchtower
+    container_name: textur-watchtower
     restart: always
-    ports:
-      - "${SMTP_PORT}:1025"   # SMTP port
-      - "${MAILHOG_PORT:-9005}:8025"   # Web UI
-    environment:
-      MH_UI_BIND_ADDR: "0.0.0.0:8025"
-      MH_API_BIND_ADDR: "0.0.0.0:8025"
-      MH_SMTP_BIND_ADDR: "0.0.0.0:1025"
+    command: --interval 30 --scope textur --cleanup
+    labels: [ "com.centurylinklabs.watchtower.scope=textur" ]
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - textur
 
 
 volumes:
   postgres_data:
   s3_data:
   redis_data:
+
+networks:
+  textur:
+    driver: bridge
+  
