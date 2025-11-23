@@ -8,6 +8,7 @@ from core.config import (
     DB_STATEMENT_TIMEOUT,
     DEBUG,
 )
+from core.app_exception import AppException
 from core.logger import get_logger
 from fastapi import Depends, HTTPException
 from sqlalchemy import event, text
@@ -92,8 +93,8 @@ async def session() -> AsyncGenerator[Session, None]:
 
 def _handle_db_exception(e: Exception) -> None:
     """Handle database exceptions and raise appropriate HTTP exceptions"""
-    # Pass through existing HTTP exceptions
-    if isinstance(e, HTTPException):
+    # Pass through existing HTTP exceptions and AppExceptions
+    if isinstance(e, (HTTPException, AppException)):
         raise e
 
     # Determine status code and message based on exception type
@@ -123,7 +124,7 @@ def _handle_db_exception(e: Exception) -> None:
         if DEBUG:
             raise e
         else:
-            db_logger.error("Database error: %s", e)
+            db_logger.error("Database error: %s", e, exc_info=True)
 
     raise HTTPException(status_code=status_code, detail=detail) from e
 

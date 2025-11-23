@@ -13,6 +13,7 @@ const withBaseUrl = (request: Request, baseUrl: string): Request => {
 
 /**
  * Forwards API requests to the backend and sets x-forwarded-for headers.
+ * Also forwards cookies from the client request to the backend.
  */
 export const handleFetch: HandleFetch = async ({ request, fetch, event }) => {
 	const url = new URL(request.url);
@@ -22,6 +23,26 @@ export const handleFetch: HandleFetch = async ({ request, fetch, event }) => {
 	}
 
 	request = withBaseUrl(request, baseUrl);
+
+	// Forward cookies from the client to the backend
+	const accessToken = event.cookies.get('access_token');
+	const refreshToken = event.cookies.get('refresh_token');
+
+	if (accessToken || refreshToken) {
+		const cookieHeader = [
+			accessToken ? `access_token=${accessToken}` : '',
+			refreshToken ? `refresh_token=${refreshToken}` : ''
+		].filter(Boolean).join('; ');
+
+		const headers = new Headers(request.headers);
+		headers.set('Cookie', cookieHeader);
+		request = new Request(request.url, {
+			method: request.method,
+			headers,
+			body: request.body,
+			duplex: 'half'
+		} as RequestInit);
+	}
 
 	const response = await fetch(request);
 

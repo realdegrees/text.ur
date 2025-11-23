@@ -1,3 +1,4 @@
+import core.config as cfg
 from api.dependencies.authentication import BasicAuthentication
 from api.dependencies.database import Database
 from fastapi import Response
@@ -12,8 +13,8 @@ router = APIRouter(
 @router.post("/")
 async def logout(response: Response) -> None:
     """Log the user out by clearing the authentication cookies."""
-    response.set_cookie(key="access_token", value="", httponly=True, secure=True, samesite="none", max_age=0)
-    response.set_cookie(key="refresh_token", value="", httponly=True, secure=True, samesite="none", max_age=0)
+    response.set_cookie(key="access_token", value="", httponly=True, secure=cfg.COOKIE_SECURE, samesite=cfg.COOKIE_SAMESITE, max_age=0)
+    response.set_cookie(key="refresh_token", value="", httponly=True, secure=cfg.COOKIE_SECURE, samesite=cfg.COOKIE_SAMESITE, max_age=0)
 
 
 @router.post("/all")

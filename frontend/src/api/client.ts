@@ -1,66 +1,26 @@
-import { jwtDecode } from 'jwt-decode';
 import { browser } from '$app/environment';
-import { error } from '@sveltejs/kit';
 import { env } from '$env/dynamic/public';
 import type { Filter, Sort, AppError } from './types';
 import type { Paginated } from './pagination';
 import type { GetFilterModel, TypedFilter, ComputeExclusions } from './filters';
 import { filterToSearchParam, sortToSearchParam } from '$lib/util/query';
-import { appErrorCodeSchema, appErrorSchema } from './schemas';
+import { appErrorSchema } from './schemas';
 
-export type ApiResult<T> = 
+export type ApiResult<T> =
 	| { success: true; data?: T }
 	| { success: false; error: AppError };
 
-export type ApiGetResult<T> = 
+export type ApiGetResult<T> =
 	| { success: true; data: T }
 	| { success: false; error: AppError };
 
-export type ApiMutationResult = 
+export type ApiMutationResult =
 	| { success: true }
 	| { success: false; error: AppError };
 
-export type ApiCreateResult<T> = 
+export type ApiCreateResult<T> =
 	| { success: true; data: T }
 	| { success: false; error: AppError };
-
-/**
- * Token storage and management for client-side authentication.
- */
-class TokenManager {
-	private accessTokenKey = 'access_token';
-	private refreshTokenKey = 'refresh_token';
-
-	getAccessToken(): string | null {
-		if (!browser) return null;
-		return this.getCookie(this.accessTokenKey);
-	}
-
-	getRefreshToken(): string | null {
-		if (!browser) return null;
-		return this.getCookie(this.refreshTokenKey);
-	}
-
-	private getCookie(name: string): string | null {
-		if (!browser) return null;
-		const value = `; ${document.cookie}`;
-		const parts = value.split(`; ${name}=`);
-		if (parts.length === 2) {
-			return parts.pop()?.split(';').shift() || null;
-		}
-		return null;
-	}
-
-	isTokenExpired(token: string | null): boolean {
-		if (!token) return true;
-		try {
-			const decoded = jwtDecode(token);
-			return !decoded.exp || decoded.exp * 1000 <= Date.now();
-		} catch {
-			return true;
-		}
-	}
-}
 
 /**
  * Generate a unique connection ID for this browser session
@@ -71,11 +31,11 @@ function generateConnectionId(): string {
 
 /**
  * API client configuration and fetch wrapper with automatic authentication.
+ * Cookies are handled automatically by the browser (credentials: 'include')
+ * and forwarded by SvelteKit's handleFetch hook for SSR requests.
  */
 class ApiClient {
 	private baseUrl: string = env.PUBLIC_BACKEND_BASEURL;
-	private tokenManager = new TokenManager();
-	private refreshPromise: Promise<void> | null = null;
 	private connectionId: string = browser ? generateConnectionId() : '';
 
 	/**
@@ -104,46 +64,6 @@ class ApiClient {
 		}
 
 		return `${this.baseUrl}${path}`;
-	}
-
-	/**
-	 * Refresh the access token using the refresh token.
-	 */
-	private async refreshAccessToken(): Promise<void> {
-		const refreshToken = this.tokenManager.getRefreshToken();
-
-		if (!refreshToken || this.tokenManager.isTokenExpired(refreshToken)) {
-			throw new Error('No valid refresh token available');
-		}
-
-		const response = await fetch(`${this.baseUrl}/api/login/refresh`, {
-			method: 'POST',
-			credentials: 'include'
-		});
-
-		if (!response.ok) {
-			throw new Error('Failed to refresh access token');
-		}
-	}
-
-	/**
-	 * Ensure we have a valid access token before making a request.
-	 */
-	private async ensureValidToken(): Promise<void> {
-		const accessToken = this.tokenManager.getAccessToken();
-		const refreshToken = this.tokenManager.getRefreshToken();
-
-		if (
-			this.tokenManager.isTokenExpired(accessToken) &&
-			!this.tokenManager.isTokenExpired(refreshToken)
-		) {
-			if (!this.refreshPromise) {
-				this.refreshPromise = this.refreshAccessToken().finally(() => {
-					this.refreshPromise = null;
-				});
-			}
-			await this.refreshPromise;
-		}
 	}
 
 	/**
@@ -268,14 +188,6 @@ class ApiClient {
 			}
 			
 			url = urlObj.toString();
-		}
-
-		if (browser) {
-			try {
-				await this.ensureValidToken();
-			} catch (e) {
-				console.log('Failed to refresh token:', e);
-			}
 		}
 
 		const requestInit: RequestInit = {
@@ -478,14 +390,6 @@ class ApiClient {
 		}
 
 		// No filters/sort for downloads; leave URL unchanged.
-
-		if (browser) {
-			try {
-				await this.ensureValidToken();
-			} catch (e) {
-				console.log('Failed to refresh token:', e);
-			}
-		}
 
 		const requestInit: RequestInit = {
 			...cleanedInit,

@@ -183,6 +183,12 @@ async def root() -> RedirectResponse:
     """Redirects to the Swagger UI."""
     return RedirectResponse(url="/api/docs")
 
+
+@router.get("/health", include_in_schema=False)
+async def health() -> dict[str, str]:
+    """Health check endpoint for monitoring backend availability."""
+    return {"status": "ok"}
+
 @router.get("/docs", include_in_schema=False)
 def docs(req: Request) -> HTMLResponse:
     """Return Custom Swagger UI."""
@@ -199,6 +205,8 @@ def docs(req: Request) -> HTMLResponse:
     response.body = body
     response.headers["content-length"] = str(len(body))
     return response
+
+
 
 
 app.include_router(router)
