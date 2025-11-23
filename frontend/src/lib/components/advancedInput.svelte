@@ -138,6 +138,29 @@
 	async function navigate(event: KeyboardEvent) {
 		if (!focused) return;
 
+		// Handle Enter key for all input types (including password fields without autocomplete)
+		if (event.key === 'Enter') {
+			event.preventDefault();
+
+			// If autocomplete is active and there's a suggestion to complete, complete it first
+			if (effectiveFetchOptions && options[selectedIndex] && !selected) {
+				await doComplete();
+				return;
+			}
+
+			// Otherwise, submit
+			if (onSubmit) {
+				onSubmit(value, selected);
+			} else {
+				// Submit the parent form if no onSubmit handler is provided
+				const form = searchElement?.closest('form');
+				if (form) {
+					form.requestSubmit();
+				}
+			}
+			return;
+		}
+
 		if (!effectiveFetchOptions) {
 			return;
 		}
@@ -157,12 +180,6 @@
 				event.preventDefault();
 				if (options[selectedIndex]) {
 					doComplete();
-				}
-				break;
-			case 'Enter':
-				event.preventDefault();
-				if (selected) {
-					onSubmit?.(value, selected);
 				}
 				break;
 		}

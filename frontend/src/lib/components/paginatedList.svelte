@@ -45,11 +45,11 @@
 <!-- Page Controls -->
 <div class="flex w-full flex-row items-stretch justify-start">
 	<div class="flex w-full flex-row items-center justify-center">
-		<button class:invisible={currentPage === 1} onclick={() => changePage(-1)}
+		<button type="button" class:invisible={currentPage === 1} onclick={() => changePage(-1)}
 			><Arrow class="rotate-180" /></button
 		>
 		<span>Page {currentPage} of {maxPages}</span>
-		<button class:invisible={currentPage === maxPages} onclick={() => changePage(+1)}
+		<button type="button" class:invisible={currentPage === maxPages} onclick={() => changePage(+1)}
 			><Arrow /></button
 		>
 	</div>

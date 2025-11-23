@@ -34,7 +34,7 @@
 		{#each scroll.items as item (item)}
 			<li class="mr-1">
 				{#if onSelect}
-					<button class="block w-full cursor-pointer rounded-sm" onclick={() => onSelect(item)}>
+					<button type="button" class="block w-full cursor-pointer rounded-sm" onclick={() => onSelect(item)}>
 						{@render itemSnippet(item)}
 					</button>
 				{:else}
@@ -51,6 +51,7 @@
 
 	{#if scroll.hasMore && !scroll.loadingMore && !autoLoad}
 		<button
+			type="button"
 			class="flex w-full cursor-pointer items-center justify-center rounded bg-inset py-1 shadow-inner-sym-[5px] shadow-black transition-shadow hover:shadow-inner-sym-[10px]"
 			onclick={() => scroll.handleLoadMore()}
 			aria-label="Load more items"

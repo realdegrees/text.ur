@@ -70,6 +70,7 @@
 	{#if allowSelection}
 		<!-- Check the allowSelection flag -->
 		<button
+			type="button"
 			class="bg-surface hover:bg-surface-variant flex cursor-pointer items-center justify-between gap-1 rounded-sm"
 			onclick={toggleDropdown}
 			{title}
@@ -101,6 +102,7 @@
 		>
 			{#each items.filter((item) => item !== currentItem) as item (item)}
 				<button
+					type="button"
 					class="block w-full whitespace-nowrap hover:bg-primary"
 					onclick={() => handleItemSelect(item)}
 				>

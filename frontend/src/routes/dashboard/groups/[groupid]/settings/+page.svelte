@@ -19,7 +19,6 @@
 	import AdvancedInput from '$lib/components/advancedInput.svelte';
 	import Dropdown from '$lib/components/dropdown.svelte';
 	import Badge from '$lib/components/badge.svelte';
-	import { scale } from 'svelte/transition';
 	import LL from '$i18n/i18n-svelte.js';
 
 	let { data } = $props();
@@ -174,31 +173,27 @@
 						/>
 					{/each}
 
-					{#key defaultPermissions.length}
-						<div in:scale out:scale>
-							<Dropdown
-								items={availablePermissions.filter((p) => !defaultPermissions.includes(p))}
-								onSelect={(perm) => addDefaultPermission(perm)}
-								position="bottom-left"
-								title="Add Permission"
-								showArrow={false}
-								show={false}
-								hideCurrentSelection={true}
-								allowSelection={true}
-							>
-								{#snippet icon()}
-									{#if availablePermissions.filter((p) => !defaultPermissions.includes(p)).length > 0}
-										<AddIcon
-											class="h-full w-5.5 rounded bg-background text-text shadow-inner shadow-black/20 transition-all hover:bg-green-500/30"
-										/>
-									{/if}
-								{/snippet}
-								{#snippet itemSnippet(perm)}
-									{@render permissionItem(perm)}
-								{/snippet}
-							</Dropdown>
-						</div>
-					{/key}
+					{#if availablePermissions.filter((p) => !defaultPermissions.includes(p)).length > 0}
+						<Dropdown
+							items={availablePermissions.filter((p) => !defaultPermissions.includes(p))}
+							onSelect={(perm) => addDefaultPermission(perm)}
+							position="bottom-left"
+							title="Add Permission"
+							showArrow={false}
+							show={false}
+							hideCurrentSelection={true}
+							allowSelection={true}
+						>
+							{#snippet icon()}
+								<AddIcon
+									class="h-full w-5.5 rounded bg-background text-text shadow-inner shadow-black/20 transition-all hover:bg-green-500/30"
+								/>
+							{/snippet}
+							{#snippet itemSnippet(perm)}
+								{@render permissionItem(perm)}
+							{/snippet}
+						</Dropdown>
+					{/if}
 				</div>
 			</div>
 		{/if}
@@ -206,6 +201,7 @@
 		<!-- Save Button -->
 		<div class="flex flex-row justify-end gap-2">
 			<button
+				type="button"
 				onclick={handleSave}
 				class="flex flex-row items-center gap-2 rounded-md bg-primary px-6 py-2 text-background transition-all hover:bg-primary/80"
 			>
@@ -244,6 +240,7 @@
 							/>
 						</div>
 						<button
+							type="button"
 							class="rounded bg-orange-500/30 px-3 py-2.5 font-semibold shadow-inner shadow-black/30 transition hover:cursor-pointer hover:bg-orange-500/40"
 							onclick={() => {
 								if (selectedTransferUser) {
@@ -273,12 +270,14 @@
 						</p>
 						<div class="flex flex-row gap-2">
 							<button
+								type="button"
 								onclick={handleTransfer}
 								class="rounded bg-orange-500/30 px-4 py-2 font-semibold transition hover:bg-orange-500/40"
 							>
 								Confirm Transfer
 							</button>
 							<button
+								type="button"
 								onclick={() => {
 									showTransferConfirm = false;
 									transferUsername = '';
@@ -304,6 +303,7 @@
 
 				{#if !showDeleteConfirm}
 					<button
+						type="button"
 						onclick={() => (showDeleteConfirm = true)}
 						class="flex w-fit flex-row items-center gap-2 rounded-md bg-red-500/20 px-4 py-2 transition-all hover:bg-red-500/30"
 					>
@@ -325,6 +325,7 @@
 						/>
 						<div class="flex flex-row gap-2">
 							<button
+								type="button"
 								onclick={handleDelete}
 								disabled={deleteConfirmText !== group.name}
 								class="rounded bg-red-500/30 px-4 py-2 font-semibold transition hover:bg-red-500/40 disabled:cursor-not-allowed disabled:opacity-50"
@@ -332,6 +333,7 @@
 								Delete Group
 							</button>
 							<button
+								type="button"
 								onclick={() => {
 									showDeleteConfirm = false;
 									deleteConfirmText = '';

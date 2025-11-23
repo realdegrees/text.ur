@@ -10,7 +10,6 @@
 	import { notification } from '$lib/stores/notificationStore';
 	import Dropdown from '$lib/components/dropdown.svelte';
 	import Badge from '$lib/components/badge.svelte';
-	import { scale } from 'svelte/transition';
 
 	let groupName: string = $state('');
 	let selectedPermissions: Permission[] = $state([]);
@@ -127,31 +126,27 @@
 					/>
 				{/each}
 
-				{#key selectedPermissions.length}
-					<div in:scale out:scale>
-						<Dropdown
-							items={availablePermissions.filter((p) => !selectedPermissions.includes(p))}
-							onSelect={(perm) => addPermission(perm)}
-							position="bottom-left"
-							title="Add Permission"
-							showArrow={false}
-							show={false}
-							hideCurrentSelection={true}
-							allowSelection={true}
-						>
-							{#snippet icon()}
-								{#if availablePermissions.filter((p) => !selectedPermissions.includes(p)).length > 0}
-									<AddIcon
-										class="h-full w-5.5 rounded bg-background text-text shadow-inner shadow-black/20 transition-all hover:bg-green-500/30"
-									/>
-								{/if}
-							{/snippet}
-							{#snippet itemSnippet(perm)}
-								{@render permissionItem(perm)}
-							{/snippet}
-						</Dropdown>
-					</div>
-				{/key}
+				{#if availablePermissions.filter((p) => !selectedPermissions.includes(p)).length > 0}
+					<Dropdown
+						items={availablePermissions.filter((p) => !selectedPermissions.includes(p))}
+						onSelect={(perm) => addPermission(perm)}
+						position="bottom-left"
+						title="Add Permission"
+						showArrow={false}
+						show={false}
+						hideCurrentSelection={true}
+						allowSelection={true}
+					>
+						{#snippet icon()}
+							<AddIcon
+								class="h-full w-5.5 rounded bg-background text-text shadow-inner shadow-black/20 transition-all hover:bg-green-500/30"
+							/>
+						{/snippet}
+						{#snippet itemSnippet(perm)}
+							{@render permissionItem(perm)}
+						{/snippet}
+					</Dropdown>
+				{/if}
 			</div>
 		</div>
 
