@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { documentStore, type CachedComment } from '$lib/runes/document.svelte.js';
+	import { sessionStore } from '$lib/runes/session.svelte.js';
 	import { parseAnnotation, type Annotation, type BoundingBox } from '$types/pdf';
 	import { SvelteMap } from 'svelte/reactivity';
 	import { RENDER_DEBOUNCE_MS, OPACITY_TRANSITION_MS } from './constants';
@@ -11,10 +12,27 @@
 
 	let { viewerContainer, scale }: Props = $props();
 
+	// Apply local filters to comments
+	let filteredComments = $derived.by(() => {
+		let result = documentStore.comments;
+
+		// Filter by specific author
+		if (documentStore.authorFilter !== null) {
+			result = result.filter((c: CachedComment) => c.user?.id === documentStore.authorFilter);
+		}
+
+		// Filter to show only current user's comments
+		if (documentStore.showOnlyMyComments && sessionStore.currentUser) {
+			result = result.filter((c: CachedComment) => c.user?.id === sessionStore.currentUser?.id);
+		}
+
+		return result;
+	});
+
 	// Get comments with valid parsed annotations from the store
 	// Only track annotation data, not interaction state (to avoid re-rendering on hover)
 	let commentsWithAnnotations = $derived(
-		documentStore.comments
+		filteredComments
 			.map((c: CachedComment) => ({
 				comment: c,
 				parsedAnnotation: parseAnnotation(c.annotation)

@@ -32,7 +32,9 @@ export const handleFetch: HandleFetch = async ({ request, fetch, event }) => {
 		const cookieHeader = [
 			accessToken ? `access_token=${accessToken}` : '',
 			refreshToken ? `refresh_token=${refreshToken}` : ''
-		].filter(Boolean).join('; ');
+		]
+			.filter(Boolean)
+			.join('; ');
 
 		const headers = new Headers(request.headers);
 		headers.set('Cookie', cookieHeader);

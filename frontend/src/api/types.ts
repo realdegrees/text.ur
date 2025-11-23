@@ -35,8 +35,18 @@ export type ReactionType = "like" | "dislike" | "laugh" | "confused" | "fire";
 export type Visibility1 = "private" | "restricted" | "public";
 /**
  * Document view mode settings.
+ *
+ * RESTRICTED: Only owner, admins, and users with VIEW_RESTRICTED_COMMENTS can see comments
+ * PUBLIC: Comments visible based on individual comment visibility settings
  */
-export type ViewMode = "private" | "anonymous" | "public";
+export type ViewMode = "restricted" | "public";
+/**
+ * Document view mode settings.
+ *
+ * RESTRICTED: Only owner, admins, and users with VIEW_RESTRICTED_COMMENTS can see comments
+ * PUBLIC: Comments visible based on individual comment visibility settings
+ */
+export type ViewMode1 = "restricted" | "public";
 /**
  * Available permissions for group members.
  */
@@ -44,7 +54,6 @@ export type Permission =
   | "administrator"
   | "add_comments"
   | "remove_comments"
-  | "view_public_comments"
   | "view_restricted_comments"
   | "add_members"
   | "remove_members"
@@ -176,7 +185,7 @@ export interface DocumentRead {
   name: string;
   group_id: string;
   visibility: Visibility;
-  view_mode: Visibility;
+  view_mode: ViewMode1;
 }
 export interface DocumentTransfer {
   group_id: string;

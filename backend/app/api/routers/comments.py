@@ -9,7 +9,7 @@ from api.dependencies.resource import Resource
 from api.routers.reactions import router as ReactionRouter
 from fastapi import Body, Header, Response
 from models.comment import CommentCreate, CommentRead, CommentUpdate
-from models.enums import Permission
+from models.enums import Permission, Visibility
 from models.event import Event
 from models.filter import CommentFilter
 from models.pagination import Paginated
@@ -94,13 +94,16 @@ async def update_comment(
     x_connection_id: str | None = Header(None, alias="X-Connection-ID"),
 ) -> Comment:
     """Update a comment."""
+    # Store old visibility before updating (for WebSocket event filtering)
+    old_visibility = comment.visibility.value if comment.visibility else None
+
     # Apply updates to the comment fields
     db.merge(comment)
     comment.sqlmodel_update(update.model_dump(exclude_unset=True))
     db.commit()
     db.refresh(comment)
 
-    # Broadcast update event
+    # Broadcast update event with old_visibility for visibility change detection
     comment_read = CommentRead.model_validate(comment)
     event = Event[CommentRead](
         event_id=uuid4(),
@@ -111,8 +114,11 @@ async def update_comment(
         type="update",
         originating_connection_id=x_connection_id  # Don't echo to originating connection
     )
+    event_data = event.model_dump(mode="json")
+    event_data["old_visibility"] = old_visibility  # Include old visibility for filtering
+
     await events.publish(
-        event.model_dump(mode="json"),
+        event_data,
         channel=f"documents:{comment.document_id}:comments"
     )
 

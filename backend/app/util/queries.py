@@ -5,7 +5,7 @@ from http.client import HTTPException
 from typing import Any, Literal
 
 from fastapi.datastructures import QueryParams
-from models.enums import Permission, Visibility
+from models.enums import Permission, ViewMode, Visibility
 from models.pagination import Paginated
 from models.tables import (
     Comment,
@@ -366,108 +366,144 @@ class Guard:
         return EndpointGuard(clause, predicate, exclude_fields=exclude_fields)
 
     @staticmethod
-    def comment_access(  # noqa: C901
+    def comment_access( # noqa: C901
         require_permissions: set[Permission] | None = None,
         *,
         only_owner: bool = False,
         exclude_fields: list[ColumnElement] | None = None,
     ) -> EndpointGuard[Comment]:
-        """User can access a comment based on its visibility and the given required permissions:
-
-        The visibility restrictions apply regardless of if additional permissions are required.
-        - VisibilityType.private: only the comment owner.
-        - VisibilityType.restricted: private + group owners/admins/members with VIEW_RESTRICTED_COMMENTS permission.
-        - VisibilityType.public: private, restricted + any group member.
-        
-        Args:
-            require_permissions: Set of permissions required to access comments
-            only_owner: If True, restrict access to comment owners only
-            exclude_fields: List of model fields to exclude from responses
-        
-        """
+        """User can access a comment based on its visibility, the document view_mode and the given required permissions."""
 
         def clause(user: User, params: dict[str, Any], multi: bool = False) -> ColumnElement[bool]:
+            """Generate the SQLAlchemy clause for comment access, taking document.view_mode into account."""
             comment_id = params.get("comment_id", None)
             if not comment_id and not multi:
                 raise HTTPException(
-                    status_code=500, detail="Endpoint Guard misconfiguration: missing comment_id parameter")
+                    status_code=500, detail="Endpoint Guard misconfiguration: missing comment_id parameter"
+                )
+
+            def has_required_permissions_sql() -> ColumnElement[bool]:
+                """Return a SQL clause that checks for all required permissions on Membership."""
+                if not require_permissions:
+                    return true()
+                return and_(
+                    *(
+                        Membership.permissions.contains([permission.value])
+                        for permission in require_permissions
+                    )
+                )
 
             def build_visibility_clause(comment_id_filter: ColumnElement[bool] | None = None) -> ColumnElement[bool]:
-                """Build visibility clause, optionally filtering by comment ID."""
-                base_conditions = [
-                    comment_id_filter] if comment_id_filter is not None else []
+                """Build the combined visibility clause, also considering document.view_mode."""
+                base_conditions: list[ColumnElement[bool]] = [comment_id_filter] if comment_id_filter is not None else []
+
+                # Clause applied when the document's view_mode forces restricted access for the whole document
+                restricted_by_view_mode_clause = and_(
+                    *base_conditions,
+                    Comment.document.has(
+                        and_(
+                            Document.view_mode == ViewMode.RESTRICTED,
+                        )
+                    ),
+                    or_(
+                        Comment.user_id == user.id,
+                        Comment.document.has(
+                            Document.group_id.in_(
+                                select(Membership.group_id).where(
+                                    Membership.user_id == user.id,
+                                    Membership.accepted.is_(True),
+                                    or_(
+                                        Membership.is_owner.is_(True),
+                                        Membership.permissions.contains(
+                                            [Permission.VIEW_RESTRICTED_COMMENTS.value]
+                                        ),
+                                        Membership.permissions.contains(
+                                            [Permission.ADMINISTRATOR.value]
+                                        ),
+                                        has_required_permissions_sql(),
+                                    ),
+                                )
+                            )
+                        ),
+                    ),
+                )
 
                 if only_owner:
                     # If only_owner is True, restrict to comments owned by the user
-                    return and_(
+                    owner_only_clause = and_(
                         *base_conditions,
-                        Comment.user_id == user.id
+                        Comment.user_id == user.id,
                     )
+                    return owner_only_clause
 
-                return or_(
-                    # Private comments: only the owner and admins
-                    and_(
-                        *base_conditions,
-                        Comment.visibility == Visibility.PRIVATE,
-                        or_(
-                            Comment.user_id == user.id,
-                            Membership.is_owner.is_(True),
-                            Membership.permissions.contains(
-                                [Permission.ADMINISTRATOR.value]),
-                            and_(Membership.permissions.contains(
-                                [permission.value]) for permission in require_permissions) if require_permissions else true()
-                        ),
-                    ),
-                    # Restricted comments: owner, admins and member with VIEW_RESTRICTED_COMMENTS
-                    and_(
-                        *base_conditions,
-                        Comment.visibility == Visibility.RESTRICTED,
-                        or_(
-                            Comment.user_id == user.id,
-                            Comment.document.has(
-                                Document.group_id.in_(
-                                    select(Membership.group_id).where(
-                                        Membership.user_id == user.id,
-                                        Membership.accepted.is_(True),
-                                        or_(
-                                            Membership.is_owner.is_(True),
-                                            Membership.permissions.contains(
-                                                [Permission.VIEW_RESTRICTED_COMMENTS.value]),
-                                            Membership.permissions.contains(
-                                                [Permission.ADMINISTRATOR.value]),
-                                            and_(Membership.permissions.contains(
-                                                [permission.value]) for permission in require_permissions) if require_permissions else true()
-                                        ),
-                                    )
-                                ),
-                            ),
-                        ),
-                    ),
-                    # Public comments: any document group member or the owner
-                    and_(
-                        *base_conditions,
-                        Comment.visibility == Visibility.PUBLIC,
-                        or_(
-                            Comment.user_id == user.id,
-                            Comment.document.has(
-                                Document.group_id.in_(
-                                    select(Membership.group_id).where(
-                                        Membership.user_id == user.id,
-                                        Membership.accepted.is_(True),
-                                        or_(
-                                            Membership.is_owner.is_(True),
-                                            Membership.permissions.contains(
-                                                [Permission.VIEW_PUBLIC_COMMENTS.value]),
-                                            Membership.permissions.contains(
-                                                [Permission.ADMINISTRATOR.value]),
-                                            (and_(*(Membership.permissions.contains([permission.value])
-                                                    for permission in require_permissions)) if require_permissions else true())
-                                        ),
-                                    )
+                # Original visibility-based clauses (applied when the document view_mode is public or unspecified)
+                private_clause = and_(
+                    *base_conditions,
+                    Comment.visibility == Visibility.PRIVATE,
+                    or_(
+                        Comment.user_id == user.id,
+                        Comment.document.has(
+                            Document.group_id.in_(
+                                select(Membership.group_id).where(
+                                    Membership.user_id == user.id,
+                                    or_(
+                                        Membership.is_owner.is_(True),
+                                        Membership.permissions.contains([Permission.ADMINISTRATOR.value]),
+                                    ),
+                                    # allow required permissions for private when specified
+                                    has_required_permissions_sql(),
                                 )
-                            ),
+                            )
                         ),
                     ),
+                )
+
+                restricted_clause = and_(
+                    *base_conditions,
+                    Comment.visibility == Visibility.RESTRICTED,
+                    or_(
+                        Comment.user_id == user.id,
+                        Comment.document.has(
+                            Document.group_id.in_(
+                                select(Membership.group_id).where(
+                                    Membership.user_id == user.id,
+                                    Membership.accepted.is_(True),
+                                    or_(
+                                        Membership.is_owner.is_(True),
+                                        Membership.permissions.contains([Permission.VIEW_RESTRICTED_COMMENTS.value]),
+                                        Membership.permissions.contains([Permission.ADMINISTRATOR.value]),
+                                        has_required_permissions_sql(),
+                                    ),
+                                )
+                            )
+                        ),
+                    ),
+                )
+
+                public_clause = and_(
+                    *base_conditions,
+                    Comment.visibility == Visibility.PUBLIC,
+                    or_(
+                        Comment.user_id == user.id,
+                        Comment.document.has(
+                            Document.group_id.in_(
+                                select(Membership.group_id).where(
+                                    Membership.user_id == user.id,
+                                    Membership.accepted.is_(True),
+                                )
+                            )
+                        ),
+                    ),
+                )
+
+                # Combine:
+                # - If document.view_mode == restricted -> restricted_by_view_mode_clause
+                # - Otherwise fall back to comment-level visibility clauses (private/restricted/public)
+                return or_(
+                    restricted_by_view_mode_clause,
+                    and_(Comment.document.has(Document.view_mode == ViewMode.PUBLIC), or_(private_clause, restricted_clause, public_clause)),
+                    # also allow cases where view_mode is NULL/unspecified -> fallback to visibility clauses
+                    or_(private_clause, restricted_clause, public_clause),
                 )
 
             if multi and comment_id is None:
@@ -481,37 +517,75 @@ class Guard:
             else:
                 return build_visibility_clause()
 
-        def predicate(comment: Comment, user: User) -> bool:
+        def predicate(comment: Comment, user: User) -> bool: # noqa: C901
+            """Run Python-side predicate for comment access, taking document.view_mode into account."""
             if only_owner:
                 return comment.user_id == user.id
 
-            if comment.visibility == Visibility.PRIVATE:
-                return comment.user_id == user.id
-            elif comment.visibility == Visibility.RESTRICTED:
+            document = comment.document
+            if document is None:
+                return False
+
+            def membership_satisfies_required_permissions(membership: Membership) -> bool:
+                """Check required permissions on a Python Membership object."""
+                if not require_permissions:
+                    return True
+                return all(p in membership.permissions for p in require_permissions)
+
+            # If the document forces restricted view mode, treat all comments as restricted
+            if getattr(document, "view_mode", None) == ViewMode.RESTRICTED:
                 if comment.user_id == user.id:
                     return True
-                if comment.document.group is None:
+                if document.group is None:
                     return False
                 return any(
                     m.accepted and m.user_id == user.id and (
                         m.is_owner or
                         Permission.VIEW_RESTRICTED_COMMENTS in m.permissions or
-                        Permission.ADMINISTRATOR in m.permissions
+                        Permission.ADMINISTRATOR in m.permissions or
+                        membership_satisfies_required_permissions(m)
                     )
-                    for m in comment.document.group.memberships
+                    for m in document.group.memberships
                 )
-            elif comment.visibility == Visibility.PUBLIC:
+
+            # Otherwise, apply comment-level visibility rules
+            if comment.visibility == Visibility.PRIVATE:
+                return comment.user_id == user.id or (
+                    document.group is not None and any(
+                        m.user_id == user.id and (
+                            m.is_owner or
+                            Permission.ADMINISTRATOR in m.permissions or
+                            membership_satisfies_required_permissions(m)
+                        )
+                        for m in document.group.memberships
+                    )
+                )
+            elif comment.visibility == Visibility.RESTRICTED:
                 if comment.user_id == user.id:
                     return True
-                if comment.document.group is None:
+                if document.group is None:
                     return False
                 return any(
                     m.accepted and m.user_id == user.id and (
                         m.is_owner or
-                        Permission.VIEW_PUBLIC_COMMENTS in m.permissions or
-                        Permission.ADMINISTRATOR in m.permissions
+                        Permission.VIEW_RESTRICTED_COMMENTS in m.permissions or
+                        Permission.ADMINISTRATOR in m.permissions or
+                        membership_satisfies_required_permissions(m)
                     )
-                    for m in comment.document.group.memberships
+                    for m in document.group.memberships
+                )
+            elif comment.visibility == Visibility.PUBLIC:
+                if comment.user_id == user.id:
+                    return True
+                if document.group is None:
+                    return False
+                return any(
+                    m.accepted and m.user_id == user.id and (
+                        m.is_owner or
+                        Permission.ADMINISTRATOR in m.permissions or
+                        membership_satisfies_required_permissions(m)
+                    )
+                    for m in document.group.memberships
                 )
             return False
 

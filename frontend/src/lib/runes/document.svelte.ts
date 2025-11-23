@@ -4,7 +4,8 @@ import type {
 	CommentEvent,
 	CommentRead,
 	CommentUpdate,
-	DocumentRead
+	DocumentRead,
+	ViewMode1,
 } from '$api/types';
 import type { Paginated } from '$api/pagination';
 import { notification } from '$lib/stores/notificationStore';
@@ -62,6 +63,15 @@ const removeCommentRecursively = (
 		}));
 };
 
+/** Find the parent comment of a given comment by its parent_id */
+const findParentOfComment = (
+	inComments: CachedComment[],
+	parentId: number | null | undefined
+): CachedComment | undefined => {
+	if (!parentId) return undefined;
+	return findComment(inComments, parentId);
+};
+
 const createDocumentStore = () => {
 	let comments: CachedComment[] = $state<CachedComment[]>([]);
 	let loadedDocument: DocumentRead | undefined = $state<DocumentRead | undefined>(undefined);
@@ -70,6 +80,11 @@ const createDocumentStore = () => {
 	let pdfViewerRef: HTMLElement | null = $state<HTMLElement | null>(null);
 	let scrollContainerRef: HTMLElement | null = $state<HTMLElement | null>(null);
 	let commentSidebarRef: HTMLDivElement | null = $state<HTMLDivElement | null>(null);
+	// Track which comment has an active reply input
+	let replyingToCommentId: number | null = $state<number | null>(null);
+	// Filter state (local only - doesn't affect fetched data)
+	let authorFilter: number | null = $state<number | null>(null);
+	let showOnlyMyComments: boolean = $state<boolean>(false);
 
 	const setDocument = (document: DocumentRead) => {
 		loadedDocument = document;
@@ -133,6 +148,27 @@ const createDocumentStore = () => {
 		setCommentFlag(commentId, 'isEditing');
 	};
 
+	// Set replying state (tracks which comment has reply input open)
+	const setReplyingTo = (commentId: number | null) => {
+		replyingToCommentId = commentId;
+	};
+
+	// Filter setters
+	const setAuthorFilter = (userId: number | null) => {
+		authorFilter = userId;
+	};
+
+	const setShowOnlyMyComments = (show: boolean) => {
+		showOnlyMyComments = show;
+		// Clear author filter when toggling "my comments only"
+		if (show) authorFilter = null;
+	};
+
+	const clearFilters = () => {
+		authorFilter = null;
+		showOnlyMyComments = false;
+	};
+
 	// Toggle replies collapsed state for a specific comment
 	const toggleRepliesCollapsed = (commentId: number) => {
 		const comment = findComment(comments, commentId);
@@ -182,7 +218,7 @@ const createDocumentStore = () => {
 			content: options.content,
 			parent_id: options.parentId,
 			document_id: loadedDocument.id,
-			visibility: loadedDocument.view_mode
+			visibility: 'public' // New highlight comments are always public by default
 		} satisfies CommentCreate);
 		if (!result.success) {
 			notification(result.error);
@@ -210,10 +246,21 @@ const createDocumentStore = () => {
 	};
 
 	const deleteComment = async (commentId: number) => {
+		// Find the comment first to get its parent_id
+		const commentToDelete = findComment(comments, commentId);
+
 		const result = await api.delete(`/comments/${commentId}`);
 		if (!result.success) {
 			notification(result.error);
 			return;
+		}
+
+		// Decrement parent's num_replies if this was a reply
+		if (commentToDelete?.parent_id) {
+			const parentComment = findParentOfComment(comments, commentToDelete.parent_id);
+			if (parentComment && parentComment.num_replies > 0) {
+				parentComment.num_replies--;
+			}
 		}
 
 		comments = removeCommentRecursively(comments, commentId);
@@ -238,6 +285,20 @@ const createDocumentStore = () => {
 	};
 
 	const handleWebSocketEvent = (event: CommentEvent): void => {
+		// Handle custom events (like view_mode changes) first
+		if (event.type === 'custom') {
+			const customPayload = event.payload as unknown as {
+				document_id?: string;
+				view_mode?: ViewMode1;
+			};
+			if (customPayload?.view_mode && customPayload?.document_id && loadedDocument) {
+				// Update local document view_mode
+				loadedDocument.view_mode = customPayload.view_mode;
+				console.log(`[WS] Document view_mode updated to ${customPayload.view_mode}`);
+			}
+			return;
+		}
+
 		if (!event.payload) {
 			console.warn('Received WebSocket event with no payload', event);
 			return;
@@ -274,6 +335,13 @@ const createDocumentStore = () => {
 			}
 
 			case 'delete': {
+				// Decrement parent's num_replies if this was a reply
+				if (comment.parent_id) {
+					const parentComment = findParentOfComment(comments, comment.parent_id);
+					if (parentComment && parentComment.num_replies > 0) {
+						parentComment.num_replies--;
+					}
+				}
 				comments = removeCommentRecursively(comments, comment.id);
 				break;
 			}
@@ -319,6 +387,16 @@ const createDocumentStore = () => {
 		get commentSidebarRef() {
 			return commentSidebarRef;
 		},
+		// Filter state getters
+		get authorFilter() {
+			return authorFilter;
+		},
+		get showOnlyMyComments() {
+			return showOnlyMyComments;
+		},
+		get hasActiveFilter() {
+			return authorFilter !== null || showOnlyMyComments;
+		},
 		// Helper getters
 		get hoveredComment() {
 			return getHoveredComment();
@@ -331,6 +409,13 @@ const createDocumentStore = () => {
 		},
 		get editingComment() {
 			return getEditingComment();
+		},
+		get replyingToCommentId() {
+			return replyingToCommentId;
+		},
+		// Returns true if any input is active (editing or replying)
+		get hasActiveInput() {
+			return getEditingComment() !== undefined || replyingToCommentId !== null;
 		},
 		// Methods
 		setDocument,
@@ -345,8 +430,13 @@ const createDocumentStore = () => {
 		setSelected,
 		setPinned,
 		setEditing,
+		setReplyingTo,
 		clearAllInteractionState,
 		toggleRepliesCollapsed,
+		// Filter methods
+		setAuthorFilter,
+		setShowOnlyMyComments,
+		clearFilters,
 		// CRUD operations
 		updateComment,
 		create: createComment,

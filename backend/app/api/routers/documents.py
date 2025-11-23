@@ -1,7 +1,10 @@
 import uuid
+from datetime import datetime
+from uuid import uuid4
 
 from api.dependencies.authentication import Authenticate, BasicAuthentication
 from api.dependencies.database import Database
+from api.dependencies.events import Events
 from api.dependencies.paginated.resources import PaginatedResource
 from api.dependencies.resource import Resource
 from api.dependencies.s3 import S3
@@ -30,8 +33,10 @@ from models.document import (
     DocumentRead,
     DocumentTransfer,
     DocumentUpdate,
+    ViewModeChangedEvent,
 )
 from models.enums import AppErrorCode, Permission
+from models.event import Event
 from models.filter import DocumentFilter
 from models.pagination import Paginated
 from models.tables import Comment, Document, Group, Membership, User
@@ -51,22 +56,11 @@ events_router = get_events_router(
     "comments", Document, Comment,
     base_router=router,
     config=EventRouterConfig(
-        # TODO add global validation in/out for all events based on document access
-        read=EventModelConfig(model=CommentRead,
-                              validation_out=Guard.comment_access().predicate
-                              ),
-        create=EventModelConfig(model=CommentRead,
-                                validation_in=Guard.comment_access().predicate,
-                                validation_out=Guard.comment_access().predicate
-                                ),
-        update=EventModelConfig(model=CommentUpdate,
-                                validation_in=Guard.comment_access().predicate,
-                                validation_out=Guard.comment_access().predicate
-                                ),
-        delete=EventModelConfig(model=CommentDelete,
-                                validation_in=Guard.comment_access().predicate,
-                                validation_out=Guard.comment_access().predicate
-                                ),
+        read=EventModelConfig(model=CommentRead),
+        create=EventModelConfig(model=CommentRead),
+        update=EventModelConfig(model=CommentUpdate),
+        delete=EventModelConfig(model=CommentDelete),
+        custom=EventModelConfig(model=ViewModeChangedEvent),  # For view_mode change events
     )
 )
 
@@ -184,14 +178,38 @@ async def transfer_document(
 @router.put("/{document_id}", response_model=DocumentRead)
 async def update_document(
     db: Database,
+    events: Events,
     _: User = Authenticate(guards=[Guard.document_access({Permission.ADD_DOCUMENTS})]), # ? Users with add permissions can also update
     document_update: DocumentUpdate = Body(...),
     document: Document = Resource(Document, param_alias="document_id"),
 ) -> DocumentRead:
     """Update a document and return the updated document."""
+    # Store old view_mode to detect changes
+    old_view_mode = document.view_mode
+
     db.merge(document)
     document.sqlmodel_update(document_update.model_dump(exclude_unset=True))
     db.commit()
+    db.refresh(document)
+
+    # If view_mode changed, publish a custom event to update WebSocket clients
+    if document.view_mode != old_view_mode:
+        view_mode_event = Event[ViewModeChangedEvent](
+            event_id=uuid4(),
+            published_at=datetime.now(),
+            payload=ViewModeChangedEvent(
+                document_id=document.id,
+                view_mode=document.view_mode,
+            ),
+            resource_id=None,
+            resource="document",
+            type="custom",
+        )
+        await events.publish(
+            view_mode_event.model_dump(mode="json"),
+            channel=f"documents:{document.id}:comments"
+        )
+
     return document
 
 @router.delete("/{document_id}")

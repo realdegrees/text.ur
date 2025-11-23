@@ -210,10 +210,6 @@ type RootTranslation = {
 		 */
 		remove_comments: string
 		/**
-		 * V​i​e​w​ ​p​u​b​l​i​c​ ​c​o​m​m​e​n​t​s
-		 */
-		view_public_comments: string
-		/**
 		 * V​i​e​w​ ​r​e​s​t​r​i​c​t​e​d​ ​c​o​m​m​e​n​t​s
 		 */
 		view_restricted_comments: string
@@ -554,10 +550,6 @@ export type TranslationFunctions = {
 		 * Remove comments
 		 */
 		remove_comments: () => LocalizedString
-		/**
-		 * View public comments
-		 */
-		view_public_comments: () => LocalizedString
 		/**
 		 * View restricted comments
 		 */

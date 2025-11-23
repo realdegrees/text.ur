@@ -7,6 +7,7 @@
 	import CommentSidebar from './CommentSidebar.svelte';
 	import PdfControls from './PdfControls.svelte';
 	import ConnectionLine from './ConnectionLine.svelte';
+	import UserCursors from './UserCursors.svelte';
 	import { documentStore } from '$lib/runes/document.svelte.js';
 	import { PDF_ZOOM_STEP, PDF_MIN_SCALE } from './constants';
 
@@ -229,6 +230,9 @@
 
 		<!-- Text selection handler for creating new annotations -->
 		<TextSelectionHandler viewerContainer={container} />
+
+		<!-- Other users' cursors -->
+		<UserCursors viewerContainer={container} {scale} />
 	</div>
 
 	<!-- Right Sidebar - Comments (expands to fill remaining space) -->

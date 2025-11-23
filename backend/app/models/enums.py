@@ -20,7 +20,6 @@ class Permission(str, Enum):
     # Comments
     ADD_COMMENTS = "add_comments"
     REMOVE_COMMENTS = "remove_comments"
-    VIEW_PUBLIC_COMMENTS = "view_public_comments"
     VIEW_RESTRICTED_COMMENTS = "view_restricted_comments"
     
     # Members
@@ -42,10 +41,13 @@ class Permission(str, Enum):
 
 
 class ViewMode(str, Enum):
-    """Document view mode settings."""
+    """Document view mode settings.
 
-    PRIVATE = "private"
-    ANONYMOUS = "anonymous"
+    RESTRICTED: Only owner, admins, and users with VIEW_RESTRICTED_COMMENTS can see comments
+    PUBLIC: Comments visible based on individual comment visibility settings
+    """
+
+    RESTRICTED = "restricted"
     PUBLIC = "public"
 
 

@@ -35,7 +35,7 @@ class GroupFactory(BaseFactory):
 
     name = factory.Sequence(lambda n: f"Group {n}")
     secret = factory.LazyFunction(lambda: str(uuid4()))
-    default_permissions = factory.LazyFunction(lambda: [Permission.VIEW_PUBLIC_COMMENTS])
+    default_permissions = factory.LazyFunction(lambda: [])
 
 
 class MembershipFactory(BaseFactory):
@@ -44,7 +44,7 @@ class MembershipFactory(BaseFactory):
 
     user = factory.SubFactory(UserFactory)
     group = factory.SubFactory(GroupFactory)
-    permissions = factory.LazyFunction(lambda: [Permission.VIEW_PUBLIC_COMMENTS])
+    permissions = factory.LazyFunction(lambda: [])
     is_owner = False
     accepted = True
 
@@ -88,7 +88,7 @@ class ShareLinkFactory(BaseFactory):
 
     group = factory.SubFactory(GroupFactory)
     created_by = factory.SubFactory(UserFactory)
-    permissions = factory.LazyFunction(lambda: [Permission.VIEW_PUBLIC_COMMENTS])
+    permissions = factory.LazyFunction(lambda: [])
     token = factory.LazyFunction(lambda: str(uuid4()))
     expires_at = factory.LazyFunction(lambda: datetime.now(UTC) + timedelta(days=7))
     label = factory.Faker("sentence")

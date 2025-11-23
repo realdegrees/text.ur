@@ -1,21 +1,30 @@
+import asyncio
+import contextlib
 from collections.abc import Callable
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path as PathLibPath
 from typing import Annotated, Literal, Union
 from uuid import uuid4
 
 from api.dependencies.authentication import Authenticate
 from api.dependencies.database import Database
-from api.dependencies.events import EventManager, ProvideEvents
+from api.dependencies.events import (
+    HEARTBEAT_INTERVAL,
+    ConnectedUser,
+    EventManager,
+    ProvideEvents,
+)
 from core.logger import get_logger
 from fastapi import HTTPException, WebSocket, WebSocketDisconnect
 from jinja2 import Template
 from models.base import BaseModel
+from models.enums import Permission, ViewMode, Visibility
 from models.event import Event
-from models.tables import User
+from models.tables import Document, Membership, User
 from pydantic import ValidationError
 from pydantic import create_model as internal_model
-from sqlmodel import SQLModel
+from sqlmodel import SQLModel, select
 from util.api_router import APIRouter
 
 logger = get_logger("app")
@@ -24,6 +33,60 @@ logger = get_logger("app")
 WEBSOCKET_TEMPLATE_PATH = PathLibPath(__file__).parent.parent / "docs" / "websocket.jinja"
 with open(WEBSOCKET_TEMPLATE_PATH) as template_file:
     WEBSOCKET_TEMPLATE = Template(template_file.read())
+
+
+def can_user_see_comment(
+    user: User,
+    membership: Membership | None,
+    document: Document,
+    comment_visibility: Visibility,
+    comment_user_id: int,
+) -> bool:
+    """Check if a user can see a comment based on view_mode, visibility, and permissions.
+
+    Rules:
+    - Document view_mode RESTRICTED: only owner, admins, and users with VIEW_RESTRICTED_COMMENTS
+    - Document view_mode PUBLIC: based on comment visibility and user permissions
+
+    Comment visibility (when view_mode is PUBLIC):
+    - PRIVATE: only comment author sees it
+    - RESTRICTED: author + owner + admin + users with VIEW_RESTRICTED_COMMENTS
+    - PUBLIC: author + owner + admin + members if the group
+    """
+    # Comment author always sees their own comments
+    if comment_user_id == user.id:
+        return True
+
+    # No membership = no access (except for own comments handled above)
+    if not membership:
+        return False
+
+    # Check document view_mode first
+    if document.view_mode == ViewMode.RESTRICTED:
+        # Only owner, admins, and users with VIEW_RESTRICTED_COMMENTS can see comments
+        return (
+            membership.is_owner
+            or Permission.ADMINISTRATOR in membership.permissions
+            or Permission.VIEW_RESTRICTED_COMMENTS in membership.permissions
+        )
+
+    # view_mode is PUBLIC - check comment visibility
+    # Owner and admin bypass visibility restrictions
+    if membership.is_owner or Permission.ADMINISTRATOR in membership.permissions:
+        return True
+
+    # Check based on comment visibility
+    if comment_visibility == Visibility.PRIVATE:
+        # Only author (handled above) can see private comments
+        return False
+
+    if comment_visibility == Visibility.RESTRICTED:
+        return Permission.VIEW_RESTRICTED_COMMENTS in membership.permissions
+
+    if comment_visibility == Visibility.PUBLIC:
+        return True
+
+    return False
     
 @dataclass
 class EventModelConfig[T: SQLModel](dict):
@@ -77,7 +140,6 @@ def get_events_router[TableModel: SQLModel, RelatedResourceModel: BaseModel, Cre
     # Create the WebSocket path for registration on the main app
     full_path = "/" + "/".join(base_prefix + router_prefix)
 
-    # TODO store the auth state in websocket.state and use it in the event manager to filter outgoing events individually like an endpoint would
     # Create the WebSocket handler function
     async def client_endpoint(  # noqa: C901
         websocket: WebSocket, db: Database, events: Annotated[EventManager, ProvideEvents(endpoint="ws")], resource_id: str, user: User = Authenticate(endpoint="ws")
@@ -98,9 +160,69 @@ def get_events_router[TableModel: SQLModel, RelatedResourceModel: BaseModel, Cre
         connection_id = websocket.query_params.get("connection_id") or str(uuid4())
         websocket.state.connection_id = connection_id
 
+        # Store user and related resource for permission checks on outgoing events
+        websocket.state.user = user
+        websocket.state.document = related_resource if isinstance(related_resource, Document) else None
+
+        # Fetch and store user's membership for this document's group (for permission checks)
+        membership: Membership | None = None
+        if websocket.state.document and websocket.state.document.group_id:
+            membership = db.exec(
+                select(Membership).where(
+                    Membership.user_id == user.id,
+                    Membership.group_id == websocket.state.document.group_id,
+                    Membership.accepted == True,  # noqa: E712
+                )
+            ).first()
+        websocket.state.membership = membership
+
         logger.info(f"[WS] Accepting connection for resource_id={resource_id}, connection_id={connection_id}")
         await websocket.accept()
 
+        # Track active users for this document
+        active_users: list[ConnectedUser] = []
+        heartbeat_task: asyncio.Task | None = None
+
+        if channel == "comments" and websocket.state.document:
+            doc_id = websocket.state.document.id
+            # Add this user to active users and get current list
+            active_users = await events.add_active_user(
+                doc_id, user.id, user.username, connection_id
+            )
+
+            # Send handshake response with active users
+            handshake_response = {
+                "type": "handshake",
+                "payload": {
+                    "connection_id": connection_id,
+                    "active_users": [u.model_dump() for u in active_users]
+                }
+            }
+            await websocket.send_json(handshake_response)
+
+            # Publish user_connected event to other clients
+            user_connected_event = {
+                "type": "user_connected",
+                "payload": {
+                    "user_id": user.id,
+                    "username": user.username,
+                    "connection_id": connection_id,
+                    "connected_at": datetime.now().isoformat()
+                },
+                "originating_connection_id": connection_id
+            }
+            await events.publish(
+                user_connected_event,
+                channel=f"documents:{doc_id}:comments"
+            )
+
+            # Start heartbeat task to keep user active
+            async def heartbeat_loop() -> None:
+                while True:
+                    await asyncio.sleep(HEARTBEAT_INTERVAL)
+                    await events.refresh_user_heartbeat(doc_id)
+
+            heartbeat_task = asyncio.create_task(heartbeat_loop())
 
         def is_user_eligible(event: Event, direction: str) -> bool:
             """Check if the event passes the configured validation for the given direction ('in' or 'out')."""
@@ -128,10 +250,16 @@ def get_events_router[TableModel: SQLModel, RelatedResourceModel: BaseModel, Cre
                 return bool(config.custom and config.custom.model)
             return False
 
-        async def on_event(event_data: dict) -> None:
-            """Validate outgoing event before sending to client."""
-            # Don't validate - just parse event type and check eligibility
-            # The event was already validated when published
+        async def on_event(event_data: dict) -> None: # noqa: C901
+            """Validate outgoing event before sending to client.
+
+            Permission filtering logic for comment events:
+            - DELETE: Always send (user needs to know to remove from their UI)
+            - CREATE: Check visibility - if user can't see, skip
+            - UPDATE: Check visibility - if user can see, send UPDATE;
+                      if user can't see, send DELETE instead (remove from their view)
+            - mouse_position: Always send (no filtering needed for cursor positions)
+            """
             event_type = event_data.get("type")
             payload = event_data.get("payload")
             originating_connection_id = event_data.get("originating_connection_id")
@@ -145,23 +273,117 @@ def get_events_router[TableModel: SQLModel, RelatedResourceModel: BaseModel, Cre
                 logger.debug(f"[WS] Skipping event echo for connection {websocket.state.connection_id}")
                 return
 
-            # Create a simple object to pass to validation
-            class SimpleEvent:
-                def __init__(self, event_type: str, payload: dict) -> None:
-                    self.type = event_type
-                    self.payload = payload
-
-            simple_event = SimpleEvent(event_type, payload)
-
-            if not is_user_eligible(simple_event, "out"):
+            # Handle mouse_position events - just send them through without filtering
+            if event_type == "mouse_position":
+                await websocket.send_json(event_data)
                 return
 
-            logger.info(f"[WS] Sending event to client: type={event_type}, resource_id={event_data.get('resource_id')}")
+            # Get stored state for permission checks
+            ws_user: User | None = getattr(websocket.state, "user", None)
+            ws_document: Document | None = getattr(websocket.state, "document", None)
+            ws_membership: Membership | None = getattr(websocket.state, "membership", None)
+
+            # Check if this is a comment event that needs visibility filtering
+            should_filter = ws_user and ws_document and channel == "comments"
+
+            if should_filter:
+                # Extract comment visibility and user_id from payload
+                comment_visibility_str = payload.get("visibility")
+                comment_user = payload.get("user", {})
+                comment_user_id = comment_user.get("id") if isinstance(comment_user, dict) else None
+
+                if comment_visibility_str and comment_user_id is not None:
+                    try:
+                        comment_visibility = Visibility(comment_visibility_str)
+                    except ValueError:
+                        comment_visibility = Visibility.PUBLIC
+
+                    # Check if user can see this comment
+                    can_see = can_user_see_comment(
+                        ws_user, ws_membership, ws_document, comment_visibility, comment_user_id
+                    )
+
+                    if event_type == "delete":
+                        # Always send DELETE events so users remove the comment from their UI
+                        pass
+                    elif event_type == "create":
+                        # Skip CREATE if user can't see the comment
+                        if not can_see:
+                            logger.debug(f"[WS] Skipping CREATE event - user {ws_user.id} cannot see comment")
+                            return
+                    elif event_type == "update":
+                        # Check if visibility changed - use old_visibility to determine correct event type
+                        old_visibility_str = event_data.get("old_visibility")
+                        could_see_before = True  # Assume could see if no old_visibility provided
+
+                        if old_visibility_str:
+                            try:
+                                old_visibility = Visibility(old_visibility_str)
+                                could_see_before = can_user_see_comment(
+                                    ws_user, ws_membership, ws_document, old_visibility, comment_user_id
+                                )
+                            except ValueError:
+                                pass
+
+                        if can_see and could_see_before:
+                            # User could see before and can see now → send UPDATE
+                            pass
+                        elif can_see and not could_see_before:
+                            # User couldn't see before but can see now → send CREATE
+                            logger.debug(f"[WS] Converting UPDATE to CREATE - visibility opened for user {ws_user.id}")
+                            event_data = {
+                                **event_data,
+                                "type": "create",
+                            }
+                        elif not can_see and could_see_before:
+                            # User could see before but can't see now → send DELETE
+                            logger.debug(f"[WS] Converting UPDATE to DELETE - visibility closed for user {ws_user.id}")
+                            event_data = {
+                                **event_data,
+                                "type": "delete",
+                                "payload": {"id": payload.get("id")},  # Strip payload for delete
+                            }
+                        else:
+                            # User couldn't see before and can't see now → skip
+                            logger.debug(f"[WS] Skipping UPDATE event - user {ws_user.id} cannot see comment")
+                            return
+
+            # Handle custom events - specifically view_mode changes
+            if event_type == "custom" and payload.get("view_mode") and payload.get("document_id"):
+                # Update cached document view_mode
+                if ws_document and ws_document.id == payload.get("document_id"):
+                    try:
+                        new_view_mode = ViewMode(payload.get("view_mode"))
+                        ws_document.view_mode = new_view_mode
+                        logger.info(f"[WS] Updated cached view_mode to {new_view_mode} for document {ws_document.id}")
+                    except ValueError:
+                        logger.warning(f"[WS] Invalid view_mode in custom event: {payload.get('view_mode')}")
+
+            logger.info(f"[WS] Sending event to client: type={event_data.get('type')}, resource_id={event_data.get('resource_id')}")
             await websocket.send_json(event_data)
             
-        async def client_event_loop() -> None:
+        async def client_event_loop() -> None: # noqa: C901
             while True:
                 event_data = await websocket.receive_json()
+
+                # Handle mouse_position events specially - just broadcast to others
+                if event_data.get("type") == "mouse_position":
+                    # Add user info to the event and broadcast
+                    mouse_event = {
+                        "type": "mouse_position",
+                        "payload": {
+                            "user_id": user.id,
+                            "username": user.username,
+                            "x": event_data.get("payload", {}).get("x", 0),
+                            "y": event_data.get("payload", {}).get("y", 0),
+                            "page": event_data.get("payload", {}).get("page", 1),
+                            "visible": event_data.get("payload", {}).get("visible", True),
+                        },
+                        "originating_connection_id": websocket.state.connection_id,
+                    }
+                    await events.publish(mouse_event, channel=websocket.state.channel)
+                    continue
+
                 event = Event[table_model].model_validate(event_data)
 
                 if not is_user_eligible(event, "in"):
@@ -211,12 +433,41 @@ def get_events_router[TableModel: SQLModel, RelatedResourceModel: BaseModel, Cre
             on_event=on_event
         )
 
+        # Cleanup function for disconnect
+        async def cleanup_connection() -> None:
+            """Clean up connection resources."""
+            # Cancel heartbeat task
+            if heartbeat_task:
+                heartbeat_task.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await heartbeat_task
+
+            # Remove user from active users and notify others
+            if channel == "comments" and websocket.state.document:
+                doc_id = websocket.state.document.id
+                await events.remove_active_user(doc_id, user.id)
+
+                # Publish user_disconnected event
+                user_disconnected_event = {
+                    "type": "user_disconnected",
+                    "payload": {
+                        "user_id": user.id
+                    }
+                }
+                await events.publish(
+                    user_disconnected_event,
+                    channel=f"documents:{doc_id}:comments"
+                )
+
+            await events.unregister_client(websocket)
+
         # Client event loop (Incoming events from client to server)
         try:
-            await client_event_loop() 
+            await client_event_loop()
         except WebSocketDisconnect:
-            await events.unregister_client(websocket)
+            await cleanup_connection()
         except ValidationError as e:
+            await cleanup_connection()
             await websocket.send_json({"error": "Validation error", "details": str(e)}, mode="text")
             await websocket.close(code=1003)
         except Exception as e:
@@ -224,6 +475,7 @@ def get_events_router[TableModel: SQLModel, RelatedResourceModel: BaseModel, Cre
                 f"Error processing WebSocket message for {table_model.__name__} resource {resource_id} "
                 f"on route {full_path}: {e}"
             )
+            await cleanup_connection()
             await websocket.send_json({"error": "Internal server error", "details": "Unknown error"})
             await websocket.close(code=1011)
             
