@@ -63,8 +63,7 @@ async def register(request: Request, db: Database, mail: Mail, user_create: User
     except Exception as e:
         db.delete(user)
         db.commit()
-        raise HTTPException(
-            status_code=500, detail="Failed to send verification email") from e
+        raise e
 
 
 @router.get("/verify/{token}")

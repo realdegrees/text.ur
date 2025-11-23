@@ -3,30 +3,40 @@ import os
 from dotenv import load_dotenv
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
-root_path = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), "..", "..", "..")
+backend_path = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "..")
 )
-backend_path = os.path.join(root_path, "backend")
-dotenv_path = os.path.join(root_path, ".env")
-print(f"Loading environment variables from: {dotenv_path}")
-load_dotenv(dotenv_path)
+dotenv_path = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "..", "..", ".env")
+)
+
+
+if os.path.exists(dotenv_path):
+    print(f"Loading environment variables from: {dotenv_path}")
+    load_dotenv(dotenv_path)
+else:
+    print("No .env file found, using system environment variables.")
 
 DEBUG = os.getenv("DEBUG", "False").lower() == "true"
 LOG_FILE_DIR = os.getenv("LOG_FILE_DIR", os.path.join(backend_path, "logs"))
 ENABLE_LOGGING = os.getenv("ENABLE_LOGGING", "False").lower() == "true"
 
 # DB
-PGBOUNCER_PORT: int | None = int(os.getenv("PGBOUNCER_PORT")) if os.getenv("PGBOUNCER_PORT") else None
-PGBOUNCER_HOST: str | None = os.getenv("PGBOUNCER_HOST") if os.getenv("PGBOUNCER_HOST") else None
- 
+PGBOUNCER_PORT: int | None = int(
+    os.getenv("PGBOUNCER_PORT")) if os.getenv("PGBOUNCER_PORT") else None
+PGBOUNCER_HOST: str | None = os.getenv(
+    "PGBOUNCER_HOST") if os.getenv("PGBOUNCER_HOST") else None
+
 
 POSTGRES_USER: str = os.getenv("POSTGRES_USER", "postgres")
 POSTGRES_PASSWORD: str = os.getenv("POSTGRES_PASSWORD", "dev")
 POSTGRES_DB: str = os.getenv("POSTGRES_DB", "prod")
 POSTGRES_HOST: str = os.getenv("POSTGRES_HOST", "localhost")
 POSTGRES_PORT: int = int(os.getenv("POSTGRES_PORT", 5433))
-DB_CONNECTION_TIMEOUT: int = int(os.getenv("DB_CONNECTION_TIMEOUT", 10))  # seconds
-DB_STATEMENT_TIMEOUT: int = int(os.getenv("DB_STATEMENT_TIMEOUT", 10000))  # milliseconds
+DB_CONNECTION_TIMEOUT: int = int(
+    os.getenv("DB_CONNECTION_TIMEOUT", 10))  # seconds
+DB_STATEMENT_TIMEOUT: int = int(
+    os.getenv("DB_STATEMENT_TIMEOUT", 10000))  # milliseconds
 
 DATABASE_URL: str = (
     f"postgresql+psycopg2://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{PGBOUNCER_HOST or POSTGRES_HOST}:{PGBOUNCER_PORT or POSTGRES_PORT}/{POSTGRES_DB}"
@@ -39,12 +49,13 @@ REDIS_HOST: str = os.getenv("REDIS_HOST", "localhost")
 
 # S3
 S3_PRESIGN_EXPIRY = int(os.getenv("S3_PRESIGN_EXPIRY", 3600))
-AWS_ACCESS_KEY= os.getenv("AWS_ACCESS_KEY")
-AWS_ENDPOINT_PORT= os.getenv("AWS_ENDPOINT_PORT") 
-AWS_ENDPOINT_URL= os.getenv("AWS_ENDPOINT_URL") + f":{AWS_ENDPOINT_PORT}" if AWS_ENDPOINT_PORT else ""
-AWS_REGION= os.getenv("AWS_REGION")
-AWS_SECRET_KEY= os.getenv("AWS_SECRET_KEY")
-S3_BUCKET= os.getenv("S3_BUCKET")
+AWS_ACCESS_KEY = os.getenv("AWS_ACCESS_KEY")
+AWS_ENDPOINT_PORT = os.getenv("AWS_ENDPOINT_PORT")
+AWS_ENDPOINT_URL = os.getenv("AWS_ENDPOINT_URL") + \
+    f":{AWS_ENDPOINT_PORT}" if AWS_ENDPOINT_PORT else ""
+AWS_REGION = os.getenv("AWS_REGION")
+AWS_SECRET_KEY = os.getenv("AWS_SECRET_KEY")
+S3_BUCKET = os.getenv("S3_BUCKET")
 
 JWT_ACCESS_EXPIRATION_MINUTES = int(
     os.getenv("JWT_ACCESS_EXPIRATION_MINUTES", 30))
@@ -53,12 +64,13 @@ JWT_SECRET = os.getenv("JWT_SECRET")
 
 # EMAIL
 EMAIL_PRESIGN_SECRET = os.getenv("EMAIL_PRESIGN_SECRET")
-EMAIL_PRESIGN_EXPIRY = int(os.getenv("EMAIL_PRESIGN_EXPIRY", 3600)) # seconds
+EMAIL_PRESIGN_EXPIRY = int(os.getenv("EMAIL_PRESIGN_EXPIRY", 3600))  # seconds
 SMTP_USER = os.getenv("SMTP_USER")
 SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
 SMTP_SERVER = os.getenv("SMTP_SERVER")
 SMTP_PORT = int(os.getenv("SMTP_PORT")) if os.getenv("SMTP_PORT") else None
-SMTP_TLS = os.getenv("SMTP_TLS", "True").lower() == "true"  # Default to True for most SMTP servers
+# Default to True for most SMTP servers
+SMTP_TLS = os.getenv("SMTP_TLS", "True").lower() == "true"
 
 # APP
 JINJA_ENV = Environment(
@@ -66,7 +78,9 @@ JINJA_ENV = Environment(
     autoescape=select_autoescape(["html"])
 )
 FRONTEND_BASEURL = os.getenv("ORIGIN")
-COOKIE_SECURE = os.getenv("COOKIE_SECURE", "True").lower() == "true"  # Should be True in production (requires HTTPS)
+# Should be True in production (requires HTTPS)
+COOKIE_SECURE = os.getenv("COOKIE_SECURE", "True").lower() == "true"
 COOKIE_SAMESITE = os.getenv(
     "COOKIE_SAMESITE", "strict"
-)  # 'none' with different frontend/backend origins; 'strict' with same origin (reverse proxy)
+    # 'none' with different frontend/backend origins; 'strict' with same origin (reverse proxy)
+)

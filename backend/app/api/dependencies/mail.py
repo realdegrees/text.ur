@@ -96,16 +96,16 @@ class EmailManager:
         msg.attach(MIMEText(html_body, "html"))
 
         # Send email
-        with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
-            try:
+        try:
+            with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
                 if SMTP_TLS:
                     server.starttls()
                 server.login(SMTP_USER, SMTP_PASSWORD)
                 server.send_message(msg)
                 mail_logger.info("Email sent to %s (subject: %s)", target_email, subject)
-            except Exception as e:
-                mail_logger.error("Failed to send email to %s: %s", target_email, e)
-                raise HTTPException(status_code=500, detail="Failed to send email") from e
+        except Exception as e:
+            mail_logger.error("Failed to send email to %s: %s", target_email, e, exc_info=True)
+            raise HTTPException(status_code=500, detail="Failed to send email") from e
 
 
 manager = EmailManager()
