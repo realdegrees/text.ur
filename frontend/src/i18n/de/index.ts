@@ -17,6 +17,18 @@ const de = {
 	needAccount: 'Haben Sie kein Konto? Registrieren',
 	emailVerified: 'E-Mail erfolgreich bestätigt! Ihr Konto ist jetzt aktiviert.',
 	myGroups: 'Meine Gruppen',
+	dashboard: {
+		welcome: 'Willkommen bei text.ur!',
+		noGroupsDescription: 'Gruppen sind der Ort, an dem Sie gemeinsam mit anderen an Dokumenten arbeiten. Erstellen Sie Ihre erste Gruppe, um zu beginnen.',
+		selectGroup: 'Gruppe auswählen',
+		selectGroupDescription: 'Wählen Sie eine Gruppe aus der Seitenleiste, um deren Dokumente anzuzeigen und mit der Zusammenarbeit zu beginnen.',
+		selectFromSidebar: 'Wählen Sie eine Gruppe aus der Seitenleiste',
+		createGroup: 'Erste Gruppe erstellen',
+		orAcceptInvite: 'Oder akzeptieren Sie eine ausstehende Einladung aus der Seitenleiste',
+		step1: 'Erstellen Sie eine Gruppe und geben Sie ihr einen Namen',
+		step2: 'Laden Sie PDF-Dokumente zum Annotieren hoch',
+		step3: 'Laden Sie Teammitglieder zur Zusammenarbeit ein'
+	},
 	group: {
 		documents: 'Dokumente',
 		members: 'Mitglieder',
@@ -86,7 +98,9 @@ const de = {
 		not_authorized: 'Sie haben keine Berechtigung für diese Aktion',
 		invalid_credentials: 'Ungültiger Benutzername oder Passwort',
 		not_in_group: 'Sie sind kein Mitglied dieser Gruppe',
-		email_not_verified: 'Bitte bestätigen Sie Ihre E-Mail-Adresse, bevor Sie fortfahren'
+		email_not_verified: 'Bitte bestätigen Sie Ihre E-Mail-Adresse, bevor Sie fortfahren',
+		membership_not_found: 'Mitgliedschaft nicht gefunden',
+		owner_cannot_leave_group: 'Der Gruppeninhaber kann die Gruppe nicht verlassen'
 	},
 	invitations: 'Einladungen'
 } satisfies Translation;

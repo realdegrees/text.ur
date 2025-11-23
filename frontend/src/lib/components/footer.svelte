@@ -2,6 +2,7 @@
 	import darkMode from '$lib/stores/darkMode.svelte';
 	import MailIcon from '~icons/fluent-color/mail-16';
 	import GithubIcon from '~icons/logos/github-icon';
+	import SvelteIcon from '~icons/vscode-icons/file-type-svelte';
 	import LL from '$i18n/i18n-svelte';
 	import Dark from '~icons/material-symbols/dark-mode-outline';
 	import Light from '~icons/iconamoon/mode-light';
@@ -72,6 +73,9 @@
 
 	<!-- Links -->
 	<section class="flex flex-row items-center gap-1">
+		<span class="mr-2 flex items-center gap-1 text-xs text-text/60">
+			Built with <SvelteIcon class="h-4 w-4" />
+		</span>
 		<a
 			href="https://github.com/realdegrees/text.ur"
 			target="_blank"

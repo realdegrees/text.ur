@@ -78,6 +78,48 @@ type RootTranslation = {
 	 * M​y​ ​G​r​o​u​p​s
 	 */
 	myGroups: string
+	dashboard: {
+		/**
+		 * W​e​l​c​o​m​e​ ​t​o​ ​t​e​x​t​.​u​r​!
+		 */
+		welcome: string
+		/**
+		 * G​r​o​u​p​s​ ​a​r​e​ ​w​h​e​r​e​ ​y​o​u​ ​c​o​l​l​a​b​o​r​a​t​e​ ​o​n​ ​d​o​c​u​m​e​n​t​s​ ​w​i​t​h​ ​o​t​h​e​r​s​.​ ​C​r​e​a​t​e​ ​y​o​u​r​ ​f​i​r​s​t​ ​g​r​o​u​p​ ​t​o​ ​g​e​t​ ​s​t​a​r​t​e​d​.
+		 */
+		noGroupsDescription: string
+		/**
+		 * S​e​l​e​c​t​ ​a​ ​G​r​o​u​p
+		 */
+		selectGroup: string
+		/**
+		 * C​h​o​o​s​e​ ​a​ ​g​r​o​u​p​ ​f​r​o​m​ ​t​h​e​ ​s​i​d​e​b​a​r​ ​t​o​ ​v​i​e​w​ ​i​t​s​ ​d​o​c​u​m​e​n​t​s​ ​a​n​d​ ​s​t​a​r​t​ ​c​o​l​l​a​b​o​r​a​t​i​n​g​.
+		 */
+		selectGroupDescription: string
+		/**
+		 * S​e​l​e​c​t​ ​a​ ​g​r​o​u​p​ ​f​r​o​m​ ​t​h​e​ ​s​i​d​e​b​a​r
+		 */
+		selectFromSidebar: string
+		/**
+		 * C​r​e​a​t​e​ ​Y​o​u​r​ ​F​i​r​s​t​ ​G​r​o​u​p
+		 */
+		createGroup: string
+		/**
+		 * O​r​ ​a​c​c​e​p​t​ ​a​ ​p​e​n​d​i​n​g​ ​i​n​v​i​t​a​t​i​o​n​ ​f​r​o​m​ ​t​h​e​ ​s​i​d​e​b​a​r
+		 */
+		orAcceptInvite: string
+		/**
+		 * C​r​e​a​t​e​ ​a​ ​g​r​o​u​p​ ​a​n​d​ ​g​i​v​e​ ​i​t​ ​a​ ​n​a​m​e
+		 */
+		step1: string
+		/**
+		 * U​p​l​o​a​d​ ​P​D​F​ ​d​o​c​u​m​e​n​t​s​ ​t​o​ ​a​n​n​o​t​a​t​e
+		 */
+		step2: string
+		/**
+		 * I​n​v​i​t​e​ ​t​e​a​m​ ​m​e​m​b​e​r​s​ ​t​o​ ​c​o​l​l​a​b​o​r​a​t​e
+		 */
+		step3: string
+	}
 	group: {
 		/**
 		 * D​o​c​u​m​e​n​t​s
@@ -301,6 +343,14 @@ type RootTranslation = {
 		 * P​l​e​a​s​e​ ​v​e​r​i​f​y​ ​y​o​u​r​ ​e​m​a​i​l​ ​a​d​d​r​e​s​s​ ​b​e​f​o​r​e​ ​c​o​n​t​i​n​u​i​n​g
 		 */
 		email_not_verified: string
+		/**
+		 * M​e​m​b​e​r​s​h​i​p​ ​n​o​t​ ​f​o​u​n​d
+		 */
+		membership_not_found: string
+		/**
+		 * G​r​o​u​p​ ​o​w​n​e​r​ ​c​a​n​n​o​t​ ​l​e​a​v​e​ ​t​h​e​ ​g​r​o​u​p
+		 */
+		owner_cannot_leave_group: string
 	}
 	/**
 	 * I​n​v​i​t​a​t​i​o​n​s
@@ -373,6 +423,48 @@ export type TranslationFunctions = {
 	 * My Groups
 	 */
 	myGroups: () => LocalizedString
+	dashboard: {
+		/**
+		 * Welcome to text.ur!
+		 */
+		welcome: () => LocalizedString
+		/**
+		 * Groups are where you collaborate on documents with others. Create your first group to get started.
+		 */
+		noGroupsDescription: () => LocalizedString
+		/**
+		 * Select a Group
+		 */
+		selectGroup: () => LocalizedString
+		/**
+		 * Choose a group from the sidebar to view its documents and start collaborating.
+		 */
+		selectGroupDescription: () => LocalizedString
+		/**
+		 * Select a group from the sidebar
+		 */
+		selectFromSidebar: () => LocalizedString
+		/**
+		 * Create Your First Group
+		 */
+		createGroup: () => LocalizedString
+		/**
+		 * Or accept a pending invitation from the sidebar
+		 */
+		orAcceptInvite: () => LocalizedString
+		/**
+		 * Create a group and give it a name
+		 */
+		step1: () => LocalizedString
+		/**
+		 * Upload PDF documents to annotate
+		 */
+		step2: () => LocalizedString
+		/**
+		 * Invite team members to collaborate
+		 */
+		step3: () => LocalizedString
+	}
 	group: {
 		/**
 		 * Documents
@@ -596,6 +688,14 @@ export type TranslationFunctions = {
 		 * Please verify your email address before continuing
 		 */
 		email_not_verified: () => LocalizedString
+		/**
+		 * Membership not found
+		 */
+		membership_not_found: () => LocalizedString
+		/**
+		 * Group owner cannot leave the group
+		 */
+		owner_cannot_leave_group: () => LocalizedString
 	}
 	/**
 	 * Invitations

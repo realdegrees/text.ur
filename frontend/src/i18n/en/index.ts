@@ -17,6 +17,18 @@ const en = {
 	needAccount: 'Need an account? Register',
 	emailVerified: 'Email verified successfully! Your account is now activated.',
 	myGroups: 'My Groups',
+	dashboard: {
+		welcome: 'Welcome to text.ur!',
+		noGroupsDescription: 'Groups are where you collaborate on documents with others. Create your first group to get started.',
+		selectGroup: 'Select a Group',
+		selectGroupDescription: 'Choose a group from the sidebar to view its documents and start collaborating.',
+		selectFromSidebar: 'Select a group from the sidebar',
+		createGroup: 'Create Your First Group',
+		orAcceptInvite: 'Or accept a pending invitation from the sidebar',
+		step1: 'Create a group and give it a name',
+		step2: 'Upload PDF documents to annotate',
+		step3: 'Invite team members to collaborate'
+	},
 	group: {
 		documents: 'Documents',
 		members: 'Members',

@@ -7,7 +7,7 @@
 	import { api } from '$api/client';
 	import { notification } from '$lib/stores/notificationStore';
 	import { sessionStore } from '$lib/runes/session.svelte.js';
-	import { goto, invalidateAll } from '$app/navigation';
+	import { invalidateAll } from '$app/navigation';
 	import type {
 		GroupUpdate,
 		GroupTransfer,
@@ -66,7 +66,8 @@
 
 		if (result.success) {
 			notification('success', 'Group deleted successfully');
-			goto('/dashboard');
+			// Hard navigation to ensure fresh page load
+			window.location.href = '/dashboard';
 		} else {
 			notification(result.error);
 		}

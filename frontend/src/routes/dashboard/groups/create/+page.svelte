@@ -1,7 +1,6 @@
 <script lang="ts">
 	import type { GroupCreate, GroupRead, Permission } from '$api/types';
 	import { permissionSchema } from '$api/schemas';
-	import { goto } from '$app/navigation';
 	import LL from '$i18n/i18n-svelte';
 	import AddIcon from '~icons/material-symbols/add-2-rounded';
 	import GroupIcon from '~icons/material-symbols/group-outline';
@@ -51,7 +50,9 @@
 		}
 
 		isLoading = false;
-		goto(`/dashboard/groups/${result.data.id}/documents`, { invalidateAll: true });
+
+		// Hard navigation to ensure fresh page load
+		window.location.href = `/dashboard/groups/${result.data.id}/documents`;
 	}
 </script>
 
