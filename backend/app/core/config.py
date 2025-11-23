@@ -63,8 +63,7 @@ JINJA_ENV = Environment(
     loader=FileSystemLoader(os.path.join(os.getcwd(), "templates")),
     autoescape=select_autoescape(["html"])
 )
-FRONTEND_BASEURL = os.getenv("FRONTEND_BASEURL")
-BACKEND_BASEURL = os.getenv("BACKEND_BASEURL")
+FRONTEND_BASEURL = os.getenv("ORIGIN")
 COOKIE_SECURE = os.getenv("COOKIE_SECURE", "True").lower() == "true"  # Should be True in production (requires HTTPS)
 COOKIE_SAMESITE = os.getenv(
     "COOKIE_SAMESITE", "strict"
