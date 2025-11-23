@@ -1,0 +1,408 @@
+name: CI/CD
+
+on:
+  pull_request:
+    branches:
+      - main
+      - develop
+  push:
+    branches:
+      - main
+      - develop
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # ============================================
+  # Stage 1: Detect Changes
+  # ============================================
+  changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+      models: ${{ steps.filter.outputs.models }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            backend:
+              - 'backend/**'
+            frontend:
+              - 'frontend/**'
+            models:
+              - 'backend/app/models/**'
+              - 'backend/database/**'
+
+  # ============================================
+  # Stage 2: Linting
+  # ============================================
+  lint-backend:
+    name: Lint Backend (Ruff)
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install ruff
+        run: pip install --no-cache-dir ruff
+      - name: Run ruff
+        working-directory: ./backend
+        run: ruff check .
+
+  lint-frontend:
+    name: Lint Frontend (ESLint)
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "25"
+      - uses: pnpm/action-setup@v3
+        with:
+          version: 10
+      - name: Install dependencies
+        working-directory: ./frontend
+        run: pnpm install --workspace-root
+      - name: Run eslint
+        working-directory: ./frontend
+        run: pnpm run lint
+
+  # ============================================
+  # Stage 3: Validation
+  # ============================================
+  validate-migrations:
+    name: Validate Migrations
+    needs: [changes, lint-backend]
+    if: |
+      always() &&
+      needs.changes.outputs.models == 'true' &&
+      (needs.lint-backend.result == 'success' || needs.lint-backend.result == 'skipped')
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: test
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    env:
+      POSTGRES_DB: test
+      POSTGRES_USER: test_user
+      POSTGRES_PASSWORD: test_password
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: 5432
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq build-essential
+      - name: Install Python dependencies
+        working-directory: ./backend
+        run: |
+          python -m venv venv
+          . venv/bin/activate
+          pip install -r requirements.txt
+      - name: Initialize database
+        working-directory: ./backend/database
+        run: |
+          . ../venv/bin/activate
+          alembic stamp base
+          alembic upgrade head
+      - name: Validate migrations
+        working-directory: ./backend/database
+        run: |
+          . ../venv/bin/activate
+          alembic revision --autogenerate -m "ci" --rev-id=generated
+          REVISION="versions/generated_ci.py"
+          if grep -q "op\." "$REVISION"; then
+            echo "Migration scripts are not in sync with the table models."
+            cat "$REVISION"
+            exit 1
+          else
+            echo "Migration files validated successfully"
+            exit 0
+          fi
+
+  validate-types:
+    name: Validate Zod Types
+    needs: [changes, lint-backend, lint-frontend]
+    if: |
+      always() &&
+      needs.changes.outputs.models == 'true' &&
+      (needs.lint-backend.result == 'success' || needs.lint-backend.result == 'skipped') &&
+      (needs.lint-frontend.result == 'success' || needs.lint-frontend.result == 'skipped')
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "25"
+      - uses: pnpm/action-setup@v3
+        with:
+          version: 10
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq build-essential
+      - name: Install Python dependencies
+        working-directory: ./backend
+        run: pip install -r requirements.txt
+      - name: Install Node dependencies
+        working-directory: ./frontend
+        run: pnpm install
+      - name: Generate types
+        working-directory: ./frontend
+        run: pnpm run typegen
+      - name: Check for differences
+        run: |
+          git add .
+          git status
+          if git status | grep -q ".*api.ts"; then
+            echo "API types were not generated correctly, run pydantic2ts and ts-to-zod locally and commit the generated schemas and types."
+            exit 1
+          else
+            echo "Generated API schemas and types validated successfully"
+          fi
+
+  # ============================================
+  # Stage 4: Build
+  # ============================================
+  build-frontend:
+    name: Build Frontend
+    needs: [changes, lint-frontend, validate-types]
+    if: |
+      always() &&
+      needs.changes.outputs.frontend == 'true' &&
+      (needs.lint-frontend.result == 'success' || needs.lint-frontend.result == 'skipped') &&
+      (needs.validate-types.result == 'success' || needs.validate-types.result == 'skipped')
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "25"
+      - uses: pnpm/action-setup@v3
+        with:
+          version: 10
+      - name: Install dependencies
+        working-directory: ./frontend
+        run: pnpm install --workspace-root
+      - name: Build frontend
+        working-directory: ./frontend
+        run: pnpm run build
+
+  # ============================================
+  # Stage 5: Tests
+  # ============================================
+  test-backend:
+    name: Test Backend (Pytest)
+    needs: [changes, lint-backend, validate-migrations]
+    if: |
+      always() &&
+      needs.changes.outputs.backend == 'true' &&
+      (needs.lint-backend.result == 'success' || needs.lint-backend.result == 'skipped') &&
+      (needs.validate-migrations.result == 'success' || needs.validate-migrations.result == 'skipped')
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: test
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      minio:
+        image: minio/minio:RELEASE.2025-09-07T16-13-09Z
+        env:
+          MINIO_ROOT_USER: test_access_key
+          MINIO_ROOT_PASSWORD: test_secret_key
+          MINIO_REGION_NAME: us-east-1
+          S3_BUCKET: test_bucket
+        ports:
+          - 9000:9000
+    env:
+      POSTGRES_DB: test
+      POSTGRES_USER: test_user
+      POSTGRES_PASSWORD: test_password
+      POSTGRES_PORT: 5432
+      POSTGRES_HOST: localhost
+      AWS_ACCESS_KEY: test_access_key
+      AWS_SECRET_KEY: test_secret_key
+      AWS_REGION: us-east-1
+      AWS_ENDPOINT_URL: http://localhost
+      AWS_ENDPOINT_PORT: 9000
+      S3_BUCKET: test_bucket
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq build-essential
+      - name: Install Python dependencies
+        working-directory: ./backend
+        run: |
+          python -m venv venv
+          . venv/bin/activate
+          pip install -r requirements.txt
+      - name: Generate JWT secret
+        run: echo "JWT_SECRET=$(openssl rand -hex 32)" >> $GITHUB_ENV
+      - name: Initialize database and s3
+        working-directory: ./backend/database
+        run: |
+          . ../venv/bin/activate
+          alembic stamp base
+          alembic upgrade head
+          docker run -it --entrypoint=/bin/sh minio/mc mc alias set myminio http://minio:9000 test_access_key test_secret_key && mc mb myminio/test_bucket || true
+      - name: Run pytest
+        working-directory: ./backend
+        run: |
+          . venv/bin/activate
+          pytest --cov=app --cov-report=html:coverage --cov-report=term
+      - uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage
+          path: backend/coverage/
+          retention-days: 7
+
+  test-frontend:
+    name: Test Frontend (Vitest)
+    needs: [changes, lint-frontend, build-frontend]
+    if: |
+      always() &&
+      needs.changes.outputs.frontend == 'true' &&
+      (needs.lint-frontend.result == 'success' || needs.lint-frontend.result == 'skipped') &&
+      (needs.build-frontend.result == 'success' || needs.build-frontend.result == 'skipped')
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "latest"
+      - uses: pnpm/action-setup@v3
+        with:
+          version: 10
+      - name: Install dependencies
+        working-directory: ./frontend
+        run: pnpm install --workspace-root
+      - name: Run vitest
+        working-directory: ./frontend
+        run: pnpm run test:coverage
+      - uses: actions/upload-artifact@v4
+        with:
+          name: frontend-coverage
+          path: frontend/coverage/
+          retention-days: 7
+
+  # ============================================
+  # Stage 6: Dockerize (only on push to main/develop)
+  # ============================================
+  dockerize-backend:
+    name: Dockerize Backend
+    needs: [changes, lint-backend, validate-migrations, test-backend]
+    if: |
+      always() &&
+      github.event_name == 'push' &&
+      needs.changes.outputs.backend == 'true' &&
+      (needs.lint-backend.result == 'success' || needs.lint-backend.result == 'skipped') &&
+      (needs.validate-migrations.result == 'success' || needs.validate-migrations.result == 'skipped') &&
+      (needs.test-backend.result == 'success' || needs.test-backend.result == 'skipped')
+    runs-on: self-hosted
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/backend
+          tags: |
+            type=sha,format=short
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/develop' }}
+            type=raw,value=stable,enable=${{ github.ref == 'refs/heads/main' }}
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  dockerize-frontend:
+    name: Dockerize Frontend
+    needs: [changes, lint-frontend, validate-types, build-frontend, test-frontend]
+    if: |
+      always() &&
+      github.event_name == 'push' &&
+      needs.changes.outputs.frontend == 'true' &&
+      (needs.lint-frontend.result == 'success' || needs.lint-frontend.result == 'skipped') &&
+      (needs.validate-types.result == 'success' || needs.validate-types.result == 'skipped') &&
+      (needs.build-frontend.result == 'success' || needs.build-frontend.result == 'skipped') &&
+      (needs.test-frontend.result == 'success' || needs.test-frontend.result == 'skipped')
+    runs-on: self-hosted
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/frontend
+          tags: |
+            type=sha,format=short
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/develop' }}
+            type=raw,value=stable,enable=${{ github.ref == 'refs/heads/main' }}
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
