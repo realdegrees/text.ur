@@ -25,6 +25,8 @@ POSTGRES_PASSWORD: str = os.getenv("POSTGRES_PASSWORD", "dev")
 POSTGRES_DB: str = os.getenv("POSTGRES_DB", "prod")
 POSTGRES_HOST: str = os.getenv("POSTGRES_HOST", "localhost")
 POSTGRES_PORT: int = int(os.getenv("POSTGRES_PORT", 5433))
+DB_CONNECTION_TIMEOUT: int = int(os.getenv("DB_CONNECTION_TIMEOUT", 10))  # seconds
+DB_STATEMENT_TIMEOUT: int = int(os.getenv("DB_STATEMENT_TIMEOUT", 10000))  # milliseconds
 
 DATABASE_URL: str = (
     f"postgresql+psycopg2://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{PGBOUNCER_HOST or POSTGRES_HOST}:{PGBOUNCER_PORT or POSTGRES_PORT}/{POSTGRES_DB}"
@@ -56,7 +58,7 @@ SMTP_USER = os.getenv("SMTP_USER")
 SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
 SMTP_SERVER = os.getenv("SMTP_SERVER")
 SMTP_PORT = int(os.getenv("SMTP_PORT")) if os.getenv("SMTP_PORT") else None
-SMTP_TLS = os.getenv("SMTP_TLS", "False").lower() == "true"
+SMTP_TLS = os.getenv("SMTP_TLS", "True").lower() == "true"  # Default to True for most SMTP servers
 
 # APP
 JINJA_ENV = Environment(

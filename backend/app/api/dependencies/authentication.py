@@ -4,7 +4,7 @@ from typing import Annotated, Any, Literal
 from api.dependencies.database import Database
 from core.app_exception import AppException
 from core.auth import oauth2_scheme, parse_jwt
-from core.logger import get_logger
+from core.logger import get_logger, set_current_user
 from fastapi import Depends, Request, WebSocket
 from models.enums import AppErrorCode
 from models.tables import User
@@ -76,7 +76,8 @@ def Authenticate( # noqa: C901
         else:
             user = db.get(User, user.id)
 
-        context.state.user = user 
+        context.state.user = user
+        set_current_user(f"{user.username} (id:{user.id})")
         return user
 
     async def dependency_ws(

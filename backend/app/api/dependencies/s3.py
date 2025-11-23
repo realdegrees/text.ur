@@ -15,6 +15,7 @@ from core.logger import get_logger
 from fastapi import Depends
 
 app_logger = get_logger("app")
+s3_logger = get_logger("s3")
 
 
 class S3Manager:
@@ -24,17 +25,40 @@ class S3Manager:
         """Initialize the S3Manager with a boto3 client."""
         self.enabled = all([AWS_ACCESS_KEY, AWS_SECRET_KEY, S3_BUCKET])
         if not self.enabled:
-            app_logger.warning("⚠️ S3 is not fully configured. S3 operations are disabled.")
+            app_logger.warning("S3 is not fully configured. S3 operations are disabled.")
             return
-            
+
         self._client = boto3.client(
             "s3",
             endpoint_url=AWS_ENDPOINT_URL,
             region_name=AWS_REGION,
             aws_access_key_id=AWS_ACCESS_KEY,
             aws_secret_access_key=AWS_SECRET_KEY,
-            config=Config(signature_version="s3v4"),
+            config=Config(
+                signature_version="s3v4",
+                connect_timeout=10,
+                read_timeout=30,
+            ),
         )
+
+    def verify_connection(self) -> None:
+        """Verify S3 connection and bucket access at startup."""
+        if not self.enabled:
+            return
+        try:
+            self._client.head_bucket(Bucket=S3_BUCKET)
+            app_logger.info("S3 connection verified successfully (bucket: %s)", S3_BUCKET)
+        except ClientError as e:
+            error_code = e.response.get("Error", {}).get("Code", "Unknown")
+            if error_code == "404":
+                raise RuntimeError(f"S3 bucket '{S3_BUCKET}' does not exist") from e
+            elif error_code == "403":
+                raise RuntimeError(f"Access denied to S3 bucket '{S3_BUCKET}'") from e
+            else:
+                raise RuntimeError(f"Failed to connect to S3: {e}") from e
+        except Exception as e:
+            app_logger.error("S3 connection failed: %s", e)
+            raise RuntimeError(f"Failed to connect to S3: {e}") from e
 
     def metadata(self, key: str) -> dict | None:
         """Check if an object exists in S3 and return its metadata."""
@@ -53,17 +77,21 @@ class S3Manager:
         """Delete an object from S3."""
         try:
             self._client.delete_object(Bucket=S3_BUCKET, Key=key)
+            s3_logger.info("Deleted object: %s", key)
             return True
-        except ClientError:
+        except ClientError as e:
+            s3_logger.error("Failed to delete object %s: %s", key, e)
             return False
 
     def upload(self, key: str, data: BinaryIO, content_type: str) -> None:
         """Upload an object to S3."""
         self._client.put_object(Bucket=S3_BUCKET, Key=key, Body=data, ContentType=content_type)
+        s3_logger.info("Uploaded object: %s (content_type=%s)", key, content_type)
 
     def download(self, key: str) -> Any:  # noqa: ANN401 # this trash library is so poorly typed I cba to find the right type
         """Download an object from S3."""
         response = self._client.get_object(Bucket=S3_BUCKET, Key=key)
+        s3_logger.debug("Downloaded object: %s", key)
         return response["Body"]
 
     def download_stream(self, key: str, chunk_size: int = 8192) -> Iterator[bytes]:

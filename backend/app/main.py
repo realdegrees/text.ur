@@ -1,15 +1,19 @@
 # fmt: on
 import os  # noq: I001
 import sys  # noq: I001
+import time
 
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 # fmt: off
 
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Callable
 from contextlib import asynccontextmanager
 
 import uvicorn
+from api.dependencies.database import verify_database_connection
 from api.dependencies.events import EventManager
+from api.dependencies.mail import manager as mail_manager
+from api.dependencies.s3 import manager as s3_manager
 from api.routers.comments import router as CommentRouter
 from api.routers.documents import router as DocumentsRouter
 from api.routers.groups import router as GroupRouter
@@ -19,11 +23,16 @@ from api.routers.register import router as RegisterRouter
 from api.routers.users import router as UserRouter
 from core import config
 from core.app_exception import AppException
-from core.logger import get_logger
+from core.logger import get_current_user, get_logger
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.docs import get_swagger_ui_html
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.responses import (
+    HTMLResponse,
+    JSONResponse,
+    RedirectResponse,
+    Response,
+)
 from fastapi.staticfiles import StaticFiles
 from models.app_error import AppError
 from models.enums import AppErrorCode
@@ -38,13 +47,25 @@ app_logger = get_logger("app")
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Initialize on app start."""
+    app_logger.info("Starting application...")
+
+    # Verify all service connections before accepting requests
+    verify_database_connection()
+    s3_manager.verify_connection()
+    mail_manager.verify_connection()
+
+    # Start event manager (Redis)
     app.state.event_manager = EventManager()
     await app.state.event_manager.connect()
+
+    app_logger.info("Application started successfully")
     try:
         yield
     finally:
+        app_logger.info("Shutting down application...")
         await app.state.event_manager.disconnect()
         app.state.event_manager = None
+        app_logger.info("Application shutdown complete")
 
 
 app = FastAPI(
@@ -118,6 +139,35 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def log_requests(request: Request, call_next: Callable) -> Response:
+    """Log all incoming HTTP requests."""
+    start_time = time.time()
+    response = await call_next(request)
+    duration_ms = (time.time() - start_time) * 1000
+
+    # Skip logging for static files and health checks
+    path = request.url.path
+    if not path.startswith("/static"):
+        client_ip = request.client.host if request.client else "unknown"
+        logger.info(
+            "%s %s %s %.2fms",
+            request.method,
+            path,
+            response.status_code,
+            duration_ms,
+            extra={
+                "method": request.method,
+                "path": path,
+                "ip": client_ip,
+                "user": get_current_user(),
+            },
+        )
+
+    return response
+
 
 router = APIRouter(prefix="/api")
 
