@@ -8,13 +8,18 @@
 	import { notification } from '$lib/stores/notificationStore';
 	import { page } from '$app/state';
 	import { loadingBar } from '$lib/stores/loadingBar.svelte';
+	import { browser } from '$app/environment';
 
 	let { children, data } = $props();
 
+	// Track the search string reactively to ensure the effect triggers on URL changes
+	const verifiedParam = $derived(page.url.searchParams.get('verified'));
+
 	// Check for email verification
 	$effect(() => {
-		const verified = page.url.searchParams.get('verified') === 'true';
-		if (verified) {
+		if (!browser) return;
+
+		if (verifiedParam === 'true') {
 			notification('success', $LL.emailVerified(), { duration: 10 * 1000 });
 			loadingBar.one_shot();
 			// Remove the verified param from the URL

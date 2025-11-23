@@ -21,7 +21,9 @@ export const actions: Actions = {
 		const result = await api.post('/login', formData, { fetch });
 
 		if (!result.success) {
-			return fail(401, { error: 'Invalid username/email or password' });
+			// Use backend error detail if available, otherwise use generic message
+			const errorMessage = result.error.detail || 'Invalid username/email or password';
+			return fail(result.error.status_code, { error: errorMessage });
 		}
 
 		throw redirect(303, '/');
@@ -44,7 +46,7 @@ export const actions: Actions = {
 			return fail(400, { error: 'Passwords do not match' });
 		}
 
-		await api.post(
+		const result = await api.post(
 			'/register',
 			{
 				username,
@@ -57,6 +59,10 @@ export const actions: Actions = {
 				fetch
 			}
 		);
+
+		if (!result.success) {
+			return fail(result.error.status_code, { error: result.error.detail });
+		}
 
 		return {
 			success: true,
