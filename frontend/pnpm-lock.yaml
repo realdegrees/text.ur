@@ -23,6 +23,9 @@ importers:
       marked:
         specifier: ^17.0.1
         version: 17.0.1
+      pdfjs-dist:
+        specifier: ^5.4.394
+        version: 5.4.394
       zod:
         specifier: ^4.1.12
         version: 4.1.12
