@@ -7,11 +7,7 @@ export const visibilitySchema = z.union([z.literal("private"), z.literal("restri
 
 export const reactionTypeSchema = z.union([z.literal("like"), z.literal("dislike"), z.literal("laugh"), z.literal("confused"), z.literal("fire")]);
 
-export const visibility1Schema = z.union([z.literal("private"), z.literal("restricted"), z.literal("public")]);
-
 export const viewModeSchema = z.union([z.literal("restricted"), z.literal("public")]);
-
-export const viewMode1Schema = z.union([z.literal("restricted"), z.literal("public")]);
 
 export const permissionSchema = z.union([z.literal("administrator"), z.literal("add_comments"), z.literal("remove_comments"), z.literal("view_restricted_comments"), z.literal("add_members"), z.literal("remove_members"), z.literal("manage_permissions"), z.literal("upload_documents"), z.literal("view_restricted_documents"), z.literal("delete_documents"), z.literal("remove_reactions"), z.literal("add_reactions"), z.literal("manage_share_links")]);
 
@@ -77,7 +73,7 @@ export const documentSchema = z.object({
     name: z.string(),
     s3_key: z.string(),
     size_bytes: z.number().optional(),
-    visibility: visibility1Schema.optional(),
+    visibility: visibilitySchema.optional(),
     view_mode: viewModeSchema.optional(),
     secret: z.string().optional(),
     group_id: z.string()
@@ -102,7 +98,7 @@ export const documentReadSchema = z.object({
     name: z.string(),
     group_id: z.string(),
     visibility: visibilitySchema,
-    view_mode: viewMode1Schema
+    view_mode: viewModeSchema
 });
 
 export const documentTransferSchema = z.object({
@@ -302,7 +298,7 @@ export const userUpdateSchema = z.object({
 
 export const viewModeChangedEventSchema = z.object({
     document_id: z.string(),
-    view_mode: viewMode1Schema
+    view_mode: viewModeSchema
 });
 
 export const commentReadSchema = z.object({

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { documentWebSocket, type UserCursor } from '$lib/stores/documentWebSocket';
+	import { documentStore } from '$lib/runes/document.svelte';
 	import { fade } from 'svelte/transition';
 
 	interface Props {
@@ -7,6 +8,9 @@
 	}
 
 	let { viewerContainer }: Props = $props();
+
+	// Check if cursor sharing is enabled (disabled in restricted mode)
+	let isCursorSharingEnabled = $derived(documentStore.loadedDocument?.view_mode !== 'restricted');
 
 	// Subscribe to user cursors
 	let cursorsMap: Map<number, UserCursor> = $state(new Map());
@@ -59,7 +63,7 @@
 
 	// Track mouse movement on PDF and send position updates
 	const handleMouseMove = (e: MouseEvent) => {
-		if (!viewerContainer) return;
+		if (!viewerContainer || !isCursorSharingEnabled) return;
 
 		// Find which page the mouse is over
 		const pages = viewerContainer.querySelectorAll('[data-page-number]') as NodeListOf<HTMLElement>;
@@ -88,6 +92,7 @@
 
 	// Handle mouse leaving the PDF area
 	const handleMouseLeave = () => {
+		if (!isCursorSharingEnabled) return;
 		documentWebSocket.sendMousePosition(0, 0, 1, false);
 	};
 
@@ -133,33 +138,36 @@
 </script>
 
 <!-- Cursor overlay layer - positioned within the PDF viewer container -->
-{#each cursorsMap.entries() as [userId, cursor] (userId)}
-	{@const position = getCursorPosition(cursor)}
-	{#if cursor.visible && position}
-		<div
-			class="pointer-events-none absolute z-50 transition-all duration-75"
-			style="left: {position.x}px; top: {position.y}px;"
-			out:fade={{ duration: 400, delay: 2000 }}
-		>
-			<!-- Cursor pointer SVG -->
-			<svg
-				class="h-5 w-5 -translate-x-0.5 -translate-y-0.5 drop-shadow-md"
-				viewBox="0 0 24 24"
-				fill={getUserColor(cursor.user_id)}
-				stroke="white"
-				stroke-width="1.5"
-			>
-				<path
-					d="M5.5 3.21V20.8c0 .45.54.67.85.35l4.86-4.86a.5.5 0 0 1 .35-.15h6.87a.5.5 0 0 0 .35-.85L6.35 2.86a.5.5 0 0 0-.85.35Z"
-				/>
-			</svg>
-			<!-- Username label -->
+<!-- Only show cursors when cursor sharing is enabled (not in restricted mode) and user hasn't toggled them off -->
+{#if isCursorSharingEnabled && documentStore.showOtherCursors}
+	{#each cursorsMap.entries() as [userId, cursor] (userId)}
+		{@const position = getCursorPosition(cursor)}
+		{#if cursor.visible && position}
 			<div
-				class="absolute top-3 left-4 rounded-full px-2 py-0.5 text-[10px] font-medium whitespace-nowrap text-white shadow-md"
-				style="background-color: {getUserColor(cursor.user_id)};"
+				class="pointer-events-none absolute z-50 transition-all duration-75"
+				style="left: {position.x}px; top: {position.y}px;"
+				out:fade={{ duration: 400, delay: 2000 }}
 			>
-				{cursor.username}
+				<!-- Cursor pointer SVG -->
+				<svg
+					class="h-5 w-5 -translate-x-0.5 -translate-y-0.5 drop-shadow-md"
+					viewBox="0 0 24 24"
+					fill={getUserColor(cursor.user_id)}
+					stroke="white"
+					stroke-width="1.5"
+				>
+					<path
+						d="M5.5 3.21V20.8c0 .45.54.67.85.35l4.86-4.86a.5.5 0 0 1 .35-.15h6.87a.5.5 0 0 0 .35-.85L6.35 2.86a.5.5 0 0 0-.85.35Z"
+					/>
+				</svg>
+				<!-- Username label -->
+				<div
+					class="absolute top-3 left-4 rounded-full px-2 py-0.5 text-[10px] font-medium whitespace-nowrap text-white shadow-md"
+					style="background-color: {getUserColor(cursor.user_id)};"
+				>
+					{cursor.username}
+				</div>
 			</div>
-		</div>
-	{/if}
-{/each}
+		{/if}
+	{/each}
+{/if}

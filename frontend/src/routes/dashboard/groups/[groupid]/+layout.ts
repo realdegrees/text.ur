@@ -1,19 +1,13 @@
-import { api } from '$api/client';
-import type { MembershipRead } from '$api/types';
+import { redirect } from '@sveltejs/kit';
 import type { LayoutLoad } from './$types';
+import { notification } from '$lib/stores/notificationStore';
 
-export const load: LayoutLoad = async ({ fetch, params, parent }) => {
+export const load: LayoutLoad = async ({ parent }) => {
 	const data = await parent();
-	const membership = data.memberships?.data.find(({ group }) => group.id === params.groupid);
+	const membership = data.routeMembership;
 	if (!membership) {
-		const result = await api.get<MembershipRead>(
-			`/groups/${params.groupid}/memberships/${data.sessionUser.id}`,
-			{ fetch }
-		);
-		if (!result.success) {
-			throw new Error(`Failed to load membership for group: ${result.error.detail}`);
-		}
-		return { membership: result.data, ...data };
+		notification('error', 'You are not a member of this group.'); // TODO i18n
+		throw redirect(303, '/dashboard');
 	}
 	return { membership, ...data };
 };

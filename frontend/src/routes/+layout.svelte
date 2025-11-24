@@ -9,6 +9,7 @@
 	import { page } from '$app/state';
 	import { loadingBar } from '$lib/stores/loadingBar.svelte';
 	import { browser } from '$app/environment';
+	import { sessionStore } from '$lib/runes/session.svelte';
 
 	let { children, data } = $props();
 
@@ -18,6 +19,10 @@
 	// Check for email verification
 	$effect(() => {
 		if (!browser) return;
+
+		// Initialize session store with user and membership data
+		sessionStore.currentUser = data.sessionUser;
+		sessionStore.routeMembership = data.routeMembership;
 
 		if (verifiedParam === 'true') {
 			notification('success', $LL.emailVerified(), { duration: 10 * 1000 });

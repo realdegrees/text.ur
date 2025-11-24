@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { documentStore, type CachedComment } from '$lib/runes/document.svelte.js';
-	import { sessionStore } from '$lib/runes/session.svelte.js';
 	import { parseAnnotation, type Annotation } from '$types/pdf';
 	import CommentBadge from './CommentBadge.svelte';
 	import { onMount } from 'svelte';
@@ -26,14 +25,11 @@
 	let filteredComments = $derived.by(() => {
 		let result = documentStore.comments;
 
-		// Filter by specific author
-		if (documentStore.authorFilter !== null) {
-			result = result.filter((c: CachedComment) => c.user?.id === documentStore.authorFilter);
-		}
-
-		// Filter to show only current user's comments
-		if (documentStore.showOnlyMyComments && sessionStore.currentUser) {
-			result = result.filter((c: CachedComment) => c.user?.id === sessionStore.currentUser?.id);
+		// Filter by selected authors (empty set = show all)
+		if (documentStore.authorFilterIds.size > 0) {
+			result = result.filter(
+				(c: CachedComment) => c.user?.id && documentStore.authorFilterIds.has(c.user.id)
+			);
 		}
 
 		return result;

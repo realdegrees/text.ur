@@ -83,8 +83,12 @@ const createDocumentStore = () => {
 	// Track which comment has an active reply input
 	let replyingToCommentId: number | null = $state<number | null>(null);
 	// Filter state (local only - doesn't affect fetched data)
-	let authorFilter: number | null = $state<number | null>(null);
-	let showOnlyMyComments: boolean = $state<boolean>(false);
+	// Set of user IDs to filter by (empty = show all)
+	let authorFilterIds: Set<number> = $state<Set<number>>(new Set());
+	// Flag to defer invalidation when view mode changes during editing
+	let pendingViewModeRefresh: boolean = $state<boolean>(false);
+	// Toggle for showing other users' cursors
+	let showOtherCursors: boolean = $state<boolean>(true);
 
 	const setDocument = (document: DocumentRead) => {
 		loadedDocument = document;
@@ -146,6 +150,17 @@ const createDocumentStore = () => {
 	// Set editing state
 	const setEditing = (commentId: number | null) => {
 		setCommentFlag(commentId, 'isEditing');
+		// When editing ends, check if we have a pending view mode refresh
+		if (commentId === null && pendingViewModeRefresh) {
+			pendingViewModeRefresh = false;
+			// Dynamically import to avoid circular dependency
+			import('$app/navigation').then(({ invalidateAll }) => invalidateAll());
+		}
+	};
+
+	// Set pending view mode refresh flag (called when view mode changes during editing)
+	const setPendingViewModeRefresh = (pending: boolean) => {
+		pendingViewModeRefresh = pending;
 	};
 
 	// Set replying state (tracks which comment has reply input open)
@@ -154,19 +169,23 @@ const createDocumentStore = () => {
 	};
 
 	// Filter setters
-	const setAuthorFilter = (userId: number | null) => {
-		authorFilter = userId;
+	const toggleAuthorFilter = (userId: number) => {
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity
+		const newSet = new Set(authorFilterIds);
+		if (newSet.has(userId)) {
+			newSet.delete(userId);
+		} else {
+			newSet.add(userId);
+		}
+		authorFilterIds = newSet;
 	};
 
-	const setShowOnlyMyComments = (show: boolean) => {
-		showOnlyMyComments = show;
-		// Clear author filter when toggling "my comments only"
-		if (show) authorFilter = null;
+	const clearAuthorFilter = () => {
+		authorFilterIds = new Set();
 	};
 
-	const clearFilters = () => {
-		authorFilter = null;
-		showOnlyMyComments = false;
+	const setShowOtherCursors = (show: boolean) => {
+		showOtherCursors = show;
 	};
 
 	// Toggle replies collapsed state for a specific comment
@@ -393,14 +412,14 @@ const createDocumentStore = () => {
 			return commentSidebarRef;
 		},
 		// Filter state getters
-		get authorFilter() {
-			return authorFilter;
-		},
-		get showOnlyMyComments() {
-			return showOnlyMyComments;
+		get authorFilterIds() {
+			return authorFilterIds;
 		},
 		get hasActiveFilter() {
-			return authorFilter !== null || showOnlyMyComments;
+			return authorFilterIds.size > 0;
+		},
+		get showOtherCursors() {
+			return showOtherCursors;
 		},
 		// Helper getters
 		get hoveredComment() {
@@ -439,9 +458,12 @@ const createDocumentStore = () => {
 		clearAllInteractionState,
 		toggleRepliesCollapsed,
 		// Filter methods
-		setAuthorFilter,
-		setShowOnlyMyComments,
-		clearFilters,
+		toggleAuthorFilter,
+		clearAuthorFilter,
+		// Cursor visibility
+		setShowOtherCursors,
+		// View mode refresh deferral
+		setPendingViewModeRefresh,
 		// CRUD operations
 		updateComment,
 		create: createComment,

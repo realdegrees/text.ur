@@ -1,27 +1,30 @@
 <script lang="ts">
 	import Pdf from '$lib/components/pdf/Pdf.svelte';
 	import { documentStore } from '$lib/runes/document.svelte.js';
-	import { sessionStore } from '$lib/runes/session.svelte.js';
 	import { documentWebSocket } from '$lib/stores/documentWebSocket';
 
 	let { data } = $props();
-	let { document, membership, rootComments, documentFile } = data;
+
+	// Extract document ID to prevent WebSocket effect from re-running on data refresh
+	// (invalidateAll updates data object but ID stays the same)
+	let documentId = $derived(data.document.id);
 
 	// Initialize session and document stores (reactive to data changes)
+	// Use data.X directly so the effect re-runs when invalidateAll() updates data
 	$effect(() => {
-		sessionStore.currentUser = data.sessionUser;
-		sessionStore.currentMembership = membership;
-		documentStore.setDocument(document);
-		documentStore.setRootComments(rootComments);
+		documentStore.setDocument(data.document);
+		documentStore.setRootComments(data.rootComments);
 	});
 
 	// WebSocket connection lifecycle (separate effect with cleanup)
+	// Only re-runs when documentId actually changes, not on every data refresh
 	$effect(() => {
+		const docId = documentId; // Track only the ID
 		let wsUnsubscribe: (() => void) | null = null;
 		let vmUnsubscribe: (() => void) | null = null;
 
 		// Connect to WebSocket for real-time comment updates
-		documentWebSocket.connect(document.id.toString()).then(() => {
+		documentWebSocket.connect(docId.toString()).then(() => {
 			wsUnsubscribe = documentWebSocket.onCommentEvent((event) => {
 				documentStore.handleWebSocketEvent(event);
 			});
@@ -41,5 +44,5 @@
 </script>
 
 <div class="h-full w-full">
-	<Pdf document={documentFile} />
+	<Pdf document={data.documentFile} />
 </div>

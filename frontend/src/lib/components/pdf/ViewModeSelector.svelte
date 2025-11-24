@@ -15,8 +15,8 @@
 
 	// Only admins and owners can change view mode
 	let canChangeViewMode = $derived(
-		sessionStore.currentMembership?.is_owner ||
-			sessionStore.currentMembership?.permissions.includes('administrator')
+		sessionStore.routeMembership?.is_owner ||
+			sessionStore.routeMembership?.permissions.includes('administrator')
 	);
 
 	let currentViewMode = $derived(documentStore.loadedDocument?.view_mode ?? 'public');

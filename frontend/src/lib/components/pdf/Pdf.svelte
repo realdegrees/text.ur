@@ -232,7 +232,7 @@
 		<TextSelectionHandler viewerContainer={container} />
 
 		<!-- Other users' cursors -->
-		<UserCursors viewerContainer={container} {scale} />
+		<UserCursors viewerContainer={container} />
 	</div>
 
 	<!-- Right Sidebar - Comments (expands to fill remaining space) -->

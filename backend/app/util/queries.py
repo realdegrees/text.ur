@@ -397,14 +397,21 @@ class Guard:
                 """Build the combined visibility clause, also considering document.view_mode."""
                 base_conditions: list[ColumnElement[bool]] = [comment_id_filter] if comment_id_filter is not None else []
 
+                # Build the permission OR for restricted-by-view-mode checks. Only include
+                # the `require_permissions` clause if `require_permissions` was provided;
+                # otherwise omit it so we don't accidentally broaden access.
+                restricted_permission_ors = [
+                    Membership.is_owner.is_(True),
+                    Membership.permissions.contains([Permission.VIEW_RESTRICTED_COMMENTS.value]),
+                    Membership.permissions.contains([Permission.ADMINISTRATOR.value]),
+                ]
+                if require_permissions:
+                    restricted_permission_ors.append(has_required_permissions_sql())
+
                 # Clause applied when the document's view_mode forces restricted access for the whole document
                 restricted_by_view_mode_clause = and_(
                     *base_conditions,
-                    Comment.document.has(
-                        and_(
-                            Document.view_mode == ViewMode.RESTRICTED,
-                        )
-                    ),
+                    Comment.document.has(Document.view_mode == ViewMode.RESTRICTED),
                     or_(
                         Comment.user_id == user.id,
                         Comment.document.has(
@@ -412,16 +419,7 @@ class Guard:
                                 select(Membership.group_id).where(
                                     Membership.user_id == user.id,
                                     Membership.accepted.is_(True),
-                                    or_(
-                                        Membership.is_owner.is_(True),
-                                        Membership.permissions.contains(
-                                            [Permission.VIEW_RESTRICTED_COMMENTS.value]
-                                        ),
-                                        Membership.permissions.contains(
-                                            [Permission.ADMINISTRATOR.value]
-                                        ),
-                                        has_required_permissions_sql(),
-                                    ),
+                                    or_(*restricted_permission_ors),
                                 )
                             )
                         ),
@@ -468,12 +466,8 @@ class Guard:
                                 select(Membership.group_id).where(
                                     Membership.user_id == user.id,
                                     Membership.accepted.is_(True),
-                                    or_(
-                                        Membership.is_owner.is_(True),
-                                        Membership.permissions.contains([Permission.VIEW_RESTRICTED_COMMENTS.value]),
-                                        Membership.permissions.contains([Permission.ADMINISTRATOR.value]),
-                                        has_required_permissions_sql(),
-                                    ),
+                                    # Only include the "required permissions" clause if specified
+                                    or_(*restricted_permission_ors),
                                 )
                             )
                         ),
@@ -496,14 +490,20 @@ class Guard:
                     ),
                 )
 
-                # Combine:
-                # - If document.view_mode == restricted -> restricted_by_view_mode_clause
-                # - Otherwise fall back to comment-level visibility clauses (private/restricted/public)
+                # Combine carefully:
+                # - If document.view_mode == RESTRICTED -> only allow restricted_by_view_mode_clause
+                # - If document.view_mode == PUBLIC -> apply comment-level visibility clauses
+                # - If document.view_mode is NULL/unspecified -> fall back to comment-level visibility clauses
                 return or_(
                     restricted_by_view_mode_clause,
-                    and_(Comment.document.has(Document.view_mode == ViewMode.PUBLIC), or_(private_clause, restricted_clause, public_clause)),
-                    # also allow cases where view_mode is NULL/unspecified -> fallback to visibility clauses
-                    or_(private_clause, restricted_clause, public_clause),
+                    and_(
+                        Comment.document.has(Document.view_mode == ViewMode.PUBLIC),
+                        or_(private_clause, restricted_clause, public_clause),
+                    ),
+                    and_(
+                        Comment.document.has(Document.view_mode.is_(None)),
+                        or_(private_clause, restricted_clause, public_clause),
+                    ),
                 )
 
             if multi and comment_id is None:

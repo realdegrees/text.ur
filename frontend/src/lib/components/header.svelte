@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { browser } from '$app/environment';
 	import AppLogoDark from '$lib/images/logo/logo_dark.svg';
 	import AppLogoLight from '$lib/images/logo/logo_light.svg';
 	import darkMode from '$lib/stores/darkMode.svelte';
@@ -9,6 +10,10 @@
 	import Login from './login.svelte';
 
 	let { user }: { user?: UserPrivate } = $props();
+
+	// Use dark logo as default during SSR to avoid hydration mismatch,
+	// then reactively update on client based on actual theme preference
+	let logoSrc = $derived(browser ? (darkMode.enabled ? AppLogoLight : AppLogoDark) : AppLogoDark);
 </script>
 
 <div class="h-15.5 w-full"></div>
@@ -21,7 +26,7 @@
 			href="/"
 			class="col-span-1 col-start-1 flex flex-row justify-self-start transition-all hover:pl-0.5"
 		>
-			<img class="w-auto p-2" src={darkMode.enabled ? AppLogoLight : AppLogoDark} alt="Logo" />
+			<img class="w-auto p-2" src={logoSrc} alt="Logo" />
 			<p class="ml-1 self-center text-3xl"></p>
 		</a>
 

@@ -30,23 +30,12 @@ export type Visibility = "private" | "restricted" | "public";
  */
 export type ReactionType = "like" | "dislike" | "laugh" | "confused" | "fire";
 /**
- * Visibility levels for comments.
- */
-export type Visibility1 = "private" | "restricted" | "public";
-/**
  * Document view mode settings.
  *
  * RESTRICTED: Only owner, admins, and users with VIEW_RESTRICTED_COMMENTS can see comments
  * PUBLIC: Comments visible based on individual comment visibility settings
  */
 export type ViewMode = "restricted" | "public";
-/**
- * Document view mode settings.
- *
- * RESTRICTED: Only owner, admins, and users with VIEW_RESTRICTED_COMMENTS can see comments
- * PUBLIC: Comments visible based on individual comment visibility settings
- */
-export type ViewMode1 = "restricted" | "public";
 /**
  * Available permissions for group members.
  */
@@ -163,7 +152,7 @@ export interface Document {
   name: string;
   s3_key: string;
   size_bytes?: number;
-  visibility?: Visibility1;
+  visibility?: Visibility;
   view_mode?: ViewMode;
   secret?: string;
   group_id: string;
@@ -185,7 +174,7 @@ export interface DocumentRead {
   name: string;
   group_id: string;
   visibility: Visibility;
-  view_mode: ViewMode1;
+  view_mode: ViewMode;
 }
 export interface DocumentTransfer {
   group_id: string;
@@ -390,5 +379,5 @@ export interface UserUpdate {
  */
 export interface ViewModeChangedEvent {
   document_id: string;
-  view_mode: ViewMode1;
+  view_mode: ViewMode;
 }

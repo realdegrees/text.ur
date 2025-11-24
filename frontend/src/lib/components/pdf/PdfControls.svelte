@@ -7,9 +7,11 @@
 	import ExpandIcon from '~icons/material-symbols/chevron-right';
 	import CollapseIcon from '~icons/material-symbols/chevron-left';
 	import PersonIcon from '~icons/material-symbols/person';
+	import CursorIcon from '~icons/material-symbols/near-me';
 	import ViewModeSelector from './ViewModeSelector.svelte';
 	import ActiveUsers from './ActiveUsers.svelte';
 	import { documentStore } from '$lib/runes/document.svelte.js';
+	import { sessionStore } from '$lib/runes/session.svelte.js';
 
 	interface Props {
 		scale: number;
@@ -38,6 +40,25 @@
 	}: Props = $props();
 
 	let isExpanded = $state(false);
+
+	// Derived values for filtering own comments
+	let currentUserId = $derived(sessionStore.currentUser?.id);
+	let isFilteringOwn = $derived(
+		currentUserId ? documentStore.authorFilterIds.has(currentUserId) : false
+	);
+
+	// Check if filters should be disabled (restricted mode without view_restricted_comments permission)
+	let isRestrictedWithoutPermission = $derived(
+		documentStore.loadedDocument?.view_mode === 'restricted' &&
+			!sessionStore.validatePermissions(['view_restricted_comments'])
+	);
+
+	// Clear filters when view mode changes to restricted and user lacks permission
+	$effect(() => {
+		if (isRestrictedWithoutPermission && documentStore.hasActiveFilter) {
+			documentStore.clearAuthorFilter();
+		}
+	});
 
 	const buttonClass =
 		'rounded p-2 text-text/70 transition-colors hover:bg-text/10 hover:text-text disabled:opacity-30 disabled:hover:bg-transparent';
@@ -136,32 +157,53 @@
 
 		<div class="my-1 h-px w-full bg-text/20"></div>
 
-		<!-- My Comments Only Toggle -->
+		<!-- Filter Own Comments Toggle -->
 		<button
-			class="{documentStore.showOnlyMyComments ? activeButtonClass : buttonClass} {isExpanded
+			class="{isFilteringOwn ? activeButtonClass : buttonClass} {isExpanded
 				? 'w-full justify-start'
 				: ''}"
-			onclick={() => documentStore.setShowOnlyMyComments(!documentStore.showOnlyMyComments)}
-			title={documentStore.showOnlyMyComments ? 'Show all comments' : 'Show only my comments'}
+			onclick={() => currentUserId && documentStore.toggleAuthorFilter(currentUserId)}
+			title={isRestrictedWithoutPermission
+				? 'Filtering disabled in restricted mode'
+				: isFilteringOwn
+					? 'Remove own comments from filter'
+					: 'Filter own comments'}
+			disabled={!currentUserId || isRestrictedWithoutPermission}
 		>
 			<span class="flex items-center gap-2">
 				<PersonIcon class="h-5 w-5" />
-				{#if isExpanded}<span class="text-xs"
-						>{documentStore.showOnlyMyComments ? 'My Comments' : 'All Comments'}</span
-					>{/if}
+				{#if isExpanded}<span class="text-xs">Filter Own</span>{/if}
 			</span>
 		</button>
 
-		{#if documentStore.hasActiveFilter}
+		{#if documentStore.hasActiveFilter && !isRestrictedWithoutPermission}
 			<button
 				class="text-xs text-primary/70 transition-colors hover:text-primary {isExpanded
 					? 'w-full px-2 text-left'
 					: ''}"
-				onclick={() => documentStore.clearFilters()}
+				onclick={() => documentStore.clearAuthorFilter()}
 			>
-				{isExpanded ? 'Clear filters' : 'x'}
+				{isExpanded ? 'Clear filters' : '×'}
 			</button>
 		{/if}
+
+		<div class="my-1 h-px w-full bg-text/20"></div>
+
+		<!-- Other Cursors Toggle -->
+		<button
+			class="{documentStore.showOtherCursors ? activeButtonClass : buttonClass} {isExpanded
+				? 'w-full justify-start'
+				: ''}"
+			onclick={() => documentStore.setShowOtherCursors(!documentStore.showOtherCursors)}
+			title={documentStore.showOtherCursors ? 'Hide other cursors' : 'Show other cursors'}
+		>
+			<span class="flex items-center gap-2">
+				<CursorIcon class="h-5 w-5" />
+				{#if isExpanded}<span class="text-xs"
+						>{documentStore.showOtherCursors ? 'Cursors On' : 'Cursors Off'}</span
+					>{/if}
+			</span>
+		</button>
 
 		<div class="my-1 h-px w-full bg-text/20"></div>
 

@@ -170,22 +170,46 @@ class EventManager:
             raise RuntimeError("Redis connection not initialized")
 
         pubsub = self._redis.pubsub()
+        subscribed_channels: set[str] = set()
+
         while True:
-            # Subscribe to all channels with clients
+            # Get current channels that have clients
             current_channels = set(self._clients.keys())
-            if current_channels:
-                events_logger.debug("Subscribing to Redis channels: %s", ", ".join(current_channels))
-                await pubsub.subscribe(*current_channels)
+
+            # If no channels, wait and check again
+            if not current_channels:
+                # Unsubscribe from all if we were subscribed
+                if subscribed_channels:
+                    await pubsub.unsubscribe(*subscribed_channels)
+                    subscribed_channels.clear()
+                await asyncio.sleep(0.5)
+                continue
+
+            # Subscribe to new channels, unsubscribe from removed ones
+            to_subscribe = current_channels - subscribed_channels
+            to_unsubscribe = subscribed_channels - current_channels
+
+            if to_unsubscribe:
+                await pubsub.unsubscribe(*to_unsubscribe)
+                subscribed_channels -= to_unsubscribe
+
+            if to_subscribe:
+                events_logger.debug("Subscribing to Redis channels: %s", ", ".join(to_subscribe))
+                await pubsub.subscribe(*to_subscribe)
+                subscribed_channels |= to_subscribe
 
             try:
-                async for message in pubsub.listen():
+                # Use get_message with timeout instead of blocking listen()
+                message = await pubsub.get_message(ignore_subscribe_messages=True, timeout=1.0)
+                if message:
                     await self._on_message(message)
             except Exception as e:
                 events_logger.warning("Redis pubsub error, reconnecting: %s", e)
                 await asyncio.sleep(1.0)
                 pubsub = self._redis.pubsub()
+                subscribed_channels.clear()
 
-            await asyncio.sleep(0.1)
+            await asyncio.sleep(0.05)  # Small sleep to prevent busy loop when messages arrive rapidly
 
     async def _on_message(self, message: dict) -> None:
         if message["type"] != "message":

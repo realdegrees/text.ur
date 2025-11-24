@@ -65,7 +65,10 @@
 	// Clear selected comment when card closes (but not if pinned or input active)
 	const handleMouseLeave = () => {
 		isHovered = false;
-		documentStore.setBadgeHovered(null);
+		// Don't update badge hover state if there's active input - it triggers re-render and loses focus
+		if (!hasActiveInputInGroup) {
+			documentStore.setBadgeHovered(null);
+		}
 		// Small delay to allow for moving to another badge
 		setTimeout(() => {
 			// Don't auto-close if there's an active input (editing or replying)
@@ -152,7 +155,7 @@
 		onkeydown={handleKeydown}
 	>
 		<div
-			class="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border-2 border-background bg-secondary shadow-md transition-transform hover:scale-110"
+			class="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border-2 border-background bg-secondary shadow-md shadow-black/20 drop-shadow-xs transition-transform hover:scale-110"
 		>
 			{#if commentCount > 1}
 				<span class="text-xs font-bold text-text">{commentCount}</span>

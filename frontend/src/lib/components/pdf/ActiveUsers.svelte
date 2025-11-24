@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { documentWebSocket, type ConnectedUser } from '$lib/stores/documentWebSocket';
+	import { documentWebSocket } from '$lib/stores/documentWebSocket';
+	import type { ConnectedUser } from '$types/websocket';
 	import { documentStore } from '$lib/runes/document.svelte.js';
 	import { sessionStore } from '$lib/runes/session.svelte.js';
 
@@ -47,15 +48,10 @@
 	};
 
 	const handleUserClick = (userId: number) => {
-		if (documentStore.authorFilter === userId) {
-			// Toggle off if already filtering by this user
-			documentStore.setAuthorFilter(null);
-		} else {
-			documentStore.setAuthorFilter(userId);
-		}
+		documentStore.toggleAuthorFilter(userId);
 	};
 
-	const isFiltered = (userId: number) => documentStore.authorFilter === userId;
+	const isFiltered = (userId: number) => documentStore.authorFilterIds.has(userId);
 </script>
 
 {#if otherUsers.length > 0}

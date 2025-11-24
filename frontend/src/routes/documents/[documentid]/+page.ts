@@ -75,7 +75,6 @@ export const load: PageLoad = async ({ params, parent, fetch }) => {
 
 	return {
 		document: documentResult.data,
-		membership: membership,
 		group: membership.group,
 		rootComments: rootComments,
 		documentFile: documentFileResult.data

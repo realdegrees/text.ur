@@ -77,7 +77,7 @@
 		return sessionStore.validatePermissions(['remove_comments']);
 	});
 	let canReply = $derived(
-		sessionStore.currentMembership ? sessionStore.validatePermissions(['add_comments']) : false
+		sessionStore.routeMembership ? sessionStore.validatePermissions(['add_comments']) : false
 	);
 	let hasReplies = $derived(activeComment.replies && activeComment.replies.length > 0);
 

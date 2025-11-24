@@ -70,10 +70,10 @@ const createSessionStore = () => {
 		get currentUserId() {
 			return currentUser?.id ?? null;
 		},
-		get currentMembership() {
+		get routeMembership() {
 			return currentMembership;
 		},
-		set currentMembership(membership: MembershipRead | null) {
+		set routeMembership(membership: MembershipRead | null) {
 			currentMembership = membership;
 		},
 		validatePermissions
