@@ -27,7 +27,11 @@ const createSessionStore = () => {
 		// Handle logical combinations of permissions
 		if (Array.isArray(requiredPermissions)) {
 			// Default behavior: all permissions must be present (AND logic)
-			if (!requiredPermissions.every((permission) => currentMembership?.permissions.includes(permission))) {
+			if (
+				!requiredPermissions.every((permission) =>
+					currentMembership?.permissions.includes(permission)
+				)
+			) {
 				if (redirectUrl) {
 					redirect(303, redirectUrl);
 				}
@@ -72,7 +76,7 @@ const createSessionStore = () => {
 		set currentMembership(membership: MembershipRead | null) {
 			currentMembership = membership;
 		},
-		validatePermissions,
+		validatePermissions
 	};
 };
 

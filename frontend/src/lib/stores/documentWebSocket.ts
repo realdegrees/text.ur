@@ -4,7 +4,11 @@ import type { ConnectionState } from '$types/websocket';
 import { browser } from '$app/environment';
 import { api } from '$api/client';
 import { env } from '$env/dynamic/public';
-import type { CommentEvent, ViewModeChangedEvent as ApiViewModeChangedEvent, MousePositionEvent as ApiMousePositionEvent } from '$api/types';
+import type {
+	CommentEvent,
+	ViewModeChangedEvent as ApiViewModeChangedEvent,
+	MousePositionEvent as ApiMousePositionEvent
+} from '$api/types';
 
 /** Represents a user connected to a document */
 export interface ConnectedUser {
@@ -189,14 +193,14 @@ class DocumentWebSocketStore {
 			case 'create':
 			case 'update':
 			case 'delete':
-					// Forward comment events to registered handlers
-					this.commentEventHandlers.forEach((handler) => handler(event as CommentEvent));
-					break;
+				// Forward comment events to registered handlers
+				this.commentEventHandlers.forEach((handler) => handler(event as CommentEvent));
+				break;
 
 			case 'view_mode_changed':
-					// Notify registered view-mode handlers
-					this.viewModeEventHandlers.forEach((handler) => handler(event as ViewModeChangedEvent));
-					break;
+				// Notify registered view-mode handlers
+				this.viewModeEventHandlers.forEach((handler) => handler(event as ViewModeChangedEvent));
+				break;
 		}
 	}
 

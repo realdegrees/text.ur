@@ -341,7 +341,7 @@
 					})}
 				>
 					{#snippet icon()}
-						{#if sessionStore.validatePermissions(['manage_permissions']) && availablePermissions.filter((p) => !membership.permissions.includes(p)).length > 0}
+						{#if sessionStore.validatePermissions( ['manage_permissions'] ) && availablePermissions.filter((p) => !membership.permissions.includes(p)).length > 0}
 							<AddIcon
 								class="h-full w-5.5 rounded bg-background text-text shadow-inner shadow-black/20 transition-all hover:bg-green-500/30"
 							/>

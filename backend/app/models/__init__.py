@@ -12,7 +12,7 @@ from models.document import (
     DocumentRead,
     DocumentTransfer,
     MousePositionEvent,
-    ViewModeChangedEvent
+    ViewModeChangedEvent,
 )
 from models.enums import AppErrorCode
 from models.event import CommentEvent, Event

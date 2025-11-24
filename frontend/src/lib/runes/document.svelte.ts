@@ -5,7 +5,7 @@ import type {
 	CommentRead,
 	CommentUpdate,
 	DocumentRead,
-	ViewMode1,
+	ViewMode1
 } from '$api/types';
 import type { Paginated } from '$api/pagination';
 import { notification } from '$lib/stores/notificationStore';
@@ -284,7 +284,11 @@ const createDocumentStore = () => {
 		return replies;
 	};
 
-	const handleWebSocketEvent = (event: CommentEvent | { type: 'view_mode_changed'; payload: { document_id?: string; view_mode?: ViewMode1 } }): void => {
+	const handleWebSocketEvent = (
+		event:
+			| CommentEvent
+			| { type: 'view_mode_changed'; payload: { document_id?: string; view_mode?: ViewMode1 } }
+	): void => {
 		// Handle explicit view-mode changed events (no longer delivered as 'custom')
 		if (event.type === 'view_mode_changed') {
 			const vm = event.payload as { document_id?: string; view_mode?: ViewMode1 };
@@ -306,21 +310,21 @@ const createDocumentStore = () => {
 			case 'create':
 				{
 					const comment = event.payload as CommentRead;
-				if (comment.parent_id) {
-					const parentComment = findComment(comments, comment.parent_id);
-					if (parentComment) {
-						// Only add to replies array if replies are already loaded unless the number of replies was 0 then we can safely add it
-						if (parentComment.replies) {
-							parentComment.replies.push(toCachedComment(comment));
-						} else if (parentComment.num_replies === 0) {
-							parentComment.replies = [toCachedComment(comment)];
+					if (comment.parent_id) {
+						const parentComment = findComment(comments, comment.parent_id);
+						if (parentComment) {
+							// Only add to replies array if replies are already loaded unless the number of replies was 0 then we can safely add it
+							if (parentComment.replies) {
+								parentComment.replies.push(toCachedComment(comment));
+							} else if (parentComment.num_replies === 0) {
+								parentComment.replies = [toCachedComment(comment)];
+							}
+							parentComment.num_replies = (parentComment.num_replies || 0) + 1;
 						}
-						parentComment.num_replies = (parentComment.num_replies || 0) + 1;
+						comments = [...comments]; // trigger reactivity
+					} else {
+						comments = [...comments, toCachedComment(comment)];
 					}
-					comments = [...comments]; // trigger reactivity
-				} else {
-					comments = [...comments, toCachedComment(comment)];
-				}
 				}
 				break;
 

@@ -262,7 +262,7 @@ def get_events_router[TableModel: SQLModel, RelatedResourceModel: BaseModel, Cre
                 return bool(config.mouse_position and config.mouse_position.model)
             return False
 
-        async def on_event(event_data: dict) -> None: # noqa: C901
+        async def on_event(event_data: dict) -> None:
             """Validate outgoing event before sending to client.
 
             Permission filtering logic for comment events:

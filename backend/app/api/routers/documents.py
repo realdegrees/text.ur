@@ -10,9 +10,10 @@ from api.dependencies.s3 import S3
 from api.routers.events import (
     EventModelConfig,
     EventRouterConfig,
-    get_events_router,
     can_user_see_comment,
+    get_events_router,
 )
+from core.app_exception import AppException
 from fastapi import (
     BackgroundTasks,
     Body,
@@ -22,9 +23,6 @@ from fastapi import (
     Response,
     UploadFile,
 )
-from sqlmodel import select
-from starlette.responses import StreamingResponse
-from core.app_exception import AppException
 from models.comment import (
     CommentDelete,
     CommentRead,
@@ -35,14 +33,16 @@ from models.document import (
     DocumentRead,
     DocumentTransfer,
     DocumentUpdate,
-    ViewModeChangedEvent,
     MousePositionEvent,
+    ViewModeChangedEvent,
 )
 from models.enums import AppErrorCode, Permission, Visibility
 from models.event import Event
 from models.filter import DocumentFilter
 from models.pagination import Paginated
 from models.tables import Comment, Document, Group, Membership, User
+from sqlmodel import select
+from starlette.responses import StreamingResponse
 from util.api_router import APIRouter
 from util.queries import Guard
 from util.response import ExcludableFieldsJSONResponse

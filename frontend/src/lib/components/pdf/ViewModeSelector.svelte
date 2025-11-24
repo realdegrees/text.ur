@@ -63,23 +63,23 @@
 </script>
 
 <div class="flex {isExpanded ? 'w-full flex-col' : 'flex-col items-center'} gap-0.5">
-		{#each viewModes as { mode, icon: Icon, label, shortLabel } (mode)}
-			<!-- Render view mode buttons; only apply hover styles when the user can change view mode -->
-			<button
-				class="rounded p-1.5 transition-colors {currentViewMode === mode
-					? 'bg-primary/20 text-primary'
-					: (canChangeViewMode ? 'text-text/50 hover:bg-text/10 hover:text-text/70' : 'text-text/50')} disabled:opacity-50 {isExpanded
-					? 'w-full'
-					: ''}"
-				onclick={() => setViewMode(mode)}
-				disabled={isUpdating || !canChangeViewMode}
-				aria-disabled={isUpdating || !canChangeViewMode}
-				title={label}
-			>
-				<span class="flex items-center gap-2">
-					<Icon class="h-4 w-4" />
-					{#if isExpanded}<span class="text-xs">{shortLabel}</span>{/if}
-				</span>
-			</button>
-		{/each}
-	</div>
+	{#each viewModes as { mode, icon: Icon, label, shortLabel } (mode)}
+		<!-- Render view mode buttons; only apply hover styles when the user can change view mode -->
+		<button
+			class="rounded p-1.5 transition-colors {currentViewMode === mode
+				? 'bg-primary/20 text-primary'
+				: canChangeViewMode
+					? 'text-text/50 hover:bg-text/10 hover:text-text/70'
+					: 'text-text/50'} disabled:opacity-50 {isExpanded ? 'w-full' : ''}"
+			onclick={() => setViewMode(mode)}
+			disabled={isUpdating || !canChangeViewMode}
+			aria-disabled={isUpdating || !canChangeViewMode}
+			title={label}
+		>
+			<span class="flex items-center gap-2">
+				<Icon class="h-4 w-4" />
+				{#if isExpanded}<span class="text-xs">{shortLabel}</span>{/if}
+			</span>
+		</button>
+	{/each}
+</div>

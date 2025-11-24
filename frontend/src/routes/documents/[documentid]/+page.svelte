@@ -25,7 +25,9 @@
 			wsUnsubscribe = documentWebSocket.onCommentEvent((event) => {
 				documentStore.handleWebSocketEvent(event);
 			});
-			vmUnsubscribe = documentWebSocket.onViewModeChanged((ev) => documentStore.handleWebSocketEvent(ev as any));
+			vmUnsubscribe = documentWebSocket.onViewModeChanged((ev) =>
+				documentStore.handleWebSocketEvent(ev as any)
+			);
 		});
 
 		// Cleanup when effect re-runs or component unmounts
