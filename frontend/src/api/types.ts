@@ -107,7 +107,7 @@ export interface CommentEvent {
   payload: CommentRead | null;
   resource_id: number | null;
   resource: string | null;
-  type: "create" | "update" | "delete" | "custom";
+  type: "create" | "update" | "delete" | "view_mode_changed" | "mouse_position";
   originating_connection_id?: string | null;
 }
 export interface CommentRead {
@@ -269,6 +269,17 @@ export interface MembershipRead {
   is_owner: boolean;
   accepted: boolean;
 }
+/**
+ * Event payload for mouse cursor position - sent to WebSocket clients for real-time cursor tracking.
+ */
+export interface MousePositionEvent {
+  user_id: number;
+  username: string;
+  x: number;
+  y: number;
+  page: number;
+  visible?: boolean;
+}
 export interface PaginatedBase {
   data: unknown[];
   total: number;
@@ -373,4 +384,11 @@ export interface UserUpdate {
   email?: string | null;
   first_name?: string | null;
   last_name?: string | null;
+}
+/**
+ * Event payload for view_mode changes - sent to WebSocket clients.
+ */
+export interface ViewModeChangedEvent {
+  document_id: string;
+  view_mode: ViewMode1;
 }

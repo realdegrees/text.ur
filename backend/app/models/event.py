@@ -19,7 +19,7 @@ class Event[Payload: PydanticBaseModel](PydanticBaseModel):
     payload: Payload | None
     resource_id: int | None
     resource: str | None
-    type: Literal["create", "update", "delete", "custom"]
+    type: Literal["create", "update", "delete", "view_mode_changed", "mouse_position"]
     originating_connection_id: str | None = None  # Connection that triggered this event (to avoid echo)
 
 
@@ -32,7 +32,7 @@ class CommentEvent(PydanticBaseModel):
     payload: "CommentRead | None"
     resource_id: int | None
     resource: str | None
-    type: Literal["create", "update", "delete", "custom"]
+    type: Literal["create", "update", "delete", "view_mode_changed", "mouse_position"]
     originating_connection_id: str | None = None
 
 

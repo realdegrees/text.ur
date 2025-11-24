@@ -91,27 +91,37 @@ def can_user_see_comment(
 @dataclass
 class EventModelConfig[T: SQLModel](dict):
     """Configuration for a specific event model used in the event router."""
-    
+
     model: T
     validation_in: Callable[[T, User], bool] | None = None
     validation_out: Callable[[T, User], bool] | None = None
+    # Optional transform hook for outgoing events. Should return the final event dict to send,
+    # or None to skip sending for this particular user. Signature: (event_data, user, document, membership)
+    transform_outgoing: Callable[[dict, User | None, Document | None, Membership | None], dict | None] | None = None
     
 @dataclass
-class EventRouterConfig[CreateModel: SQLModel, ReadModel: SQLModel, UpdateModel: SQLModel, DeleteModel: SQLModel, CustomModel: SQLModel](dict):
-    """Configuration for event models used in the event router."""
+class EventRouterConfig[CreateModel: SQLModel, ReadModel: SQLModel, UpdateModel: SQLModel, DeleteModel: SQLModel, ViewModeModel: SQLModel, MouseModel: SQLModel](dict):
+    """Configuration for event models used in the event router.
+
+    The router supports the classical CRUD event types for a resource (create, read, update, delete)
+    and two explicit "non-resource" event shapes used by the documents/comments channel:
+    - view_mode_changed: when the document's view_mode changes
+    - mouse_position: cursor/mouse position events used for collaborative cursors
+    """
 
     create: EventModelConfig[CreateModel] | None = None
     read: EventModelConfig[ReadModel] | None = None
     update: EventModelConfig[UpdateModel] | None = None
     delete: EventModelConfig[DeleteModel] | None = None
-    custom: EventModelConfig[CustomModel] | None = None
+    view_mode_changed: EventModelConfig[ViewModeModel] | None = None
+    mouse_position: EventModelConfig[MouseModel] | None = None
 
-def get_events_router[TableModel: SQLModel, RelatedResourceModel: BaseModel, CreateModel: SQLModel, ReadModel: SQLModel, UpdateModel: SQLModel, DeleteModel: SQLModel, CustomModel: SQLModel](  # noqa: C901
+def get_events_router[TableModel: SQLModel, RelatedResourceModel: BaseModel, CreateModel: SQLModel, ReadModel: SQLModel, UpdateModel: SQLModel, DeleteModel: SQLModel, ViewModeModel: SQLModel, MouseModel: SQLModel](  # noqa: C901
     channel: str,
     related_resource_model: RelatedResourceModel,
     table_model: TableModel,
     *,
-    config: EventRouterConfig[CreateModel, ReadModel, UpdateModel, DeleteModel, CustomModel],
+    config: EventRouterConfig[CreateModel, ReadModel, UpdateModel, DeleteModel, ViewModeModel, MouseModel],
     base_router: APIRouter,
 ) -> APIRouter:
     """Create a router with event endpoints for a resource.
@@ -246,8 +256,10 @@ def get_events_router[TableModel: SQLModel, RelatedResourceModel: BaseModel, Cre
                 return bool(config.update and config.update.model)
             if event_type == "delete":
                 return bool(config.delete and config.delete.model)
-            if event_type == "custom":
-                return bool(config.custom and config.custom.model)
+            if event_type == "view_mode_changed":
+                return bool(config.view_mode_changed and config.view_mode_changed.model)
+            if event_type == "mouse_position":
+                return bool(config.mouse_position and config.mouse_position.model)
             return False
 
         async def on_event(event_data: dict) -> None: # noqa: C901
@@ -278,78 +290,30 @@ def get_events_router[TableModel: SQLModel, RelatedResourceModel: BaseModel, Cre
                 await websocket.send_json(event_data)
                 return
 
-            # Get stored state for permission checks
+            # Get stored state for permission checks and allow per-type transform hooks
             ws_user: User | None = getattr(websocket.state, "user", None)
             ws_document: Document | None = getattr(websocket.state, "document", None)
             ws_membership: Membership | None = getattr(websocket.state, "membership", None)
 
-            # Check if this is a comment event that needs visibility filtering
-            should_filter = ws_user and ws_document and channel == "comments"
+            # If the router config provides a transform_outgoing hook for this event-type, give it a chance
+            # to mutate or reject the event for this particular client. This keeps the core WebSocket
+            # plumbing separate from event-specific permission/visibility logic.
+            type_config = getattr(config, event_type, None)
+            if type_config and getattr(type_config, "transform_outgoing", None):
+                try:
+                    transformed = type_config.transform_outgoing(event_data, ws_user, ws_document, ws_membership)
+                    if transformed is None:
+                        # The hook decided the event should not be sent to this client
+                        return
+                    event_data = transformed
+                    payload = event_data.get("payload")
+                except Exception:
+                    logger.exception("Error running transform_outgoing hook for event %s", event_type)
+                    # Fail-safe: if the transformation errors, skip sending to avoid leaking info
+                    return
 
-            if should_filter:
-                # Extract comment visibility and user_id from payload
-                comment_visibility_str = payload.get("visibility")
-                comment_user = payload.get("user", {})
-                comment_user_id = comment_user.get("id") if isinstance(comment_user, dict) else None
-
-                if comment_visibility_str and comment_user_id is not None:
-                    try:
-                        comment_visibility = Visibility(comment_visibility_str)
-                    except ValueError:
-                        comment_visibility = Visibility.PUBLIC
-
-                    # Check if user can see this comment
-                    can_see = can_user_see_comment(
-                        ws_user, ws_membership, ws_document, comment_visibility, comment_user_id
-                    )
-
-                    if event_type == "delete":
-                        # Always send DELETE events so users remove the comment from their UI
-                        pass
-                    elif event_type == "create":
-                        # Skip CREATE if user can't see the comment
-                        if not can_see:
-                            logger.debug(f"[WS] Skipping CREATE event - user {ws_user.id} cannot see comment")
-                            return
-                    elif event_type == "update":
-                        # Check if visibility changed - use old_visibility to determine correct event type
-                        old_visibility_str = event_data.get("old_visibility")
-                        could_see_before = True  # Assume could see if no old_visibility provided
-
-                        if old_visibility_str:
-                            try:
-                                old_visibility = Visibility(old_visibility_str)
-                                could_see_before = can_user_see_comment(
-                                    ws_user, ws_membership, ws_document, old_visibility, comment_user_id
-                                )
-                            except ValueError:
-                                pass
-
-                        if can_see and could_see_before:
-                            # User could see before and can see now → send UPDATE
-                            pass
-                        elif can_see and not could_see_before:
-                            # User couldn't see before but can see now → send CREATE
-                            logger.debug(f"[WS] Converting UPDATE to CREATE - visibility opened for user {ws_user.id}")
-                            event_data = {
-                                **event_data,
-                                "type": "create",
-                            }
-                        elif not can_see and could_see_before:
-                            # User could see before but can't see now → send DELETE
-                            logger.debug(f"[WS] Converting UPDATE to DELETE - visibility closed for user {ws_user.id}")
-                            event_data = {
-                                **event_data,
-                                "type": "delete",
-                                "payload": {"id": payload.get("id")},  # Strip payload for delete
-                            }
-                        else:
-                            # User couldn't see before and can't see now → skip
-                            logger.debug(f"[WS] Skipping UPDATE event - user {ws_user.id} cannot see comment")
-                            return
-
-            # Handle custom events - specifically view_mode changes
-            if event_type == "custom" and payload.get("view_mode") and payload.get("document_id"):
+            # Handle explicit view-mode events (previously handled via `custom`)
+            if event_type == "view_mode_changed" and payload.get("view_mode") and payload.get("document_id"):
                 # Update cached document view_mode
                 if ws_document and ws_document.id == payload.get("document_id"):
                     try:
@@ -420,9 +384,16 @@ def get_events_router[TableModel: SQLModel, RelatedResourceModel: BaseModel, Cre
                     db.delete(resource)
                     db.commit()
                     event.payload = payload
-                elif event.type == "custom":
-                    payload: CustomModel = config.custom.model.model_validate(event.payload)
-                    event.payload = payload.model_dump()
+                elif event.type == "view_mode_changed":
+                    # Validate incoming view-mode events if the router exposes a model for it
+                    if config.view_mode_changed and config.view_mode_changed.model:
+                        payload = config.view_mode_changed.model.model_validate(event.payload)
+                        event.payload = payload.model_dump()
+                elif event.type == "mouse_position":
+                    # Incoming mouse_position may be sent by clients; validate if a model is provided
+                    if config.mouse_position and config.mouse_position.model:
+                        payload = config.mouse_position.model.model_validate(event.payload)
+                        event.payload = payload.model_dump()
 
                 await events.publish(event.model_dump(mode="json"), channel=websocket.state.channel)
 
@@ -488,7 +459,8 @@ def get_events_router[TableModel: SQLModel, RelatedResourceModel: BaseModel, Cre
     read_model=config.read.model if config and config.read else None
     update_model=config.update.model if config and config.update else None
     delete_model=config.delete.model if config and config.delete else None
-    custom_model=config.custom.model if config and config.custom else None
+    view_mode_model=config.view_mode_changed.model if config and config.view_mode_changed else None
+    mouse_model=config.mouse_position.model if config and config.mouse_position else None
         
     # Render the WebSocket documentation using the Jinja2 template
     dynamic_description = WEBSOCKET_TEMPLATE.render(
@@ -498,7 +470,8 @@ def get_events_router[TableModel: SQLModel, RelatedResourceModel: BaseModel, Cre
         read_model=read_model,
         update_model=update_model,
         delete_model=delete_model,
-        custom_model=custom_model
+        view_mode_model=view_mode_model,
+        mouse_model=mouse_model
     )
 
     response_models: list[type] = []
@@ -506,7 +479,8 @@ def get_events_router[TableModel: SQLModel, RelatedResourceModel: BaseModel, Cre
     MODEL_CONFIGS = [
         (create_model and read_model, "CreateEvent", ["create"], read_model, None),
         (update_model and read_model, "UpdateEvent", ["update"], read_model, int),
-        (custom_model, "CustomEvent", ["custom"], custom_model, int),
+        (view_mode_model, "ViewModeChangedEvent", ["view_mode_changed"], view_mode_model, None),
+        (mouse_model, "MousePositionEvent", ["mouse_position"], mouse_model, None),
         (delete_model, "DeleteEvent", ["delete"], delete_model, int),
     ]
 

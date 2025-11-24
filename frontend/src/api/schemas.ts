@@ -188,6 +188,15 @@ export const membershipReadSchema = z.object({
     accepted: z.boolean()
 });
 
+export const mousePositionEventSchema = z.object({
+    user_id: z.number(),
+    username: z.string(),
+    x: z.number(),
+    y: z.number(),
+    page: z.number(),
+    visible: z.boolean().optional()
+});
+
 export const filterSchema = z.record(z.string(), z.unknown()).and(z.object({
     field: z.string(),
     operator: z.union([z.literal("=="), z.literal(">="), z.literal("<="), z.literal(">"), z.literal("<"), z.literal("ilike"), z.literal("like"), z.literal("exists"), z.literal("!=")]),
@@ -291,6 +300,11 @@ export const userUpdateSchema = z.object({
     last_name: z.string().optional().nullable()
 });
 
+export const viewModeChangedEventSchema = z.object({
+    document_id: z.string(),
+    view_mode: viewMode1Schema
+});
+
 export const commentReadSchema = z.object({
     created_at: z.string().optional(),
     updated_at: z.string().optional(),
@@ -320,6 +334,6 @@ export const commentEventSchema = z.object({
     payload: commentReadSchema.nullable(),
     resource_id: z.number().nullable(),
     resource: z.string().nullable(),
-    type: z.union([z.literal("create"), z.literal("update"), z.literal("delete"), z.literal("custom")]),
+    type: z.union([z.literal("create"), z.literal("update"), z.literal("delete"), z.literal("view_mode_changed"), z.literal("mouse_position")]),
     originating_connection_id: z.string().optional().nullable()
 });

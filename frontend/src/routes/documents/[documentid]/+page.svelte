@@ -18,17 +18,20 @@
 	// WebSocket connection lifecycle (separate effect with cleanup)
 	$effect(() => {
 		let wsUnsubscribe: (() => void) | null = null;
+		let vmUnsubscribe: (() => void) | null = null;
 
 		// Connect to WebSocket for real-time comment updates
 		documentWebSocket.connect(document.id.toString()).then(() => {
 			wsUnsubscribe = documentWebSocket.onCommentEvent((event) => {
 				documentStore.handleWebSocketEvent(event);
 			});
+			vmUnsubscribe = documentWebSocket.onViewModeChanged((ev) => documentStore.handleWebSocketEvent(ev as any));
 		});
 
 		// Cleanup when effect re-runs or component unmounts
 		return () => {
 			wsUnsubscribe?.();
+			vmUnsubscribe?.();
 			documentWebSocket.disconnect();
 			documentStore.clearAllInteractionState();
 		};

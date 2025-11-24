@@ -4,7 +4,7 @@ import type { ConnectionState } from '$types/websocket';
 import { browser } from '$app/environment';
 import { api } from '$api/client';
 import { env } from '$env/dynamic/public';
-import type { CommentEvent } from '$api/types';
+import type { CommentEvent, ViewModeChangedEvent as ApiViewModeChangedEvent, MousePositionEvent as ApiMousePositionEvent } from '$api/types';
 
 /** Represents a user connected to a document */
 export interface ConnectedUser {
@@ -49,19 +49,10 @@ interface UserDisconnectedEvent {
 	};
 }
 
-/** Mouse position event from other users */
-interface MousePositionEvent {
-	type: 'mouse_position';
-	payload: {
-		user_id: number;
-		username: string;
-		x: number;
-		y: number;
-		page: number;
-		visible: boolean;
-	};
-	originating_connection_id?: string;
-}
+// Use the generated API event wrappers for these types
+type MousePositionEvent = ApiMousePositionEvent;
+
+type ViewModeChangedEvent = ApiViewModeChangedEvent;
 
 /** All possible WebSocket event types */
 type WebSocketEvent =
@@ -69,7 +60,8 @@ type WebSocketEvent =
 	| HandshakeEvent
 	| UserConnectedEvent
 	| UserDisconnectedEvent
-	| MousePositionEvent;
+	| MousePositionEvent
+	| ViewModeChangedEvent;
 
 /**
  * WebSocket connection for a specific document with active user tracking
@@ -94,6 +86,7 @@ class DocumentWebSocketStore {
 
 	// Internal event handlers
 	private commentEventHandlers: ((event: CommentEvent) => void)[] = [];
+	private viewModeEventHandlers: ((event: ViewModeChangedEvent) => void)[] = [];
 
 	// Throttle tracking for mouse position sending
 	private lastMouseSendTime = 0;
@@ -172,29 +165,38 @@ class DocumentWebSocketStore {
 				console.log('[WS] User disconnected:', event.payload.user_id);
 				break;
 
-			case 'mouse_position':
-				// Update cursor position for this user
+			case 'mouse_position': {
+				// Update cursor position for this user (payload may be null in some edge cases)
+				if (!event.payload) break;
+				const mp = event.payload as ApiMousePositionEvent['payload'];
+				if (!mp) break;
 				this.userCursorsStore.update((cursors) => {
-					cursors.set(event.payload.user_id, {
-						user_id: event.payload.user_id,
-						username: event.payload.username,
-						x: event.payload.x,
-						y: event.payload.y,
-						page: event.payload.page,
-						visible: event.payload.visible,
+					cursors.set(mp.user_id, {
+						user_id: mp.user_id,
+						username: mp.username,
+						x: mp.x,
+						y: mp.y,
+						page: mp.page,
+						visible: mp.visible,
 						lastUpdate: Date.now()
 					});
 					return new Map(cursors);
 				});
+
 				break;
+			}
 
 			case 'create':
 			case 'update':
 			case 'delete':
-			case 'custom':
-				// Forward comment events to registered handlers
-				this.commentEventHandlers.forEach((handler) => handler(event as CommentEvent));
-				break;
+					// Forward comment events to registered handlers
+					this.commentEventHandlers.forEach((handler) => handler(event as CommentEvent));
+					break;
+
+			case 'view_mode_changed':
+					// Notify registered view-mode handlers
+					this.viewModeEventHandlers.forEach((handler) => handler(event as ViewModeChangedEvent));
+					break;
 		}
 	}
 
@@ -237,6 +239,14 @@ class DocumentWebSocketStore {
 		this.commentEventHandlers.push(handler);
 		return () => {
 			this.commentEventHandlers = this.commentEventHandlers.filter((h) => h !== handler);
+		};
+	}
+
+	/** Subscribe to view-mode changed events. Returns an unsubscribe function */
+	onViewModeChanged(handler: (event: ViewModeChangedEvent) => void): () => void {
+		this.viewModeEventHandlers.push(handler);
+		return () => {
+			this.viewModeEventHandlers = this.viewModeEventHandlers.filter((h) => h !== handler);
 		};
 	}
 

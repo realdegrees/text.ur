@@ -49,6 +49,24 @@ Refer to endpoint response schema for reference on event structure.
 <td style='border: 1px solid #ddd; padding: 8px;'>❌ No</td>
 </tr>
 {%- endif %}
+
+{%- if view_mode_model %}
+<tr>
+<td style='border: 1px solid #ddd; padding: 8px;'><code>view_mode_changed</code></td>
+<td style='border: 1px solid #ddd; padding: 8px;'><code>{{ view_mode_model.__name__ }}</code></td>
+<td style='border: 1px solid #ddd; padding: 8px;'><code>{{ view_mode_model.__name__ }}</code></td>
+<td style='border: 1px solid #ddd; padding: 8px;'>❌ No</td>
+</tr>
+{%- endif %}
+
+{%- if mouse_model %}
+<tr>
+<td style='border: 1px solid #ddd; padding: 8px;'><code>mouse_position</code></td>
+<td style='border: 1px solid #ddd; padding: 8px;'><code>{{ mouse_model.__name__ }}</code></td>
+<td style='border: 1px solid #ddd; padding: 8px;'><code>{{ mouse_model.__name__ }}</code></td>
+<td style='border: 1px solid #ddd; padding: 8px;'>❌ No</td>
+</tr>
+{%- endif %}
 </tbody>
 </table>
 </ul>

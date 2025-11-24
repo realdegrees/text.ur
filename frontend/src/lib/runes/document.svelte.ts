@@ -284,17 +284,13 @@ const createDocumentStore = () => {
 		return replies;
 	};
 
-	const handleWebSocketEvent = (event: CommentEvent): void => {
-		// Handle custom events (like view_mode changes) first
-		if (event.type === 'custom') {
-			const customPayload = event.payload as unknown as {
-				document_id?: string;
-				view_mode?: ViewMode1;
-			};
-			if (customPayload?.view_mode && customPayload?.document_id && loadedDocument) {
-				// Update local document view_mode
-				loadedDocument.view_mode = customPayload.view_mode;
-				console.log(`[WS] Document view_mode updated to ${customPayload.view_mode}`);
+	const handleWebSocketEvent = (event: CommentEvent | { type: 'view_mode_changed'; payload: { document_id?: string; view_mode?: ViewMode1 } }): void => {
+		// Handle explicit view-mode changed events (no longer delivered as 'custom')
+		if (event.type === 'view_mode_changed') {
+			const vm = event.payload as { document_id?: string; view_mode?: ViewMode1 };
+			if (vm?.view_mode && vm?.document_id && loadedDocument) {
+				loadedDocument.view_mode = vm.view_mode;
+				console.log(`[WS] Document view_mode updated to ${vm.view_mode}`);
 			}
 			return;
 		}
@@ -304,10 +300,12 @@ const createDocumentStore = () => {
 			return;
 		}
 
-		const comment = event.payload;
+		// payload is narrowed per-case; we'll cast to CommentRead when handling comment events below
 
 		switch (event.type) {
 			case 'create':
+				{
+					const comment = event.payload as CommentRead;
 				if (comment.parent_id) {
 					const parentComment = findComment(comments, comment.parent_id);
 					if (parentComment) {
@@ -323,9 +321,11 @@ const createDocumentStore = () => {
 				} else {
 					comments = [...comments, toCachedComment(comment)];
 				}
+				}
 				break;
 
 			case 'update': {
+				const comment = event.payload as CommentRead;
 				const targetComment = findComment(comments, comment.id);
 				if (targetComment) {
 					Object.assign(targetComment, comment);
@@ -335,6 +335,7 @@ const createDocumentStore = () => {
 			}
 
 			case 'delete': {
+				const comment = event.payload as CommentRead;
 				// Decrement parent's num_replies if this was a reply
 				if (comment.parent_id) {
 					const parentComment = findParentOfComment(comments, comment.parent_id);
@@ -347,7 +348,7 @@ const createDocumentStore = () => {
 			}
 
 			default:
-				console.warn('Unknown WebSocket event type:', event.type);
+				console.warn('Unknown WebSocket event type (unexpected):', event);
 		}
 	};
 
