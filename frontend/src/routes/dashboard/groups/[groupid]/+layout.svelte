@@ -26,7 +26,7 @@
 			path: '/settings',
 			i18nKey: $LL.group.settings,
 			icon: SettingsIcon,
-			condition: sessionStore.validatePermissions(data.membership, ['administrator'])
+			condition: sessionStore.validatePermissions(['administrator'])
 		}
 	];
 
