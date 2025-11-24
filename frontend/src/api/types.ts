@@ -35,8 +35,18 @@ export type ReactionType = "like" | "dislike" | "laugh" | "confused" | "fire";
 export type Visibility1 = "private" | "restricted" | "public";
 /**
  * Document view mode settings.
+ *
+ * RESTRICTED: Only owner, admins, and users with VIEW_RESTRICTED_COMMENTS can see comments
+ * PUBLIC: Comments visible based on individual comment visibility settings
  */
-export type ViewMode = "private" | "anonymous" | "public";
+export type ViewMode = "restricted" | "public";
+/**
+ * Document view mode settings.
+ *
+ * RESTRICTED: Only owner, admins, and users with VIEW_RESTRICTED_COMMENTS can see comments
+ * PUBLIC: Comments visible based on individual comment visibility settings
+ */
+export type ViewMode1 = "restricted" | "public";
 /**
  * Available permissions for group members.
  */
@@ -44,7 +54,6 @@ export type Permission =
   | "administrator"
   | "add_comments"
   | "remove_comments"
-  | "view_public_comments"
   | "view_restricted_comments"
   | "add_members"
   | "remove_members"
@@ -98,7 +107,7 @@ export interface CommentEvent {
   payload: CommentRead | null;
   resource_id: number | null;
   resource: string | null;
-  type: "create" | "update" | "delete" | "custom";
+  type: "create" | "update" | "delete" | "view_mode_changed" | "mouse_position";
   originating_connection_id?: string | null;
 }
 export interface CommentRead {
@@ -176,7 +185,7 @@ export interface DocumentRead {
   name: string;
   group_id: string;
   visibility: Visibility;
-  view_mode: Visibility;
+  view_mode: ViewMode1;
 }
 export interface DocumentTransfer {
   group_id: string;
@@ -259,6 +268,17 @@ export interface MembershipRead {
   group: GroupRead;
   is_owner: boolean;
   accepted: boolean;
+}
+/**
+ * Event payload for mouse cursor position - sent to WebSocket clients for real-time cursor tracking.
+ */
+export interface MousePositionEvent {
+  user_id: number;
+  username: string;
+  x: number;
+  y: number;
+  page: number;
+  visible?: boolean;
 }
 export interface PaginatedBase {
   data: unknown[];
@@ -364,4 +384,11 @@ export interface UserUpdate {
   email?: string | null;
   first_name?: string | null;
   last_name?: string | null;
+}
+/**
+ * Event payload for view_mode changes - sent to WebSocket clients.
+ */
+export interface ViewModeChangedEvent {
+  document_id: string;
+  view_mode: ViewMode1;
 }

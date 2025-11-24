@@ -1,13 +1,16 @@
-import uuid
+from datetime import datetime
+from uuid import uuid4
 
 from api.dependencies.authentication import Authenticate, BasicAuthentication
 from api.dependencies.database import Database
+from api.dependencies.events import Events
 from api.dependencies.paginated.resources import PaginatedResource
 from api.dependencies.resource import Resource
 from api.dependencies.s3 import S3
 from api.routers.events import (
     EventModelConfig,
     EventRouterConfig,
+    can_user_see_comment,
     get_events_router,
 )
 from core.app_exception import AppException
@@ -30,8 +33,11 @@ from models.document import (
     DocumentRead,
     DocumentTransfer,
     DocumentUpdate,
+    MousePositionEvent,
+    ViewModeChangedEvent,
 )
-from models.enums import AppErrorCode, Permission
+from models.enums import AppErrorCode, Permission, Visibility
+from models.event import Event
 from models.filter import DocumentFilter
 from models.pagination import Paginated
 from models.tables import Comment, Document, Group, Membership, User
@@ -47,26 +53,69 @@ router = APIRouter(
 )
 
 # Define an events router for Comments linked to Documents
+def _comment_create_transform(event_data: dict, recipient: User | None, doc: Document | None, membership: Membership | None) -> dict | None:
+    """Transform outgoing create/update/delete events for comment visibility.
+
+    - For create: skip if recipient cannot see the comment
+    - For update: possibly convert to create or delete depending on visibility changes
+    - For delete: always send
+    """
+    event_type = event_data.get("type")
+    payload = event_data.get("payload") or {}
+
+    # Always send deletes (clients must remove UI state) and skip filtering if we lack context
+    if event_type == "delete" or not recipient or not doc:
+        return event_data
+
+    comment_visibility_str = payload.get("visibility")
+    comment_user = payload.get("user", {})
+    comment_user_id = comment_user.get("id") if isinstance(comment_user, dict) else None
+
+    if not (comment_visibility_str and comment_user_id is not None):
+        return event_data
+
+    try:
+        comment_visibility = Visibility(comment_visibility_str)
+    except ValueError:
+        comment_visibility = Visibility.PUBLIC
+
+    can_see = can_user_see_comment(recipient, membership, doc, comment_visibility, comment_user_id)
+
+    if event_type == "create":
+        return event_data if can_see else None
+
+    # update handling
+    old_visibility_str = event_data.get("old_visibility")
+    could_see_before = True
+    if old_visibility_str:
+        try:
+            old_visibility = Visibility(old_visibility_str)
+            could_see_before = can_user_see_comment(recipient, membership, doc, old_visibility, comment_user_id)
+        except ValueError:
+            pass
+
+    if can_see and could_see_before:
+        return event_data
+    if can_see and not could_see_before:
+        return {**event_data, "type": "create"}
+    if not can_see and could_see_before:
+        return {**event_data, "type": "delete", "payload": {"id": payload.get("id")}}
+
+    return None
+
+
 events_router = get_events_router(
-    "comments", Document, Comment,
+    "comments",
+    Document,
+    Comment,
     base_router=router,
     config=EventRouterConfig(
-        # TODO add global validation in/out for all events based on document access
-        read=EventModelConfig(model=CommentRead,
-                              validation_out=Guard.comment_access().predicate
-                              ),
-        create=EventModelConfig(model=CommentRead,
-                                validation_in=Guard.comment_access().predicate,
-                                validation_out=Guard.comment_access().predicate
-                                ),
-        update=EventModelConfig(model=CommentUpdate,
-                                validation_in=Guard.comment_access().predicate,
-                                validation_out=Guard.comment_access().predicate
-                                ),
-        delete=EventModelConfig(model=CommentDelete,
-                                validation_in=Guard.comment_access().predicate,
-                                validation_out=Guard.comment_access().predicate
-                                ),
+        read=EventModelConfig(model=CommentRead),
+        create=EventModelConfig(model=CommentRead, transform_outgoing=_comment_create_transform),
+        update=EventModelConfig(model=CommentUpdate, transform_outgoing=_comment_create_transform),
+        delete=EventModelConfig(model=CommentDelete, transform_outgoing=_comment_create_transform),
+        view_mode_changed=EventModelConfig(model=ViewModeChangedEvent),  # For view_mode change events
+        mouse_position=EventModelConfig(model=MousePositionEvent),
     )
 )
 
@@ -102,7 +151,7 @@ async def create_document(
         raise AppException(status_code=403, error_code=AppErrorCode.NOT_AUTHORIZED, detail="User does not have permission to add documents.")
 
     # Generate unique S3 key
-    s3_key = f"document-{uuid.uuid4()}.pdf"
+    s3_key = f"document-{uuid4()}.pdf"
 
     # Create document entry
     document = Document(s3_key=s3_key, size_bytes=file.size, **document_create.model_dump(exclude_unset=True))
@@ -184,14 +233,38 @@ async def transfer_document(
 @router.put("/{document_id}", response_model=DocumentRead)
 async def update_document(
     db: Database,
+    events: Events,
     _: User = Authenticate(guards=[Guard.document_access({Permission.ADD_DOCUMENTS})]), # ? Users with add permissions can also update
     document_update: DocumentUpdate = Body(...),
     document: Document = Resource(Document, param_alias="document_id"),
 ) -> DocumentRead:
     """Update a document and return the updated document."""
+    # Store old view_mode to detect changes
+    old_view_mode = document.view_mode
+
     db.merge(document)
     document.sqlmodel_update(document_update.model_dump(exclude_unset=True))
     db.commit()
+    db.refresh(document)
+
+    # If view_mode changed, publish a view_mode_changed event to update WebSocket clients
+    if document.view_mode != old_view_mode:
+        view_mode_event = Event[ViewModeChangedEvent](
+            event_id=uuid4(),
+            published_at=datetime.now(),
+            payload=ViewModeChangedEvent(
+                document_id=document.id,
+                view_mode=document.view_mode,
+            ),
+            resource_id=None,
+            resource="document",
+            type="view_mode_changed",
+        )
+        await events.publish(
+            view_mode_event.model_dump(mode="json"),
+            channel=f"documents:{document.id}:comments"
+        )
+
     return document
 
 @router.delete("/{document_id}")

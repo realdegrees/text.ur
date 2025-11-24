@@ -3,6 +3,7 @@
 	import { sessionStore } from '$lib/runes/session.svelte.js';
 	import { parseAnnotation } from '$types/pdf';
 	import CommentCard from './CommentCard.svelte';
+	import CommentVisibility from './CommentVisibility.svelte';
 	import DeleteConfirmation from './DeleteConfirmation.svelte';
 	import MarkdownTextEditor from './MarkdownTextEditor.svelte';
 	import ReplyIcon from '~icons/material-symbols/reply';
@@ -70,7 +71,14 @@
 	let hasUnloadedReplies = $derived(
 		activeComment?.num_replies > 0 && (!activeComment.replies || activeComment.replies.length === 0)
 	);
-	let canModifyComment = $derived(sessionStore.canModifyComment(activeComment?.user?.id ?? null));
+	let canModifyComment = $derived(sessionStore.currentUserId === activeComment?.user?.id);
+	let canDeleteComment = $derived.by(() => {
+		if (sessionStore.currentUserId === activeComment.user?.id) return true;
+		return sessionStore.validatePermissions(['remove_comments']);
+	});
+	let canReply = $derived(
+		sessionStore.currentMembership ? sessionStore.validatePermissions(['add_comments']) : false
+	);
 	let hasReplies = $derived(activeComment.replies && activeComment.replies.length > 0);
 
 	let annotationText = $derived.by(() => {
@@ -89,6 +97,15 @@
 		showReplyInput = false;
 		replyContent = '';
 		showDeleteConfirm = false;
+	});
+
+	// Sync showReplyInput with store for auto-close prevention
+	$effect(() => {
+		if (showReplyInput && activeComment?.id) {
+			documentStore.setReplyingTo(activeComment.id);
+		} else if (!showReplyInput && documentStore.replyingToCommentId === activeComment?.id) {
+			documentStore.setReplyingTo(null);
+		}
 	});
 
 	// Handlers
@@ -233,16 +250,37 @@
 						>{activeComment.user?.username ?? 'Anonymous'}</span
 					>
 					<span class="text-xs text-text/40">{formatDate(activeComment.created_at)}</span>
+					{#if canModifyComment && activeComment.visibility}
+						<CommentVisibility
+							commentId={activeComment.id}
+							visibility={activeComment.visibility}
+							size="sm"
+						/>
+					{/if}
 				</div>
 				{#if canModifyComment}
-					<DeleteConfirmation
-						isOpen={showDeleteConfirm}
-						disabled={isSubmitting}
-						size="sm"
-						onConfirm={handleDeleteConfirm}
-						onOpen={() => (showDeleteConfirm = true)}
-						onClose={() => (showDeleteConfirm = false)}
-					/>
+					<div class="flex items-center gap-1">
+						{#if !isEditing}
+							<button
+								class="rounded p-0.5 text-text/40 transition-colors hover:bg-text/10 hover:text-text/70"
+								onclick={(e) => {
+									e.stopPropagation();
+									documentStore.setEditing(activeComment.id);
+								}}
+								title="Edit"
+							>
+								<EditIcon class="h-3 w-3" />
+							</button>
+						{/if}
+						<DeleteConfirmation
+							isOpen={showDeleteConfirm}
+							disabled={isSubmitting}
+							size="sm"
+							onConfirm={handleDeleteConfirm}
+							onOpen={() => (showDeleteConfirm = true)}
+							onClose={() => (showDeleteConfirm = false)}
+						/>
+					</div>
 				{/if}
 			</div>
 		{/if}
@@ -263,10 +301,17 @@
 							class="italic"
 							title="Last Edit: {formatDate(activeComment.updated_at)}">(edited)</span
 						>{/if}
+					{#if canModifyComment && activeComment.visibility}
+						<CommentVisibility
+							commentId={activeComment.id}
+							visibility={activeComment.visibility}
+							size="md"
+						/>
+					{/if}
 				</div>
-				{#if canModifyComment}
+				{#if canDeleteComment || canModifyComment}
 					<div class="flex items-center gap-1">
-						{#if !isEditing}
+						{#if !isEditing && canModifyComment}
 							<button
 								class="rounded p-1 text-text/40 transition-colors hover:bg-text/10 hover:text-text/70"
 								onclick={(e) => {
@@ -278,13 +323,15 @@
 								<EditIcon class="h-3.5 w-3.5" />
 							</button>
 						{/if}
-						<DeleteConfirmation
-							isOpen={showDeleteConfirm}
-							disabled={isSubmitting}
-							onConfirm={handleDeleteConfirm}
-							onOpen={() => (showDeleteConfirm = true)}
-							onClose={() => (showDeleteConfirm = false)}
-						/>
+						{#if canDeleteComment}
+							<DeleteConfirmation
+								isOpen={showDeleteConfirm}
+								disabled={isSubmitting}
+								onConfirm={handleDeleteConfirm}
+								onOpen={() => (showDeleteConfirm = true)}
+								onClose={() => (showDeleteConfirm = false)}
+							/>
+						{/if}
 					</div>
 				{/if}
 			</div>
@@ -367,7 +414,7 @@
 					</button>
 				</div>
 			</div>
-		{:else}
+		{:else if canReply}
 			<button
 				class="{isTopLevel ? 'mb-3' : 'mt-1'} flex items-center {sizes.gap} text-xs {isTopLevel
 					? 'text-primary hover:text-primary/80'

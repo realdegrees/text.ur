@@ -34,7 +34,11 @@
 		{#each scroll.items as item (item)}
 			<li class="mr-1">
 				{#if onSelect}
-					<button type="button" class="block w-full cursor-pointer rounded-sm" onclick={() => onSelect(item)}>
+					<button
+						type="button"
+						class="block w-full cursor-pointer rounded-sm"
+						onclick={() => onSelect(item)}
+					>
 						{@render itemSnippet(item)}
 					</button>
 				{:else}

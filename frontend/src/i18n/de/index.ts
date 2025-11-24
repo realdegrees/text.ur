@@ -58,7 +58,6 @@ const de = {
 		administrator: 'Voller Administratorzugriff',
 		add_comments: 'Kommentare hinzufügen',
 		remove_comments: 'Kommentare entfernen',
-		view_public_comments: 'Öffentliche Kommentare anzeigen',
 		view_restricted_comments: 'Eingeschränkte Kommentare anzeigen',
 		add_members: 'Mitglieder hinzufügen',
 		remove_members: 'Mitglieder entfernen',

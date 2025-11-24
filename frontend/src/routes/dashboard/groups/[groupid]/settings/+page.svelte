@@ -23,7 +23,7 @@
 
 	let { data } = $props();
 	let group = $derived(data.membership.group);
-	let isOwner = $derived(sessionStore.validatePermissions(data.membership, []));
+	let isOwner = $derived(sessionStore.currentMembership?.is_owner);
 	let defaultPermissions: Permission[] = $derived(group.default_permissions || []);
 
 	let transferUsername: string = $state('');

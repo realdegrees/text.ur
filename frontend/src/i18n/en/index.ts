@@ -58,7 +58,6 @@ const en = {
 		administrator: 'Full administrative access',
 		add_comments: 'Add comments',
 		remove_comments: 'Remove comments',
-		view_public_comments: 'View public comments',
 		view_restricted_comments: 'View restricted comments',
 		add_members: 'Add members',
 		remove_members: 'Remove members',

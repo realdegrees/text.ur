@@ -2,13 +2,13 @@ from collections.abc import AsyncGenerator
 from typing import Annotated
 
 import core.config as cfg
+from core.app_exception import AppException
 from core.config import (
     DATABASE_URL,
     DB_CONNECTION_TIMEOUT,
     DB_STATEMENT_TIMEOUT,
     DEBUG,
 )
-from core.app_exception import AppException
 from core.logger import get_logger
 from fastapi import Depends, HTTPException
 from sqlalchemy import event, text

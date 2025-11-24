@@ -35,8 +35,15 @@
 		return selectedIndex;
 	});
 
-	// Show expanded card when badge is hovered, highlight is hovered, or comment is pinned
-	let showCard = $derived(isHovered || !!hoveredCommentInGroup || !!pinnedCommentInGroup);
+	// Check if any comment in this group has active input (editing or replying)
+	let hasActiveInputInGroup = $derived(
+		comments.some((c) => c.isEditing || documentStore.replyingToCommentId === c.id)
+	);
+
+	// Show expanded card when badge is hovered, highlight is hovered, comment is pinned, or input is active
+	let showCard = $derived(
+		isHovered || !!hoveredCommentInGroup || !!pinnedCommentInGroup || hasActiveInputInGroup
+	);
 
 	// Handle mouse enter - set store state
 	const handleMouseEnter = () => {
@@ -55,13 +62,19 @@
 		}
 	};
 
-	// Clear selected comment when card closes (but not if pinned)
+	// Clear selected comment when card closes (but not if pinned or input active)
 	const handleMouseLeave = () => {
 		isHovered = false;
 		documentStore.setBadgeHovered(null);
 		// Small delay to allow for moving to another badge
 		setTimeout(() => {
-			if (!isHovered && !hoveredCommentInGroup && !pinnedCommentInGroup) {
+			// Don't auto-close if there's an active input (editing or replying)
+			if (
+				!isHovered &&
+				!hoveredCommentInGroup &&
+				!pinnedCommentInGroup &&
+				!documentStore.hasActiveInput
+			) {
 				documentStore.setSelected(null);
 				documentStore.setCommentCardActive(false);
 			}

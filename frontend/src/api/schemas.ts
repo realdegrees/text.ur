@@ -9,9 +9,11 @@ export const reactionTypeSchema = z.union([z.literal("like"), z.literal("dislike
 
 export const visibility1Schema = z.union([z.literal("private"), z.literal("restricted"), z.literal("public")]);
 
-export const viewModeSchema = z.union([z.literal("private"), z.literal("anonymous"), z.literal("public")]);
+export const viewModeSchema = z.union([z.literal("restricted"), z.literal("public")]);
 
-export const permissionSchema = z.union([z.literal("administrator"), z.literal("add_comments"), z.literal("remove_comments"), z.literal("view_public_comments"), z.literal("view_restricted_comments"), z.literal("add_members"), z.literal("remove_members"), z.literal("manage_permissions"), z.literal("upload_documents"), z.literal("view_restricted_documents"), z.literal("delete_documents"), z.literal("remove_reactions"), z.literal("add_reactions"), z.literal("manage_share_links")]);
+export const viewMode1Schema = z.union([z.literal("restricted"), z.literal("public")]);
+
+export const permissionSchema = z.union([z.literal("administrator"), z.literal("add_comments"), z.literal("remove_comments"), z.literal("view_restricted_comments"), z.literal("add_members"), z.literal("remove_members"), z.literal("manage_permissions"), z.literal("upload_documents"), z.literal("view_restricted_documents"), z.literal("delete_documents"), z.literal("remove_reactions"), z.literal("add_reactions"), z.literal("manage_share_links")]);
 
 export const appErrorSchema = z.object({
     status_code: z.number(),
@@ -100,7 +102,7 @@ export const documentReadSchema = z.object({
     name: z.string(),
     group_id: z.string(),
     visibility: visibilitySchema,
-    view_mode: visibilitySchema
+    view_mode: viewMode1Schema
 });
 
 export const documentTransferSchema = z.object({
@@ -184,6 +186,15 @@ export const membershipReadSchema = z.object({
     group: groupReadSchema,
     is_owner: z.boolean(),
     accepted: z.boolean()
+});
+
+export const mousePositionEventSchema = z.object({
+    user_id: z.number(),
+    username: z.string(),
+    x: z.number(),
+    y: z.number(),
+    page: z.number(),
+    visible: z.boolean().optional()
 });
 
 export const filterSchema = z.record(z.string(), z.unknown()).and(z.object({
@@ -289,6 +300,11 @@ export const userUpdateSchema = z.object({
     last_name: z.string().optional().nullable()
 });
 
+export const viewModeChangedEventSchema = z.object({
+    document_id: z.string(),
+    view_mode: viewMode1Schema
+});
+
 export const commentReadSchema = z.object({
     created_at: z.string().optional(),
     updated_at: z.string().optional(),
@@ -318,6 +334,6 @@ export const commentEventSchema = z.object({
     payload: commentReadSchema.nullable(),
     resource_id: z.number().nullable(),
     resource: z.string().nullable(),
-    type: z.union([z.literal("create"), z.literal("update"), z.literal("delete"), z.literal("custom")]),
+    type: z.union([z.literal("create"), z.literal("update"), z.literal("delete"), z.literal("view_mode_changed"), z.literal("mouse_position")]),
     originating_connection_id: z.string().optional().nullable()
 });

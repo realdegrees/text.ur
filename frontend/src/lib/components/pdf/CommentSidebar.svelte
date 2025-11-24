@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { documentStore, type CachedComment } from '$lib/runes/document.svelte.js';
+	import { sessionStore } from '$lib/runes/session.svelte.js';
 	import { parseAnnotation, type Annotation } from '$types/pdf';
 	import CommentBadge from './CommentBadge.svelte';
 	import { onMount } from 'svelte';
@@ -21,9 +22,26 @@
 		parsedAnnotation: Annotation;
 	}
 
+	// Apply local filters to comments
+	let filteredComments = $derived.by(() => {
+		let result = documentStore.comments;
+
+		// Filter by specific author
+		if (documentStore.authorFilter !== null) {
+			result = result.filter((c: CachedComment) => c.user?.id === documentStore.authorFilter);
+		}
+
+		// Filter to show only current user's comments
+		if (documentStore.showOnlyMyComments && sessionStore.currentUser) {
+			result = result.filter((c: CachedComment) => c.user?.id === sessionStore.currentUser?.id);
+		}
+
+		return result;
+	});
+
 	// Get comments with valid annotations
 	let commentsWithAnnotations = $derived(
-		documentStore.comments
+		filteredComments
 			.map((c) => ({ ...c, parsedAnnotation: parseAnnotation(c.annotation) }))
 			.filter((c): c is CommentWithAnnotation => c.parsedAnnotation !== null)
 	);

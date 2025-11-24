@@ -27,7 +27,7 @@
 <div class="h-screen p-4">
 	<div class="mb-4 flex w-full flex-row items-center justify-between gap-2">
 		<h1 class="text-2xl font-bold">Documents</h1>
-		{#if sessionStore.validatePermissions(data.membership, ['upload_documents'])}
+		{#if sessionStore.validatePermissions(['upload_documents'])}
 			<a
 				href="/dashboard/groups/{group.id}/documents/create"
 				class="flex flex-row items-center gap-2 rounded bg-green-500/30 px-3 py-2.5 font-semibold shadow-inner shadow-black/30 transition hover:cursor-pointer hover:bg-green-500/40"

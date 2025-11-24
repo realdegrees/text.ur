@@ -1,5 +1,6 @@
 from typing import TYPE_CHECKING
 
+from pydantic import field_validator
 from sqlmodel import Field, SQLModel
 
 from models.base import BaseModel
@@ -12,13 +13,31 @@ if TYPE_CHECKING:
 # TODO maybe move these into config
 MAX_COMMENT_CONTENT_LENGTH = 500
 
+
+def sanitize_content(value: str | None) -> str | None:
+    """Remove null bytes and other problematic characters from content."""
+    if value is None:
+        return None
+    # Remove null bytes which PostgreSQL doesn't accept
+    value = value.replace('\x00', '')
+    # Remove other control characters except newlines and tabs
+    value = ''.join(c for c in value if c in '\n\t\r' or (ord(c) >= 32 or ord(c) >= 127))
+    return value
+
+
 class CommentCreate(SQLModel):
     visibility: Visibility
     document_id: str
     parent_id: int | None = None
     content: str | None = Field(default=None, max_length=MAX_COMMENT_CONTENT_LENGTH)
     annotation: dict | None = None
-    
+
+    @field_validator('content', mode='before')
+    @classmethod
+    def clean_content(cls, v: str | None) -> str | None:
+        """Sanitize content to remove problematic characters."""
+        return sanitize_content(v)
+
 
 class CommentRead(BaseModel):
     id: int
@@ -34,6 +53,12 @@ class CommentUpdate(SQLModel):
     visibility: Visibility | None = None
     content: str | None = Field(default=None, max_length=MAX_COMMENT_CONTENT_LENGTH)
     annotation: dict | None = None
+
+    @field_validator('content', mode='before')
+    @classmethod
+    def clean_content(cls, v: str | None) -> str | None:
+        """Sanitize content to remove problematic characters."""
+        return sanitize_content(v)
     
 class CommentDelete(SQLModel):
     id: int
