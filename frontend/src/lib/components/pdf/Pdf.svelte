@@ -6,7 +6,6 @@
 	import TextSelectionHandler from './TextSelectionHandler.svelte';
 	import CommentSidebar from './CommentSidebar.svelte';
 	import PdfControls from './PdfControls.svelte';
-	import ConnectionLine from './ConnectionLine.svelte';
 	import UserCursors from './UserCursors.svelte';
 	import { documentStore } from '$lib/runes/document.svelte.js';
 	import { PDF_ZOOM_STEP, PDF_MIN_SCALE } from './constants';
@@ -242,11 +241,8 @@
 		role="complementary"
 		bind:this={sidebarContainer}
 	>
-		<CommentSidebar viewerContainer={container} {scale} {scrollTop} />
+		<CommentSidebar viewerContainer={container} {sidebarContainer} {scale} {scrollTop} />
 	</div>
-
-	<!-- Connection line between comment and highlight -->
-	<ConnectionLine pdfContainer={container} {sidebarContainer} />
 </div>
 
 <style>

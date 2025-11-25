@@ -1,4 +1,6 @@
 import os
+import sys
+from importlib import util as importlib_util
 
 from dotenv import load_dotenv
 from jinja2 import Environment, FileSystemLoader, select_autoescape
@@ -38,9 +40,17 @@ DB_CONNECTION_TIMEOUT: int = int(
 DB_STATEMENT_TIMEOUT: int = int(
     os.getenv("DB_STATEMENT_TIMEOUT", 10000))  # milliseconds
 
-DATABASE_URL: str = (
-    f"postgresql+psycopg2://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{PGBOUNCER_HOST or POSTGRES_HOST}:{PGBOUNCER_PORT or POSTGRES_PORT}/{POSTGRES_DB}"
-)
+IS_TEST_ENV = any("pytest" in str(arg) for arg in sys.argv)
+if IS_TEST_ENV:
+    POSTGRES_DB = "test"
+
+user = POSTGRES_USER
+password = POSTGRES_PASSWORD
+host = PGBOUNCER_HOST or POSTGRES_HOST if not IS_TEST_ENV else POSTGRES_HOST
+port = PGBOUNCER_PORT or POSTGRES_PORT if not IS_TEST_ENV else POSTGRES_PORT
+db = POSTGRES_DB if not IS_TEST_ENV else "test"
+
+DATABASE_URL: str = f"postgresql+psycopg2://{user}:{password}@{host}:{port}/{db}"
 
 # REDIS
 REDIS_PASSWORD: str = os.getenv("REDIS_PASSWORD")
@@ -55,7 +65,10 @@ AWS_ENDPOINT_URL = os.getenv("AWS_ENDPOINT_URL") + \
     f":{AWS_ENDPOINT_PORT}" if AWS_ENDPOINT_PORT else ""
 AWS_REGION = os.getenv("AWS_REGION")
 AWS_SECRET_KEY = os.getenv("AWS_SECRET_KEY")
-S3_BUCKET = os.getenv("S3_BUCKET")
+S3_BUCKET = os.getenv("S3_BUCKET", "default")
+
+if IS_TEST_ENV:
+    S3_BUCKET = S3_BUCKET + "-test"
 
 JWT_ACCESS_EXPIRATION_MINUTES = int(
     os.getenv("JWT_ACCESS_EXPIRATION_MINUTES", 30))

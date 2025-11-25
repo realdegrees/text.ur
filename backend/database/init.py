@@ -16,7 +16,10 @@ import sys
 from datetime import UTC
 
 import psycopg2
+from alembic import command as alembic_command
+from alembic.config import Config
 from api.dependencies.s3 import S3Manager
+from core import config as app_config
 from core.config import (
     POSTGRES_DB,
     POSTGRES_HOST,
@@ -80,7 +83,7 @@ def drop_and_recreate_database(db: str = POSTGRES_DB) -> None:
         conn.close()
         
 def get_connection(db_name: str | None = None) -> PgConnection:
-    """Create a new PostgreSQL connection. If db_name is None, use DATABASE_URL."""
+    """Create a new PostgreSQL connection."""
     conn: PgConnection = psycopg2.connect(
             dbname=db_name or POSTGRES_DB,
             user=POSTGRES_USER,
@@ -122,30 +125,35 @@ def reset_sequences(conn: PgConnection) -> None:
                 continue
 
 def run_alembic_commands(upgrade_to_version: str = "head") -> None:
-    """Run alembic stamp base and upgrade to a specific version or head using subprocess to replicate CLI behavior."""
-    # Find the full path to alembic
-    alembic_path = shutil.which("alembic")
-    if not alembic_path:
-        raise RuntimeError("Alembic executable not found in PATH")
+    """Programmatically stamp the database to base then upgrade to the requested revision.
 
-    # Run alembic stamp base
-    print("Stamping base revision...")
-    subprocess.run(  # noqa: S603
-        [alembic_path, "stamp", "base"],
-        check=True,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL
+    This uses Alembic's Python API instead of invoking the alembic CLI via subprocess.
+    It is safe to call from test code (no external binary required) and honors the
+    configured database connection.
+    """
+    # Locate the alembic.ini file adjacent to this script and prepare a Config
+    alembic_ini = os.path.join(os.path.dirname(__file__), "alembic.ini")
+    if not os.path.exists(alembic_ini):
+        raise RuntimeError("alembic.ini not found next to init.py")
+
+    alembic_cfg = Config(alembic_ini)
+    alembic_cfg.set_main_option(
+            "sqlalchemy.url",
+            f"postgresql+psycopg2://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}",
+        )
+
+    # Ensure alembic can find env.py and the migrations package by using an
+    # absolute script_location path.
+    alembic_cfg.set_main_option(
+        "script_location", os.path.abspath(os.path.join(os.path.dirname(__file__), "."))
     )
+
+    print("Stamping base revision...")
+    alembic_command.stamp(alembic_cfg, "base")
     print("✅ Base revision stamped.")
 
-    # Run alembic upgrade
     print(f"Upgrading to {upgrade_to_version}...")
-    subprocess.run(  # noqa: S603
-        [alembic_path, "upgrade", upgrade_to_version],
-        check=True,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL
-    )
+    alembic_command.upgrade(alembic_cfg, upgrade_to_version)
     print(f"✅ Upgraded to {upgrade_to_version}.")
 
 def apply_sql_dump(conn: PgConnection, sql_dump_path: str) -> None:

@@ -15,11 +15,19 @@
 	let filteredComments = $derived.by(() => {
 		let result = documentStore.comments;
 
-		// Filter by selected authors (empty set = show all)
-		if (documentStore.authorFilterIds.size > 0) {
-			result = result.filter(
-				(c: CachedComment) => c.user?.id && documentStore.authorFilterIds.has(c.user.id)
-			);
+		// Build include/exclude sets from the store's authorFilterStates
+		const states = documentStore.authorFilterStates;
+		const included = new Set<number>(
+			[...states.entries()].filter(([, v]) => v === 'include').map(([k]) => k)
+		);
+		const excluded = new Set<number>(
+			[...states.entries()].filter(([, v]) => v === 'exclude').map(([k]) => k)
+		);
+
+		if (included.size > 0) {
+			result = result.filter((c: CachedComment) => c.user?.id && included.has(c.user.id));
+		} else if (excluded.size > 0) {
+			result = result.filter((c: CachedComment) => !(c.user?.id && excluded.has(c.user.id)));
 		}
 
 		return result;

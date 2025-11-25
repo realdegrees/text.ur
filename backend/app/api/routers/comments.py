@@ -57,11 +57,10 @@ async def create_comment(
     db.refresh(comment)
 
     # Broadcast creation event
-    comment_read = CommentRead.model_validate(comment)
-    event = Event[CommentRead](
+    event = Event(
         event_id=uuid4(),
         published_at=datetime.now(),
-        payload=comment_read,
+        payload=CommentRead.model_validate(comment),
         resource_id=comment.id,
         resource="comment",
         type="create",
@@ -104,11 +103,10 @@ async def update_comment(
     db.refresh(comment)
 
     # Broadcast update event with old_visibility for visibility change detection
-    comment_read = CommentRead.model_validate(comment)
-    event = Event[CommentRead](
+    event = Event(
         event_id=uuid4(),
         published_at=datetime.now(),
-        payload=comment_read,
+        payload=CommentRead.model_validate(comment),
         resource_id=comment.id,
         resource="comment",
         type="update",
@@ -138,17 +136,17 @@ async def delete_comment(
     document_id = comment.document_id
     comment_id = comment.id
 
-    # Get comment data before deletion
-    comment_read = CommentRead.model_validate(comment)
+    # Serialize comment BEFORE deleting (relationships won't be accessible after deletion)
+    comment_payload = CommentRead.model_validate(comment)
 
     db.delete(comment)
     db.commit()
 
     # Broadcast delete event
-    event = Event[CommentRead](
+    event = Event(
         event_id=uuid4(),
         published_at=datetime.now(),
-        payload=comment_read,
+        payload=comment_payload,
         resource_id=comment_id,
         resource="comment",
         type="delete",

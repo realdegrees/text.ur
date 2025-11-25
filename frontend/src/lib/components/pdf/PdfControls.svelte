@@ -6,7 +6,6 @@
 	import ChevronDownIcon from '~icons/material-symbols/keyboard-arrow-down';
 	import ExpandIcon from '~icons/material-symbols/chevron-right';
 	import CollapseIcon from '~icons/material-symbols/chevron-left';
-	import PersonIcon from '~icons/material-symbols/person';
 	import CursorIcon from '~icons/material-symbols/near-me';
 	import ViewModeSelector from './ViewModeSelector.svelte';
 	import ActiveUsers from './ActiveUsers.svelte';
@@ -40,12 +39,6 @@
 	}: Props = $props();
 
 	let isExpanded = $state(false);
-
-	// Derived values for filtering own comments
-	let currentUserId = $derived(sessionStore.currentUser?.id);
-	let isFilteringOwn = $derived(
-		currentUserId ? documentStore.authorFilterIds.has(currentUserId) : false
-	);
 
 	// Check if filters should be disabled (restricted mode without view_restricted_comments permission)
 	let isRestrictedWithoutPermission = $derived(
@@ -154,38 +147,6 @@
 
 		<!-- View Mode Selector (admin/owner only) -->
 		<ViewModeSelector {isExpanded} />
-
-		<div class="my-1 h-px w-full bg-text/20"></div>
-
-		<!-- Filter Own Comments Toggle -->
-		<button
-			class="{isFilteringOwn ? activeButtonClass : buttonClass} {isExpanded
-				? 'w-full justify-start'
-				: ''}"
-			onclick={() => currentUserId && documentStore.toggleAuthorFilter(currentUserId)}
-			title={isRestrictedWithoutPermission
-				? 'Filtering disabled in restricted mode'
-				: isFilteringOwn
-					? 'Remove own comments from filter'
-					: 'Filter own comments'}
-			disabled={!currentUserId || isRestrictedWithoutPermission}
-		>
-			<span class="flex items-center gap-2">
-				<PersonIcon class="h-5 w-5" />
-				{#if isExpanded}<span class="text-xs">Filter Own</span>{/if}
-			</span>
-		</button>
-
-		{#if documentStore.hasActiveFilter && !isRestrictedWithoutPermission}
-			<button
-				class="text-xs text-primary/70 transition-colors hover:text-primary {isExpanded
-					? 'w-full px-2 text-left'
-					: ''}"
-				onclick={() => documentStore.clearAuthorFilter()}
-			>
-				{isExpanded ? 'Clear filters' : '×'}
-			</button>
-		{/if}
 
 		<div class="my-1 h-px w-full bg-text/20"></div>
 

@@ -20,98 +20,98 @@ const TYPES_FILE = resolve(__dirname, '../src/api/types.ts');
 const TYPE_ALIAS_REGEX = /^export type (\w+) = (.+);$/;
 
 function dedupeTypes() {
-  const content = readFileSync(TYPES_FILE, 'utf-8');
-  const lines = content.split('\n');
+	const content = readFileSync(TYPES_FILE, 'utf-8');
+	const lines = content.split('\n');
 
-  // Map of normalized definition -> { canonicalName, lineIndex }
-  const definitionToCanonical = new Map();
-  // Map of duplicate name -> canonical name
-  const duplicateToCanonical = new Map();
-  // Set of line indices to remove (duplicate type declarations + their JSDoc)
-  const linesToRemove = new Set();
+	// Map of normalized definition -> { canonicalName, lineIndex }
+	const definitionToCanonical = new Map();
+	// Map of duplicate name -> canonical name
+	const duplicateToCanonical = new Map();
+	// Set of line indices to remove (duplicate type declarations + their JSDoc)
+	const linesToRemove = new Set();
 
-  // First pass: identify type aliases and find duplicates
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    const match = line.match(TYPE_ALIAS_REGEX);
+	// First pass: identify type aliases and find duplicates
+	for (let i = 0; i < lines.length; i++) {
+		const line = lines[i];
+		const match = line.match(TYPE_ALIAS_REGEX);
 
-    if (match) {
-      const [, typeName, definition] = match;
-      const normalizedDef = definition.replace(/\s+/g, ' ').trim();
+		if (match) {
+			const [, typeName, definition] = match;
+			const normalizedDef = definition.replace(/\s+/g, ' ').trim();
 
-      // Check if this looks like a numbered duplicate (e.g., ViewMode1, Visibility1)
-      const numericSuffixMatch = typeName.match(/^(.+?)(\d+)$/);
+			// Check if this looks like a numbered duplicate (e.g., ViewMode1, Visibility1)
+			const numericSuffixMatch = typeName.match(/^(.+?)(\d+)$/);
 
-      if (numericSuffixMatch) {
-        // This type has a numeric suffix - check if we have the base type
-        const baseName = numericSuffixMatch[1];
+			if (numericSuffixMatch) {
+				// This type has a numeric suffix - check if we have the base type
+				const baseName = numericSuffixMatch[1];
 
-        // Look for the canonical version (without numeric suffix)
-        const canonicalEntry = definitionToCanonical.get(normalizedDef);
-        if (canonicalEntry && canonicalEntry.canonicalName === baseName) {
-          // This is a duplicate - mark for removal
-          duplicateToCanonical.set(typeName, baseName);
-          console.log(`  Found duplicate: ${typeName} -> ${baseName}`);
+				// Look for the canonical version (without numeric suffix)
+				const canonicalEntry = definitionToCanonical.get(normalizedDef);
+				if (canonicalEntry && canonicalEntry.canonicalName === baseName) {
+					// This is a duplicate - mark for removal
+					duplicateToCanonical.set(typeName, baseName);
+					console.log(`  Found duplicate: ${typeName} -> ${baseName}`);
 
-          // Mark this line for removal
-          linesToRemove.add(i);
+					// Mark this line for removal
+					linesToRemove.add(i);
 
-          // Find and mark the preceding JSDoc comment for removal
-          // Look backwards for JSDoc: pattern is /** ... */ directly before the type
-          let jsdocEndLine = -1;
-          let j = i - 1;
+					// Find and mark the preceding JSDoc comment for removal
+					// Look backwards for JSDoc: pattern is /** ... */ directly before the type
+					let jsdocEndLine = -1;
+					let j = i - 1;
 
-          // Skip blank lines
-          while (j >= 0 && lines[j].trim() === '') {
-            j--;
-          }
+					// Skip blank lines
+					while (j >= 0 && lines[j].trim() === '') {
+						j--;
+					}
 
-          // Check if we hit the end of a JSDoc comment
-          if (j >= 0 && lines[j].trim() === '*/') {
-            jsdocEndLine = j;
-            // Find the start of the JSDoc
-            while (j >= 0) {
-              if (lines[j].trim().startsWith('/**')) {
-                // Found JSDoc start - mark all lines from here to jsdocEndLine
-                for (let k = j; k <= jsdocEndLine; k++) {
-                  linesToRemove.add(k);
-                }
-                break;
-              }
-              j--;
-            }
-          }
-        }
-      }
+					// Check if we hit the end of a JSDoc comment
+					if (j >= 0 && lines[j].trim() === '*/') {
+						jsdocEndLine = j;
+						// Find the start of the JSDoc
+						while (j >= 0) {
+							if (lines[j].trim().startsWith('/**')) {
+								// Found JSDoc start - mark all lines from here to jsdocEndLine
+								for (let k = j; k <= jsdocEndLine; k++) {
+									linesToRemove.add(k);
+								}
+								break;
+							}
+							j--;
+						}
+					}
+				}
+			}
 
-      // Always record the first occurrence of each definition
-      if (!definitionToCanonical.has(normalizedDef)) {
-        definitionToCanonical.set(normalizedDef, { canonicalName: typeName, lineIndex: i });
-      }
-    }
-  }
+			// Always record the first occurrence of each definition
+			if (!definitionToCanonical.has(normalizedDef)) {
+				definitionToCanonical.set(normalizedDef, { canonicalName: typeName, lineIndex: i });
+			}
+		}
+	}
 
-  if (duplicateToCanonical.size === 0) {
-    console.log('No duplicate types found.');
-    return;
-  }
+	if (duplicateToCanonical.size === 0) {
+		console.log('No duplicate types found.');
+		return;
+	}
 
-  // Second pass: filter out lines to remove
-  const filteredLines = lines.filter((_, i) => !linesToRemove.has(i));
+	// Second pass: filter out lines to remove
+	const filteredLines = lines.filter((_, i) => !linesToRemove.has(i));
 
-  // Third pass: replace references to duplicates with canonical names
-  let result = filteredLines.join('\n');
-  for (const [duplicate, canonical] of duplicateToCanonical) {
-    // Replace references (whole word match)
-    const refRegex = new RegExp(`\\b${duplicate}\\b`, 'g');
-    result = result.replace(refRegex, canonical);
-  }
+	// Third pass: replace references to duplicates with canonical names
+	let result = filteredLines.join('\n');
+	for (const [duplicate, canonical] of duplicateToCanonical) {
+		// Replace references (whole word match)
+		const refRegex = new RegExp(`\\b${duplicate}\\b`, 'g');
+		result = result.replace(refRegex, canonical);
+	}
 
-  // Clean up any excessive blank lines
-  result = result.replace(/\n{3,}/g, '\n\n');
+	// Clean up any excessive blank lines
+	result = result.replace(/\n{3,}/g, '\n\n');
 
-  writeFileSync(TYPES_FILE, result);
-  console.log(`✅ Deduplicated ${duplicateToCanonical.size} type aliases in types.ts`);
+	writeFileSync(TYPES_FILE, result);
+	console.log(`✅ Deduplicated ${duplicateToCanonical.size} type aliases in types.ts`);
 }
 
 console.log('Deduplicating generated types...');

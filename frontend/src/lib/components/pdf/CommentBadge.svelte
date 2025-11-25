@@ -1,13 +1,16 @@
 <script lang="ts">
 	import { documentStore, type CachedComment } from '$lib/runes/document.svelte.js';
 	import CommentCard from './CommentCard.svelte';
+	import ConnectionLine from './ConnectionLine.svelte';
 	import CommentIcon from '~icons/material-symbols/comment-outline';
 
 	interface Props {
 		comments: CachedComment[];
+		pdfContainer: HTMLDivElement | null;
+		sidebarContainer: HTMLDivElement | null;
 	}
 
-	let { comments }: Props = $props();
+	let { comments, pdfContainer, sidebarContainer }: Props = $props();
 
 	let isHovered = $state(false);
 
@@ -140,6 +143,13 @@
 			onSelectionChange={handleSelectionChange}
 		/>
 	</div>
+
+	<!-- Connection line for this card -->
+	<ConnectionLine
+		{pdfContainer}
+		{sidebarContainer}
+		commentId={comments[effectiveSelectedIndex]?.id}
+	/>
 {:else}
 	<!-- Compact badge - only hover on badge itself triggers expansion -->
 	<div

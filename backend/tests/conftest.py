@@ -6,6 +6,9 @@ import sys  # noq: I001
 sys.path.insert(
     0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "app"))
 )
+sys.path.insert(
+    0, os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+)
 # fmt: off
 
 import inspect
@@ -13,6 +16,8 @@ from collections.abc import Callable, Generator
 
 import pytest
 from _pytest.fixtures import SubRequest
+from alembic import command as alembic_command
+from alembic.config import Config
 from api.dependencies.database import SessionFactory
 from api.dependencies.events import EventManager
 from api.dependencies.s3 import S3Manager
@@ -24,8 +29,7 @@ from main import app
 from models.tables import User
 from sqlmodel import Session
 
-logger = get_logger("database")
-
+from database import init
 
 # TODO maybe override the Authenticate dependency instead of the inner parse_jwt directly
 SessionUser = Callable[[factory_models.UserFactory], User]
@@ -61,6 +65,12 @@ def pytest_configure(config: pytest.Config) -> None:
         "markers",
         "dependency_overrides: set overrides like auth for the test client",
     )
+    try:
+        init.drop_and_recreate_database()
+        init.run_alembic_commands("head")
+    except Exception as e:
+        # Abort tests if database initialization fails
+        raise RuntimeError("Failed to initialize test database") from e
 
 
 @pytest.fixture(scope="function")

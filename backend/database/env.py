@@ -27,6 +27,7 @@ if not config.get_main_option("sqlalchemy.url"):
     POSTGRES_USER: str | None = os.getenv("POSTGRES_USER")
     POSTGRES_PASSWORD: str | None = os.getenv("POSTGRES_PASSWORD")
     POSTGRES_DB: str | None = os.getenv("POSTGRES_DB")
+    POSTGRES_DB = "test" if any("pytest" in str(arg) for arg in sys.argv) else POSTGRES_DB
     POSTGRES_HOST: str | None = os.getenv("POSTGRES_HOST")
     POSTGRES_PORT: int = int(os.getenv("POSTGRES_PORT", 5432))
 

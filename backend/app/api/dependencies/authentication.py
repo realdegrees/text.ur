@@ -6,6 +6,7 @@ from core.app_exception import AppException
 from core.auth import oauth2_scheme, parse_jwt
 from core.logger import get_logger, set_current_user
 from fastapi import Depends, Request, WebSocket
+from fastapi.datastructures import QueryParams
 from models.enums import AppErrorCode
 from models.tables import User
 from sqlmodel import select
@@ -51,6 +52,7 @@ def Authenticate( # noqa: C901
             raise AppException(status_code=403, detail="Forbidden: Email not verified", error_code=AppErrorCode.EMAIL_NOT_VERIFIED)
 
         context_path_params: dict[str, Any] = context.path_params
+        context_query_params: QueryParams = context.query_params
         body_data: dict[str, Any] = {}
         
         if hasattr(context, "json"):
@@ -63,12 +65,12 @@ def Authenticate( # noqa: C901
                 body_data = {}
                 
         # merge context_path_params and body_data, path takes precedence
-        merged_params = {**body_data, **context_path_params}
+        merged_params = {**body_data, **context_path_params, **context_query_params}
 
         if guards:
             query = select(User).where(User.id == int(user.id))
             for guard in guards:
-                query = query.where(guard.clause(user, merged_params, context.query_params))
+                query = query.where(guard.clause(user, merged_params))
 
             user = db.exec(query).first()
             if not user:

@@ -71,7 +71,7 @@
 	let hasUnloadedReplies = $derived(
 		activeComment?.num_replies > 0 && (!activeComment.replies || activeComment.replies.length === 0)
 	);
-	let canModifyComment = $derived(sessionStore.currentUserId === activeComment?.user?.id);
+	let isAuthor = $derived(sessionStore.currentUserId === activeComment?.user?.id);
 	let canDeleteComment = $derived.by(() => {
 		if (sessionStore.currentUserId === activeComment.user?.id) return true;
 		return sessionStore.validatePermissions(['remove_comments']);
@@ -250,7 +250,7 @@
 						>{activeComment.user?.username ?? 'Anonymous'}</span
 					>
 					<span class="text-xs text-text/40">{formatDate(activeComment.created_at)}</span>
-					{#if canModifyComment && activeComment.visibility}
+					{#if isAuthor}
 						<CommentVisibility
 							commentId={activeComment.id}
 							visibility={activeComment.visibility}
@@ -258,7 +258,7 @@
 						/>
 					{/if}
 				</div>
-				{#if canModifyComment}
+				{#if isAuthor}
 					<div class="flex items-center gap-1">
 						{#if !isEditing}
 							<button
@@ -301,7 +301,7 @@
 							class="italic"
 							title="Last Edit: {formatDate(activeComment.updated_at)}">(edited)</span
 						>{/if}
-					{#if canModifyComment && activeComment.visibility}
+					{#if isAuthor && activeComment.visibility}
 						<CommentVisibility
 							commentId={activeComment.id}
 							visibility={activeComment.visibility}
@@ -309,9 +309,9 @@
 						/>
 					{/if}
 				</div>
-				{#if canDeleteComment || canModifyComment}
+				{#if canDeleteComment || isAuthor}
 					<div class="flex items-center gap-1">
-						{#if !isEditing && canModifyComment}
+						{#if !isEditing && isAuthor}
 							<button
 								class="rounded p-1 text-text/40 transition-colors hover:bg-text/10 hover:text-text/70"
 								onclick={(e) => {

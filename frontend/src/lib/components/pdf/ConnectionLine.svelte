@@ -1,23 +1,13 @@
 <script lang="ts">
-	import { documentStore } from '$lib/runes/document.svelte.js';
-
 	interface Props {
 		pdfContainer: HTMLDivElement | null;
 		sidebarContainer: HTMLDivElement | null;
+		commentId: number | undefined;
 	}
 
-	let { pdfContainer, sidebarContainer }: Props = $props();
+	let { pdfContainer, sidebarContainer, commentId }: Props = $props();
 
-	// Get the active comment to draw line for
-	let selectedComment = $derived(documentStore.selectedComment);
-	let hoveredComment = $derived(documentStore.hoveredComment);
-	let pinnedComment = $derived(documentStore.pinnedComment);
-
-	// Determine which comment to draw the line for
-	// Priority: pinned > selected > hovered
-	let activeComment = $derived(pinnedComment ?? selectedComment ?? hoveredComment);
-
-	let activeCommentId = $derived(activeComment?.id ?? null);
+	let activeCommentId = $derived(commentId ?? null);
 
 	// Line coordinates (viewport-relative, then converted to container-relative)
 	let lineCoords = $state<{
@@ -121,7 +111,7 @@
 	});
 </script>
 
-<div class="pointer-events-none absolute inset-0 z-40 overflow-visible" bind:this={parentContainer}>
+<div class="pointer-events-none fixed inset-0 overflow-visible" bind:this={parentContainer}>
 	{#if lineCoords}
 		<svg class="absolute inset-0 h-full w-full overflow-visible">
 			<!-- Main line -->

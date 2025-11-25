@@ -193,6 +193,13 @@ export const mousePositionEventSchema = z.object({
     visible: z.boolean().optional()
 });
 
+export const mousePositionInputSchema = z.object({
+    x: z.number(),
+    y: z.number(),
+    page: z.number(),
+    visible: z.boolean().optional()
+});
+
 export const filterSchema = z.record(z.string(), z.unknown()).and(z.object({
     field: z.string(),
     operator: z.union([z.literal("=="), z.literal(">="), z.literal("<="), z.literal(">"), z.literal("<"), z.literal("ilike"), z.literal("like"), z.literal("exists"), z.literal("!=")]),
@@ -330,6 +337,6 @@ export const commentEventSchema = z.object({
     payload: commentReadSchema.nullable(),
     resource_id: z.number().nullable(),
     resource: z.string().nullable(),
-    type: z.union([z.literal("create"), z.literal("update"), z.literal("delete"), z.literal("view_mode_changed"), z.literal("mouse_position")]),
+    type: z.string(),
     originating_connection_id: z.string().optional().nullable()
 });

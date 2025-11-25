@@ -17,9 +17,9 @@ class Event[Payload: PydanticBaseModel](PydanticBaseModel):
     event_id: UUID
     published_at: datetime = Field(default_factory=datetime.now)
     payload: Payload | None
-    resource_id: int | None
+    resource_id: int | str | None
     resource: str | None
-    type: Literal["create", "update", "delete", "view_mode_changed", "mouse_position"]
+    type: str
     originating_connection_id: str | None = None  # Connection that triggered this event (to avoid echo)
 
 
@@ -32,7 +32,7 @@ class CommentEvent(PydanticBaseModel):
     payload: "CommentRead | None"
     resource_id: int | None
     resource: str | None
-    type: Literal["create", "update", "delete", "view_mode_changed", "mouse_position"]
+    type: str
     originating_connection_id: str | None = None
 
 

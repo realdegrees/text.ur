@@ -5,7 +5,7 @@ import type {
 	CommentRead,
 	CommentUpdate,
 	DocumentRead,
-	ViewMode1
+	ViewMode
 } from '$api/types';
 import type { Paginated } from '$api/pagination';
 import { notification } from '$lib/stores/notificationStore';
@@ -83,8 +83,11 @@ const createDocumentStore = () => {
 	// Track which comment has an active reply input
 	let replyingToCommentId: number | null = $state<number | null>(null);
 	// Filter state (local only - doesn't affect fetched data)
-	// Set of user IDs to filter by (empty = show all)
-	let authorFilterIds: Set<number> = $state<Set<number>>(new Set());
+	// Map of user ID -> filter state (include | exclude). Absence = none.
+	type AuthorFilterState = 'include' | 'exclude';
+	let authorFilterStates: Map<number, AuthorFilterState> = $state<Map<number, AuthorFilterState>>(
+		new Map()
+	);
 	// Flag to defer invalidation when view mode changes during editing
 	let pendingViewModeRefresh: boolean = $state<boolean>(false);
 	// Toggle for showing other users' cursors
@@ -169,19 +172,28 @@ const createDocumentStore = () => {
 	};
 
 	// Filter setters
-	const toggleAuthorFilter = (userId: number) => {
+	/**
+	 * Cycle a user's filter state: none -> include -> exclude -> none
+	 */
+	const toggleAuthorFilter = (userId: number): void => {
 		// eslint-disable-next-line svelte/prefer-svelte-reactivity
-		const newSet = new Set(authorFilterIds);
-		if (newSet.has(userId)) {
-			newSet.delete(userId);
+		const newStates = new Map(authorFilterStates);
+		const current = newStates.get(userId);
+
+		if (!current) {
+			newStates.set(userId, 'include');
+		} else if (current === 'include') {
+			newStates.set(userId, 'exclude');
 		} else {
-			newSet.add(userId);
+			newStates.delete(userId);
 		}
-		authorFilterIds = newSet;
+
+		authorFilterStates = newStates;
 	};
 
-	const clearAuthorFilter = () => {
-		authorFilterIds = new Set();
+	/** Clear all author filters (reset to none) */
+	const clearAuthorFilter = (): void => {
+		authorFilterStates = new Map();
 	};
 
 	const setShowOtherCursors = (show: boolean) => {
@@ -306,11 +318,11 @@ const createDocumentStore = () => {
 	const handleWebSocketEvent = (
 		event:
 			| CommentEvent
-			| { type: 'view_mode_changed'; payload: { document_id?: string; view_mode?: ViewMode1 } }
+			| { type: 'view_mode_changed'; payload: { document_id?: string; view_mode?: ViewMode } }
 	): void => {
 		// Handle explicit view-mode changed events (no longer delivered as 'custom')
 		if (event.type === 'view_mode_changed') {
-			const vm = event.payload as { document_id?: string; view_mode?: ViewMode1 };
+			const vm = event.payload as { document_id?: string; view_mode?: ViewMode };
 			if (vm?.view_mode && vm?.document_id && loadedDocument) {
 				loadedDocument.view_mode = vm.view_mode;
 				console.log(`[WS] Document view_mode updated to ${vm.view_mode}`);
@@ -412,11 +424,17 @@ const createDocumentStore = () => {
 			return commentSidebarRef;
 		},
 		// Filter state getters
+		get authorFilterStates() {
+			return authorFilterStates;
+		},
+		/** Return a set of user IDs that are currently included */
 		get authorFilterIds() {
-			return authorFilterIds;
+			return new Set<number>(
+				[...authorFilterStates.entries()].filter(([, v]) => v === 'include').map(([k]) => k)
+			);
 		},
 		get hasActiveFilter() {
-			return authorFilterIds.size > 0;
+			return authorFilterStates.size > 0;
 		},
 		get showOtherCursors() {
 			return showOtherCursors;

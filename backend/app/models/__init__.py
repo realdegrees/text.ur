@@ -12,6 +12,7 @@ from models.document import (
     DocumentRead,
     DocumentTransfer,
     MousePositionEvent,
+    MousePositionInput,
     ViewModeChangedEvent,
 )
 from models.enums import AppErrorCode
@@ -45,6 +46,7 @@ from models.user import UserCreate, UserPrivate, UserRead, UserUpdate
 AppError.model_rebuild()
 
 MousePositionEvent.model_rebuild()
+MousePositionInput.model_rebuild()
 ViewModeChangedEvent.model_rebuild()
 
 Event.model_rebuild()

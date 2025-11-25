@@ -39,8 +39,17 @@ class ViewModeChangedEvent(SQLModel):
     view_mode: ViewMode
 
 
+class MousePositionInput(SQLModel):
+    """Input model for mouse cursor position - sent from clients (without user info)."""
+
+    x: float  # Normalized X position (0-1 relative to PDF page width)
+    y: float  # Normalized Y position (0-1 relative to PDF page height)
+    page: int  # Page number (1-indexed)
+    visible: bool = True  # False when mouse leaves the PDF area
+
+
 class MousePositionEvent(SQLModel):
-    """Event payload for mouse cursor position - sent to WebSocket clients for real-time cursor tracking."""
+    """Event payload for mouse cursor position - broadcasted to WebSocket clients (with user info)."""
 
     user_id: int
     username: str

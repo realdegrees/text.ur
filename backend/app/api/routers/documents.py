@@ -1,4 +1,5 @@
 from datetime import datetime
+from types import SimpleNamespace
 from uuid import uuid4
 
 from api.dependencies.authentication import Authenticate, BasicAuthentication
@@ -10,7 +11,6 @@ from api.dependencies.s3 import S3
 from api.routers.events import (
     EventModelConfig,
     EventRouterConfig,
-    can_user_see_comment,
     get_events_router,
 )
 from core.app_exception import AppException
@@ -22,8 +22,10 @@ from fastapi import (
     HTTPException,
     Response,
     UploadFile,
+    WebSocket,
 )
 from models.comment import (
+    CommentCreate,
     CommentDelete,
     CommentRead,
     CommentUpdate,
@@ -34,14 +36,15 @@ from models.document import (
     DocumentTransfer,
     DocumentUpdate,
     MousePositionEvent,
+    MousePositionInput,
     ViewModeChangedEvent,
 )
-from models.enums import AppErrorCode, Permission, Visibility
+from models.enums import AppErrorCode, Permission, ViewMode, Visibility
 from models.event import Event
 from models.filter import DocumentFilter
 from models.pagination import Paginated
 from models.tables import Comment, Document, Group, Membership, User
-from sqlmodel import select
+from sqlmodel import Session, select
 from starlette.responses import StreamingResponse
 from util.api_router import APIRouter
 from util.queries import Guard
@@ -52,8 +55,57 @@ router = APIRouter(
     tags=["Documents"],
 )
 
-# Define an events router for Comments linked to Documents
-def _comment_create_transform(event_data: dict, recipient: User | None, doc: Document | None, membership: Membership | None) -> dict | None:
+# ========================================================================
+# ================= Document/Comment WebSocket Hooks ====================
+# ========================================================================
+
+def can_user_see_comment(
+    user: User,
+    membership: Membership,
+    document: Document,
+    comment_visibility: Visibility,
+    comment_user_id: int,
+) -> bool:
+    """Determine comment visibility using the centralized comment_access guard.
+
+    This builds a minimal Comment-like object from the provided data so we can
+    reuse the Guard.comment_access predicate logic and avoid duplicating access rules.
+    """
+    # If we don't have a recipient user, short-circuit to False
+    if not user:
+        return False
+
+    # Compose a minimal document object with a group containing only the recipient's
+    # membership (if any). Guard.comment_access predicate expects comment.document.group.memberships
+    # to be an iterable of Membership-like objects.
+    group_obj = SimpleNamespace(memberships=[membership])
+    document_obj = SimpleNamespace(view_mode=document.view_mode if document is not None else None, group=group_obj)
+    comment_obj = SimpleNamespace(user_id=comment_user_id, visibility=comment_visibility, document=document_obj)
+
+    # Delegate to the guard predicate (single source of truth)
+    guard = Guard.comment_access()
+    return guard.predicate(comment_obj, user)
+
+
+def _setup_document_comment_connection(websocket: WebSocket, related_resource: Document, user: User, session: Session) -> None:
+    """Set up connection state for document comment channel.
+
+    Attaches document and membership to websocket.state for use in other hooks.
+    """
+    # Fetch and store user's membership for this document's group (for permission checks)
+    membership: Membership | None = None
+    if related_resource.group_id:
+        membership = session.exec(
+            select(Membership).where(
+                Membership.user_id == user.id,
+                Membership.group_id == related_resource.group_id,
+                Membership.accepted == True,  # noqa: E712
+            )
+        ).first()
+    websocket.state.membership = membership
+
+
+def _comment_visibility_transform(event_data: dict, websocket: WebSocket) -> dict | None:
     """Transform outgoing create/update/delete events for comment visibility.
 
     - For create: skip if recipient cannot see the comment
@@ -62,6 +114,11 @@ def _comment_create_transform(event_data: dict, recipient: User | None, doc: Doc
     """
     event_type = event_data.get("type")
     payload = event_data.get("payload") or {}
+
+    # Get state from websocket
+    recipient: User | None = getattr(websocket.state, "user", None)
+    doc: Document | None = getattr(websocket.state, "related_resource", None)
+    membership: Membership | None = getattr(websocket.state, "membership", None)
 
     # Always send deletes (clients must remove UI state) and skip filtering if we lack context
     if event_type == "delete" or not recipient or not doc:
@@ -104,18 +161,63 @@ def _comment_create_transform(event_data: dict, recipient: User | None, doc: Doc
     return None
 
 
+
+def _handle_mouse_position(event: Event, websocket: WebSocket, session: Session) -> Event:
+    """Handle incoming mouse_position event - enriches with user info.
+
+    event.payload is already a validated MousePositionInput instance from the events router.
+    """
+    user: User = websocket.state.user
+
+    # event.payload is a MousePositionInput instance - enrich with user info
+    # and convert to MousePositionEvent format
+    enriched_payload = MousePositionEvent(
+        user_id=user.id,
+        username=user.username,
+        x=event.payload.x,
+        y=event.payload.y,
+        page=event.payload.page,
+        visible=event.payload.visible,
+    )
+    # Build a new Event typed for MousePositionEvent so downstream
+    # serialization/validation doesn't warn about mismatched payload types.
+    event_dict = event.model_dump()
+    event_dict["payload"] = enriched_payload.model_dump()
+    # Validate into a correctly-typed Event[MousePositionEvent]
+    return Event[MousePositionEvent].model_validate(event_dict)
+
+
 events_router = get_events_router(
     "comments",
     Document,
-    Comment,
     base_router=router,
     config=EventRouterConfig(
-        read=EventModelConfig(model=CommentRead),
-        create=EventModelConfig(model=CommentRead, transform_outgoing=_comment_create_transform),
-        update=EventModelConfig(model=CommentUpdate, transform_outgoing=_comment_create_transform),
-        delete=EventModelConfig(model=CommentDelete, transform_outgoing=_comment_create_transform),
-        view_mode_changed=EventModelConfig(model=ViewModeChangedEvent),  # For view_mode change events
-        mouse_position=EventModelConfig(model=MousePositionEvent),
+        event_types={
+            "create": EventModelConfig(
+                model=CommentRead,
+                response_model=CommentRead,
+                transform_outgoing=_comment_visibility_transform,
+            ),
+            "update": EventModelConfig(
+                model=CommentRead,
+                response_model=CommentRead,
+                transform_outgoing=_comment_visibility_transform,
+            ),
+            "delete": EventModelConfig(
+                model=CommentRead,
+                response_model=CommentDelete,
+            ),
+            "view_mode_changed": EventModelConfig(
+                model=ViewModeChangedEvent,
+            ),
+            "mouse_position": EventModelConfig(
+                model=MousePositionInput,  # Input: validate against MousePositionInput (no user info)
+                response_model=MousePositionEvent,  # Output: documentation shows MousePositionEvent (with user info)
+                handle_incoming=_handle_mouse_position,
+            ),
+        },
+        setup_connection=_setup_document_comment_connection,
+        track_active_users=True,
     )
 )
 
@@ -249,14 +351,14 @@ async def update_document(
 
     # If view_mode changed, publish a view_mode_changed event to update WebSocket clients
     if document.view_mode != old_view_mode:
-        view_mode_event = Event[ViewModeChangedEvent](
+        view_mode_event = Event(
             event_id=uuid4(),
             published_at=datetime.now(),
             payload=ViewModeChangedEvent(
                 document_id=document.id,
                 view_mode=document.view_mode,
             ),
-            resource_id=None,
+            resource_id=document.id,
             resource="document",
             type="view_mode_changed",
         )

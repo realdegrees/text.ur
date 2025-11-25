@@ -264,14 +264,14 @@ class Guard:
             def user_has_required_permissions(membership: Membership) -> bool:
                 if not require_permissions:
                     return True
-                return all(p in membership.permissions for p in require_permissions)
+                return all(permission.value in membership.permissions for permission in require_permissions)
 
             if doc.visibility == Visibility.PRIVATE:
                 # Private: owner or admin only
                 return any(
                     m.user_id == user.id and (
                         m.is_owner or
-                        Permission.ADMINISTRATOR in m.permissions
+                        Permission.ADMINISTRATOR.value in m.permissions
                     )
                     for m in doc.group.memberships
                 )
@@ -280,8 +280,8 @@ class Guard:
                 return any(
                     m.accepted and m.user_id == user.id and (
                         m.is_owner or
-                        Permission.ADMINISTRATOR in m.permissions or
-                        Permission.VIEW_RESTRICTED_DOCUMENTS in m.permissions or
+                        Permission.ADMINISTRATOR.value in m.permissions or
+                        Permission.VIEW_RESTRICTED_DOCUMENTS.value in m.permissions or
                         user_has_required_permissions(m)
                     )
                     for m in doc.group.memberships
@@ -291,7 +291,7 @@ class Guard:
                 return any(
                     m.accepted and m.user_id == user.id and (
                         m.is_owner or
-                        Permission.ADMINISTRATOR in m.permissions or
+                        Permission.ADMINISTRATOR.value in m.permissions or
                         user_has_required_permissions(m)
                     )
                     for m in doc.group.memberships
@@ -356,14 +356,65 @@ class Guard:
                 ).exists()
 
         def predicate(group: Group, user: User) -> bool:
+            required_vals: list[str] = [] if require_permissions is None else [p.value for p in require_permissions]
+
             return any(
-                (m.user_id == user.id) and
-                (m.is_owner if only_owner else True) and
-                all(p in require_permissions for p in m.permissions)
+                (m.user_id == user.id)
+                and (m.is_owner if only_owner else True)
+                and all(p in m.permissions for p in required_vals)
                 for m in group.memberships
             )
 
         return EndpointGuard(clause, predicate, exclude_fields=exclude_fields)
+
+
+    # Access Rules Truth Table
+    #
+    # Legend:
+    # user_has_perm: Does the user have "view_restricted_comments"?
+    # document_view_mode: Document view mode ("public" or "restricted")
+    # comment_visibility: Comment visibility ("public", "restricted", "private")
+    # is_author: Is the user the author of the comment?
+    # allowed: Does the user get access to the comment?
+    #
+    # Rules summary (admin and owner bypass all besides private rule):
+    # - Private comments are only visible to the author.
+    # - Private comments are always visible to the author regardless of document view_mode.
+    # - Restricted comments are only visible to users with "view_restricted_comments" permission
+    # - Public comments are always visible unless document view_mode is "restricted".
+    # - Comment authors always see their own comments.
+    #
+    # -------------------------------------------------------------------------------
+    # | user_has_perm | document_view_mode  | comment_visibility  | is_author | passes |
+    # -------------------------------------------------------------------------------
+    # | False         | public              | public              | False     | True   |
+    # | False         | public              | public              | True      | True   |
+    # | False         | public              | restricted          | False     | False  |
+    # | False         | public              | restricted          | True      | True   |
+    # | False         | public              | private             | False     | False  |
+    # | False         | public              | private             | True      | True   |
+    # -------------------------------------------------------------------------------
+    # | False         | restricted          | public              | False     | False  |
+    # | False         | restricted          | public              | True      | True   |
+    # | False         | restricted          | restricted          | False     | False  |
+    # | False         | restricted          | restricted          | True      | True   |
+    # | False         | restricted          | private             | False     | False  |
+    # | False         | restricted          | private             | True      | True   |
+    # -------------------------------------------------------------------------------
+    # | True          | public              | public              | False     | True   |
+    # | True          | public              | public              | True      | True   |
+    # | True          | public              | restricted          | False     | True   |
+    # | True          | public              | restricted          | True      | True   |
+    # | True          | public              | private             | False     | False  |
+    # | True          | public              | private             | True      | True   |
+    # -------------------------------------------------------------------------------
+    # | True          | restricted          | public              | False     | True   |
+    # | True          | restricted          | public              | True      | True   |
+    # | True          | restricted          | restricted          | False     | True   |
+    # | True          | restricted          | restricted          | True      | True   |
+    # | True          | restricted          | private             | False     | False  |
+    # | True          | restricted          | private             | True      | True   |
+    # -------------------------------------------------------------------------------
 
     @staticmethod
     def comment_access( # noqa: C901
@@ -375,88 +426,37 @@ class Guard:
         """User can access a comment based on its visibility, the document view_mode and the given required permissions."""
 
         def clause(user: User, params: dict[str, Any], multi: bool = False) -> ColumnElement[bool]:
-            """Generate the SQLAlchemy clause for comment access, taking document.view_mode into account."""
+            """Generate the SQLAlchemy clause for comment access, following the truth table exactly."""
             comment_id = params.get("comment_id", None)
             if not comment_id and not multi:
                 raise HTTPException(
                     status_code=500, detail="Endpoint Guard misconfiguration: missing comment_id parameter"
                 )
 
-            def has_required_permissions_sql() -> ColumnElement[bool]:
-                """Return a SQL clause that checks for all required permissions on Membership."""
-                if not require_permissions:
-                    return true()
-                return and_(
-                    *(
-                        Membership.permissions.contains([permission.value])
-                        for permission in require_permissions
-                    )
-                )
-
             def build_visibility_clause(comment_id_filter: ColumnElement[bool] | None = None) -> ColumnElement[bool]:
-                """Build the combined visibility clause, also considering document.view_mode."""
+                """Build the visibility clause following the truth table exactly."""
                 base_conditions: list[ColumnElement[bool]] = [comment_id_filter] if comment_id_filter is not None else []
-
-                # Build the permission OR for restricted-by-view-mode checks. Only include
-                # the `require_permissions` clause if `require_permissions` was provided;
-                # otherwise omit it so we don't accidentally broaden access.
-                restricted_permission_ors = [
-                    Membership.is_owner.is_(True),
-                    Membership.permissions.contains([Permission.VIEW_RESTRICTED_COMMENTS.value]),
-                    Membership.permissions.contains([Permission.ADMINISTRATOR.value]),
-                ]
-                if require_permissions:
-                    restricted_permission_ors.append(has_required_permissions_sql())
-
-                # Clause applied when the document's view_mode forces restricted access for the whole document
-                restricted_by_view_mode_clause = and_(
-                    *base_conditions,
-                    Comment.document.has(Document.view_mode == ViewMode.RESTRICTED),
-                    or_(
-                        Comment.user_id == user.id,
-                        Comment.document.has(
-                            Document.group_id.in_(
-                                select(Membership.group_id).where(
-                                    Membership.user_id == user.id,
-                                    Membership.accepted.is_(True),
-                                    or_(*restricted_permission_ors),
-                                )
-                            )
-                        ),
-                    ),
-                )
 
                 if only_owner:
                     # If only_owner is True, restrict to comments owned by the user
-                    owner_only_clause = and_(
-                        *base_conditions,
-                        Comment.user_id == user.id,
-                    )
-                    return owner_only_clause
+                    return and_(*base_conditions, Comment.user_id == user.id)
 
-                # Original visibility-based clauses (applied when the document view_mode is public or unspecified)
-                private_clause = and_(
-                    *base_conditions,
-                    Comment.visibility == Visibility.PRIVATE,
-                    or_(
-                        Comment.user_id == user.id,
-                        Comment.document.has(
-                            Document.group_id.in_(
-                                select(Membership.group_id).where(
-                                    Membership.user_id == user.id,
-                                    or_(
-                                        Membership.is_owner.is_(True),
-                                        Membership.permissions.contains([Permission.ADMINISTRATOR.value]),
-                                    ),
-                                    # allow required permissions for private when specified
-                                    has_required_permissions_sql(),
-                                )
-                            )
-                        ),
-                    ),
+                # Helper: users with VIEW_RESTRICTED_COMMENTS permission (or admin/owner)
+                has_view_restricted_perm = or_(
+                    Membership.is_owner.is_(True),
+                    Membership.permissions.contains([Permission.VIEW_RESTRICTED_COMMENTS.value]),
+                    Membership.permissions.contains([Permission.ADMINISTRATOR.value]),
                 )
 
-                restricted_clause = and_(
+                # Rule 1: Private comments are only visible to the author (always)
+                private_comment_clause = and_(
+                    *base_conditions,
+                    Comment.visibility == Visibility.PRIVATE,
+                    Comment.user_id == user.id,
+                )
+
+                # Rule 2: Restricted comments are only visible to users with VIEW_RESTRICTED_COMMENTS (or author)
+                restricted_comment_clause = and_(
                     *base_conditions,
                     Comment.visibility == Visibility.RESTRICTED,
                     or_(
@@ -466,17 +466,62 @@ class Guard:
                                 select(Membership.group_id).where(
                                     Membership.user_id == user.id,
                                     Membership.accepted.is_(True),
-                                    # Only include the "required permissions" clause if specified
-                                    or_(*restricted_permission_ors),
+                                    has_view_restricted_perm,
                                 )
                             )
                         ),
                     ),
                 )
 
-                public_clause = and_(
+                # Helper for public comments: member check with optional required permissions
+                def public_comment_member_check() -> ColumnElement[bool]:
+                    if not require_permissions:
+                        # No additional permissions required, any accepted member can access
+                        return or_(
+                            Comment.user_id == user.id,
+                            Comment.document.has(
+                                Document.group_id.in_(
+                                    select(Membership.group_id).where(
+                                        Membership.user_id == user.id,
+                                        Membership.accepted.is_(True),
+                                    )
+                                )
+                            ),
+                        )
+                    else:
+                        # Additional permissions required (owner/admin bypass)
+                        return or_(
+                            Comment.user_id == user.id,
+                            Comment.document.has(
+                                Document.group_id.in_(
+                                    select(Membership.group_id).where(
+                                        Membership.user_id == user.id,
+                                        Membership.accepted.is_(True),
+                                        or_(
+                                            Membership.is_owner.is_(True),
+                                            Membership.permissions.contains([Permission.ADMINISTRATOR.value]),
+                                            and_(*(Membership.permissions.contains([p.value]) for p in require_permissions)),
+                                        ),
+                                    )
+                                )
+                            ),
+                        )
+
+                # Rule 3: Public comments when document view_mode is PUBLIC
+                # - Visible to all accepted members (or author)
+                public_comment_public_doc_clause = and_(
                     *base_conditions,
                     Comment.visibility == Visibility.PUBLIC,
+                    Comment.document.has(Document.view_mode == ViewMode.PUBLIC),
+                    public_comment_member_check(),
+                )
+
+                # Rule 4: Public comments when document view_mode is RESTRICTED
+                # - Only visible to users with VIEW_RESTRICTED_COMMENTS (or author)
+                public_comment_restricted_doc_clause = and_(
+                    *base_conditions,
+                    Comment.visibility == Visibility.PUBLIC,
+                    Comment.document.has(Document.view_mode == ViewMode.RESTRICTED),
                     or_(
                         Comment.user_id == user.id,
                         Comment.document.has(
@@ -484,26 +529,27 @@ class Guard:
                                 select(Membership.group_id).where(
                                     Membership.user_id == user.id,
                                     Membership.accepted.is_(True),
+                                    has_view_restricted_perm,
                                 )
                             )
                         ),
                     ),
                 )
 
-                # Combine carefully:
-                # - If document.view_mode == RESTRICTED -> only allow restricted_by_view_mode_clause
-                # - If document.view_mode == PUBLIC -> apply comment-level visibility clauses
-                # - If document.view_mode is NULL/unspecified -> fall back to comment-level visibility clauses
+                # Rule 5: Handle NULL view_mode as PUBLIC
+                public_comment_null_doc_clause = and_(
+                    *base_conditions,
+                    Comment.visibility == Visibility.PUBLIC,
+                    Comment.document.has(Document.view_mode.is_(None)),
+                    public_comment_member_check(),
+                )
+
                 return or_(
-                    restricted_by_view_mode_clause,
-                    and_(
-                        Comment.document.has(Document.view_mode == ViewMode.PUBLIC),
-                        or_(private_clause, restricted_clause, public_clause),
-                    ),
-                    and_(
-                        Comment.document.has(Document.view_mode.is_(None)),
-                        or_(private_clause, restricted_clause, public_clause),
-                    ),
+                    private_comment_clause,
+                    restricted_comment_clause,
+                    public_comment_public_doc_clause,
+                    public_comment_restricted_doc_clause,
+                    public_comment_null_doc_clause,
                 )
 
             if multi and comment_id is None:
@@ -518,7 +564,7 @@ class Guard:
                 return build_visibility_clause()
 
         def predicate(comment: Comment, user: User) -> bool: # noqa: C901
-            """Run Python-side predicate for comment access, taking document.view_mode into account."""
+            """Run Python-side predicate for comment access, following the truth table exactly."""
             if only_owner:
                 return comment.user_id == user.id
 
@@ -526,67 +572,61 @@ class Guard:
             if document is None:
                 return False
 
-            def membership_satisfies_required_permissions(membership: Membership) -> bool:
-                """Check required permissions on a Python Membership object."""
-                if not require_permissions:
-                    return True
-                return all(p in membership.permissions for p in require_permissions)
-
-            # If the document forces restricted view mode, treat all comments as restricted
-            if getattr(document, "view_mode", None) == ViewMode.RESTRICTED:
-                if comment.user_id == user.id:
-                    return True
+            # Helper: check if user has VIEW_RESTRICTED_COMMENTS permission (or admin/owner)
+            def user_has_view_restricted_perm() -> bool:
                 if document.group is None:
                     return False
                 return any(
                     m.accepted and m.user_id == user.id and (
                         m.is_owner or
                         Permission.VIEW_RESTRICTED_COMMENTS in m.permissions or
-                        Permission.ADMINISTRATOR in m.permissions or
-                        membership_satisfies_required_permissions(m)
+                        Permission.ADMINISTRATOR in m.permissions
                     )
                     for m in document.group.memberships
                 )
 
-            # Otherwise, apply comment-level visibility rules
-            if comment.visibility == Visibility.PRIVATE:
-                return comment.user_id == user.id or (
-                    document.group is not None and any(
-                        m.user_id == user.id and (
-                            m.is_owner or
-                            Permission.ADMINISTRATOR in m.permissions or
-                            membership_satisfies_required_permissions(m)
-                        )
+            # Helper: check if user satisfies requirements for public comments
+            def user_satisfies_public_comment_requirements() -> bool:
+                if document.group is None:
+                    return False
+                # If no required permissions, any accepted member can access
+                if not require_permissions:
+                    return any(
+                        m.accepted and m.user_id == user.id
                         for m in document.group.memberships
                     )
-                )
-            elif comment.visibility == Visibility.RESTRICTED:
-                if comment.user_id == user.id:
-                    return True
-                if document.group is None:
-                    return False
-                return any(
-                    m.accepted and m.user_id == user.id and (
-                        m.is_owner or
-                        Permission.VIEW_RESTRICTED_COMMENTS in m.permissions or
-                        Permission.ADMINISTRATOR in m.permissions or
-                        membership_satisfies_required_permissions(m)
-                    )
-                    for m in document.group.memberships
-                )
-            elif comment.visibility == Visibility.PUBLIC:
-                if comment.user_id == user.id:
-                    return True
-                if document.group is None:
-                    return False
+                # If required permissions provided, need to be owner/admin OR have those permissions
                 return any(
                     m.accepted and m.user_id == user.id and (
                         m.is_owner or
                         Permission.ADMINISTRATOR in m.permissions or
-                        membership_satisfies_required_permissions(m)
+                        all(p in m.permissions for p in require_permissions)
                     )
                     for m in document.group.memberships
                 )
+
+            # Rule 1: Authors always see their own comments
+            if comment.user_id == user.id:
+                return True
+
+            # Rule 2: Private comments are only visible to the author
+            if comment.visibility == Visibility.PRIVATE:
+                return False
+
+            # Rule 3: Restricted comments are only visible to users with VIEW_RESTRICTED_COMMENTS
+            if comment.visibility == Visibility.RESTRICTED:
+                return user_has_view_restricted_perm()
+
+            # Rule 4: Public comments
+            if comment.visibility == Visibility.PUBLIC:
+                document_view_mode = getattr(document, "view_mode", None)
+                if document_view_mode == ViewMode.RESTRICTED:
+                    # Public comments in restricted documents need VIEW_RESTRICTED_COMMENTS
+                    return user_has_view_restricted_perm()
+                else:
+                    # Public comments in public documents are visible to accepted members (with required permissions if any)
+                    return user_satisfies_public_comment_requirements()
+
             return False
 
         return EndpointGuard(clause, predicate, exclude_fields=exclude_fields)
@@ -619,7 +659,7 @@ class Guard:
                     Reaction.comment_id.in_(
                         select(Comment.id).where(
                             Guard.comment_access(None, only_owner=only_owner).clause(
-                                user, params, params, multi=True
+                                user, params, multi=True
                             )
                         ))
                 )

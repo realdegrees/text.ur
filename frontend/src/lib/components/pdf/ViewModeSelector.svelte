@@ -1,11 +1,12 @@
 <script lang="ts">
 	import { api } from '$api/client';
-	import type { ViewMode1 } from '$api/types';
+	import type { ViewMode } from '$api/types';
 	import { documentStore } from '$lib/runes/document.svelte.js';
 	import { sessionStore } from '$lib/runes/session.svelte.js';
 	import { notification } from '$lib/stores/notificationStore';
 	import LockIcon from '~icons/material-symbols/lock';
 	import PublicIcon from '~icons/material-symbols/public';
+	import QuestionMarkIcon from '~icons/material-symbols/help-outline';
 
 	interface Props {
 		isExpanded?: boolean;
@@ -22,7 +23,7 @@
 	let currentViewMode = $derived(documentStore.loadedDocument?.view_mode ?? 'public');
 	let isUpdating = $state(false);
 
-	const viewModes: { mode: ViewMode1; icon: typeof LockIcon; label: string; shortLabel: string }[] =
+	const viewModes: { mode: ViewMode; icon: typeof LockIcon; label: string; shortLabel: string }[] =
 		[
 			{
 				mode: 'restricted',
@@ -38,7 +39,7 @@
 			}
 		];
 
-	const setViewMode = async (mode: ViewMode1) => {
+	const setViewMode = async (mode: ViewMode) => {
 		if (!canChangeViewMode || isUpdating || mode === currentViewMode) return;
 		if (!documentStore.loadedDocument) return;
 
@@ -57,12 +58,25 @@
 			documentStore.loadedDocument.view_mode = previousMode;
 			notification(result.error);
 		}
-		// On success, WebSocket will also broadcast this to other users
 		isUpdating = false;
 	};
 </script>
 
 <div class="flex {isExpanded ? 'w-full flex-col' : 'flex-col items-center'} gap-0.5">
+	{#if isExpanded}
+		<span class="flex flex-row items-center justify-between px-1 text-[10px] text-text/40">
+			View Mode
+			{#if canChangeViewMode}
+				<div
+					title="In Restricted Mode members without permission will not see other comments and cursor sharing is disabled. In Public Mode comments are visible based on their individual visibility settings."
+				>
+					<QuestionMarkIcon
+						class="ml-1 h-3.5 w-3.5 text-text/40 transition-colors hover:text-text"
+					/>
+				</div>
+			{/if}
+		</span>
+	{/if}
 	{#each viewModes as { mode, icon: Icon, label, shortLabel } (mode)}
 		<!-- Render view mode buttons; only apply hover styles when the user can change view mode -->
 		<button

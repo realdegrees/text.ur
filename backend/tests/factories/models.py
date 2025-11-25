@@ -47,12 +47,39 @@ class MembershipFactory(BaseFactory):
     permissions = factory.LazyFunction(lambda: [])
     is_owner = False
     accepted = True
+    
+    @factory.post_generation
+    def link(self, create: bool, extracted, **kwargs) -> None:  # noqa: ANN001, ANN003
+        """Ensure created Membership is visible on the related User and Group objects.
+
+        Some tests evaluate Python-side predicates that rely on in-memory
+        relationship lists (e.g. group.memberships or user.memberships). When
+        factories persist objects using a session with "commit" persistence the
+        relationship collections may not be populated on detached instances. This
+        hook attempts to append the newly-created membership into the in-memory
+        collections when possible so predicates operate on expected objects.
+        """
+        # Link membership into group membership list if present
+        if getattr(self, "group", None) is not None:
+                if getattr(self.group, "memberships", None) is None:
+                    self.group.memberships = []
+                # Avoid duplicate entries
+                if self not in self.group.memberships:
+                    self.group.memberships.append(self)
+
+        # Link membership into user membership list if present
+        if getattr(self, "user", None) is not None:
+                if getattr(self.user, "memberships", None) is None:
+                    self.user.memberships = []
+                if self not in self.user.memberships:
+                    self.user.memberships.append(self)
+    
 
 
 class DocumentFactory(BaseFactory):
     class Meta:
         model = Document
-
+    name = factory.Sequence(lambda n: f"document_{n}.pdf")
     s3_key = factory.Sequence(lambda n: f"documents/doc_{n}.pdf")
     size_bytes = factory.Faker("random_int", min=1000, max=1000000)
     visibility = Visibility.PRIVATE

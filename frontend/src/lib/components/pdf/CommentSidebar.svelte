@@ -7,11 +7,12 @@
 
 	interface Props {
 		viewerContainer: HTMLDivElement | null;
+		sidebarContainer: HTMLDivElement | null;
 		scale: number;
 		scrollTop: number;
 	}
 
-	let { viewerContainer, scale, scrollTop }: Props = $props();
+	let { viewerContainer, sidebarContainer, scale, scrollTop }: Props = $props();
 
 	// Force recalculation trigger
 	let renderTick = $state(0);
@@ -25,11 +26,20 @@
 	let filteredComments = $derived.by(() => {
 		let result = documentStore.comments;
 
-		// Filter by selected authors (empty set = show all)
-		if (documentStore.authorFilterIds.size > 0) {
-			result = result.filter(
-				(c: CachedComment) => c.user?.id && documentStore.authorFilterIds.has(c.user.id)
-			);
+		// Filter by author filter states (include/exclude/none)
+		const states = documentStore.authorFilterStates;
+		const included = new Set<number>(
+			[...states.entries()].filter(([, v]) => v === 'include').map(([k]) => k)
+		);
+		const excluded = new Set<number>(
+			[...states.entries()].filter(([, v]) => v === 'exclude').map(([k]) => k)
+		);
+
+		// If there are include filters, show only those authors. Otherwise, if exclude filters exist, hide those authors.
+		if (included.size > 0) {
+			result = result.filter((c: CachedComment) => c.user?.id && included.has(c.user.id));
+		} else if (excluded.size > 0) {
+			result = result.filter((c: CachedComment) => !(c.user?.id && excluded.has(c.user.id)));
 		}
 
 		return result;
@@ -163,7 +173,7 @@
 			class="absolute right-3 left-3 transition-transform duration-75"
 			style="top: {cluster.yPosition}px;"
 		>
-			<CommentBadge comments={cluster.comments} />
+			<CommentBadge comments={cluster.comments} pdfContainer={viewerContainer} {sidebarContainer} />
 		</div>
 	{/each}
 

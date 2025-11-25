@@ -22,7 +22,7 @@ USER_KEY_EXPIRY = HEARTBEAT_INTERVAL + 60  # 4 minutes
 
 
 class ConnectedUser(BaseModel):
-    """Represents a user connected to a document."""
+    """Represents a user connected to a channel endpoint (an active websocket connection)."""
 
     user_id: int
     username: str
@@ -76,18 +76,31 @@ class EventManager:
         app_logger.info("EventManager disconnected")
 
     # ---------------- Active User Tracking ----------------
-    def _active_users_key(self, document_id: str) -> str:
-        """Get Redis key for active users of a document."""
-        return f"document:{document_id}:active_users"
+    def _active_users_key(self, channel_key: str) -> str:
+        """Return a redis key used to store active users for a specific channel.
+
+        The EventManager tracks active users per event subscription key — which may
+        include resource identifiers and the channel name (for example
+        "documents:123:comments"). Using the channel-key keeps active-user storage
+        generic and endpoint-specific rather than hardcoded to documents/comments.
+        """
+        # Use a stable prefix to avoid accidental collisions with pubsub channel
+        # names and make keys easily identifiable in Redis.
+        return f"active_users:{channel_key}"
 
     async def add_active_user(
-        self, document_id: str, user_id: int, username: str, connection_id: str
+        self, channel_key: str, user_id: int, username: str, connection_id: str
     ) -> list[ConnectedUser]:
-        """Add a user to the active users list and return all active users."""
+        """Add a user to the active users list for the given channel and return all active users.
+
+        channel_key should be the same string used for EventManager.publish/subscribe
+        (for example the endpoint-specific channel). This avoids hardcoding to
+        document semantics and allows the router to track active users for any endpoint.
+        """
         if not self._redis:
             raise RuntimeError("Redis connection not initialized")
 
-        key = self._active_users_key(document_id)
+        key = self._active_users_key(channel_key)
         user_data = ConnectedUser(
             user_id=user_id,
             username=username,
@@ -99,24 +112,23 @@ class EventManager:
         await self._redis.hset(key, str(user_id), user_data.model_dump_json())
         await self._redis.expire(key, USER_KEY_EXPIRY)
 
-        events_logger.info("Added active user %s to document %s", username, document_id)
-        return await self.get_active_users(document_id)
+        return await self.get_active_users(channel_key)
 
-    async def remove_active_user(self, document_id: str, user_id: int) -> None:
-        """Remove a user from the active users list."""
+    async def remove_active_user(self, channel_key: str, user_id: int) -> None:
+        """Remove a user from the active users list for the provided channel key."""
         if not self._redis:
             raise RuntimeError("Redis connection not initialized")
 
-        key = self._active_users_key(document_id)
+        key = self._active_users_key(channel_key)
         await self._redis.hdel(key, str(user_id))
-        events_logger.info("Removed active user %s from document %s", user_id, document_id)
+        events_logger.info("Removed active user %s from channel %s", user_id, channel_key)
 
-    async def get_active_users(self, document_id: str) -> list[ConnectedUser]:
-        """Get all active users for a document."""
+    async def get_active_users(self, channel_key: str) -> list[ConnectedUser]:
+        """Get all active users for a channel key."""
         if not self._redis:
             raise RuntimeError("Redis connection not initialized")
 
-        key = self._active_users_key(document_id)
+        key = self._active_users_key(channel_key)
         users_data = await self._redis.hgetall(key)
 
         users = []
@@ -128,12 +140,12 @@ class EventManager:
 
         return users
 
-    async def refresh_user_heartbeat(self, document_id: str) -> None:
-        """Refresh the expiry for active users (called periodically as heartbeat)."""
+    async def refresh_user_heartbeat(self, channel_key: str) -> None:
+        """Refresh the expiry for active users for the provided channel key."""
         if not self._redis:
             return
 
-        key = self._active_users_key(document_id)
+        key = self._active_users_key(channel_key)
         await self._redis.expire(key, USER_KEY_EXPIRY)
 
     # ---------------- WebSocket client management ----------------
@@ -142,17 +154,14 @@ class EventManager:
         websocket.state.channel = channel
         websocket.state.on_event = on_event
         self._clients.setdefault(channel, set()).add(websocket)
-        client_info = getattr(websocket, "client", None)
-        events_logger.debug("Registered websocket client for channel %s: %s", channel, client_info)
 
     async def unregister_client(self, websocket: WebSocket) -> None:
         """Unregister a WebSocket client."""
-        channel: str = getattr(websocket.state, "channel", "default")
+        channel: str = websocket.state.channel or "default"
         if channel in self._clients:
             self._clients[channel].discard(websocket)
             if not self._clients[channel]:
                 del self._clients[channel]
-            events_logger.debug("Unregistered websocket client from channel %s", channel)
 
     # ---------------- Publishing ----------------
     async def publish(self, event: dict, channel: str = "default") -> None:
@@ -160,7 +169,6 @@ class EventManager:
         if not self._redis:
             raise RuntimeError("Redis connection not initialized")
         payload: str = json.dumps(event)
-        events_logger.info("Publishing event to %s: %s", channel, event)
         await self._redis.publish(channel, payload)
 
     # ---------------- Subscriber loop ----------------
@@ -219,8 +227,6 @@ class EventManager:
         data: dict = json.loads(message["data"])
         clients: set[WebSocket] = self._clients.get(channel, set())
         to_remove: set[WebSocket] = set()
-
-        events_logger.info("Received event on %s: %s", channel, data)
 
         for ws in clients:
             on_event = getattr(ws.state, "on_event", None)

@@ -3,73 +3,30 @@
 <h3>WebSocket Event Stream: {{ channel }}</h3>
 <p>Establishes a live WebSocket connection for resource events on channel <code>{{ channel }}</code>.</p>
 
+
+<p>Below are the expected payload types. <strong>Incoming Payload Model</strong> is what clients should send inside <code>Event.payload</code>, and the <strong>Outgoing Payload Model</strong> is what the server will broadcast in <code>Event.payload</code>.</p>
+<p style="font-size:0.95em; color:#444"><strong>Note:</strong> If the <em>Incoming Payload Model</em> displays <code>-</code> there is no client-facing input handler for this event. These events are triggered internally e.g. by HTTP endpoints or background processes.</p>
+
 <h4>Event Types & Operations:</h4>
-<ul>
-Refer to endpoint response schema for reference on event structure.
 
 <table style='border-collapse: collapse; width: 100%; margin: 10px 0;'>
 <thead>
 <tr style='background-color: #f5f5f5;'>
 <th style='border: 1px solid #ddd; padding: 8px; text-align: left;'>Event Type</th>
-<th style='border: 1px solid #ddd; padding: 8px; text-align: left;'>Incoming Payload</th>
-<th style='border: 1px solid #ddd; padding: 8px; text-align: left;'>Outgoing Payload</th>
-<th style='border: 1px solid #ddd; padding: 8px; text-align: left;'>Database Write</th>
+<th style='border: 1px solid #ddd; padding: 8px; text-align: left;'>Incoming Payload Model</th>
+<th style='border: 1px solid #ddd; padding: 8px; text-align: left;'>Outgoing Payload Model</th>
 </tr>
 </thead>
 <tbody>
-{%- if create_model and read_model %}
+{%- for event_type_name, models in event_types.items() %}
 <tr>
-<td style='border: 1px solid #ddd; padding: 8px;'><code>create</code></td>
-<td style='border: 1px solid #ddd; padding: 8px;'><code>{{ create_model.__name__ }}</code></td>
-<td style='border: 1px solid #ddd; padding: 8px;'><code>{{ read_model.__name__ }}</code></td>
-<td style='border: 1px solid #ddd; padding: 8px;'>✅ Yes</td>
+<td style='border: 1px solid #ddd; padding: 8px;'><code>{{ event_type_name }}</code></td>
+<td style='border: 1px solid #ddd; padding: 8px;'><code>{% if models.incoming %}{{ models.incoming.__name__ }}{% else %}-{% endif %}</code></td>
+<td style='border: 1px solid #ddd; padding: 8px;'><code>{{ models.outgoing.__name__ }}</code></td>
 </tr>
-{%- endif %}
-{%- if update_model and read_model %}
-<tr>
-<td style='border: 1px solid #ddd; padding: 8px;'><code>update</code></td>
-<td style='border: 1px solid #ddd; padding: 8px;'><code>{{ update_model.__name__ }}</code></td>
-<td style='border: 1px solid #ddd; padding: 8px;'><code>{{ read_model.__name__ }}</code></td>
-<td style='border: 1px solid #ddd; padding: 8px;'>✅ Yes</td>
-</tr>
-{%- endif %}
-{%- if delete_model %}
-<tr>
-<td style='border: 1px solid #ddd; padding: 8px;'><code>delete</code></td>
-<td style='border: 1px solid #ddd; padding: 8px;'><code>{{ delete_model.__name__ }}</code></td>
-<td style='border: 1px solid #ddd; padding: 8px;'><code>{{ delete_model.__name__ }}</code></td>
-<td style='border: 1px solid #ddd; padding: 8px;'>✅ Yes</td>
-</tr>
-{%- endif %}
-{%- if custom_model %}
-<tr>
-<td style='border: 1px solid #ddd; padding: 8px;'><code>custom</code></td>
-<td style='border: 1px solid #ddd; padding: 8px;'><code>{{ custom_model.__name__ }}</code></td>
-<td style='border: 1px solid #ddd; padding: 8px;'><code>{{ custom_model.__name__ }}</code></td>
-<td style='border: 1px solid #ddd; padding: 8px;'>❌ No</td>
-</tr>
-{%- endif %}
-
-{%- if view_mode_model %}
-<tr>
-<td style='border: 1px solid #ddd; padding: 8px;'><code>view_mode_changed</code></td>
-<td style='border: 1px solid #ddd; padding: 8px;'><code>{{ view_mode_model.__name__ }}</code></td>
-<td style='border: 1px solid #ddd; padding: 8px;'><code>{{ view_mode_model.__name__ }}</code></td>
-<td style='border: 1px solid #ddd; padding: 8px;'>❌ No</td>
-</tr>
-{%- endif %}
-
-{%- if mouse_model %}
-<tr>
-<td style='border: 1px solid #ddd; padding: 8px;'><code>mouse_position</code></td>
-<td style='border: 1px solid #ddd; padding: 8px;'><code>{{ mouse_model.__name__ }}</code></td>
-<td style='border: 1px solid #ddd; padding: 8px;'><code>{{ mouse_model.__name__ }}</code></td>
-<td style='border: 1px solid #ddd; padding: 8px;'>❌ No</td>
-</tr>
-{%- endif %}
+{%- endfor %}
 </tbody>
 </table>
-</ul>
 
 <h4>Functionality:</h4>
 <ul>

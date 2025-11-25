@@ -96,7 +96,7 @@ export interface CommentEvent {
   payload: CommentRead | null;
   resource_id: number | null;
   resource: string | null;
-  type: "create" | "update" | "delete" | "view_mode_changed" | "mouse_position";
+  type: string;
   originating_connection_id?: string | null;
 }
 export interface CommentRead {
@@ -259,11 +259,20 @@ export interface MembershipRead {
   accepted: boolean;
 }
 /**
- * Event payload for mouse cursor position - sent to WebSocket clients for real-time cursor tracking.
+ * Event payload for mouse cursor position - broadcasted to WebSocket clients (with user info).
  */
 export interface MousePositionEvent {
   user_id: number;
   username: string;
+  x: number;
+  y: number;
+  page: number;
+  visible?: boolean;
+}
+/**
+ * Input model for mouse cursor position - sent from clients (without user info).
+ */
+export interface MousePositionInput {
   x: number;
   y: number;
   page: number;
