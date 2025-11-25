@@ -130,7 +130,7 @@ services:
   # Automatically restarts containers in the defined scope when a new image is available
   watchtower:
     image: docker.io/containrrr/watchtower
-    container_name: textur-watchtower
+    container_name: text.ur-watchtower
     restart: always
     command: --interval 30 --scope textur --cleanup
     labels: [ "com.centurylinklabs.watchtower.scope=textur" ]

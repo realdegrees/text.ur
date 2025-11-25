@@ -36,22 +36,70 @@ cd /annotation-software/database
 
 
 
-# Try to acquire advisory lock without waiting
 echo "Attempting to acquire Postgres advisory lock (key: $LOCK_KEY)..."
-if psql $PSQL_OPTS -t -A -c "SELECT pg_try_advisory_lock($LOCK_KEY);" | grep -q '^t$'; then
+
+# Create a FIFO and temporary file to coordinate with a persistent psql session.
+FIFO=$(mktemp -u)
+OUTFILE=$(mktemp)
+mkfifo "$FIFO"
+
+# Start a background psql session: first run pg_try_advisory_lock, then read further
+# commands from the FIFO (so the psql process stays alive and can hold the lock).
+( echo "SELECT pg_try_advisory_lock($LOCK_KEY);" ; cat "$FIFO" ) | psql $PSQL_OPTS -t -A > "$OUTFILE" 2>/tmp/psql_lock.err &
+LOCK_PSQL_PID=$!
+
+# Wait for the initial result (up to 120s)
+for i in $(seq 1 120); do
+  if [ -s "$OUTFILE" ]; then
+    break
+  fi
+  sleep 1
+done
+
+if [ ! -s "$OUTFILE" ]; then
+  echo "Timed out waiting for lock result. Check /tmp/psql_lock.err for details."
+  kill "$LOCK_PSQL_PID" 2>/dev/null || true
+  rm -f "$FIFO" "$OUTFILE"
+  exit 1
+fi
+
+LOCK_RES=$(head -n1 "$OUTFILE" | tr -d '[:space:]')
+
+if [ "$LOCK_RES" = "t" ]; then
+  OWN_LOCK=1
   echo "Database lock acquired. Running Alembic migrations..."
+
+  cleanup() {
+    if [ "${OWN_LOCK:-0}" = "1" ]; then
+      echo "Releasing Postgres advisory lock..."
+      echo "SELECT pg_advisory_unlock($LOCK_KEY);" > "$FIFO" || true
+      wait "$LOCK_PSQL_PID" 2>/dev/null || true
+    else
+      kill "$LOCK_PSQL_PID" 2>/dev/null || true
+    fi
+    rm -f "$FIFO" "$OUTFILE"
+  }
+
+  trap cleanup EXIT INT TERM
+
   if ! alembic upgrade head 2>&1 | tee /tmp/alembic_error.log; then
     echo "Alembic migration failed. See error details below."
     cat /tmp/alembic_error.log
+    exit 1
   fi
-  echo "Releasing Postgres advisory lock..."
-  psql $PSQL_OPTS -c "SELECT pg_advisory_unlock($LOCK_KEY);"
+
+  # Success: release lock and cleanup now
+  trap - EXIT
+  cleanup
+  echo "Migrations complete."
 else
   echo "Database lock is held by another process. Waiting for it to be released..."
-  # Wait until the lock is free (block until available), then immediately release and skip migrations
-  psql $PSQL_OPTS -c "SELECT pg_advisory_lock($LOCK_KEY);"
+  # This background psql session did not obtain the lock; stop it and wait for lock release
+  kill "$LOCK_PSQL_PID" 2>/dev/null || true
+  rm -f "$FIFO" "$OUTFILE"
+  # Block until lock is free, then immediately release it and skip migrations
+  psql $PSQL_OPTS -c "SELECT pg_advisory_lock($LOCK_KEY); SELECT pg_advisory_unlock($LOCK_KEY);"
   echo "Database lock released. Skipping migrations."
-  psql $PSQL_OPTS -c "SELECT pg_advisory_unlock($LOCK_KEY);"
 fi
 
 
