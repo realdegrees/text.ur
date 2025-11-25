@@ -16,6 +16,7 @@ MAX_LABEL_LENGTH = 30
 
 class ShareLinkCreate(SQLModel):
     permissions: set[Permission]
+    allow_anonymous_access: bool = False
     expires_at: str | None = None
     label: str | None = Field(default=None, max_length=MAX_LABEL_LENGTH)
 
@@ -24,6 +25,7 @@ class ShareLinkRead(SQLModel):
     permissions: set[Permission]
     expires_at: str | None = None
     label: str | None = None
+    allow_anonymous_access: bool
     token: str
     author: "UserRead"
     group_id: str
@@ -31,5 +33,6 @@ class ShareLinkRead(SQLModel):
 class ShareLinkUpdate(SQLModel):
     permissions: set[Permission] | None = None
     expires_at: str | None = None
+    allow_anonymous_access: bool | None = None
     label: str | None = Field(default=None, max_length=MAX_LABEL_LENGTH)
     rotate_token: bool | None = None

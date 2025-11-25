@@ -3,7 +3,7 @@ from typing import ClassVar, Optional
 from uuid import UUID, uuid4
 
 from nanoid import generate
-from sqlalchemy import Column, String
+from sqlalchemy import Boolean, Column, String
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.ext.hybrid import hybrid_property
@@ -221,6 +221,7 @@ class ShareLink(BaseModel, table=True):
         default_factory=list,
         sa_column=Column(ARRAY(String))
     )
+    allow_anonymous_access: bool = Field(default=False, sa_column=Column(Boolean, server_default="false"))
 
     token: str = Field(
         default_factory=func.gen_random_uuid,
