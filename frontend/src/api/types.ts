@@ -298,6 +298,7 @@ export interface ReactionCreate {
 }
 export interface ShareLinkCreate {
   permissions: Permission[];
+  allow_anonymous_access?: boolean;
   expires_at?: string | null;
   label?: string | null;
 }
@@ -311,13 +312,15 @@ export interface ShareLinkRead {
   permissions: Permission[];
   expires_at?: string | null;
   label?: string | null;
+  allow_anonymous_access: boolean;
   token: string;
-  author: UserRead;
+  author: UserRead | null;
   group_id: string;
 }
 export interface ShareLinkUpdate {
   permissions?: Permission[] | null;
   expires_at?: string | null;
+  allow_anonymous_access?: boolean | null;
   label?: string | null;
   rotate_token?: boolean | null;
 }

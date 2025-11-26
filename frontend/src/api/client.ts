@@ -6,21 +6,13 @@ import type { GetFilterModel, TypedFilter, ComputeExclusions } from './filters';
 import { filterToSearchParam, sortToSearchParam } from '$lib/util/query';
 import { appErrorSchema } from './schemas';
 
-export type ApiResult<T> =
-	| { success: true; data?: T }
-	| { success: false; error: AppError };
+export type ApiResult<T> = { success: true; data?: T } | { success: false; error: AppError };
 
-export type ApiGetResult<T> =
-	| { success: true; data: T }
-	| { success: false; error: AppError };
+export type ApiGetResult<T> = { success: true; data: T } | { success: false; error: AppError };
 
-export type ApiMutationResult =
-	| { success: true }
-	| { success: false; error: AppError };
+export type ApiMutationResult = { success: true } | { success: false; error: AppError };
 
-export type ApiCreateResult<T> =
-	| { success: true; data: T }
-	| { success: false; error: AppError };
+export type ApiCreateResult<T> = { success: true; data: T } | { success: false; error: AppError };
 
 /**
  * Generate a unique connection ID for this browser session
@@ -95,14 +87,13 @@ class ApiClient {
 			filters?: TFilters;
 			sort?: Sort[];
 		}
-	): Promise<ApiResult<
-		T extends Paginated<infer U, any>
-			? Paginated<
-				  U,
-				  (ComputeExclusions<TFilter, TFilters> | TExclude) & PropertyKey
-			  >
-			: T
-	>>;
+	): Promise<
+		ApiResult<
+			T extends Paginated<infer U, any>
+				? Paginated<U, (ComputeExclusions<TFilter, TFilters> | TExclude) & PropertyKey>
+				: T
+		>
+	>;
 
 	// Overload B: explicit TData between T and TExclude for advanced callers
 	fetch<
@@ -118,14 +109,13 @@ class ApiClient {
 			filters?: TFilters;
 			sort?: Sort[];
 		}
-	): Promise<ApiResult<
-		T extends Paginated<infer U, any>
-			? Paginated<
-				  U,
-				  (ComputeExclusions<TFilter, TFilters> | TExclude) & PropertyKey
-			  >
-			: T
-	>>;
+	): Promise<
+		ApiResult<
+			T extends Paginated<infer U, any>
+				? Paginated<U, (ComputeExclusions<TFilter, TFilters> | TExclude) & PropertyKey>
+				: T
+		>
+	>;
 
 	// Implementation of fetch: compute TData first to enable inference
 	async fetch<
@@ -141,36 +131,35 @@ class ApiClient {
 			filters?: TFilters;
 			sort?: Sort[];
 		}
-	): Promise<ApiResult<
-		T extends Paginated<infer U, any>
-			? Paginated<
-				  U,
-				  (ComputeExclusions<TFilter, TFilters> | TExclude) & PropertyKey
-			  >
-			: T
-	>> {
+	): Promise<
+		ApiResult<
+			T extends Paginated<infer U, any>
+				? Paginated<U, (ComputeExclusions<TFilter, TFilters> | TExclude) & PropertyKey>
+				: T
+		>
+	> {
 		if (!browser && !init?.fetch) {
 			throw new Error(
 				'API client requires a fetch function when used in server context. Pass event.fetch as the third argument.'
 			);
 		}
-		
+
 		const { fetch: fetchFnOverride, filters, sort, ...cleanedInit } = init || {};
 
 		const actualFetch = fetchFnOverride ?? fetch!;
 
 		let url: string;
-		
+
 		if (input instanceof Request) {
-			url = this.resolveUrl(input.url);			
+			url = this.resolveUrl(input.url);
 		} else {
-			url = this.resolveUrl(input);			
+			url = this.resolveUrl(input);
 		}
 
 		// Append filters and sort parameters to the URL
 		if ((filters && filters.length > 0) || (sort && sort.length > 0)) {
 			const urlObj = new URL(url);
-			
+
 			if (filters && filters.length > 0) {
 				filters.forEach((filter) => {
 					if (filter) {
@@ -179,14 +168,14 @@ class ApiClient {
 					}
 				});
 			}
-			
+
 			if (sort && sort.length > 0) {
 				sort.forEach((sortItem) => {
 					const { key, value } = sortToSearchParam(sortItem);
 					urlObj.searchParams.append(key, value);
 				});
 			}
-			
+
 			url = urlObj.toString();
 		}
 
@@ -199,8 +188,23 @@ class ApiClient {
 			}
 		};
 
-
-		const response = await actualFetch(url, requestInit);
+		let response;
+		let error;
+		try {
+			response = await actualFetch(url, requestInit);
+		} catch (e) {
+			error = e;
+		}
+		if (!response) {
+			return {
+				success: false,
+				error: {
+					error_code: 'unknown_error',
+					detail: JSON.stringify(error) || 'Network error',
+					status_code: 0
+				}
+			};
+		}
 
 		if (!response.ok) {
 			const json = await response.json();
@@ -211,9 +215,9 @@ class ApiClient {
 					success: false,
 					error: errorData.data
 				};
-			}else {
-				console.error("Unmapped Error", json);
-				
+			} else {
+				console.error('Unmapped Error', json);
+
 				return {
 					success: false,
 					error: {
@@ -221,47 +225,40 @@ class ApiClient {
 						detail: response.statusText,
 						status_code: response.status
 					}
-				}
+				};
 			}
 		}
 
 		let contentType: string | null = null;
 		try {
-			contentType = response.headers.get("content-type");
+			contentType = response.headers.get('content-type');
 		} catch {
 			// In server-side context, headers might be filtered
 		}
-		
-		const hasJsonContent = contentType && contentType.includes("application/json");
-		
+
 		if (response.status === 204) {
-			return { 
-				success: true, 
+			return {
+				success: true,
 				data: undefined
 			};
 		}
 
 		// Try to parse as JSON (even if content-type is wrong or unavailable)
 		try {
-			const data = await response.json() as (
-				T extends Paginated<infer U, any>
-					? Paginated<U, (ComputeExclusions<TFilter, TFilters> | TExclude) & PropertyKey>
-					: T
-			);
-			
+			const data = (await response.json()) as T extends Paginated<infer U, any>
+				? Paginated<U, (ComputeExclusions<TFilter, TFilters> | TExclude) & PropertyKey>
+				: T;
+
 			return { success: true, data };
 		} catch (e) {
-			// If we explicitly know it's not JSON and parsing failed, return undefined
-			if (contentType && !hasJsonContent) {
-				return { 
-					success: true, 
-					data: undefined
-				};
-			}
-			// Otherwise, it's an error
-			return { 
-				success: true, 
-				data: undefined
+			console.error('Failed to parse JSON response', e, { contentType, url, response });
+			return {
+				success: false,
+				error: {
+					error_code: 'unknown_error',
+					detail: 'Failed to parse JSON response',
+					status_code: 500
+				}
 			};
 		}
 	}
@@ -281,14 +278,13 @@ class ApiClient {
 			filters?: TFilters;
 			sort?: Sort[];
 		}
-	): Promise<ApiGetResult<
-		T extends Paginated<infer U, any>
-			? Paginated<
-				  U,
-				  (ComputeExclusions<TFilter, TFilters> | TExclude) & PropertyKey
-			  >
-			: T
-	>>;
+	): Promise<
+		ApiGetResult<
+			T extends Paginated<infer U, any>
+				? Paginated<U, (ComputeExclusions<TFilter, TFilters> | TExclude) & PropertyKey>
+				: T
+		>
+	>;
 
 	get<
 		T,
@@ -303,14 +299,13 @@ class ApiClient {
 			filters?: TFilters;
 			sort?: Sort[];
 		}
-	): Promise<ApiGetResult<
-		T extends Paginated<infer U, any>
-			? Paginated<
-				  U,
-				  (ComputeExclusions<TFilter, TFilters> | TExclude) & PropertyKey
-			  >
-			: T
-	>>;
+	): Promise<
+		ApiGetResult<
+			T extends Paginated<infer U, any>
+				? Paginated<U, (ComputeExclusions<TFilter, TFilters> | TExclude) & PropertyKey>
+				: T
+		>
+	>;
 
 	async get<
 		T,
@@ -325,23 +320,22 @@ class ApiClient {
 			filters?: TFilters;
 			sort?: Sort[];
 		}
-	): Promise<ApiGetResult<
-		T extends Paginated<infer U, any>
-			? Paginated<
-				  U,
-				  (ComputeExclusions<TFilter, TFilters> | TExclude) & PropertyKey
-			  >
-			: T
-	>> {
+	): Promise<
+		ApiGetResult<
+			T extends Paginated<infer U, any>
+				? Paginated<U, (ComputeExclusions<TFilter, TFilters> | TExclude) & PropertyKey>
+				: T
+		>
+	> {
 		const result = await this.fetch<T, TData, TExclude, TFilter, TFilters>(input, {
 			...init,
 			method: 'GET'
 		});
-		
+
 		if (!result.success) {
 			return result;
 		}
-		
+
 		if (result.data === undefined) {
 			return {
 				success: false,
@@ -352,7 +346,7 @@ class ApiClient {
 				}
 			};
 		}
-		
+
 		return {
 			success: true,
 			data: result.data as T extends Paginated<infer U, any>
@@ -424,7 +418,7 @@ class ApiClient {
 		// Convert response to a Blob for download. Some server-side fetch
 		// implementations may not implement `response.blob()`; fall back to
 		// `arrayBuffer()` and construct a Blob if available.
-		const arrayBuffer: ArrayBuffer = await response.arrayBuffer();	
+		const arrayBuffer: ArrayBuffer = await response.arrayBuffer();
 
 		return { success: true, data: arrayBuffer };
 	}
@@ -452,11 +446,11 @@ class ApiClient {
 			// Send FormData as-is, otherwise stringify the body
 			body: isFormData ? (body as FormData) : body ? JSON.stringify(body) : undefined
 		});
-		
+
 		if (!result.success) {
 			return result;
 		}
-		
+
 		if (result.data === undefined) {
 			return {
 				success: false,
@@ -467,7 +461,7 @@ class ApiClient {
 				}
 			};
 		}
-		
+
 		return { success: true, data: result.data as T };
 	}
 
@@ -490,7 +484,7 @@ class ApiClient {
 			},
 			body: body ? JSON.stringify(body) : undefined
 		});
-		
+
 		if (result.success) {
 			return { success: true };
 		}
@@ -510,7 +504,7 @@ class ApiClient {
 			...init,
 			method: 'DELETE'
 		});
-		
+
 		if (result.success) {
 			return { success: true };
 		}

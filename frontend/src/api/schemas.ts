@@ -212,6 +212,7 @@ export const reactionCreateSchema = z.object({
 
 export const shareLinkCreateSchema = z.object({
     permissions: z.array(permissionSchema),
+    allow_anonymous_access: z.boolean().optional(),
     expires_at: z.string().optional().nullable(),
     label: z.string().optional().nullable()
 });
@@ -227,14 +228,16 @@ export const shareLinkReadSchema = z.object({
     permissions: z.array(permissionSchema),
     expires_at: z.string().optional().nullable(),
     label: z.string().optional().nullable(),
+    allow_anonymous_access: z.boolean(),
     token: z.string(),
-    author: userReadSchema,
+    author: userReadSchema.nullable(),
     group_id: z.string()
 });
 
 export const shareLinkUpdateSchema = z.object({
     permissions: z.array(permissionSchema).optional().nullable(),
     expires_at: z.string().optional().nullable(),
+    allow_anonymous_access: z.boolean().optional().nullable(),
     label: z.string().optional().nullable(),
     rotate_token: z.boolean().optional().nullable()
 });

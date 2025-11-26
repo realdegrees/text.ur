@@ -13,6 +13,7 @@ from models.tables import (
     Group,
     Membership,
     Reaction,
+    ShareLink,
     User,
 )
 from sqlalchemy import and_, or_, select, true
@@ -131,7 +132,7 @@ class Guard:
                 raise HTTPException(
                     status_code=500, detail="Endpoint Guard misconfiguration: invalid configuration for multi parameter")
 
-        def predicate(membership: Membership, user: User, params: dict[str, Any]) -> bool:
+        def predicate(membership: Membership, user: User) -> bool:
             return any(
                 m.accepted and m.user_id == user.id
                 for m in membership.group.memberships
@@ -363,6 +364,75 @@ class Guard:
                 and (m.is_owner if only_owner else True)
                 and all(p in m.permissions for p in required_vals)
                 for m in group.memberships
+            )
+
+        return EndpointGuard(clause, predicate, exclude_fields=exclude_fields)
+
+    @staticmethod
+    def sharelink_access(
+        require_permissions: set[Permission] | None = None,
+        *,
+        exclude_fields: list[ColumnElement] | None = None,
+    ) -> EndpointGuard[ShareLink]:
+        """User can access a share link if they have access to its group.
+
+        Args:
+            require_permissions: Set of permissions required to access share links
+            exclude_fields: List of model fields to exclude from responses
+
+        """
+
+        def clause(user: User, params: dict[str, Any], multi: bool = False) -> ColumnElement[bool]:
+            share_link_id = params.get("share_link_id", None)
+            if not share_link_id and not multi:
+                raise HTTPException(
+                    status_code=500, detail="Endpoint Guard misconfiguration: missing share_link_id parameter")
+
+            def build_permission_clause() -> ColumnElement[bool]:
+                """Build permission check clause."""
+                return (
+                    Membership.is_owner.is_(True) |
+                    Membership.permissions.contains([Permission.ADMINISTRATOR.value]) |
+                    (and_(*(Membership.permissions.contains([permission.value])
+                            for permission in require_permissions)) if require_permissions else true())
+                )
+
+            if multi and share_link_id is None:
+                # For multi-sharelink queries (filtering ShareLink table directly)
+                return ShareLink.group_id.in_(
+                    select(Membership.group_id).where(
+                        Membership.user_id == user.id,
+                        Membership.accepted.is_(True),
+                        build_permission_clause()
+                    )
+                )
+            elif not multi:
+                # For single share link access checks - use EXISTS to avoid cross join
+                return select(ShareLink).where(
+                    (ShareLink.id == share_link_id) &
+                    ShareLink.group_id.in_(
+                        select(Membership.group_id).where(
+                            Membership.user_id == user.id,
+                            Membership.accepted.is_(True),
+                            build_permission_clause()
+                        )
+                    )
+                ).exists()
+            else:
+                raise HTTPException(
+                    status_code=500, detail="Endpoint Guard misconfiguration: invalid configuration for multi parameter")
+
+        def predicate(share_link: ShareLink, user: User) -> bool:
+            if share_link.group is None:
+                return False
+
+            required_vals: list[str] = [] if require_permissions is None else [p.value for p in require_permissions]
+
+            return any(
+                (m.user_id == user.id)
+                and m.accepted
+                and (m.is_owner or Permission.ADMINISTRATOR.value in m.permissions or all(p in m.permissions for p in required_vals))
+                for m in share_link.group.memberships
             )
 
         return EndpointGuard(clause, predicate, exclude_fields=exclude_fields)

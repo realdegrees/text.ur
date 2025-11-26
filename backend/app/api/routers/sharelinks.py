@@ -25,22 +25,23 @@ router = APIRouter(
 async def list_share_links(
     _: BasicAuthentication,
     share_links: Paginated[ShareLink] = PaginatedResource(
-        ShareLink, ShareLinkFilter, guards=[Guard.group_access(require_permissions={Permission.MANAGE_SHARE_LINKS})]
+        ShareLink, ShareLinkFilter, guards=[Guard.sharelink_access(require_permissions={Permission.MANAGE_SHARE_LINKS})]
     )
 ) -> Paginated[ShareLinkRead]:
-    """Get all group memberships."""
+    """Get all share links for groups the user has access to."""
     return share_links
 
 @router.post("/", response_model=ShareLinkRead)
 async def create_share_link(
     db: Database,
     group: Group = Resource(Group, param_alias="group_id"),
-    _: User = Authenticate([Guard.group_access({Permission.ADMINISTRATOR})]),
+    user: User = Authenticate([Guard.group_access({Permission.ADMINISTRATOR})]),
     share_link_create: ShareLinkCreate = Body(...)
 ) -> ShareLinkRead:
     """Create a new share link for a group."""
     share_link = ShareLink(**share_link_create.model_dump())
     share_link.group_id = group.id
+    share_link.author_id = user.id
     db.add(share_link)
     db.commit()
     db.refresh(share_link)

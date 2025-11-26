@@ -17,8 +17,9 @@
 	import type { Paginated } from '$api/pagination.js';
 	import { sessionStore } from '$lib/runes/session.svelte.js';
 	import { notification } from '$lib/stores/notificationStore.js';
-	import Dropdown from '$lib/components/dropdown.svelte';
 	import Badge from '$lib/components/badge.svelte';
+	import Dropdown from '$lib/components/dropdown.svelte';
+	import PermissionSelector from '$lib/components/permissionSelector.svelte';
 	import { scale, slide } from 'svelte/transition';
 	import AdvancedInput from '$lib/components/advancedInput.svelte';
 	import { invalidateAll } from '$app/navigation';
@@ -316,44 +317,20 @@
 {/snippet}
 
 {#snippet permissionsSnippet(membership: Omit<MembershipRead, 'group'>)}
-	<div class="flex flex-wrap items-center gap-1.5">
-		{#each membership.permissions as perm (perm)}
-			<Badge
-				item={perm}
-				label={$LL.permissions[perm]?.() || perm}
+	{#key membership.permissions}
+		<div in:scale out:scale>
+			<PermissionSelector
+				selectedPermissions={membership.permissions}
+				onAdd={(perm) => addPermissionToMembership(membership, perm)}
+				onRemove={(perm) => removePermissionFromMembership(membership, perm)}
 				showRemove={sessionStore.validatePermissions(['manage_permissions'])}
-				onRemove={() => removePermissionFromMembership(membership, perm)}
+				allowSelection={sessionStore.validatePermissions({
+					or: ['manage_permissions', 'remove_members']
+				})}
+				compact
 			/>
-		{/each}
-
-		{#key membership.permissions}
-			<div in:scale out:scale>
-				<Dropdown
-					items={availablePermissions.filter((p) => !membership.permissions.includes(p))}
-					onSelect={(perm) => addPermissionToMembership(membership, perm)}
-					position="bottom-left"
-					title="Add Permission"
-					showArrow={false}
-					show={false}
-					hideCurrentSelection={true}
-					allowSelection={sessionStore.validatePermissions({
-						or: ['manage_permissions', 'remove_members']
-					})}
-				>
-					{#snippet icon()}
-						{#if sessionStore.validatePermissions( ['manage_permissions'] ) && availablePermissions.filter((p) => !membership.permissions.includes(p)).length > 0}
-							<AddIcon
-								class="h-full w-5.5 rounded bg-background text-text shadow-inner shadow-black/20 transition-all hover:bg-green-500/30"
-							/>
-						{/if}
-					{/snippet}
-					{#snippet itemSnippet(perm)}
-						{@render permissionItem(perm)}
-					{/snippet}
-				</Dropdown>
-			</div>
-		{/key}
-	</div>
+		</div>
+	{/key}
 {/snippet}
 
 {#snippet removeSnippet(membership: Omit<MembershipRead, 'group'>)}

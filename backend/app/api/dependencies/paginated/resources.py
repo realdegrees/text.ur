@@ -177,10 +177,10 @@ def PaginatedResource(  # noqa: C901
         for filter_item in filters:
             params[filter_item.field] = filter_item.value
         
-        # Add query parameters from request
+        # Add query parameters from request (excluding filters)
         if isinstance(request.query_params, QueryParams):
             for key, value in request.query_params.multi_items():
-                if key not in params:
+                if key not in params and not key.startswith("filter[["):
                     params[key] = value
                     
         # Add path parameters from request
