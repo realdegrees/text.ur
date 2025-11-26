@@ -1,12 +1,12 @@
 import { api } from '$api/client';
-import type { CommentRead, DocumentRead, MembershipRead } from '$api/types';
+import type { CommentRead, DocumentRead } from '$api/types';
 import { notification } from '$lib/stores/notificationStore';
 import { redirect } from '@sveltejs/kit';
 import type { PageLoad } from './$types';
 import type { Paginated } from '$api/pagination';
 
 export const load: PageLoad = async ({ params, parent, fetch }) => {
-	const { sessionUser } = await parent();
+	const { routeMembership: membership } = await parent();
 	// Fetch document by param
 	const documentResult = await api.get<DocumentRead>(`/documents/${params.documentid}`, {
 		fetch
@@ -20,16 +20,6 @@ export const load: PageLoad = async ({ params, parent, fetch }) => {
 		throw redirect(303, '/dashboard');
 	}
 
-	// Fetch user group membership
-	const membershipResult = await api.get<MembershipRead>(
-		`/groups/${documentResult.data.group_id}/memberships/${sessionUser.id}`,
-		{ fetch }
-	);
-	if (!membershipResult.success) {
-		notification(membershipResult.error);
-		throw redirect(303, '/dashboard');
-	}
-	const membership = membershipResult.data;
 	if (!membership) {
 		notification('error', 'You are not a member of the group that owns this document.'); // TODO i18n
 		throw redirect(303, '/dashboard');

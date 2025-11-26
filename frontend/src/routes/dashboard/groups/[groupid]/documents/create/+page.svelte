@@ -132,6 +132,11 @@
 			return;
 		}
 
+		if (!result.data) {
+			notification('error', 'Failed to upload document: No data returned');
+			return;
+		}
+
 		notification('success', 'Document uploaded successfully');
 		goto(`/documents/${result.data.id}`);
 	}

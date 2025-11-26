@@ -255,6 +255,10 @@ const createDocumentStore = () => {
 			notification(result.error);
 			return;
 		}
+		if (!result.data) {
+			notification('error', 'Failed to create comment: No data returned');
+			return;
+		}
 		const newComment = toCachedComment(result.data);
 		if (options.parentId) {
 			const parentComment = findComment(comments, options.parentId);

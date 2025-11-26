@@ -20,6 +20,7 @@ from api.routers.groups import router as GroupRouter
 from api.routers.login import router as LoginRouter
 from api.routers.memberships import membership_router as MembershipRouter
 from api.routers.register import router as RegisterRouter
+from api.routers.sharelinks import root_router as ShareLinkRouter
 from api.routers.users import router as UserRouter
 from core import config
 from core.app_exception import AppException
@@ -39,7 +40,7 @@ from models.enums import AppErrorCode
 from util.api_router import APIRouter
 from util.openapi import custom_openapi
 
-routers = [RegisterRouter, LoginRouter, UserRouter, MembershipRouter, GroupRouter, DocumentsRouter, CommentRouter]
+routers = [RegisterRouter, LoginRouter, UserRouter, MembershipRouter, GroupRouter, ShareLinkRouter, DocumentsRouter, CommentRouter]
 
 logger = get_logger("requests")
 app_logger = get_logger("app")

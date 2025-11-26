@@ -19,8 +19,13 @@ export type AppErrorCode =
   | "invalid_credentials"
   | "not_in_group"
   | "email_not_verified"
+  | "sharelink_invalid"
+  | "sharelink_expired"
   | "membership_not_found"
-  | "owner_cannot_leave_group";
+  | "owner_cannot_leave_group"
+  | "username_taken"
+  | "email_taken"
+  | "sharelink_anonymous_disabled";
 /**
  * Visibility levels for comments.
  */
@@ -120,6 +125,7 @@ export interface UserRead {
   username: string;
   first_name?: string | null;
   last_name?: string | null;
+  is_guest?: boolean;
 }
 export interface ReactionRead {
   type: ReactionType;
@@ -185,6 +191,7 @@ export interface DocumentTransfer {
 export interface GlobalJWTPayload {
   sub: string;
   type?: ("access" | "refresh") | null;
+  scopes?: string[] | null;
   exp?: string | null;
   iat?: string | null;
   inner?: string | null;
@@ -317,6 +324,15 @@ export interface ShareLinkRead {
   author: UserRead | null;
   group_id: string;
 }
+/**
+ * A token object that contains the share link token.
+ */
+export interface ShareLinkTokens {
+  groups?: {
+    [k: string]: string;
+  };
+  user_id: number;
+}
 export interface ShareLinkUpdate {
   permissions?: Permission[] | null;
   expires_at?: string | null;
@@ -343,15 +359,17 @@ export interface User {
   username: string;
   first_name?: string | null;
   last_name?: string | null;
-  password: string;
-  email: string;
+  password?: string | null;
+  email?: string | null;
   verified?: boolean;
+  is_guest?: boolean;
   secret?: string;
 }
 export interface UserCreate {
+  token?: string | null;
   username: string;
-  password: string;
-  email: string;
+  password?: string | null;
+  email?: string | null;
   first_name?: string | null;
   last_name?: string | null;
 }
@@ -376,7 +394,8 @@ export interface UserPrivate {
   username: string;
   first_name?: string | null;
   last_name?: string | null;
-  email: string;
+  is_guest?: boolean;
+  email?: string | null;
 }
 export interface UserUpdate {
   username?: string | null;

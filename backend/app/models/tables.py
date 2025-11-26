@@ -21,9 +21,10 @@ class User(BaseModel, table=True):
     username: str = Field(index=True, unique=True)
     first_name: str | None = Field(nullable=True, default=None)
     last_name: str | None = Field(nullable=True, default=None)
-    password: str  # hashed
-    email: str = Field(index=True, unique=True)
+    password: str | None = Field(nullable=True, default=None)  # hashed
+    email: str | None = Field(nullable=True, default=None, index=True, unique=True)
     verified: bool = Field(default=False)
+    is_guest: bool = Field(default=False, sa_column=Column(Boolean, server_default="false"))
     # For personally signed URLs, JWT encryption etc.
     secret: str = Field(
         default_factory=func.gen_random_uuid,

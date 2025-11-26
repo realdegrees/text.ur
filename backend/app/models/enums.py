@@ -75,7 +75,15 @@ class AppErrorCode(str, Enum):
     INVALID_CREDENTIALS = "invalid_credentials"  # use when username/password is incorrect
     NOT_IN_GROUP = "not_in_group"  # use when user is not a member of the group they are trying to access
     EMAIL_NOT_VERIFIED = "email_not_verified"  # use when user has not verified their email address
+    SHARELINK_INVALID = "sharelink_invalid"  # use when sharelink token is invalid
+    SHARELINK_EXPIRED = "sharelink_expired"  # use when sharelink has
     
     # Group Membership Errors
     MEMBERSHIP_NOT_FOUND = "membership_not_found"  # use when membership invite is not found or has been revoked or user is not a member of the group
     OWNER_CANNOT_LEAVE_GROUP = "owner_cannot_leave_group"  # use when the owner tries to leave the group instead of deleting it
+    
+    # Registration Errors
+    USERNAME_TAKEN = "username_taken"  # use when the username is already registered
+    EMAIL_TAKEN = "email_taken"  # use when the email is already registered
+    SHARELINK_ANONYMOUS_DISABLED = "sharelink_anonymous_disabled"  # use when sharelink does not allow anonymous access
+

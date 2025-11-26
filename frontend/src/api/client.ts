@@ -7,11 +7,8 @@ import { filterToSearchParam, sortToSearchParam } from '$lib/util/query';
 import { appErrorSchema } from './schemas';
 
 export type ApiResult<T> = { success: true; data?: T } | { success: false; error: AppError };
-
 export type ApiGetResult<T> = { success: true; data: T } | { success: false; error: AppError };
-
 export type ApiMutationResult = { success: true } | { success: false; error: AppError };
-
 export type ApiCreateResult<T> = { success: true; data: T } | { success: false; error: AppError };
 
 /**
@@ -21,20 +18,35 @@ function generateConnectionId(): string {
 	return `${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
 }
 
+interface FetchOptions extends Omit<RequestInit, 'body'> {
+	fetch?: typeof fetch;
+	filters?: readonly TypedFilter<any>[];
+	sort?: Sort[];
+	_isRetry?: boolean;
+}
+
 /**
- * API client configuration and fetch wrapper with automatic authentication.
+ * API client configuration and fetch wrapper with automatic authentication and token refresh.
  * Cookies are handled automatically by the browser (credentials: 'include')
  * and forwarded by SvelteKit's handleFetch hook for SSR requests.
  */
 class ApiClient {
 	private baseUrl: string = env.PUBLIC_BACKEND_BASEURL;
 	private connectionId: string = browser ? generateConnectionId() : '';
+	private isRefreshing = false;
 
 	/**
 	 * Get the configured base URL.
 	 */
 	getBaseUrl(): string {
 		return this.baseUrl;
+	}
+
+	/**
+	 * Get the connection ID for this session
+	 */
+	getConnectionId(): string {
+		return this.connectionId;
 	}
 
 	/**
@@ -59,95 +71,9 @@ class ApiClient {
 	}
 
 	/**
-	 * Get the connection ID for this session
+	 * Build URL with filters and sort parameters
 	 */
-	getConnectionId(): string {
-		return this.connectionId;
-	}
-
-	/**
-	 * Fetch wrapper with automatic authentication and type-safe filters.
-	 * Returns a type-safe result object with success/error discrimination.
-	 *
-	 * When fetching Paginated<T> with filters, the return type automatically
-	 * excludes fields based on the active filters.
-	 * You can also explicitly provide a field to exclude by passing a second
-	 * generic.
-	 */
-	// Overload A: caller provides Paginated<T> and explicit TExclude, e.g. api.fetch<Paginated<MembershipRead>, 'group'>
-	fetch<
-		T extends Paginated<any>,
-		TExclude extends keyof (T extends Paginated<infer U, any> ? U : never) = never,
-		TFilter = GetFilterModel<T extends Paginated<infer U, any> ? U : never>,
-		TFilters extends readonly TypedFilter<TFilter>[] = readonly TypedFilter<TFilter>[]
-	>(
-		input: string | URL | Request,
-		init?: RequestInit & {
-			fetch?: typeof fetch;
-			filters?: TFilters;
-			sort?: Sort[];
-		}
-	): Promise<
-		ApiResult<
-			T extends Paginated<infer U, any>
-				? Paginated<U, (ComputeExclusions<TFilter, TFilters> | TExclude) & PropertyKey>
-				: T
-		>
-	>;
-
-	// Overload B: explicit TData between T and TExclude for advanced callers
-	fetch<
-		T,
-		TData = T extends Paginated<infer U, any> ? U : T,
-		TExclude extends keyof TData = never,
-		TFilter = GetFilterModel<TData>,
-		TFilters extends readonly TypedFilter<TFilter>[] = readonly TypedFilter<TFilter>[]
-	>(
-		input: string | URL | Request,
-		init?: RequestInit & {
-			fetch?: typeof fetch;
-			filters?: TFilters;
-			sort?: Sort[];
-		}
-	): Promise<
-		ApiResult<
-			T extends Paginated<infer U, any>
-				? Paginated<U, (ComputeExclusions<TFilter, TFilters> | TExclude) & PropertyKey>
-				: T
-		>
-	>;
-
-	// Implementation of fetch: compute TData first to enable inference
-	async fetch<
-		T,
-		TData = T extends Paginated<infer U, any> ? U : T,
-		TExclude extends keyof TData = never,
-		TFilter = GetFilterModel<TData>,
-		TFilters extends readonly TypedFilter<TFilter>[] = readonly TypedFilter<TFilter>[]
-	>(
-		input: string | URL | Request,
-		init?: RequestInit & {
-			fetch?: typeof fetch;
-			filters?: TFilters;
-			sort?: Sort[];
-		}
-	): Promise<
-		ApiResult<
-			T extends Paginated<infer U, any>
-				? Paginated<U, (ComputeExclusions<TFilter, TFilters> | TExclude) & PropertyKey>
-				: T
-		>
-	> {
-		if (!browser && !init?.fetch) {
-			throw new Error(
-				'API client requires a fetch function when used in server context. Pass event.fetch as the third argument.'
-			);
-		}
-
-		const { fetch: fetchFnOverride, filters, sort, ...cleanedInit } = init || {};
-
-		const actualFetch = fetchFnOverride ?? fetch!;
-
+	private buildUrl(input: string | URL | Request, options?: FetchOptions): string {
 		let url: string;
 
 		if (input instanceof Request) {
@@ -156,7 +82,8 @@ class ApiClient {
 			url = this.resolveUrl(input);
 		}
 
-		// Append filters and sort parameters to the URL
+		const { filters, sort } = options || {};
+
 		if ((filters && filters.length > 0) || (sort && sort.length > 0)) {
 			const urlObj = new URL(url);
 
@@ -176,38 +103,52 @@ class ApiClient {
 				});
 			}
 
-			url = urlObj.toString();
+			return urlObj.toString();
 		}
 
-		const requestInit: RequestInit = {
-			...cleanedInit,
-			credentials: cleanedInit.credentials || 'include',
-			headers: {
-				...cleanedInit.headers,
-				...(this.connectionId && { 'X-Connection-ID': this.connectionId })
-			}
-		};
+		return url;
+	}
 
-		let response;
-		let error;
+	/**
+	 * Parse response as JSON, handling empty responses
+	 */
+	private async parseResponse<T>(response: Response): Promise<T | undefined> {
+		// Handle 204 No Content
+		if (response.status === 204) {
+			return undefined;
+		}
+
+		// Get response text
+		const text = await response.text();
+
+		// Handle empty responses (common for 200/201 with no body)
+		if (!text || text.trim() === '') {
+			return undefined;
+		}
+
+		// Try to parse as JSON
 		try {
-			response = await actualFetch(url, requestInit);
+			return JSON.parse(text) as T;
 		} catch (e) {
-			error = e;
+			// If content-type suggests JSON and we have content, it's a parse error
+			const contentType = response.headers.get('content-type');
+			if (contentType?.includes('application/json')) {
+				console.error('Failed to parse JSON response:', text);
+				throw new Error('Failed to parse JSON response');
+			}
+			// Otherwise, return undefined for non-JSON responses
+			return undefined;
 		}
-		if (!response) {
-			return {
-				success: false,
-				error: {
-					error_code: 'unknown_error',
-					detail: JSON.stringify(error) || 'Network error',
-					status_code: 0
-				}
-			};
-		}
+	}
 
-		if (!response.ok) {
-			const json = await response.json();
+	/**
+	 * Handle error response
+	 */
+	private async handleErrorResponse(response: Response): Promise<{ success: false; error: AppError }> {
+		let json: any = null;
+
+		try {
+			json = await response.json();
 			const errorData = appErrorSchema.safeParse(json);
 
 			if (errorData.success) {
@@ -215,48 +156,116 @@ class ApiClient {
 					success: false,
 					error: errorData.data
 				};
-			} else {
-				console.error('Unmapped Error', json);
-
-				return {
-					success: false,
-					error: {
-						error_code: 'unknown_error',
-						detail: response.statusText,
-						status_code: response.status
-					}
-				};
 			}
-		}
-
-		let contentType: string | null = null;
-		try {
-			contentType = response.headers.get('content-type');
 		} catch {
-			// In server-side context, headers might be filtered
+			// JSON parse failed - fall through to generic error
 		}
 
-		if (response.status === 204) {
-			return {
-				success: true,
-				data: undefined
-			};
+		// No JSON or parse failed - use response status text
+		return {
+			success: false,
+			error: {
+				error_code: 'unknown_error',
+				detail: response.statusText || 'Request failed',
+				status_code: response.status
+			}
+		};
+	}
+
+	/**
+	 * Attempt to refresh the access token using the refresh_token cookie
+	 */
+	private async refreshToken(fetchFn: typeof fetch): Promise<boolean> {
+		if (this.isRefreshing) {
+			return false;
 		}
 
-		// Try to parse as JSON (even if content-type is wrong or unavailable)
+		this.isRefreshing = true;
+
 		try {
-			const data = (await response.json()) as T extends Paginated<infer U, any>
-				? Paginated<U, (ComputeExclusions<TFilter, TFilters> | TExclude) & PropertyKey>
-				: T;
+			const refreshUrl = this.resolveUrl('/login/refresh');
+			const response = await fetchFn(refreshUrl, {
+				method: 'POST',
+				credentials: 'include'
+			});
 
-			return { success: true, data };
+			return response.ok;
+		} catch {
+			return false;
+		} finally {
+			this.isRefreshing = false;
+		}
+	}
+
+	/**
+	 * Core fetch method with automatic token refresh on 401
+	 */
+	async fetch<T>(
+		input: string | URL | Request,
+		options?: FetchOptions & { body?: unknown }
+	): Promise<ApiResult<T>> {
+		if (!browser && !options?.fetch) {
+			throw new Error(
+				'API client requires a fetch function when used in server context. Pass event.fetch as the third argument.'
+			);
+		}
+
+		const { fetch: fetchFnOverride, filters, sort, _isRetry, body, ...init } = options || {};
+		const actualFetch = fetchFnOverride ?? fetch!;
+		const url = this.buildUrl(input, { filters, sort });
+
+		const requestInit: RequestInit = {
+			...init,
+			credentials: init.credentials || 'include',
+			headers: {
+				...init.headers,
+				...(this.connectionId && { 'X-Connection-ID': this.connectionId })
+			},
+			body: body !== undefined ? (body instanceof FormData ? body : JSON.stringify(body)) : undefined
+		};
+
+		let response: Response;
+		try {
+			response = await actualFetch(url, requestInit);
 		} catch (e) {
-			console.error('Failed to parse JSON response', e, { contentType, url, response });
 			return {
 				success: false,
 				error: {
 					error_code: 'unknown_error',
-					detail: 'Failed to parse JSON response',
+					detail: e instanceof Error ? e.message : 'Network error',
+					status_code: 0
+				}
+			};
+		}
+
+		// Handle 401 Unauthorized - attempt token refresh
+		if (response.status === 401 && !_isRetry && !url.includes('/refresh')) {
+			const refreshed = await this.refreshToken(actualFetch);
+
+			if (refreshed) {
+				// Retry the original request with refreshed token
+				return this.fetch<T>(input, {
+					...options,
+					_isRetry: true
+				});
+			}
+		}
+
+		// Handle error responses
+		if (!response.ok) {
+			return this.handleErrorResponse(response);
+		}
+
+		// Parse successful response
+		try {
+			const data = await this.parseResponse<T>(response);
+			return { success: true, data };
+		} catch (e) {
+			return {
+				success: false,
+				error: {
+					error_code: 'unknown_error',
+					detail: 'Failed to parse response',
 					status_code: 500
 				}
 			};
@@ -266,47 +275,6 @@ class ApiClient {
 	/**
 	 * GET request wrapper with automatic authentication and type-safe filters.
 	 */
-	get<
-		T extends Paginated<any>,
-		TExclude extends keyof (T extends Paginated<infer U, any> ? U : never) = never,
-		TFilter = GetFilterModel<T extends Paginated<infer U, any> ? U : never>,
-		TFilters extends readonly TypedFilter<TFilter>[] = readonly TypedFilter<TFilter>[]
-	>(
-		input: string | URL,
-		init?: Omit<RequestInit, 'method' | 'body'> & {
-			fetch?: typeof fetch;
-			filters?: TFilters;
-			sort?: Sort[];
-		}
-	): Promise<
-		ApiGetResult<
-			T extends Paginated<infer U, any>
-				? Paginated<U, (ComputeExclusions<TFilter, TFilters> | TExclude) & PropertyKey>
-				: T
-		>
-	>;
-
-	get<
-		T,
-		TData = T extends Paginated<infer U, any> ? U : T,
-		TExclude extends keyof TData = never,
-		TFilter = GetFilterModel<TData>,
-		TFilters extends readonly TypedFilter<TFilter>[] = readonly TypedFilter<TFilter>[]
-	>(
-		input: string | URL,
-		init?: Omit<RequestInit, 'method' | 'body'> & {
-			fetch?: typeof fetch;
-			filters?: TFilters;
-			sort?: Sort[];
-		}
-	): Promise<
-		ApiGetResult<
-			T extends Paginated<infer U, any>
-				? Paginated<U, (ComputeExclusions<TFilter, TFilters> | TExclude) & PropertyKey>
-				: T
-		>
-	>;
-
 	async get<
 		T,
 		TData = T extends Paginated<infer U, any> ? U : T,
@@ -315,11 +283,7 @@ class ApiClient {
 		TFilters extends readonly TypedFilter<TFilter>[] = readonly TypedFilter<TFilter>[]
 	>(
 		input: string | URL,
-		init?: Omit<RequestInit, 'method' | 'body'> & {
-			fetch?: typeof fetch;
-			filters?: TFilters;
-			sort?: Sort[];
-		}
+		options?: FetchOptions
 	): Promise<
 		ApiGetResult<
 			T extends Paginated<infer U, any>
@@ -327,13 +291,13 @@ class ApiClient {
 				: T
 		>
 	> {
-		const result = await this.fetch<T, TData, TExclude, TFilter, TFilters>(input, {
-			...init,
+		const result = await this.fetch<T>(input, {
+			...options,
 			method: 'GET'
 		});
 
 		if (!result.success) {
-			return result;
+			return result as any;
 		}
 
 		if (result.data === undefined) {
@@ -349,77 +313,64 @@ class ApiClient {
 
 		return {
 			success: true,
-			data: result.data as T extends Paginated<infer U, any>
-				? Paginated<U, (ComputeExclusions<TFilter, TFilters> | TExclude) & PropertyKey>
-				: T
+			data: result.data as any
 		};
 	}
 
 	/**
-	 * Download a file (GET) and return the result as a Blob.
-	 * Uses the same filters/sort and optional fetch override as other GET helpers.
-	 */
-	/**
-	 * Download a file (GET) and return the response as a Blob.
-	 * The method always returns a Blob on success (or an error on failure).
+	 * Download a file (GET) and return the response as an ArrayBuffer.
 	 */
 	async download(
 		input: string | URL,
-		init?: Omit<RequestInit, 'method' | 'body'> & { fetch?: typeof fetch }
+		options?: FetchOptions
 	): Promise<ApiGetResult<ArrayBuffer>> {
-		if (!browser && !init?.fetch) {
+		if (!browser && !options?.fetch) {
 			throw new Error(
 				'API client requires a fetch function when used in server context. Pass event.fetch as the third argument.'
 			);
 		}
 
-		const { fetch: fetchFnOverride, ...cleanedInit } = init || {};
+		const { fetch: fetchFnOverride, _isRetry, ...init } = options || {};
 		const actualFetch = fetchFnOverride ?? fetch!;
-
-		let url: string;
-		if (input instanceof Request) {
-			url = this.resolveUrl(input.url);
-		} else {
-			url = this.resolveUrl(input);
-		}
-
-		// No filters/sort for downloads; leave URL unchanged.
+		const url = this.buildUrl(input);
 
 		const requestInit: RequestInit = {
-			...cleanedInit,
-			credentials: cleanedInit.credentials || 'include'
+			...init,
+			method: 'GET',
+			credentials: init.credentials || 'include'
 		};
 
-		const response = await actualFetch(url, { ...requestInit, method: 'GET' });
-
-		if (!response.ok) {
-			// Try parse error body as json and return structured error
-			try {
-				const json = await response.json();
-				const errorData = appErrorSchema.safeParse(json);
-
-				if (errorData.success) {
-					return { success: false, error: errorData.data };
-				}
-			} catch {
-				// ignore JSON parse failures
-			}
-
+		let response: Response;
+		try {
+			response = await actualFetch(url, requestInit);
+		} catch (e) {
 			return {
 				success: false,
 				error: {
 					error_code: 'unknown_error',
-					detail: response.statusText,
-					status_code: response.status
+					detail: e instanceof Error ? e.message : 'Network error',
+					status_code: 0
 				}
 			};
 		}
 
-		// Convert response to a Blob for download. Some server-side fetch
-		// implementations may not implement `response.blob()`; fall back to
-		// `arrayBuffer()` and construct a Blob if available.
-		const arrayBuffer: ArrayBuffer = await response.arrayBuffer();
+		// Handle 401 Unauthorized - attempt token refresh
+		if (response.status === 401 && !_isRetry) {
+			const refreshed = await this.refreshToken(actualFetch);
 
+			if (refreshed) {
+				return this.download(input, {
+					...options,
+					_isRetry: true
+				});
+			}
+		}
+
+		if (!response.ok) {
+			return this.handleErrorResponse(response);
+		}
+
+		const arrayBuffer = await response.arrayBuffer();
 		return { success: true, data: arrayBuffer };
 	}
 
@@ -429,40 +380,25 @@ class ApiClient {
 	async post<T>(
 		input: string | URL,
 		body?: unknown,
-		init?: Omit<RequestInit, 'method' | 'body'> & {
-			fetch?: typeof fetch;
-		}
-	): Promise<ApiCreateResult<T>> {
+		options?: FetchOptions
+	): Promise<ApiCreateResult<T | undefined>> {
 		const isFormData = body instanceof FormData;
 
 		const result = await this.fetch<T>(input, {
-			...init,
+			...options,
 			method: 'POST',
 			headers: {
-				// Only set JSON headers if not sending FormData
 				...(isFormData ? {} : { 'Content-Type': 'application/json' }),
-				...init?.headers
+				...options?.headers
 			},
-			// Send FormData as-is, otherwise stringify the body
-			body: isFormData ? (body as FormData) : body ? JSON.stringify(body) : undefined
+			body
 		});
 
 		if (!result.success) {
-			return result;
+			return result as any;
 		}
 
-		if (result.data === undefined) {
-			return {
-				success: false,
-				error: {
-					error_code: 'unknown_error',
-					detail: 'POST request returned no data',
-					status_code: 500
-				}
-			};
-		}
-
-		return { success: true, data: result.data as T };
+		return { success: true, data: result.data };
 	}
 
 	/**
@@ -471,18 +407,16 @@ class ApiClient {
 	async update(
 		input: string | URL,
 		body?: unknown,
-		init?: Omit<RequestInit, 'method' | 'body'> & {
-			fetch?: typeof fetch;
-		}
+		options?: FetchOptions
 	): Promise<ApiMutationResult> {
 		const result = await this.fetch<void>(input, {
-			...init,
+			...options,
 			method: 'PUT',
 			headers: {
 				'Content-Type': 'application/json',
-				...init?.headers
+				...options?.headers
 			},
-			body: body ? JSON.stringify(body) : undefined
+			body
 		});
 
 		if (result.success) {
@@ -496,12 +430,10 @@ class ApiClient {
 	 */
 	async delete(
 		input: string | URL,
-		init?: Omit<RequestInit, 'method' | 'body'> & {
-			fetch?: typeof fetch;
-		}
+		options?: FetchOptions
 	): Promise<ApiMutationResult> {
 		const result = await this.fetch<void>(input, {
-			...init,
+			...options,
 			method: 'DELETE'
 		});
 

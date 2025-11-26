@@ -115,7 +115,7 @@
 	}
 
 	async function copyLinkToClipboard(token: string) {
-		const link = `${window.location.origin}/dashboard/groups/${groupId}?sharelink=${token}`;
+		const link = `${window.location.origin}/sharelink/${token}`;
 		try {
 			await navigator.clipboard.writeText(link);
 			notification('success', 'Link copied to clipboard');

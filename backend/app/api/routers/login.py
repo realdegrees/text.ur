@@ -1,3 +1,4 @@
+from datetime import UTC, datetime
 from typing import Annotated
 
 import core.config as cfg
@@ -15,8 +16,9 @@ from fastapi import Body, Depends, HTTPException, Request, Response
 from fastapi.responses import RedirectResponse
 from fastapi.security import OAuth2PasswordRequestForm
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
+from models.auth import ShareLinkTokens
 from models.enums import AppErrorCode
-from models.tables import User
+from models.tables import Membership, ShareLink, User
 from sqlmodel import select
 from util.api_router import APIRouter
 
@@ -126,3 +128,74 @@ async def reset_verify(token: str, db: Database, password: str = Body(..., embed
     user.password = hash_password(password)
     db.commit()
     return RedirectResponse(url="/login")
+
+
+@router.post("/anonymous/refresh")
+async def anonymous_refresh(
+    db: Database,
+    response: Response,
+    request: Request,
+) -> Token:
+    """Verify and re-authenticate an anonymous user using their sharelink token from cookies.
+
+    This endpoint is used to re-authenticate anonymous users by checking if their
+    stored sharelink token is still valid.
+    """
+    # Get sharelink token from cookie
+    sharelink_token_data: ShareLinkTokens | None = None
+    try: 
+        sharelink_token_data = ShareLinkTokens.model_validate(request.cookies.get("sharelink_tokens"))
+    except Exception as e:
+        raise AppException(status_code=401, detail="Invalid sharelink token format", error_code=AppErrorCode.NOT_AUTHENTICATED) from e
+        
+    if not sharelink_token_data:
+        raise HTTPException(status_code=401, detail="No sharelink tokens found")
+    
+    sharelink_tokens = sharelink_token_data.groups
+
+    # Find all share links by their token
+    share_links: list[ShareLink] = db.exec(
+        select(ShareLink).where(ShareLink.token.in_(sharelink_tokens.values()))
+    ).all()
+    
+    # Filter out expired share links
+    share_links = [sl for sl in share_links if not sl.expires_at or sl.expires_at >= datetime.now(tz=sl.expires_at.tzinfo)]
+    
+    sharelink_token_data = ShareLinkTokens(
+        user_id=sharelink_token_data.user_id,
+        groups={str(sl.group_id): str(sl.token) for sl in share_links}
+    )
+
+    if not len(share_links):
+        raise HTTPException(status_code=404, detail="No valid sharelink tokens found")
+
+    # Check if user exists
+    user: User | None = db.exec(select(User).where(User.id == sharelink_token_data.user_id)).first()
+
+    # Generate new tokens
+    token = Token(
+        access_token=generate_token(user, "access", scopes=[f"/groups/{share_link.group_id}" for share_link in share_links]),
+        token_type="bearer",
+    )
+
+    # Update cookies
+    response.set_cookie(
+        key="access_token",
+        value=token.access_token,
+        httponly=True,
+        secure=cfg.COOKIE_SECURE,
+        samesite=cfg.COOKIE_SAMESITE,
+        max_age=cfg.JWT_ACCESS_EXPIRATION_MINUTES * 60
+    )
+    
+    # Refresh the max_age of the sharelink token cookie and update valid groups
+    response.set_cookie(
+        key="sharelink_tokens",
+        value=sharelink_token_data.model_dump_json(),
+        httponly=True,
+        secure=cfg.COOKIE_SECURE,
+        samesite=cfg.COOKIE_SAMESITE,
+        max_age=cfg.JWT_REFRESH_EXPIRATION_DAYS * 24 * 60 * 60
+    )
+
+    return token

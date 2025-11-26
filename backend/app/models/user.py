@@ -11,9 +11,10 @@ MIN_PASSWORD_LENGTH = 8
 MAX_PASSWORD_LENGTH = 128
 
 class UserCreate(SQLModel):
+    token: str | None = None
     username: str = Field(max_length=MAX_USERNAME_LENGTH)
-    password: str = Field(min_length=MIN_PASSWORD_LENGTH, max_length=MAX_PASSWORD_LENGTH)
-    email: str = Field(max_length=MAX_EMAIL_LENGTH)
+    password: str | None = Field(default=None, min_length=MIN_PASSWORD_LENGTH, max_length=MAX_PASSWORD_LENGTH)
+    email: str | None = Field(default=None, max_length=MAX_EMAIL_LENGTH)
     first_name: str | None = Field(default=None, max_length=MAX_FIRST_NAME_LENGTH)
     last_name: str | None = Field(default=None, max_length=MAX_LAST_NAME_LENGTH)
 
@@ -23,10 +24,11 @@ class UserRead(BaseModel):
     username: str
     first_name: str | None = None
     last_name: str | None = None
+    is_guest: bool = False
 
 
 class UserPrivate(UserRead):
-    email: str
+    email: str | None = None
 
 
 class UserUpdate(SQLModel):

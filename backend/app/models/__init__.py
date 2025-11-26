@@ -1,7 +1,7 @@
 """Exports all models and schemas that need to be either rebuilt on start OR included in the pydantic2ts scope for frontend model generation"""
 
 from models.app_error import AppError
-from models.auth import GlobalJWTPayload, Token, UserJWTPayload
+from models.auth import GlobalJWTPayload, ShareLinkTokens, Token, UserJWTPayload
 from models.comment import (
     CommentCreate,
     CommentRead,

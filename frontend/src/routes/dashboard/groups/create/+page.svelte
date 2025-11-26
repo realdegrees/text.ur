@@ -46,6 +46,12 @@
 			return;
 		}
 
+		if (!result.data) {
+			notification('error', 'Failed to create group: No data returned');
+			isLoading = false;
+			return;
+		}
+
 		isLoading = false;
 
 		// Hard navigation to ensure fresh page load
