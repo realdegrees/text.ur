@@ -109,6 +109,13 @@
 		selected = option.value;
 	});
 
+	// Sync value to contenteditable div when value changes from outside
+	$effect(() => {
+		if (searchElement && searchElement.textContent !== value) {
+			searchElement.textContent = value;
+		}
+	});
+
 	function onInput() {
 		clearTimeout(debounceTimeout);
 		debouncing = !!effectiveFetchOptions;
@@ -272,8 +279,13 @@
 			<button
 				type="button"
 				class="text-muted flex items-center justify-center transition hover:cursor-pointer hover:text-text"
-				onclick={() => (showPassword = !showPassword)}
+				onclick={() => {
+					showPassword = !showPassword
+					// focus the input
+					searchElement?.focus();
+				}}
 				aria-label={showPassword ? 'Hide password' : 'Show password'}
+				tabindex="-1"
 			>
 				{#if showPassword}
 					<EyeOpen class="size-5" />

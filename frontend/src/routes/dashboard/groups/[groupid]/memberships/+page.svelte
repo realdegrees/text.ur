@@ -11,6 +11,7 @@
 	import PendingIcon from '~icons/material-symbols/pending-outline';
 	import AcceptedIcon from '~icons/material-symbols/check-circle-outline';
 	import AddIcon from '~icons/material-symbols/add-2-rounded';
+	import TimeIcon from '~icons/ic/baseline-access-time';	
 	import { permissionSchema } from '$api/schemas';
 	import LL from '$i18n/i18n-svelte.js';
 	import { api } from '$api/client.js';
@@ -19,7 +20,7 @@
 	import { notification } from '$lib/stores/notificationStore.js';
 	import Dropdown from '$lib/components/dropdown.svelte';
 	import PermissionSelector from '$lib/components/permissionSelector.svelte';
-	import { scale, slide } from 'svelte/transition';
+	import { slide } from 'svelte/transition';
 	import AdvancedInput from '$lib/components/advancedInput.svelte';
 	import { invalidateAll } from '$app/navigation';
 
@@ -168,7 +169,7 @@
 			{#if selected.length > 0}
 				{#if sessionStore.validatePermissions(['remove_members'])}
 					<button
-						class="rounded bg-inset px-1 py-1.5 font-semibold shadow-inner shadow-black/30 transition hover:cursor-pointer hover:bg-red-500/30"
+						class="bg-inset rounded px-1 py-1.5 font-semibold shadow-inner shadow-black/30 transition hover:cursor-pointer hover:bg-red-500/30"
 						onclick={() => selected.forEach(async ({ user: { id } }) => kickMember(id))}
 					>
 						Kick
@@ -187,7 +188,7 @@
 					>
 						{#snippet icon()}
 							<div
-								class="rounded bg-inset px-1 py-1.5 font-semibold shadow-inner shadow-black/30 transition hover:cursor-pointer hover:bg-green-500/30"
+								class="bg-inset rounded px-1 py-1.5 font-semibold shadow-inner shadow-black/30 transition hover:cursor-pointer hover:bg-green-500/30"
 							>
 								Add Permission
 							</div>
@@ -211,7 +212,7 @@
 					>
 						{#snippet icon()}
 							<div
-								class="rounded bg-inset px-1 py-1.5 font-semibold shadow-inner shadow-black/30 transition hover:cursor-pointer hover:bg-orange-500/30"
+								class="bg-inset rounded px-1 py-1.5 font-semibold shadow-inner shadow-black/30 transition hover:cursor-pointer hover:bg-orange-500/30"
 							>
 								Remove Permission
 							</div>
@@ -277,14 +278,14 @@
 </div>
 
 {#snippet permissionItem(perm: Permission)}
-	<p class="p-1 text-left text-text">{$LL.permissions[perm]?.() || perm}</p>
+	<p class="text-text p-1 text-left">{$LL.permissions[perm]?.() || perm}</p>
 {/snippet}
 
 {#snippet usernameSnippet(membership: Omit<MembershipRead, 'group'>)}
-	<div class="flex flex-row items-center text-text">
+	<div class="text-text flex flex-row items-center">
 		<p class="font-medium">{membership.user.username || 'Unknown User'}</p>
 		{#if membership.user.first_name || membership.user.last_name}
-			<p class="ml-1 text-text/70 whitespace-nowrap">
+			<p class="text-text/70 ml-1 whitespace-nowrap">
 				({membership.user.first_name || ''}
 				{membership.user.last_name || ''})
 			</p>
@@ -295,32 +296,33 @@
 {#snippet badgeSnippet(membership: Omit<MembershipRead, 'group'>)}
 	{@const isShareLinkUser = membership.user.is_guest}
 	<div class="flex flex-wrap gap-1">
-		<span
-			class="flex w-fit flex-row rounded-full px-2 py-1 text-xs font-semibold uppercase"
-			class:bg-blue-100={membership.accepted && !membership.is_owner}
-			class:text-blue-800={membership.accepted && !membership.is_owner}
-			class:bg-yellow-100={!membership.accepted}
-			class:text-yellow-800={!membership.accepted}
-			class:bg-green-100={membership.is_owner}
-			class:text-green-800={membership.is_owner}
-		>
-			{#if membership.is_owner}
-				<OwnerIcon class="mr-1 inline h-4 w-4 align-text-bottom" />
-				{$LL.group.memberships.owner()}
-			{:else if membership.accepted}
-				<AcceptedIcon class="mr-1 inline h-4 w-4 align-text-bottom" />
-				{$LL.group.memberships.accepted()}
-			{:else}
-				<PendingIcon class="mr-1 inline h-4 w-4 align-text-bottom" />
-				{$LL.group.memberships.invited()}
-			{/if}
-		</span>
 		{#if isShareLinkUser}
 			<span
 				class="flex w-fit flex-row rounded-full bg-purple-100 px-2 py-1 text-xs font-semibold uppercase text-purple-800"
 			>
-				<AddIcon class="mr-1 inline h-4 w-4 align-text-bottom" />
+				<TimeIcon class="mr-1 inline h-4 w-4 align-text-bottom" />
 				Guest
+			</span>
+		{:else}
+			<span
+				class="flex w-fit flex-row rounded-full px-2 py-1 text-xs font-semibold uppercase"
+				class:bg-blue-100={membership.accepted && !membership.is_owner}
+				class:text-blue-800={membership.accepted && !membership.is_owner}
+				class:bg-yellow-100={!membership.accepted}
+				class:text-yellow-800={!membership.accepted}
+				class:bg-green-100={membership.is_owner}
+				class:text-green-800={membership.is_owner}
+			>
+				{#if membership.is_owner}
+					<OwnerIcon class="mr-1 inline h-4 w-4 align-text-bottom" />
+					{$LL.group.memberships.owner()}
+				{:else if membership.accepted}
+					<AcceptedIcon class="mr-1 inline h-4 w-4 align-text-bottom" />
+					{$LL.group.memberships.accepted()}
+				{:else}
+					<PendingIcon class="mr-1 inline h-4 w-4 align-text-bottom" />
+					{$LL.group.memberships.invited()}
+				{/if}
 			</span>
 		{/if}
 	</div>
@@ -328,18 +330,15 @@
 
 {#snippet permissionsSnippet(membership: Omit<MembershipRead, 'group'>)}
 	{#key membership.permissions}
-		<div in:scale out:scale>
-			<PermissionSelector
-				selectedPermissions={membership.permissions}
-				onAdd={(perm) => addPermissionToMembership(membership, perm)}
-				onRemove={(perm) => removePermissionFromMembership(membership, perm)}
-				showRemove={sessionStore.validatePermissions(['manage_permissions'])}
-				allowSelection={sessionStore.validatePermissions({
-					or: ['manage_permissions', 'remove_members']
-				})}
-				compact
-			/>
-		</div>
+		<PermissionSelector
+			selectedPermissions={membership.permissions}
+			onAdd={(perm) => addPermissionToMembership(membership, perm)}
+			onRemove={(perm) => removePermissionFromMembership(membership, perm)}
+			showRemove={sessionStore.validatePermissions(['manage_permissions'])}
+			allowSelection={sessionStore.validatePermissions({
+				or: ['manage_permissions', 'remove_members']
+			})}
+		/>
 	{/key}
 {/snippet}
 
@@ -379,7 +378,7 @@
 					}
 				}
 			}}
-			class="h-full w-fit rounded rounded-r bg-red-500/10 p-1 text-text shadow-black/20 transition-all hover:cursor-pointer hover:bg-red-500/30 hover:shadow-inner"
+			class="text-text h-full w-fit rounded rounded-r bg-red-500/10 p-1 shadow-black/20 transition-all hover:cursor-pointer hover:bg-red-500/30 hover:shadow-inner"
 			aria-label="Kick {membership.user.username} from the group"
 		>
 			{useLeaveButton ? $LL.memberships.leave() : $LL.memberships.kick()}

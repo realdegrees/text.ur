@@ -32,7 +32,7 @@
 
 		<div class="col-span-1 col-start-3 mr-3 flex flex-row-reverse items-center justify-self-end">
 			{#if user?.id}
-				<a href="/users/{user.username}" class="flex w-full flex-row items-center">
+				<a href="/users/{user.id}" class="flex w-full flex-row items-center">
 					<ProfileImageFallback class="h-9 w-9" />
 					<!--TODO insert user profile image if that feature is added-->
 					<p class="ml-1 font-semibold">

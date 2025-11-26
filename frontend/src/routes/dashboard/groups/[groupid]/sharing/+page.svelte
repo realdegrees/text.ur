@@ -1,5 +1,5 @@
 <script lang="ts">
-	import ShareLinksManager from '$lib/components/shareLinksManager.svelte';
+	import ShareLinksManager from '$lib/components/sharelinks/shareLinksManager.svelte';
 
 	let { data } = $props();
 	let group = $derived(data.membership.group);

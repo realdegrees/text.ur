@@ -60,7 +60,7 @@
 		const endY = firstHighlightRect.top + firstHighlightRect.height / 2 - parentRect.top;
 
 		// Start point: left edge of badge, near the top (where annotation quote is)
-		const startX = badgeRect.left - parentRect.left;
+		const startX = badgeRect.left - parentRect.left - 2;
 		const startY = badgeRect.top + 40 - parentRect.top; // ~40px from top is where quote area is
 
 		lineCoords = { startX, startY, endX, endY };
@@ -121,12 +121,10 @@
 				x2={lineCoords.endX}
 				y2={lineCoords.endY}
 				stroke="currentColor"
-				stroke-width="2"
-				stroke-dasharray="4 2"
-				class="text-primary/60"
+				stroke-width="3"
+				stroke-dasharray="6 2"
+				class="text-primary/80"
 			/>
-			<!-- Start dot (at badge) -->
-			<circle cx={lineCoords.startX} cy={lineCoords.startY} r="4" class="fill-primary/80" />
 			<!-- End dot (at highlight) -->
 			<circle cx={lineCoords.endX} cy={lineCoords.endY} r="4" class="fill-primary/80" />
 		</svg>

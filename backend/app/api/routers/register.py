@@ -1,6 +1,7 @@
 from datetime import datetime
 
 import core.config as cfg
+from api.dependencies.authentication import Authenticate
 from api.dependencies.database import Database
 from api.dependencies.mail import Mail
 from core.app_exception import AppException
@@ -26,6 +27,66 @@ router = APIRouter(
 )
 
 
+def _upgrade_guest_account(
+    db: Database,
+    mail: Mail,
+    user: User,
+    user_create: UserCreate
+) -> None:
+    """Upgrade a guest account to a permanent account with email verification."""
+    if not user.is_guest:
+        raise AppException(
+            status_code=400,
+            detail="Account is already a permanent account",
+            error_code=AppErrorCode.INVALID_INPUT
+        )
+
+    # Check if email is already taken
+    existing_user = db.exec(
+        select(User).where(User.email == user_create.email)
+    ).first()
+
+    if existing_user and existing_user.id != user.id:
+        raise AppException(
+            status_code=400,
+            detail="Email already registered",
+            error_code=AppErrorCode.EMAIL_TAKEN
+        )
+
+    # Update user with email and password
+    user.email = user_create.email
+    user.password = hash_password(user_create.password)
+    user.verified = False  # Require email verification
+
+    # Update optional fields if provided
+    if user_create.first_name is not None:
+        user.first_name = user_create.first_name
+    if user_create.last_name is not None:
+        user.last_name = user_create.last_name
+
+    db.commit()
+    db.refresh(user)
+
+    # Send verification email
+    try:
+        verification_link = mail.generate_verification_link(
+            user.email, router, salt="email-verification", confirm_route="verify"
+        )
+        mail.send_email(
+            user.email,
+            subject="Email Verification - Upgrade Your Account",
+            template="register.jinja",
+            template_vars={
+                "verification_link": verification_link,
+                "expiry_minutes": cfg.EMAIL_PRESIGN_EXPIRY // 60
+            }
+        )
+    except Exception as e:
+        # Rollback the changes if email fails
+        db.rollback()
+        raise e
+
+
 def _register_regular_user(
     db: Database,
     mail: Mail,
@@ -39,7 +100,7 @@ def _register_regular_user(
     ).first()
 
     if existing_user:
-        if not existing_user.verified:
+        if not existing_user.verified and not existing_user.is_guest:
             db.delete(existing_user)
             db.commit()
         elif existing_user.username == user_create.username:
@@ -190,16 +251,24 @@ async def register(
     db: Database,
     mail: Mail,
     response: Response,
-    user_create: UserCreate
+    user_create: UserCreate,
+    authenticated_user: User | None = Authenticate(strict=False)
 ) -> Token | None:
-    """Register a new user or anonymous user.
+    """Register a new user, anonymous user, or upgrade a guest account.
 
-    Supports two registration modes:
+    Supports three registration modes:
     1. Regular registration: Requires email and password, sends verification email
     2. Anonymous registration: Requires sharelink token, auto-verifies and logs in
+    3. Guest account upgrade: Authenticated guest user provides email+password to upgrade
 
     If both email and token are provided, email takes precedence (regular registration).
+    If user is authenticated and is_guest=True with email+password, upgrade the account.
     """
+    # Check if this is a guest account upgrade
+    if authenticated_user and authenticated_user.is_guest and user_create.email and user_create.password:
+        _upgrade_guest_account(db, mail, authenticated_user, user_create)
+        return None
+
     # Validate that at least one of email or token is provided
     if not user_create.email and not user_create.token:
         raise HTTPException(
@@ -239,6 +308,11 @@ async def verify(token: str, db: Database) -> RedirectResponse:
         raise HTTPException(status_code=404, detail="User not found")
 
     user.verified = True
+
+    # If this is a guest user upgrading their account, set is_guest to False
+    if user.is_guest:
+        user.is_guest = False
+
     db.commit()
 
     # Generate tokens

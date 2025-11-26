@@ -156,8 +156,7 @@ const createDocumentStore = () => {
 		// When editing ends, check if we have a pending view mode refresh
 		if (commentId === null && pendingViewModeRefresh) {
 			pendingViewModeRefresh = false;
-			// Dynamically import to avoid circular dependency
-			import('$app/navigation').then(({ invalidateAll }) => invalidateAll());
+
 		}
 	};
 

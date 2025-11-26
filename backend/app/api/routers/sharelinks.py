@@ -130,7 +130,7 @@ async def use_sharelink_token(
     membership = Membership(
         user_id=user.id,
         group_id=share_link.group_id,
-        permissions=share_link.permissions,
+        permissions=set(share_link.permissions) | set(share_link.group.default_permissions),
         is_owner=False,
         accepted=True  # Auto-accept for sharelink memberships
     )

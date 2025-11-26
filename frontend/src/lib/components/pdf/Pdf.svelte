@@ -7,7 +7,6 @@
 	import CommentSidebar from './CommentSidebar.svelte';
 	import PdfControls from './PdfControls.svelte';
 	import UserCursors from './UserCursors.svelte';
-	import { documentStore } from '$lib/runes/document.svelte.js';
 	import { PDF_ZOOM_STEP, PDF_MIN_SCALE } from './constants';
 
 	interface Props {
@@ -149,31 +148,6 @@
 	const prevPage = () => pdfSlick?.gotoPage(Math.max(pageNumber - 1, 1));
 	const nextPage = () => pdfSlick?.gotoPage(Math.min(pageNumber + 1, numPages));
 
-	// Handle clicks outside of comments to unpin
-	const handleContainerClick = (e: MouseEvent) => {
-		const target = e.target as HTMLElement;
-		// Check if click was on a comment badge, highlight, or inside comment card
-		const isCommentRelated =
-			target.closest('[data-comment-badge]') ||
-			target.closest('.annotation-highlight') ||
-			target.closest('.comment-card');
-
-		if (!isCommentRelated && documentStore.pinnedComment) {
-			documentStore.setPinned(null);
-			documentStore.setCommentCardActive(false);
-			documentStore.setSelected(null);
-		}
-	};
-
-	// Handle Escape key to unpin
-	const handleContainerKeydown = (e: KeyboardEvent) => {
-		if (e.key === 'Escape' && documentStore.pinnedComment) {
-			documentStore.setPinned(null);
-			documentStore.setCommentCardActive(false);
-			documentStore.setSelected(null);
-		}
-	};
-
 	$effect(() => {
 		if (!pdfAreaWrapper?.parentElement) return;
 		const parent = pdfAreaWrapper.parentElement;
@@ -189,12 +163,7 @@
 	onDestroy(() => unsubscribe?.());
 </script>
 
-<!-- svelte-ignore a11y_no_static_element_interactions -->
-<div
-	class="pdf-viewer-container flex h-full w-full bg-background"
-	onclick={handleContainerClick}
-	onkeydown={handleContainerKeydown}
->
+<div class="pdf-viewer-container flex h-full w-full bg-background">
 	<PdfControls
 		{scale}
 		minScale={PDF_MIN_SCALE}

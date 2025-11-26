@@ -13,7 +13,6 @@
 		disabled = false,
 		showRemove = true,
 		allowSelection = true,
-		compact = false
 	} = $props<{
 		selectedPermissions: Permission[];
 		onAdd: (permission: Permission) => void;
@@ -21,7 +20,6 @@
 		disabled?: boolean;
 		showRemove?: boolean;
 		allowSelection?: boolean;
-		compact?: boolean;
 	}>();
 
 	const availablePermissions = permissionSchema.options.map((p) => p.value);
@@ -30,16 +28,9 @@
 		availablePermissions.filter((p) => !selectedPermissions.includes(p))
 	);
 
-	const containerClasses = $derived(
-		`flex flex-wrap items-center gap-1.5 ${
-			compact
-				? 'bg-background'
-				: 'rounded border border-text/20 bg-text/5 p-3'
-		}`
-	);
 </script>
 
-<div class={containerClasses}>
+<div class="flex flex-wrap items-center gap-1.5">
 	{#each selectedPermissions as perm (perm)}
 		<Badge
 			item={perm}

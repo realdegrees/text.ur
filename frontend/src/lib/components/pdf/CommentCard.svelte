@@ -4,10 +4,11 @@
 	import { parseAnnotation } from '$types/pdf';
 	import CommentCard from './CommentCard.svelte';
 	import CommentVisibility from './CommentVisibility.svelte';
-	import DeleteConfirmation from './DeleteConfirmation.svelte';
+	import ConfirmButton from '$lib/components/ConfirmButton.svelte';
 	import MarkdownTextEditor from './MarkdownTextEditor.svelte';
 	import ReplyIcon from '~icons/material-symbols/reply';
 	import EditIcon from '~icons/material-symbols/edit-outline';
+	import DeleteIcon from '~icons/material-symbols/delete-outline';
 	import CheckIcon from '~icons/material-symbols/check';
 	import CloseIcon from '~icons/material-symbols/close';
 	import ExpandIcon from '~icons/material-symbols/expand-more';
@@ -58,9 +59,11 @@
 	let showReplyInput = $state(false);
 	let replyContent = $state('');
 	let isSubmitting = $state(false);
-	let editContent = $state('');
+	let editContent = $derived(activeComment?.content || '');
 	let isLoadingReplies = $state(false);
-	let showDeleteConfirm = $state(false);
+	let isPinned = $derived.by(() => {
+		return documentStore.pinnedComment?.id === activeComment?.id;
+	});
 
 	let isEditing = $derived(activeComment?.isEditing ?? false);
 	let wasEdited = $derived(
@@ -86,17 +89,10 @@
 		return parseAnnotation(activeComment.annotation)?.text || null;
 	});
 
-	// Effects
-	$effect(() => {
-		if (isEditing) editContent = activeComment?.content || '';
-		else editContent = '';
-	});
-
 	$effect(() => {
 		void activeComment?.id;
 		showReplyInput = false;
 		replyContent = '';
-		showDeleteConfirm = false;
 	});
 
 	// Sync showReplyInput with store for auto-close prevention
@@ -170,7 +166,6 @@
 	const handleDeleteConfirm = async () => {
 		if (isSubmitting) return;
 		isSubmitting = true;
-		showDeleteConfirm = false;
 		try {
 			await documentStore.deleteComment(activeComment.id);
 		} finally {
@@ -211,7 +206,7 @@
 <!-- Wrapper: card for top-level, border-left for nested -->
 <div
 	class={isTopLevel
-		? 'comment-card w-full rounded-lg border border-text/10 bg-background shadow-lg shadow-black/20'
+		? `comment-card ring-primary/30 bg-background w-full rounded-lg shadow-lg shadow-black/20 ring-0 transition-all ${isPinned ? 'ring-3' : ''}`
 		: `border-l-2 ${borderColor} pl-2.5`}
 	role={isTopLevel ? 'button' : undefined}
 	onclick={isTopLevel ? handleCardActivate : undefined}
@@ -220,7 +215,7 @@
 	<!-- Header -->
 	{#if isTopLevel}
 		{#if hasMultiple && comments}
-			<div class="flex gap-1 border-b border-text/10 px-2 pt-2">
+			<div class="border-text/10 flex gap-1 border-b px-2 pt-2">
 				{#each comments as c, idx (c.id)}
 					<button
 						class="rounded-t px-2 py-1.5 text-xs font-medium transition-colors {activeIndex === idx
@@ -232,8 +227,8 @@
 				{/each}
 			</div>
 		{:else}
-			<div class="border-b border-text/10 px-3 py-2">
-				<span class="text-sm font-semibold text-text"
+			<div class="border-text/10 border-b px-3 py-2">
+				<span class="text-text text-sm font-semibold"
 					>{activeComment.user?.username ?? 'Anonymous'}</span
 				>
 			</div>
@@ -246,10 +241,10 @@
 		{#if !isTopLevel}
 			<div class="flex items-center justify-between">
 				<div class="flex items-center gap-2">
-					<span class="text-xs font-medium text-text/70"
+					<span class="text-text/70 text-xs font-medium"
 						>{activeComment.user?.username ?? 'Anonymous'}</span
 					>
-					<span class="text-xs text-text/40">{formatDate(activeComment.created_at)}</span>
+					<span class="text-text/40 text-xs">{formatDate(activeComment.created_at)}</span>
 					{#if isAuthor}
 						<CommentVisibility
 							commentId={activeComment.id}
@@ -262,7 +257,7 @@
 					<div class="flex items-center gap-1">
 						{#if !isEditing}
 							<button
-								class="rounded p-0.5 text-text/40 transition-colors hover:bg-text/10 hover:text-text/70"
+								class="text-text/40 hover:bg-text/10 hover:text-text/70 rounded p-0.5 transition-colors"
 								onclick={(e) => {
 									e.stopPropagation();
 									documentStore.setEditing(activeComment.id);
@@ -272,14 +267,37 @@
 								<EditIcon class="h-3 w-3" />
 							</button>
 						{/if}
-						<DeleteConfirmation
-							isOpen={showDeleteConfirm}
-							disabled={isSubmitting}
-							size="sm"
+						<ConfirmButton
 							onConfirm={handleDeleteConfirm}
-							onOpen={() => (showDeleteConfirm = true)}
-							onClose={() => (showDeleteConfirm = false)}
-						/>
+							disabled={isSubmitting}
+							slideoutDirection="left"
+						>
+							{#snippet button(isOpen)}
+								{#if !isOpen}
+									<div
+										class="text-text/40 hover:bg-text/10 hover:text-text/70 rounded p-0.5 transition-colors"
+										title="Delete"
+									>
+										<DeleteIcon class={sizes.icon} />
+									</div>
+								{:else}
+									<div>
+										<div
+											class="text-text/40 hover:bg-text/10 hover:text-text/70 rounded p-0.5 transition-colors"
+											title="Delete"
+										>
+											<CheckIcon class={sizes.icon} />
+										</div>
+									</div>
+								{/if}
+							{/snippet}
+
+							{#snippet slideout()}
+								<div class="flex items-center gap-1 rounded bg-red-500/10 px-2 py-0.5">
+									<span class="text-xs text-red-400">Delete?</span>
+								</div>
+							{/snippet}
+						</ConfirmButton>
 					</div>
 				{/if}
 			</div>
@@ -287,15 +305,15 @@
 
 		<!-- Annotation quote (top-level only) -->
 		{#if annotationText}
-			<div class="mb-3 border-l-2 border-primary/50 bg-primary/5 py-1.5 pr-2 pl-2.5">
-				<p class="line-clamp-2 text-xs text-text/60 italic">"{annotationText}"</p>
+			<div class="border-primary/50 bg-primary/5 mb-3 border-l-2 py-1.5 pl-2.5 pr-2">
+				<p class="text-text/60 line-clamp-2 text-xs italic">"{annotationText}"</p>
 			</div>
 		{/if}
 
 		<!-- Top-level meta row (date + controls) -->
 		{#if isTopLevel}
 			<div class="mb-2 flex items-center justify-between">
-				<div class="flex items-center gap-2 text-xs text-text/40">
+				<div class="text-text/40 flex items-center gap-2 text-xs">
 					<span>{formatDate(activeComment.created_at)}</span>
 					{#if wasEdited}<span
 							class="italic"
@@ -313,7 +331,7 @@
 					<div class="flex items-center gap-1">
 						{#if !isEditing && isAuthor}
 							<button
-								class="rounded p-1 text-text/40 transition-colors hover:bg-text/10 hover:text-text/70"
+								class="text-text/40 hover:bg-text/10 hover:text-text/70 rounded p-1 transition-colors"
 								onclick={(e) => {
 									e.stopPropagation();
 									documentStore.setEditing(activeComment.id);
@@ -324,13 +342,35 @@
 							</button>
 						{/if}
 						{#if canDeleteComment}
-							<DeleteConfirmation
-								isOpen={showDeleteConfirm}
-								disabled={isSubmitting}
+							<ConfirmButton
 								onConfirm={handleDeleteConfirm}
-								onOpen={() => (showDeleteConfirm = true)}
-								onClose={() => (showDeleteConfirm = false)}
-							/>
+								disabled={isSubmitting}
+								slideoutDirection="left"
+							>
+								{#snippet button(isOpen)}
+									{#if !isOpen}
+										<div
+											class="text-text/40 hover:bg-text/10 hover:text-text/70 rounded-r p-0.5 transition-colors"
+											title="Delete"
+										>
+											<DeleteIcon class={sizes.icon} />
+										</div>
+									{:else}
+										<div
+											class="text-text/40 hover:text-text/70 rounded-r bg-red-500/30 p-0.5 transition-colors hover:bg-red-500/60"
+											title="Delete"
+										>
+											<CheckIcon class={sizes.icon} />
+										</div>
+									{/if}
+								{/snippet}
+
+								{#snippet slideout()}
+									<div class="flex items-center gap-1 rounded-l bg-red-500/10 px-2">
+										<span class="text-xs text-red-400">Delete?</span>
+									</div>
+								{/snippet}
+							</ConfirmButton>
 						{/if}
 					</div>
 				{/if}
@@ -351,7 +391,7 @@
 				/>
 				<div class="{sizes.mt} flex justify-end {sizes.gap}">
 					<button
-						class="flex items-center gap-1 rounded {sizes.buttonPx} text-xs text-text/50 transition-colors hover:bg-text/10 hover:text-text/70"
+						class="flex items-center gap-1 rounded {sizes.buttonPx} text-text/50 hover:bg-text/10 hover:text-text/70 text-xs transition-colors"
 						onclick={(e) => {
 							e.stopPropagation();
 							documentStore.setEditing(null);
@@ -361,7 +401,7 @@
 						<CloseIcon class={sizes.icon} /> Cancel
 					</button>
 					<button
-						class="flex items-center gap-1 rounded bg-primary/20 {sizes.buttonPx} text-xs font-medium text-primary transition-colors hover:bg-primary/30 disabled:opacity-50"
+						class="bg-primary/20 flex items-center gap-1 rounded {sizes.buttonPx} text-primary hover:bg-primary/30 text-xs font-medium transition-colors disabled:opacity-50"
 						onclick={(e) => {
 							e.stopPropagation();
 							handleEdit();
@@ -378,7 +418,7 @@
 				{activeComment.content}
 			</p>
 		{:else if isTopLevel}
-			<p class="mb-3 text-sm text-text/40 italic">No comment text</p>
+			<p class="text-text/40 mb-3 text-sm italic">No comment text</p>
 		{/if}
 
 		<!-- Reply input -->
@@ -395,7 +435,7 @@
 				/>
 				<div class="{sizes.mt} flex justify-end {sizes.gap}">
 					<button
-						class="rounded {sizes.buttonPx} text-xs text-text/50 transition-colors hover:bg-text/10 hover:text-text/70"
+						class="rounded {sizes.buttonPx} text-text/50 hover:bg-text/10 hover:text-text/70 text-xs transition-colors"
 						onclick={(e) => {
 							e.stopPropagation();
 							showReplyInput = false;
@@ -403,7 +443,7 @@
 						}}>Cancel</button
 					>
 					<button
-						class="rounded bg-primary/20 {sizes.buttonPx} text-xs font-medium text-primary transition-colors hover:bg-primary/30 disabled:opacity-50"
+						class="bg-primary/20 rounded {sizes.buttonPx} text-primary hover:bg-primary/30 text-xs font-medium transition-colors disabled:opacity-50"
 						onclick={(e) => {
 							e.stopPropagation();
 							handleReply();
@@ -431,7 +471,7 @@
 		<!-- Load replies button -->
 		{#if hasUnloadedReplies}
 			<button
-				class="mt-1.5 flex items-center {sizes.gap} text-xs text-text/60 transition-colors hover:text-text/70"
+				class="mt-1.5 flex items-center {sizes.gap} text-text/60 hover:text-text/70 text-xs transition-colors"
 				onclick={(e) => {
 					e.stopPropagation();
 					handleLoadReplies();
@@ -447,12 +487,12 @@
 
 		<!-- Replies -->
 		{#if hasReplies}
-			<div class={isTopLevel ? 'border-t border-text/10 pt-2' : 'mt-2'}>
+			<div class={isTopLevel ? 'border-text/10 border-t pt-2' : 'mt-2'}>
 				<button
 					class="{isTopLevel
 						? 'mb-2 w-full'
 						: 'mb-1.5'} flex items-center gap-0.5 text-xs {isTopLevel
-						? 'font-medium text-text/50 hover:text-text/70'
+						? 'text-text/50 hover:text-text/70 font-medium'
 						: 'text-text/40 hover:text-text/60'} transition-colors"
 					onclick={(e) => {
 						e.stopPropagation();

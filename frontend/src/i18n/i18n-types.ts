@@ -352,6 +352,152 @@ type RootTranslation = {
 	 * I​n​v​i​t​a​t​i​o​n​s
 	 */
 	invitations: string
+	/**
+	 * C​o​n​t​i​n​u​e
+	 */
+	'continue': string
+	sharelink: {
+		/**
+		 * J​o​i​n​ ​G​r​o​u​p
+		 */
+		title: string
+		/**
+		 * Y​o​u​'​v​e​ ​b​e​e​n​ ​i​n​v​i​t​e​d​ ​t​o​ ​j​o​i​n​ ​a​ ​g​r​o​u​p​.​ ​E​n​t​e​r​ ​y​o​u​r​ ​d​e​t​a​i​l​s​ ​t​o​ ​c​o​n​t​i​n​u​e​ ​a​s​ ​a​ ​g​u​e​s​t​.
+		 */
+		description: string
+		/**
+		 * A​l​r​e​a​d​y​ ​h​a​v​e​ ​a​n​ ​a​c​c​o​u​n​t​?​ ​L​o​g​ ​i​n
+		 */
+		alreadyHaveAccount: string
+		errors: {
+			/**
+			 * P​l​e​a​s​e​ ​e​n​t​e​r​ ​a​ ​u​s​e​r​n​a​m​e
+			 */
+			usernameRequired: string
+			/**
+			 * F​a​i​l​e​d​ ​t​o​ ​r​e​g​i​s​t​e​r​.​ ​P​l​e​a​s​e​ ​t​r​y​ ​a​g​a​i​n​.
+			 */
+			registerFailed: string
+		}
+	}
+	userSettings: {
+		/**
+		 * A​c​c​o​u​n​t​ ​S​e​t​t​i​n​g​s
+		 */
+		title: string
+		guestWarning: {
+			/**
+			 * G​u​e​s​t​ ​A​c​c​o​u​n​t​ ​W​a​r​n​i​n​g
+			 */
+			title: string
+			/**
+			 * Y​o​u​r​ ​a​c​c​o​u​n​t​ ​i​s​ ​t​e​m​p​o​r​a​r​y​ ​a​n​d​ ​b​o​u​n​d​ ​t​o​ ​t​h​i​s​ ​b​r​o​w​s​e​r​.​ ​I​f​ ​y​o​u​ ​c​l​e​a​r​ ​y​o​u​r​ ​c​o​o​k​i​e​s​ ​o​r​ ​u​s​e​ ​a​ ​d​i​f​f​e​r​e​n​t​ ​d​e​v​i​c​e​,​ ​y​o​u​ ​w​i​l​l​ ​l​o​s​e​ ​a​c​c​e​s​s​ ​t​o​ ​t​h​i​s​ ​a​c​c​o​u​n​t​ ​p​e​r​m​a​n​e​n​t​l​y​.
+			 */
+			description: string
+			/**
+			 * U​p​g​r​a​d​e​ ​t​o​ ​P​e​r​m​a​n​e​n​t​ ​A​c​c​o​u​n​t​ ​→
+			 */
+			upgradeButton: string
+			/**
+			 * C​a​n​c​e​l​ ​U​p​g​r​a​d​e
+			 */
+			cancelButton: string
+		}
+		upgradeAccount: {
+			/**
+			 * U​p​g​r​a​d​e​ ​A​c​c​o​u​n​t
+			 */
+			title: string
+			/**
+			 * L​i​n​k​ ​y​o​u​r​ ​g​u​e​s​t​ ​a​c​c​o​u​n​t​ ​t​o​ ​a​n​ ​e​m​a​i​l​ ​a​d​d​r​e​s​s​ ​t​o​ ​m​a​k​e​ ​i​t​ ​p​e​r​m​a​n​e​n​t​.​ ​Y​o​u​'​l​l​ ​n​e​e​d​ ​t​o​ ​v​e​r​i​f​y​ ​y​o​u​r​ ​e​m​a​i​l​ ​b​e​f​o​r​e​ ​t​h​e​ ​u​p​g​r​a​d​e​ ​i​s​ ​c​o​m​p​l​e​t​e​.
+			 */
+			description: string
+			/**
+			 * E​m​a​i​l​ ​A​d​d​r​e​s​s
+			 */
+			emailLabel: string
+			/**
+			 * P​a​s​s​w​o​r​d
+			 */
+			passwordLabel: string
+			/**
+			 * C​o​n​f​i​r​m​ ​P​a​s​s​w​o​r​d
+			 */
+			confirmPasswordLabel: string
+			/**
+			 * U​p​g​r​a​d​e​ ​A​c​c​o​u​n​t
+			 */
+			submitButton: string
+			/**
+			 * A​c​c​o​u​n​t​ ​u​p​g​r​a​d​e​d​!​ ​P​l​e​a​s​e​ ​c​h​e​c​k​ ​y​o​u​r​ ​e​m​a​i​l​ ​t​o​ ​v​e​r​i​f​y​ ​y​o​u​r​ ​a​c​c​o​u​n​t​.
+			 */
+			success: string
+			errors: {
+				/**
+				 * E​m​a​i​l​ ​a​n​d​ ​p​a​s​s​w​o​r​d​ ​a​r​e​ ​r​e​q​u​i​r​e​d
+				 */
+				required: string
+				/**
+				 * P​a​s​s​w​o​r​d​s​ ​d​o​ ​n​o​t​ ​m​a​t​c​h
+				 */
+				passwordMismatch: string
+			}
+		}
+		profile: {
+			/**
+			 * P​r​o​f​i​l​e​ ​I​n​f​o​r​m​a​t​i​o​n
+			 */
+			title: string
+			/**
+			 * U​s​e​r​n​a​m​e
+			 */
+			usernameLabel: string
+			/**
+			 * F​i​r​s​t​ ​N​a​m​e
+			 */
+			firstNameLabel: string
+			/**
+			 * L​a​s​t​ ​N​a​m​e
+			 */
+			lastNameLabel: string
+			/**
+			 * E​m​a​i​l
+			 */
+			emailLabel: string
+			/**
+			 * S​a​v​e​ ​C​h​a​n​g​e​s
+			 */
+			saveButton: string
+			/**
+			 * P​r​o​f​i​l​e​ ​u​p​d​a​t​e​d​ ​s​u​c​c​e​s​s​f​u​l​l​y
+			 */
+			success: string
+		}
+		changePassword: {
+			/**
+			 * C​h​a​n​g​e​ ​P​a​s​s​w​o​r​d
+			 */
+			title: string
+			/**
+			 * C​u​r​r​e​n​t​ ​P​a​s​s​w​o​r​d
+			 */
+			currentPasswordLabel: string
+			/**
+			 * N​e​w​ ​P​a​s​s​w​o​r​d
+			 */
+			newPasswordLabel: string
+			/**
+			 * C​o​n​f​i​r​m​ ​N​e​w​ ​P​a​s​s​w​o​r​d
+			 */
+			confirmPasswordLabel: string
+			errors: {
+				/**
+				 * N​e​w​ ​p​a​s​s​w​o​r​d​s​ ​d​o​ ​n​o​t​ ​m​a​t​c​h
+				 */
+				mismatch: string
+			}
+		}
+	}
 }
 
 export type TranslationFunctions = {
@@ -693,6 +839,152 @@ export type TranslationFunctions = {
 	 * Invitations
 	 */
 	invitations: () => LocalizedString
+	/**
+	 * Continue
+	 */
+	'continue': () => LocalizedString
+	sharelink: {
+		/**
+		 * Join Group
+		 */
+		title: () => LocalizedString
+		/**
+		 * You've been invited to join a group. Enter your details to continue as a guest.
+		 */
+		description: () => LocalizedString
+		/**
+		 * Already have an account? Log in
+		 */
+		alreadyHaveAccount: () => LocalizedString
+		errors: {
+			/**
+			 * Please enter a username
+			 */
+			usernameRequired: () => LocalizedString
+			/**
+			 * Failed to register. Please try again.
+			 */
+			registerFailed: () => LocalizedString
+		}
+	}
+	userSettings: {
+		/**
+		 * Account Settings
+		 */
+		title: () => LocalizedString
+		guestWarning: {
+			/**
+			 * Guest Account Warning
+			 */
+			title: () => LocalizedString
+			/**
+			 * Your account is temporary and bound to this browser. If you clear your cookies or use a different device, you will lose access to this account permanently.
+			 */
+			description: () => LocalizedString
+			/**
+			 * Upgrade to Permanent Account →
+			 */
+			upgradeButton: () => LocalizedString
+			/**
+			 * Cancel Upgrade
+			 */
+			cancelButton: () => LocalizedString
+		}
+		upgradeAccount: {
+			/**
+			 * Upgrade Account
+			 */
+			title: () => LocalizedString
+			/**
+			 * Link your guest account to an email address to make it permanent. You'll need to verify your email before the upgrade is complete.
+			 */
+			description: () => LocalizedString
+			/**
+			 * Email Address
+			 */
+			emailLabel: () => LocalizedString
+			/**
+			 * Password
+			 */
+			passwordLabel: () => LocalizedString
+			/**
+			 * Confirm Password
+			 */
+			confirmPasswordLabel: () => LocalizedString
+			/**
+			 * Upgrade Account
+			 */
+			submitButton: () => LocalizedString
+			/**
+			 * Account upgraded! Please check your email to verify your account.
+			 */
+			success: () => LocalizedString
+			errors: {
+				/**
+				 * Email and password are required
+				 */
+				required: () => LocalizedString
+				/**
+				 * Passwords do not match
+				 */
+				passwordMismatch: () => LocalizedString
+			}
+		}
+		profile: {
+			/**
+			 * Profile Information
+			 */
+			title: () => LocalizedString
+			/**
+			 * Username
+			 */
+			usernameLabel: () => LocalizedString
+			/**
+			 * First Name
+			 */
+			firstNameLabel: () => LocalizedString
+			/**
+			 * Last Name
+			 */
+			lastNameLabel: () => LocalizedString
+			/**
+			 * Email
+			 */
+			emailLabel: () => LocalizedString
+			/**
+			 * Save Changes
+			 */
+			saveButton: () => LocalizedString
+			/**
+			 * Profile updated successfully
+			 */
+			success: () => LocalizedString
+		}
+		changePassword: {
+			/**
+			 * Change Password
+			 */
+			title: () => LocalizedString
+			/**
+			 * Current Password
+			 */
+			currentPasswordLabel: () => LocalizedString
+			/**
+			 * New Password
+			 */
+			newPasswordLabel: () => LocalizedString
+			/**
+			 * Confirm New Password
+			 */
+			confirmPasswordLabel: () => LocalizedString
+			errors: {
+				/**
+				 * New passwords do not match
+				 */
+				mismatch: () => LocalizedString
+			}
+		}
+	}
 }
 
 export type Formatters = {}

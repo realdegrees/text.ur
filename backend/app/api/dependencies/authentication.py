@@ -48,7 +48,7 @@ def Authenticate( # noqa: C901
 
         user = parse_jwt(token, db, for_type=token_type, strict=strict, scopes=[context.url.path])
         
-        if not user.verified:
+        if not user.verified and not user.is_guest:
             raise AppException(status_code=403, detail="Forbidden: Email not verified", error_code=AppErrorCode.EMAIL_NOT_VERIFIED)
 
         context_path_params: dict[str, Any] = context.path_params

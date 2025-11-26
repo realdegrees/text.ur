@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { api } from '$api/client';
 	import { invalidate, invalidateAll } from '$app/navigation';
+	import { LL } from '$i18n/i18n-svelte';
 	import Field from '$lib/components/advancedInput.svelte';
 	import Loading from '~icons/svg-spinners/90-ring-with-bg';
 	import type { PageData } from './$types';
@@ -17,7 +18,7 @@
 
 	async function handleAnonymousRegister() {
 		if (!username.trim()) {
-			error = 'Please enter a username';
+			error = $LL.sharelink.errors.usernameRequired();
 			return;
 		}
 
@@ -33,14 +34,14 @@
 			} satisfies UserCreate);
 
 			if (!response.success) {
-				error = response.error.detail || 'Failed to register. Please try again.';
+				error = response.error.detail || $LL.sharelink.errors.registerFailed();
 				return;
 			}
 
 			// Now the api login has attached auth cookies so we can invalidate and let the page ssr handle the group join
 			invalidateAll();
 		} catch (err: any) {
-			error = err.detail || 'Failed to register. Please try again.';
+			error = err.detail || $LL.sharelink.errors.registerFailed();
 		} finally {
 			isLoading = false;
 		}
@@ -49,9 +50,9 @@
 
 <div class="flex h-full w-full items-center justify-center p-4">
 	<div class="w-full max-w-md overflow-hidden rounded-lg bg-inset p-8 shadow-lg">
-		<h1 class="mb-2 text-center text-3xl font-bold text-text">Join Group</h1>
+		<h1 class="mb-2 text-center text-3xl font-bold text-text">{$LL.sharelink.title()}</h1>
 		<p class="mb-6 text-center text-sm text-muted">
-			You've been invited to join a group. Enter your details to continue as a guest.
+			{$LL.sharelink.description()}
 		</p>
 
 		{#if error}
@@ -69,9 +70,9 @@
 			}}
 			class="flex flex-col gap-4"
 		>
-			<Field name="username" label="Username" bind:value={username} required />
-			<Field name="firstName" label="First Name" bind:value={firstName} />
-			<Field name="lastName" label="Last Name" bind:value={lastName} />
+			<Field name="username" label={$LL.username()} bind:value={username} required />
+			<Field name="firstName" label={$LL.firstName()} bind:value={firstName} />
+			<Field name="lastName" label={$LL.lastName()} bind:value={lastName} />
 
 			<button
 				type="submit"
@@ -81,7 +82,7 @@
 				{#if isLoading}
 					<Loading class="m-auto" />
 				{:else}
-					Continue
+					{$LL.continue()}
 				{/if}
 			</button>
 		</form>
@@ -92,7 +93,7 @@
 				class="text-primary underline transition-colors hover:text-secondary"
 				onclick={() => invalidate(page.url.pathname)}
 			>
-				Already have an account? Log in
+				{$LL.sharelink.alreadyHaveAccount()}
 			</a>
 		</div>
 	</div>

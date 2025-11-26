@@ -3,6 +3,7 @@
 	import CommentCard from './CommentCard.svelte';
 	import ConnectionLine from './ConnectionLine.svelte';
 	import CommentIcon from '~icons/material-symbols/comment-outline';
+	import { tick } from 'svelte';
 
 	interface Props {
 		comments: CachedComment[];
@@ -18,21 +19,20 @@
 	let selectedIndex = $state(0);
 
 	// Check if any comment in this cluster is hovered (via annotation highlight)
-	let hoveredCommentInGroup = $derived(comments.find((c) => c.isHighlightHovered));
+	let highlightHoveredInComments = $derived(comments.find((c) => c.isHighlightHovered));
 
 	// Check if any comment in this cluster is pinned
 	let pinnedCommentInGroup = $derived(comments.find((c) => c.isPinned));
 
 	// Derive selectedIndex from external state (highlight hover or pinned)
-	// This is read-only synchronization - no store writes here
 	let effectiveSelectedIndex = $derived.by(() => {
 		// Priority: pinned > hovered highlight > local selection
 		if (pinnedCommentInGroup) {
 			const idx = comments.findIndex((c) => c.id === pinnedCommentInGroup.id);
 			if (idx !== -1) return idx;
 		}
-		if (hoveredCommentInGroup) {
-			const idx = comments.findIndex((c) => c.id === hoveredCommentInGroup.id);
+		if (highlightHoveredInComments) {
+			const idx = comments.findIndex((c) => c.id === highlightHoveredInComments.id);
 			if (idx !== -1) return idx;
 		}
 		return selectedIndex;
@@ -45,11 +45,13 @@
 
 	// Show expanded card when badge is hovered, highlight is hovered, comment is pinned, or input is active
 	let showCard = $derived(
-		isHovered || !!hoveredCommentInGroup || !!pinnedCommentInGroup || hasActiveInputInGroup
+		isHovered || !!highlightHoveredInComments || !!pinnedCommentInGroup || hasActiveInputInGroup
 	);
+	let showLine = $derived(isHovered || !!pinnedCommentInGroup || hasActiveInputInGroup);
 
 	// Handle mouse enter - set store state
-	const handleMouseEnter = () => {
+	const setActive = () => {
+		if (isHovered || documentStore.pinnedComment) return;
 		isHovered = true;
 		const comment = comments[effectiveSelectedIndex];
 		if (comment) {
@@ -67,6 +69,7 @@
 
 	// Clear selected comment when card closes (but not if pinned or input active)
 	const handleMouseLeave = () => {
+		if (!isHovered) return;
 		isHovered = false;
 		// Don't update badge hover state if there's active input - it triggers re-render and loses focus
 		if (!hasActiveInputInGroup) {
@@ -77,7 +80,7 @@
 			// Don't auto-close if there's an active input (editing or replying)
 			if (
 				!isHovered &&
-				!hoveredCommentInGroup &&
+				!highlightHoveredInComments &&
 				!pinnedCommentInGroup &&
 				!documentStore.hasActiveInput
 			) {
@@ -85,22 +88,6 @@
 				documentStore.setCommentCardActive(false);
 			}
 		}, 50);
-	};
-
-	// Handle click to pin/unpin the comment
-	const handleClick = () => {
-		const currentComment = comments[effectiveSelectedIndex];
-		if (currentComment) {
-			if (currentComment.isPinned) {
-				// Already pinned, unpin it
-				documentStore.setPinned(null);
-			} else {
-				// Pin this comment
-				documentStore.setPinned(currentComment.id);
-				documentStore.setCommentCardActive(true);
-				documentStore.setSelected(currentComment.id);
-			}
-		}
 	};
 
 	let commentCount = $derived(comments.length);
@@ -119,11 +106,25 @@
 		}
 	};
 
-	// Handle keyboard events for accessibility
+	// Handle focus out - unpin when focus leaves the card entirely
+	const handleFocusOut = (e: FocusEvent) => {
+		// Only unpin if THIS card's comment was the pinned one
+		if (pinnedCommentInGroup) {
+			documentStore.setPinned(null);
+			documentStore.setSelected(null);
+			documentStore.setCommentCardActive(false);
+		}
+	};
+
+	// Handle keyboard events for accessibility and Escape to unpin
 	const handleKeydown = (e: KeyboardEvent) => {
-		if (e.key === 'Enter' || e.key === ' ') {
+		if (e.key === 'Escape' && pinnedCommentInGroup) {
+			documentStore.setPinned(null);
+			documentStore.setSelected(null);
+			documentStore.setCommentCardActive(false);
+		} else if (e.key === 'Enter' || e.key === ' ') {
 			e.preventDefault();
-			handleClick();
+			setActive();
 		}
 	};
 </script>
@@ -133,9 +134,12 @@
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
 		class="relative z-50"
+		tabindex="-1"
 		data-comment-badge={comments[effectiveSelectedIndex]?.id}
 		data-badge-active="true"
 		onmouseleave={handleMouseLeave}
+		onfocusout={handleFocusOut}
+		onkeydown={handleKeydown}
 	>
 		<CommentCard
 			{comments}
@@ -143,13 +147,14 @@
 			onSelectionChange={handleSelectionChange}
 		/>
 	</div>
-
-	<!-- Connection line for this card -->
-	<ConnectionLine
-		{pdfContainer}
-		{sidebarContainer}
-		commentId={comments[effectiveSelectedIndex]?.id}
-	/>
+	{#if showLine}
+		<!-- Connection line for this card -->
+		<ConnectionLine
+			{pdfContainer}
+			{sidebarContainer}
+			commentId={comments[effectiveSelectedIndex]?.id}
+		/>
+	{/if}
 {:else}
 	<!-- Compact badge - only hover on badge itself triggers expansion -->
 	<div
@@ -157,20 +162,22 @@
 		role="button"
 		tabindex="0"
 		data-comment-badge={comments[effectiveSelectedIndex]?.id}
-		onmouseenter={handleMouseEnter}
+		onmouseenter={setActive}
 		onmouseleave={handleMouseLeave}
-		onfocus={handleMouseEnter}
 		onblur={handleMouseLeave}
-		onclick={handleClick}
+		onclick={async () => {
+			await tick();
+			setActive();
+		}}
 		onkeydown={handleKeydown}
 	>
 		<div
-			class="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border-2 border-background bg-secondary shadow-md shadow-black/20 drop-shadow-xs transition-transform hover:scale-110"
+			class="border-background bg-secondary drop-shadow-xs flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border-2 shadow-md shadow-black/20 transition-transform hover:scale-110"
 		>
 			{#if commentCount > 1}
-				<span class="text-xs font-bold text-text">{commentCount}</span>
+				<span class="text-text text-xs font-bold">{commentCount}</span>
 			{:else}
-				<CommentIcon class="h-4 w-4 text-text" />
+				<CommentIcon class="text-text h-4 w-4" />
 			{/if}
 		</div>
 	</div>
