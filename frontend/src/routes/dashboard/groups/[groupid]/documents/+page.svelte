@@ -9,15 +9,11 @@
 	import { sessionStore } from '$lib/runes/session.svelte.js';
 	import { notification } from '$lib/stores/notificationStore';
 	import { goto } from '$app/navigation';
+	import { formatDate } from '$lib/util/dateFormat';
 
 	let { data } = $props();
 	let documents = $derived(data.documents);
 	let group = $derived(data.membership.group);
-
-	function formatDate(dateString?: string): string {
-		if (!dateString) return 'N/A';
-		return new Date(dateString).toLocaleDateString();
-	}
 
 	function handleDocumentClick(document: DocumentRead): void {
 		goto(`/documents/${document.id}`);

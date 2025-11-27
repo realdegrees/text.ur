@@ -3,11 +3,12 @@ from typing import ClassVar, Optional
 from uuid import UUID, uuid4
 
 from nanoid import generate
-from sqlalchemy import Column, String
+from sqlalchemy import Boolean, Column, String
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import column_property, declared_attr
+from sqlalchemy.sql.elements import ColumnElement
 from sqlmodel import Field, Relationship, func, select
 
 from models.base import BaseModel
@@ -21,9 +22,13 @@ class User(BaseModel, table=True):
     username: str = Field(index=True, unique=True)
     first_name: str | None = Field(nullable=True, default=None)
     last_name: str | None = Field(nullable=True, default=None)
-    password: str  # hashed
-    email: str = Field(index=True, unique=True)
+    password: str | None = Field(nullable=True, default=None)  # hashed
+    email: str | None = Field(
+        nullable=True, default=None, index=True, unique=True)
     verified: bool = Field(default=False)
+    # TODO this can probably just be removed and inferred from presence of password/email, can also be dropped from existing db entries
+    is_guest: bool = Field(default=False, sa_column=Column(
+        Boolean, server_default="false"))
     # For personally signed URLs, JWT encryption etc.
     secret: str = Field(
         default_factory=func.gen_random_uuid,
@@ -68,9 +73,33 @@ class Membership(BaseModel, table=True):
     permissions: list[Permission] = Field(
         default_factory=list, sa_column=Column(ARRAY(String)))
     is_owner: bool = Field(default=False)
+    sharelink_id: int | None = Field(
+        foreign_key="sharelink.id", nullable=True, default=None, ondelete="SET NULL")
     accepted: bool = Field(default=False)
     user: User = Relationship(back_populates="memberships")
     group: "Group" = Relationship(back_populates="memberships")
+    share_link: Optional["ShareLink"] = Relationship(
+        back_populates="memberships")
+
+    is_expired: ClassVar[bool]
+
+    @hybrid_property
+    def is_expired(self) -> bool:
+        """Return whether the share link associated with this membership is expired (Python-side)."""
+        if self.share_link is None:
+            return False  # If no share link, the membership is not expired
+        return self.share_link.is_expired
+
+    @is_expired.expression
+    def is_expired(cls) -> select:
+        """Return SQL expression returning whether the share link associated with this membership is expired."""
+        return func.coalesce(
+            select(ShareLink.is_expired)
+            .where(ShareLink.id == cls.sharelink_id)
+            .correlate_except(ShareLink)
+            .scalar_subquery(),
+            False  # Default to False if ShareLink.is_expired is NULL
+        )
 
 
 class Group(BaseModel, table=True):
@@ -169,11 +198,13 @@ class Comment(BaseModel, table=True):
     )
     replies: list["Comment"] = Relationship(
         back_populates="parent",
-        sa_relationship_kwargs={"lazy": "selectin", "cascade": "all, delete-orphan", "passive_deletes": True}
+        sa_relationship_kwargs={
+            "lazy": "selectin", "cascade": "all, delete-orphan", "passive_deletes": True}
     )
     reactions: list["Reaction"] = Relationship(
         back_populates="comment",
-        sa_relationship_kwargs={"lazy": "noload", "cascade": "all, delete-orphan", "passive_deletes": True}
+        sa_relationship_kwargs={
+            "lazy": "noload", "cascade": "all, delete-orphan", "passive_deletes": True}
     )
 
     num_replies: ClassVar[int]
@@ -196,6 +227,7 @@ class Comment(BaseModel, table=True):
             .correlate_except(Comment)
             .scalar_subquery()
         )
+
 
 class Reaction(BaseModel, table=True):
     """Reaction entity for user reactions to comments."""
@@ -221,6 +253,8 @@ class ShareLink(BaseModel, table=True):
         default_factory=list,
         sa_column=Column(ARRAY(String))
     )
+    allow_anonymous_access: bool = Field(
+        default=False, sa_column=Column(Boolean, server_default="false"))
 
     token: str = Field(
         default_factory=func.gen_random_uuid,
@@ -233,6 +267,50 @@ class ShareLink(BaseModel, table=True):
 
     group: "Group" = Relationship(back_populates="share_links")
     author: Optional["User"] = Relationship(back_populates="share_links")
+
+    is_expired: ClassVar[bool]
+
+    @hybrid_property
+    def is_expired(self) -> bool:
+        """Return whether the share link is currently valid (Python-side)."""
+        if self.expires_at is None:
+            return False  # If no expiry date, the link is not expired
+        return datetime.now(self.expires_at.tzinfo) > self.expires_at
+
+    @is_expired.expression
+    def is_expired(cls) -> ColumnElement[bool]:
+        """Return SQL expression returning whether the share link is valid."""
+        return func.coalesce(func.now() > cls.expires_at, False)  # Default to False if expires_at is NULL
+
+    # ! WARNING this cascade delete will not handle sharelink expiry,
+    # ! WARNING additional checks need to be made in an group guard to validate if the user link is expired
+    # ! WARNING but this check is also required to not leave orphaned memberships
+    memberships: list["Membership"] = Relationship(
+        back_populates="share_link",
+        sa_relationship_kwargs={
+            "lazy": "selectin", "cascade": "all, delete-orphan", "passive_deletes": True}
+    )
+
+    num_memberships: ClassVar[int]
+
+    @hybrid_property
+    def num_memberships(self) -> int:
+        """Return the number of memberships created via this share link (Python-side)."""
+        # Use the relationship to provide a Python-side count when memberships
+        # are loaded; this avoids referencing the mapped class during mapping.
+        return len(self.memberships or [])
+
+    @num_memberships.expression
+    def num_memberships(cls) -> select:
+        """Return SQL expression returning number of memberships created via this share link."""
+        # Now that the class is mapped, reference Membership to build a
+        # DB-level expression used in queries.
+        return (
+            select(func.count(Membership.user_id))
+            .where(Membership.sharelink_id == cls.id)
+            .correlate_except(Membership)
+            .scalar_subquery()
+        )
 
     def rotate_token(self) -> None:
         """Invalidate this share link by rotating its token."""

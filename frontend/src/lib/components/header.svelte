@@ -1,26 +1,64 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
+	import { goto, invalidateAll } from '$app/navigation';
 	import AppLogoDark from '$lib/images/logo/logo_dark.svg';
 	import AppLogoLight from '$lib/images/logo/logo_light.svg';
 	import darkMode from '$lib/stores/darkMode.svelte';
 	import { loadingBar } from '$lib/stores/loadingBar.svelte';
+	import { api } from '$api/client';
+	import { notification } from '$lib/stores/notificationStore';
 
 	import type { UserPrivate } from '$api/types';
 	import ProfileImageFallback from '~icons/material-symbols/account-box';
 	import Login from './login.svelte';
+	import Dropdown from '$lib/components/dropdown.svelte';
+	import AccountIcon from '~icons/mdi/account-cog';
+	import LogoutIcon from '~icons/mdi/exit-run';
+	import { page } from '$app/state';
 
 	let { user }: { user?: UserPrivate } = $props();
 
 	// Use dark logo as default during SSR to avoid hydration mismatch,
 	// then reactively update on client based on actual theme preference
 	let logoSrc = $derived(browser ? (darkMode.enabled ? AppLogoLight : AppLogoDark) : AppLogoDark);
+
+	// Dropdown state
+	let showUserMenu = $state(false);
+
+	type UserMenuItem = 'account' | 'logout';
+	const menuItems: UserMenuItem[] = ['account', 'logout'];
+
+	async function handleMenuItemSelect(item: UserMenuItem) {
+		if (item === 'account') {
+			await goto(`/users/${user?.id}`);
+		} else if (item === 'logout') {
+			await handleLogout();
+		}
+		// logout is handled by ConfirmButton in the itemSnippet
+	}
+
+	async function handleLogout() {
+		const result = await api.post('/logout', {});
+
+		if (!result.success) {
+			notification(result.error);
+			return;
+		}
+
+		// Close the dropdown
+		showUserMenu = false;
+
+		// Redirect to login page after logout
+		invalidateAll();
+		await goto('/login');
+	}
 </script>
 
 <div class="h-15.5 w-full"></div>
-<header class="fixed top-0 right-0 left-0 z-50 h-15.5 w-full bg-background">
+<header class="fixed top-0 right-0 left-0 z-9000 h-15.5 w-full bg-background">
 	<div
 		class="center-content dark:shadow-inner-sym-10 mt-1 grid h-full grid-cols-3
-	items-center overflow-hidden bg-inset shadow-inner-sym-[10px] shadow-black"
+	items-center bg-inset shadow-inner-sym-[10px] shadow-black"
 	>
 		<a
 			href="/"
@@ -32,16 +70,49 @@
 
 		<div class="col-span-1 col-start-3 mr-3 flex flex-row-reverse items-center justify-self-end">
 			{#if user?.id}
-				<a href="/users/{user.username}" class="flex w-full flex-row items-center">
-					<ProfileImageFallback class="h-9 w-9" />
-					<!--TODO insert user profile image if that feature is added-->
-					<p class="ml-1 font-semibold">
-						{user.first_name && user.last_name
-							? `${user.first_name} ${user.last_name}`
-							: user.username}
-					</p>
-				</a>
-			{:else}
+				<div class="relative z-9500">
+					<button
+						class="flex w-full flex-row items-center rounded-lg px-2 py-1 transition-colors hover:bg-text/5"
+						onclick={(e) => {
+							e.stopPropagation();
+							showUserMenu = !showUserMenu;
+						}}
+					>
+						<ProfileImageFallback class="h-9 w-9" />
+						<!--TODO insert user profile image if that feature is added-->
+						<p class="ml-1 font-semibold">
+							{user.first_name && user.last_name
+								? `${user.first_name} ${user.last_name}`
+								: user.username}
+						</p>
+					</button>
+
+					<Dropdown
+						items={menuItems}
+						bind:show={showUserMenu}
+						position="bottom-right"
+						allowSelection={false}
+						showCurrentItemInList={true}
+						onSelect={handleMenuItemSelect}
+					>
+						{#snippet itemSnippet(item)}
+							{#if item === 'account'}
+								<div class="flex w-full items-center gap-2 px-3 py-2 text-sm">
+									<AccountIcon class="h-5 w-5" />
+									<p>Account Settings</p>
+								</div>
+							{:else if item === 'logout'}
+								<div
+									class="flex w-full items-center gap-2 px-3 py-2 text-sm text-red-600 transition-colors dark:text-red-400"
+								>
+									<LogoutIcon class="h-5 w-5" />
+									<p>Logout</p>
+								</div>
+							{/if}
+						{/snippet}
+					</Dropdown>
+				</div>
+			{:else if page.url.pathname !== '/login'}
 				<Login />
 			{/if}
 		</div>

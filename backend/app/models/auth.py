@@ -24,6 +24,7 @@ class GlobalJWTPayload(BaseModel):
 
     sub: str  # user id
     type: TokenType | None = None
+    scopes: list[str] | None = None
     exp: datetime | None = None
     iat: datetime | None = None
     inner: str | None = None

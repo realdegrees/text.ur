@@ -7,8 +7,8 @@
 	import CommentSidebar from './CommentSidebar.svelte';
 	import PdfControls from './PdfControls.svelte';
 	import UserCursors from './UserCursors.svelte';
-	import { documentStore } from '$lib/runes/document.svelte.js';
 	import { PDF_ZOOM_STEP, PDF_MIN_SCALE } from './constants';
+	import { documentStore } from '$lib/runes/document.svelte';
 
 	interface Props {
 		document: ArrayBuffer;
@@ -24,7 +24,6 @@
 
 	let pageNumber = $state(1);
 	let numPages = $state(0);
-	let scale = $state(1);
 	let scrollTop = $state(0);
 	let pdfWidth = $state(0);
 	let basePageWidth = $state(0);
@@ -37,8 +36,8 @@
 			const pageRect = page.getBoundingClientRect();
 			pdfWidth = pageRect.width + 16;
 
-			if (scale > 0) {
-				basePageWidth = page.clientWidth / scale;
+			if (documentStore.documentScale > 0) {
+				basePageWidth = page.clientWidth / documentStore.documentScale;
 			}
 		}
 	};
@@ -91,7 +90,7 @@
 				pdfSlick.currentScale = clampedScale;
 			}
 
-			scale = clampedScale;
+			documentStore.documentScale = clampedScale;
 			requestAnimationFrame(() => {
 				updatePdfWidth();
 				captureMaxAvailableWidth();
@@ -134,12 +133,14 @@
 
 	const zoomIn = () => {
 		if (!pdfSlick) return;
-		pdfSlick.currentScale = scale + PDF_ZOOM_STEP;
+		documentStore.documentScale = documentStore.documentScale + PDF_ZOOM_STEP;
+		pdfSlick.currentScale = documentStore.documentScale;
 	};
 
 	const zoomOut = () => {
 		if (!pdfSlick) return;
-		pdfSlick.currentScale = scale - PDF_ZOOM_STEP;
+		documentStore.documentScale = documentStore.documentScale - PDF_ZOOM_STEP;
+		pdfSlick.currentScale = documentStore.documentScale;
 	};
 
 	const fitHeight = () => {
@@ -148,31 +149,6 @@
 
 	const prevPage = () => pdfSlick?.gotoPage(Math.max(pageNumber - 1, 1));
 	const nextPage = () => pdfSlick?.gotoPage(Math.min(pageNumber + 1, numPages));
-
-	// Handle clicks outside of comments to unpin
-	const handleContainerClick = (e: MouseEvent) => {
-		const target = e.target as HTMLElement;
-		// Check if click was on a comment badge, highlight, or inside comment card
-		const isCommentRelated =
-			target.closest('[data-comment-badge]') ||
-			target.closest('.annotation-highlight') ||
-			target.closest('.comment-card');
-
-		if (!isCommentRelated && documentStore.pinnedComment) {
-			documentStore.setPinned(null);
-			documentStore.setCommentCardActive(false);
-			documentStore.setSelected(null);
-		}
-	};
-
-	// Handle Escape key to unpin
-	const handleContainerKeydown = (e: KeyboardEvent) => {
-		if (e.key === 'Escape' && documentStore.pinnedComment) {
-			documentStore.setPinned(null);
-			documentStore.setCommentCardActive(false);
-			documentStore.setSelected(null);
-		}
-	};
 
 	$effect(() => {
 		if (!pdfAreaWrapper?.parentElement) return;
@@ -189,14 +165,8 @@
 	onDestroy(() => unsubscribe?.());
 </script>
 
-<!-- svelte-ignore a11y_no_static_element_interactions -->
-<div
-	class="pdf-viewer-container flex h-full w-full bg-background"
-	onclick={handleContainerClick}
-	onkeydown={handleContainerKeydown}
->
+<div class="pdf-viewer-container flex h-full w-full bg-background">
 	<PdfControls
-		{scale}
 		minScale={PDF_MIN_SCALE}
 		{maxScale}
 		{pageNumber}
@@ -225,7 +195,7 @@
 		</div>
 
 		<!-- Annotation highlights are rendered into the PDF pages -->
-		<AnnotationLayer viewerContainer={container} {scale} />
+		<AnnotationLayer viewerContainer={container} />
 
 		<!-- Text selection handler for creating new annotations -->
 		<TextSelectionHandler viewerContainer={container} />
@@ -241,7 +211,7 @@
 		role="complementary"
 		bind:this={sidebarContainer}
 	>
-		<CommentSidebar viewerContainer={container} {sidebarContainer} {scale} {scrollTop} />
+		<CommentSidebar viewerContainer={container} {scrollTop} />
 	</div>
 </div>
 

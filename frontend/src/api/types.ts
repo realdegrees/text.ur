@@ -19,8 +19,13 @@ export type AppErrorCode =
   | "invalid_credentials"
   | "not_in_group"
   | "email_not_verified"
+  | "sharelink_invalid"
+  | "sharelink_expired"
   | "membership_not_found"
-  | "owner_cannot_leave_group";
+  | "owner_cannot_leave_group"
+  | "username_taken"
+  | "email_taken"
+  | "sharelink_anonymous_disabled";
 /**
  * Visibility levels for comments.
  */
@@ -51,8 +56,7 @@ export type Permission =
   | "view_restricted_documents"
   | "delete_documents"
   | "remove_reactions"
-  | "add_reactions"
-  | "manage_share_links";
+  | "add_reactions";
 
 /**
  * Base class for all custom exceptions in the application.
@@ -120,6 +124,7 @@ export interface UserRead {
   username: string;
   first_name?: string | null;
   last_name?: string | null;
+  is_guest?: boolean;
 }
 export interface ReactionRead {
   type: ReactionType;
@@ -185,6 +190,7 @@ export interface DocumentTransfer {
 export interface GlobalJWTPayload {
   sub: string;
   type?: ("access" | "refresh") | null;
+  scopes?: string[] | null;
   exp?: string | null;
   iat?: string | null;
   inner?: string | null;
@@ -238,6 +244,7 @@ export interface Membership {
   group_id: string;
   permissions?: Permission[];
   is_owner?: boolean;
+  sharelink_id?: number | null;
   accepted?: boolean;
 }
 export interface MembershipCreate {
@@ -257,6 +264,15 @@ export interface MembershipRead {
   group: GroupRead;
   is_owner: boolean;
   accepted: boolean;
+  share_link: ShareLinkReadPublic | null;
+}
+export interface ShareLinkReadPublic {
+  id: number;
+  permissions: Permission[];
+  expires_at?: string | null;
+  label?: string | null;
+  allow_anonymous_access: boolean;
+  group_id: string;
 }
 /**
  * Event payload for mouse cursor position - broadcasted to WebSocket clients (with user info).
@@ -298,6 +314,7 @@ export interface ReactionCreate {
 }
 export interface ShareLinkCreate {
   permissions: Permission[];
+  allow_anonymous_access?: boolean;
   expires_at?: string | null;
   label?: string | null;
 }
@@ -311,13 +328,16 @@ export interface ShareLinkRead {
   permissions: Permission[];
   expires_at?: string | null;
   label?: string | null;
+  allow_anonymous_access: boolean;
   token: string;
-  author: UserRead;
+  author: UserRead | null;
   group_id: string;
+  num_memberships: number;
 }
 export interface ShareLinkUpdate {
   permissions?: Permission[] | null;
   expires_at?: string | null;
+  allow_anonymous_access?: boolean | null;
   label?: string | null;
   rotate_token?: boolean | null;
 }
@@ -340,15 +360,17 @@ export interface User {
   username: string;
   first_name?: string | null;
   last_name?: string | null;
-  password: string;
-  email: string;
+  password?: string | null;
+  email?: string | null;
   verified?: boolean;
+  is_guest?: boolean;
   secret?: string;
 }
 export interface UserCreate {
+  token?: string | null;
   username: string;
-  password: string;
-  email: string;
+  password?: string | null;
+  email?: string | null;
   first_name?: string | null;
   last_name?: string | null;
 }
@@ -373,7 +395,8 @@ export interface UserPrivate {
   username: string;
   first_name?: string | null;
   last_name?: string | null;
-  email: string;
+  is_guest?: boolean;
+  email?: string | null;
 }
 export interface UserUpdate {
   username?: string | null;

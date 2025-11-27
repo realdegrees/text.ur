@@ -14,6 +14,5 @@ export const CLUSTER_THRESHOLD_PX = 60;
 export const BADGE_HEIGHT_PX = 32;
 
 // Animation/timing constants
-export const RENDER_DEBOUNCE_MS = 150;
-export const OPACITY_TRANSITION_MS = 500;
+export const OPACITY_TRANSITION_MS = 100;
 export const INITIAL_RENDER_DELAY_MS = 200;

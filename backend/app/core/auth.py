@@ -98,7 +98,7 @@ def refresh_token(user: User, db: Database) -> Token:
 
 
 
-def generate_token(user: User, token_type: Literal["access", "refresh"]) -> str:
+def generate_token(user: User, token_type: Literal["access", "refresh"], scopes: list[str] | None = None) -> str:
     """Generate a nested JWT: inner signed with user secret, outer with global secret."""
     if token_type == "access":
         expire = datetime.now(UTC) + timedelta(minutes=JWT_ACCESS_EXPIRATION_MINUTES)
@@ -121,6 +121,7 @@ def generate_token(user: User, token_type: Literal["access", "refresh"]) -> str:
         exp=expire,
         iat=datetime.now(UTC),
         type=token_type,
+        scopes=scopes,
     )
     outer_token = encode(outer_payload.model_dump(), JWT_SECRET, algorithm=ALGORITHM)
     return outer_token

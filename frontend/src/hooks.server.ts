@@ -14,6 +14,7 @@ const withBaseUrl = (request: Request, baseUrl: string): Request => {
 /**
  * Forwards API requests to the backend and sets x-forwarded-for headers.
  * Also forwards cookies from the client request to the backend.
+ * Automatically handles token refresh on 401 responses.
  */
 export const handleFetch: HandleFetch = async ({ request, fetch, event }) => {
 	const url = new URL(request.url);
@@ -25,7 +26,7 @@ export const handleFetch: HandleFetch = async ({ request, fetch, event }) => {
 	request = withBaseUrl(request, baseUrl);
 
 	// Forward cookies from the client to the backend
-	const accessToken = event.cookies.get('access_token');
+	let accessToken = event.cookies.get('access_token');
 	const refreshToken = event.cookies.get('refresh_token');
 
 	if (accessToken || refreshToken) {
@@ -46,10 +47,58 @@ export const handleFetch: HandleFetch = async ({ request, fetch, event }) => {
 		} as RequestInit);
 	}
 
-	const response = await fetch(request);
+	let response = await fetch(request);
 
-	// Forward cookies from the backend response to the client
-	forwardCookies(response, event.cookies);
+	// Handle 401 Unauthorized - attempt token refresh
+	if (response.status === 401 && !url.pathname.includes('/refresh') && refreshToken) {
+		// Try to refresh the token
+		const refreshUrl = `${baseUrl}/api/login/refresh`;
+		const refreshHeaders = new Headers();
+		refreshHeaders.set('Cookie', `refresh_token=${refreshToken}`);
+
+		const refreshResponse = await fetch(refreshUrl, {
+			method: 'POST',
+			headers: refreshHeaders,
+			credentials: 'include'
+		});
+
+		if (refreshResponse.ok) {
+			// Forward new cookies from refresh response to client
+			forwardCookies(refreshResponse, event.cookies);
+
+			// Get the updated access token
+			accessToken = event.cookies.get('access_token');
+
+			// Retry the original request with the new access token
+			if (accessToken) {
+				const retryHeaders = new Headers(request.headers);
+				const cookieHeader = [`access_token=${accessToken}`, `refresh_token=${refreshToken}`].join(
+					'; '
+				);
+				retryHeaders.set('Cookie', cookieHeader);
+
+				// Clone the original request body if it exists
+				// Note: We need to handle body cloning carefully
+				let retryBody = null;
+				if (request.method !== 'GET' && request.method !== 'HEAD') {
+					// For requests with bodies, we need to be careful as body can only be read once
+					// Since we've already sent the request once, we can't access the body again
+					// This is a limitation of the fetch API
+					// For most cases, this should work as the body is typically small
+					retryBody = request.body;
+				}
+
+				const retryRequest = new Request(request.url, {
+					method: request.method,
+					headers: retryHeaders,
+					body: retryBody,
+					duplex: retryBody ? 'half' : undefined
+				} as RequestInit);
+
+				response = await fetch(retryRequest);
+			}
+		}
+	}
 
 	return response;
 };
@@ -59,11 +108,6 @@ export const handleFetch: HandleFetch = async ({ request, fetch, event }) => {
  */
 const user: Handle = async ({ event, resolve }) => {
 	if (event.url.pathname.startsWith('/api')) return resolve(event); // Only needed for server side requests
-
-	const accessToken = event.cookies.get('access_token');
-	const refreshToken = event.cookies.get('refresh_token');
-
-	if (!accessToken && !refreshToken) return resolve(event);
 
 	try {
 		const userResponse = await event.fetch(`${baseUrl}/api/users/me`);

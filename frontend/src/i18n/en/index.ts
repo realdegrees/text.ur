@@ -67,7 +67,6 @@ const en = {
 		delete_documents: 'Delete documents',
 		remove_reactions: 'Remove reactions',
 		add_reactions: 'Add reactions',
-		manage_share_links: 'Manage share links'
 	},
 	visibility: {
 		public: {
@@ -101,7 +100,57 @@ const en = {
 		membership_not_found: 'Membership not found',
 		owner_cannot_leave_group: 'Group owner cannot leave the group'
 	},
-	invitations: 'Invitations'
+	invitations: 'Invitations',
+	continue: 'Continue',
+	sharelink: {
+		title: 'Join Group',
+		description: 'You\'ve been invited to join a group. Enter your details to continue as a guest.',
+		alreadyHaveAccount: 'Already have an account? Log in',
+		errors: {
+			usernameRequired: 'Please enter a username',
+			registerFailed: 'Failed to register. Please try again.'
+		}
+	},
+	userSettings: {
+		title: 'Account Settings',
+		guestWarning: {
+			title: 'Guest Account Warning',
+			description: 'Your account is temporary and bound to this browser. If you clear your cookies, you will lose access to this account permanently.',
+			upgradeButton: 'Upgrade to Permanent Account →',
+			cancelButton: 'Cancel Upgrade'
+		},
+		upgradeAccount: {
+			title: 'Upgrade Account',
+			description: 'Link your guest account to an email address to make it permanent. You\'ll need to verify your email before the upgrade is complete.',
+			emailLabel: 'Email Address',
+			passwordLabel: 'Password',
+			confirmPasswordLabel: 'Confirm Password',
+			submitButton: 'Upgrade Account',
+			success: 'Account upgraded! Please check your email to verify your account.',
+			errors: {
+				required: 'Email and password are required',
+				passwordMismatch: 'Passwords do not match'
+			}
+		},
+		profile: {
+			title: 'Profile Information',
+			usernameLabel: 'Username',
+			firstNameLabel: 'First Name',
+			lastNameLabel: 'Last Name',
+			emailLabel: 'Email',
+			saveButton: 'Save Changes',
+			success: 'Profile updated successfully'
+		},
+		changePassword: {
+			title: 'Change Password',
+			currentPasswordLabel: 'Current Password',
+			newPasswordLabel: 'New Password',
+			confirmPasswordLabel: 'Confirm New Password',
+			errors: {
+				mismatch: 'New passwords do not match'
+			}
+		}
+	}
 } satisfies BaseTranslation;
 
 export default en;

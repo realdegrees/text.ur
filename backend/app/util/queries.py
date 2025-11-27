@@ -13,6 +13,7 @@ from models.tables import (
     Group,
     Membership,
     Reaction,
+    ShareLink,
     User,
 )
 from sqlalchemy import and_, or_, select, true
@@ -131,7 +132,7 @@ class Guard:
                 raise HTTPException(
                     status_code=500, detail="Endpoint Guard misconfiguration: invalid configuration for multi parameter")
 
-        def predicate(membership: Membership, user: User, params: dict[str, Any]) -> bool:
+        def predicate(membership: Membership, user: User) -> bool:
             return any(
                 m.accepted and m.user_id == user.id
                 for m in membership.group.memberships
@@ -363,6 +364,87 @@ class Guard:
                 and (m.is_owner if only_owner else True)
                 and all(p in m.permissions for p in required_vals)
                 for m in group.memberships
+            )
+
+        return EndpointGuard(clause, predicate, exclude_fields=exclude_fields)
+
+    @staticmethod
+    def sharelink_access(
+        *,
+        exclude_fields: list[ColumnElement] | None = None,
+    ) -> EndpointGuard[ShareLink]:
+        """User can access a share link if they have access to its group. Can be used on routes with token or id param optionally filtered by group_id param.
+
+        Args:
+            require_permissions: Set of permissions required to access share links
+            exclude_fields: List of model fields to exclude from responses
+            
+        """
+
+        def clause(user: User, params: dict[str, Any], multi: bool = False) -> ColumnElement[bool]:
+            share_link_id = params.get("share_link_id", None)
+            token = params.get("token", None)
+            group_id = params.get("group_id", None)
+            
+            if (not share_link_id or not token) and not multi:
+                raise HTTPException(
+                    status_code=500, detail="Endpoint Guard misconfiguration: missing share_link_id parameter")
+
+            def build_permission_clause() -> ColumnElement[bool]:
+                """Build permission check clause."""
+                return (
+                    Membership.is_owner.is_(True) |
+                    Membership.permissions.contains([Permission.ADMINISTRATOR.value])
+                )
+
+            if multi:
+                # For multi-sharelink queries (filtering ShareLink table directly)
+                return ShareLink.group_id.in_(
+                    select(Membership.group_id).where(
+                        Membership.user_id == user.id,
+                        Membership.accepted.is_(True),
+                        Membership.group_id == group_id if group_id is not None else true(),
+                        build_permission_clause()
+                    )
+                )
+            elif share_link_id is not None:
+                # For single share link access checks - use EXISTS to avoid cross join
+                return select(ShareLink).where(
+                    (ShareLink.id == share_link_id) &
+                    ShareLink.group_id.in_(
+                        select(Membership.group_id).where(
+                            Membership.user_id == user.id,
+                            Membership.accepted.is_(True),
+                            Membership.group_id == group_id if group_id is not None else true(),
+                            build_permission_clause()
+                        )
+                    )
+                ).exists()
+            elif token is not None:
+                return select(ShareLink).where(
+                    (ShareLink.token == token) &
+                    ShareLink.group_id.in_(
+                        select(Membership.group_id).where(
+                            Membership.user_id == user.id,
+                            Membership.accepted.is_(True),
+                            Membership.group_id == group_id if group_id is not None else true(),
+                            build_permission_clause()
+                        )
+                    )
+                ).exists()
+            else:
+                raise HTTPException(
+                    status_code=500, detail="Endpoint Guard misconfiguration: invalid configuration for multi parameter")
+
+        def predicate(share_link: ShareLink, user: User) -> bool:
+            if share_link.group is None:
+                return False
+
+            return any(
+                (m.user_id == user.id)
+                and m.accepted
+                and (m.is_owner or Permission.ADMINISTRATOR.value in m.permissions)
+                for m in share_link.group.memberships
             )
 
         return EndpointGuard(clause, predicate, exclude_fields=exclude_fields)

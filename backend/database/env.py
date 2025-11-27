@@ -65,13 +65,24 @@ target_metadata.naming_convention = {
 # my_important_option = config.get_main_option("my_important_option")
 # ... etc.
 
-# ? This is only needed for generation via command line, but breaks tests due to re-registration
+# This blocks registration when running under pytest to avoid re-registration
 if "pytest" not in sys.modules:
     print("Registering custom renderers for PostgreSQL ENUM types...")
-    @renderers.dispatch_for(PostgresqlEnum)
-    def render_pg_enum(type_, autogen_context) -> str:  # noqa: ANN001, D103
-        print(f"Rendering PostgreSQL ENUM type: {type_}")
-        return f"sa.Enum({', '.join(repr(e) for e in type_.enums)}, name={type_.name!r})"
+    try:
+        @renderers.dispatch_for(PostgresqlEnum)
+        def render_pg_enum(type_, autogen_context) -> str:  # noqa: ANN001, D103
+            """Render alembic_postgresql_enum types for autogenerate.
+
+            Guarded inside try/except to avoid crashing if env.py is loaded
+            multiple times in the same process (alembic may import it twice).
+            """
+            print(f"Rendering PostgreSQL ENUM type: {type_}")
+            return f"sa.Enum({', '.join(repr(e) for e in type_.enums)}, name={type_.name!r})"
+    except AssertionError:
+        # Already registered (env.py was loaded/executed earlier). Skipping
+        # re-registration avoids the AssertionError raised by alembic's
+        # decorator when the same (target, qualifier) pair is already present.
+        print("Renderer for PostgresqlEnum already registered — skipping re-registration.")
 
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode.

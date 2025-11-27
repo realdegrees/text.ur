@@ -4,6 +4,7 @@
 	import SettingsIcon from '~icons/material-symbols/settings-outline';
 	import PeopleIcon from '~icons/material-symbols/group-outline';
 	import DocumentIcon from '~icons/material-symbols/description-outline';
+	import ShareIcon from '~icons/material-symbols/link';
 	import type { LocalizedString } from 'typesafe-i18n';
 	import { fly } from 'svelte/transition';
 	import { page } from '$app/state';
@@ -22,6 +23,14 @@
 	const menuItems: MenuItem[] = [
 		{ path: '/documents', i18nKey: $LL.group.documents, icon: DocumentIcon, condition: true },
 		{ path: '/memberships', i18nKey: $LL.group.members, icon: PeopleIcon, condition: true },
+		{
+			path: '/sharing',
+			i18nKey: () => 'Sharing' as LocalizedString,
+			icon: ShareIcon,
+			condition: sessionStore.validatePermissions({
+				or: ['administrator']
+			})
+		},
 		{
 			path: '/settings',
 			i18nKey: $LL.group.settings,

@@ -13,7 +13,6 @@
 	import { sessionStore } from '$lib/runes/session.svelte.js';
 
 	interface Props {
-		scale: number;
 		minScale: number;
 		maxScale: number;
 		pageNumber: number;
@@ -26,7 +25,6 @@
 	}
 
 	let {
-		scale,
 		minScale,
 		maxScale,
 		pageNumber,
@@ -84,7 +82,7 @@
 			<button
 				class="{buttonClass} {isExpanded ? 'flex-1' : ''}"
 				onclick={onZoomIn}
-				disabled={scale >= maxScale}
+				disabled={documentStore.documentScale >= maxScale}
 				title="Zoom In"
 			>
 				<span class="flex items-center gap-2">
@@ -95,7 +93,7 @@
 			<button
 				class="{buttonClass} {isExpanded ? 'flex-1' : ''}"
 				onclick={onZoomOut}
-				disabled={scale <= minScale}
+				disabled={documentStore.documentScale <= minScale}
 				title="Zoom Out"
 			>
 				<span class="flex items-center gap-2">

@@ -1,3 +1,4 @@
+from datetime import UTC, datetime
 from typing import Annotated
 
 import core.config as cfg
@@ -16,7 +17,7 @@ from fastapi.responses import RedirectResponse
 from fastapi.security import OAuth2PasswordRequestForm
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 from models.enums import AppErrorCode
-from models.tables import User
+from models.tables import Membership, User
 from sqlmodel import select
 from util.api_router import APIRouter
 
@@ -39,10 +40,11 @@ async def login(
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-        
+
     if not user.verified:
-        raise AppException(status_code=403, detail="Forbidden: Email not verified", error_code=AppErrorCode.EMAIL_NOT_VERIFIED)
-        
+        raise AppException(status_code=403, detail="Forbidden: Email not verified",
+                           error_code=AppErrorCode.EMAIL_NOT_VERIFIED)
+
     token = Token(
         access_token=generate_token(user, "access"),
         refresh_token=generate_token(user, "refresh"),
@@ -54,7 +56,7 @@ async def login(
         httponly=True,
         secure=cfg.COOKIE_SECURE,
         samesite=cfg.COOKIE_SAMESITE,
-        max_age=cfg.JWT_ACCESS_EXPIRATION_MINUTES * 60
+        max_age=int(cfg.JWT_ACCESS_EXPIRATION_MINUTES * 60)
     )
     response.set_cookie(
         key="refresh_token",
@@ -62,35 +64,40 @@ async def login(
         httponly=True,
         secure=cfg.COOKIE_SECURE,
         samesite=cfg.COOKIE_SAMESITE,
-        max_age=cfg.JWT_REFRESH_EXPIRATION_DAYS * 24 * 60 * 60
+        max_age=int(cfg.JWT_REFRESH_EXPIRATION_DAYS * 24 * 60 * 60)
     )
     return token
 
 
 @router.post("/refresh")
-async def refresh(response: Response, user: User = Authenticate(token_type="refresh")) -> Token:
+async def refresh(response: Response, request: Request, db: Database, user: User = Authenticate(token_type="refresh")) -> Token:
     """Refresh the access token given a valid refresh token."""
     token = Token(
         access_token=generate_token(user, "access"),
         refresh_token=generate_token(user, "refresh"),
         token_type="bearer",
     )
+
+    # Find all memberships for the user where a share_link is present and delete the membership if the share_link is expired or if
+    invalid_memberships = db.exec(
+            select(Membership).where(
+                Membership.user_id == user.id,
+                Membership.is_expired == True,  # noqa: E712
+            )
+        ).all()
+    for membership in invalid_memberships:
+        db.delete(membership)
+    db.commit()
+
     response.set_cookie(
         key="access_token",
         value=token.access_token,
         httponly=True,
         secure=cfg.COOKIE_SECURE,
         samesite=cfg.COOKIE_SAMESITE,
-        max_age=cfg.JWT_ACCESS_EXPIRATION_MINUTES * 60
+        max_age=int(cfg.JWT_ACCESS_EXPIRATION_MINUTES * 60)
     )
-    response.set_cookie(
-        key="refresh_token",
-        value=token.refresh_token,
-        httponly=True,
-        secure=cfg.COOKIE_SECURE,
-        samesite=cfg.COOKIE_SAMESITE,
-        max_age=cfg.JWT_REFRESH_EXPIRATION_DAYS * 24 * 60 * 60
-    )
+    
     return token
 
 
@@ -101,24 +108,29 @@ async def reset_password(request: Request, db: Database, mail: Mail, email: str 
     user: User | None = db.exec(query).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    reset_link: str = mail.generate_verification_link(email, router, salt="password-reset", confirm_route="verify")
+    reset_link: str = mail.generate_verification_link(
+        email, router, salt="password-reset", confirm_route="verify")
     try:
         template = cfg.JINJA_ENV.get_template("reset_password.jinja")
         html_body: str = template.render(
             reset_link=f"{request.base_url}reset?url={reset_link}",
-            expiry_minutes=cfg.EMAIL_PRESIGN_EXPIRY // 60
+            expiry_minutes=cfg.EMAIL_PRESIGN_EXPIRY_DAYS // 60
         )
         mail.send_email(email, html_body, subject="Password Reset")
     except Exception as e:
-        raise HTTPException(status_code=500, detail="Failed to send reset email") from e
+        raise HTTPException(
+            status_code=500, detail="Failed to send reset email") from e
+
 
 @router.put("/reset/verify/{token}", response_class=RedirectResponse)
 async def reset_verify(token: str, db: Database, password: str = Body(..., embed=True)) -> RedirectResponse:
     """Confirm password reset using the presigned URL and update the user's password."""
     try:
-        email: str = URLSafeTimedSerializer(cfg.EMAIL_PRESIGN_SECRET).loads(token, max_age=cfg.EMAIL_PRESIGN_EXPIRY, salt="password-reset")
+        email: str = URLSafeTimedSerializer(cfg.EMAIL_PRESIGN_SECRET).loads(
+            token, max_age=int(cfg.EMAIL_PRESIGN_EXPIRY_DAYS), salt="password-reset")
     except (BadSignature, SignatureExpired) as e:
-        raise HTTPException(status_code=403, detail="Invalid or expired token") from e
+        raise HTTPException(
+            status_code=403, detail="Invalid or expired token") from e
     query = select(User).where(User.email == email)
     user: User | None = db.exec(query).first()
     if not user:

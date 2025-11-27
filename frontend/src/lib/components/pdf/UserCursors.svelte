@@ -2,6 +2,7 @@
 	import { documentWebSocket, type UserCursor } from '$lib/stores/documentWebSocket';
 	import { documentStore } from '$lib/runes/document.svelte';
 	import { fade } from 'svelte/transition';
+	import { SvelteMap } from 'svelte/reactivity';
 
 	interface Props {
 		viewerContainer: HTMLDivElement | null;
@@ -20,6 +21,41 @@
 			cursorsMap = cursors;
 		});
 		return unsubscribe;
+	});
+
+	// Apply author filters to cursors (same logic as AnnotationLayer)
+	let filteredCursorsMap = $derived.by(() => {
+		const states = documentStore.authorFilterStates;
+		const included = new Set<number>(
+			[...states.entries()].filter(([, v]) => v === 'include').map(([k]) => k)
+		);
+		const excluded = new Set<number>(
+			[...states.entries()].filter(([, v]) => v === 'exclude').map(([k]) => k)
+		);
+
+		// No filters applied
+		if (included.size === 0 && excluded.size === 0) {
+			return cursorsMap;
+		}
+
+		const filtered = new SvelteMap<number, UserCursor>();
+
+		for (const [userId, cursor] of cursorsMap.entries()) {
+			// If include filter is active, only show cursors from included users
+			if (included.size > 0) {
+				if (included.has(userId)) {
+					filtered.set(userId, cursor);
+				}
+			}
+			// If exclude filter is active, hide cursors from excluded users
+			else if (excluded.size > 0) {
+				if (!excluded.has(userId)) {
+					filtered.set(userId, cursor);
+				}
+			}
+		}
+
+		return filtered;
 	});
 
 	// Get page element for a specific page number
@@ -140,7 +176,7 @@
 <!-- Cursor overlay layer - positioned within the PDF viewer container -->
 <!-- Only show cursors when cursor sharing is enabled (not in restricted mode) and user hasn't toggled them off -->
 {#if isCursorSharingEnabled && documentStore.showOtherCursors}
-	{#each cursorsMap.entries() as [userId, cursor] (userId)}
+	{#each filteredCursorsMap.entries() as [userId, cursor] (userId)}
 		{@const position = getCursorPosition(cursor)}
 		{#if cursor.visible && position}
 			<div

@@ -67,7 +67,6 @@ const de = {
 		delete_documents: 'Dokumente löschen',
 		remove_reactions: 'Reaktionen entfernen',
 		add_reactions: 'Reaktionen hinzufügen',
-		manage_share_links: 'Freigabelinks verwalten'
 	},
 	visibility: {
 		public: {
@@ -101,7 +100,57 @@ const de = {
 		membership_not_found: 'Mitgliedschaft nicht gefunden',
 		owner_cannot_leave_group: 'Der Gruppeninhaber kann die Gruppe nicht verlassen'
 	},
-	invitations: 'Einladungen'
+	invitations: 'Einladungen',
+	continue: 'Weiter',
+	sharelink: {
+		title: 'Gruppe beitreten',
+		description: 'Sie wurden eingeladen, einer Gruppe beizutreten. Geben Sie Ihre Daten ein, um als Gast fortzufahren.',
+		alreadyHaveAccount: 'Haben Sie bereits ein Konto? Anmelden',
+		errors: {
+			usernameRequired: 'Bitte geben Sie einen Benutzernamen ein',
+			registerFailed: 'Registrierung fehlgeschlagen. Bitte versuchen Sie es erneut.'
+		}
+	},
+	userSettings: {
+		title: 'Kontoeinstellungen',
+		guestWarning: {
+			title: 'Gastkonto-Warnung',
+			description: 'Ihr Konto ist temporär und an diesen Browser gebunden. Wenn Sie Ihre Cookies löschen, verlieren Sie dauerhaft den Zugriff auf dieses Konto.',
+			upgradeButton: 'Auf dauerhaftes Konto upgraden →',
+			cancelButton: 'Upgrade abbrechen'
+		},
+		upgradeAccount: {
+			title: 'Konto upgraden',
+			description: 'Verknüpfen Sie Ihr Gastkonto mit einer E-Mail-Adresse, um es dauerhaft zu machen. Sie müssen Ihre E-Mail verifizieren, bevor das Upgrade abgeschlossen ist.',
+			emailLabel: 'E-Mail-Adresse',
+			passwordLabel: 'Passwort',
+			confirmPasswordLabel: 'Passwort bestätigen',
+			submitButton: 'Konto upgraden',
+			success: 'Konto erfolgreich upgegradet! Bitte überprüfen Sie Ihre E-Mail, um Ihr Konto zu verifizieren.',
+			errors: {
+				required: 'E-Mail und Passwort sind erforderlich',
+				passwordMismatch: 'Passwörter stimmen nicht überein'
+			}
+		},
+		profile: {
+			title: 'Profilinformationen',
+			usernameLabel: 'Benutzername',
+			firstNameLabel: 'Vorname',
+			lastNameLabel: 'Nachname',
+			emailLabel: 'E-Mail',
+			saveButton: 'Änderungen speichern',
+			success: 'Profil erfolgreich aktualisiert'
+		},
+		changePassword: {
+			title: 'Passwort ändern',
+			currentPasswordLabel: 'Aktuelles Passwort',
+			newPasswordLabel: 'Neues Passwort',
+			confirmPasswordLabel: 'Neues Passwort bestätigen',
+			errors: {
+				mismatch: 'Neue Passwörter stimmen nicht überein'
+			}
+		}
+	}
 } satisfies Translation;
 
 export default de;

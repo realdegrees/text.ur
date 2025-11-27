@@ -2,8 +2,6 @@
 	import SaveIcon from '~icons/material-symbols/save-outline';
 	import DeleteIcon from '~icons/material-symbols/delete-outline';
 	import TransferIcon from '~icons/material-symbols/swap-horiz';
-	import AddIcon from '~icons/material-symbols/add-2-rounded';
-	import { permissionSchema } from '$api/schemas';
 	import { api } from '$api/client';
 	import { notification } from '$lib/stores/notificationStore';
 	import { sessionStore } from '$lib/runes/session.svelte.js';
@@ -17,9 +15,7 @@
 	} from '$api/types';
 	import type { Paginated } from '$api/pagination';
 	import AdvancedInput from '$lib/components/advancedInput.svelte';
-	import Dropdown from '$lib/components/dropdown.svelte';
-	import Badge from '$lib/components/badge.svelte';
-	import LL from '$i18n/i18n-svelte.js';
+	import PermissionSelector from '$lib/components/permissionSelector.svelte';
 
 	let { data } = $props();
 	let group = $derived(data.membership.group);
@@ -32,8 +28,6 @@
 	let showTransferConfirm: boolean = $state(false);
 	let deleteConfirmText: string = $state('');
 	let editableGroupName: string = $derived(group.name);
-
-	const availablePermissions = permissionSchema.options.map((p) => p.value);
 
 	async function handleSave(): Promise<void> {
 		const updateData: GroupUpdate = {
@@ -163,39 +157,11 @@
 				<p class="text-xs text-text/50">
 					These permissions are automatically granted to new members when they join the group.
 				</p>
-				<div
-					class="flex flex-wrap items-center gap-1.5 rounded-md border border-text/20 bg-text/5 p-3"
-				>
-					{#each defaultPermissions as perm (perm)}
-						<Badge
-							item={perm}
-							label={$LL.permissions[perm]?.() || perm}
-							onRemove={removeDefaultPermission}
-						/>
-					{/each}
-
-					{#if availablePermissions.filter((p) => !defaultPermissions.includes(p)).length > 0}
-						<Dropdown
-							items={availablePermissions.filter((p) => !defaultPermissions.includes(p))}
-							onSelect={(perm) => addDefaultPermission(perm)}
-							position="bottom-left"
-							title="Add Permission"
-							showArrow={false}
-							show={false}
-							hideCurrentSelection={true}
-							allowSelection={true}
-						>
-							{#snippet icon()}
-								<AddIcon
-									class="h-full w-5.5 rounded bg-background text-text shadow-inner shadow-black/20 transition-all hover:bg-green-500/30"
-								/>
-							{/snippet}
-							{#snippet itemSnippet(perm)}
-								{@render permissionItem(perm)}
-							{/snippet}
-						</Dropdown>
-					{/if}
-				</div>
+				<PermissionSelector
+					bind:selectedPermissions={defaultPermissions}
+					onAdd={addDefaultPermission}
+					onRemove={removeDefaultPermission}
+				/>
 			</div>
 		{/if}
 
@@ -350,7 +316,3 @@
 		{/if}
 	</div>
 </div>
-
-{#snippet permissionItem(perm: Permission)}
-	<p class="p-1 text-left text-text">{$LL.permissions[perm]?.() || perm}</p>
-{/snippet}

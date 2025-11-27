@@ -245,7 +245,8 @@ class DocumentWebSocketStore {
 				this.viewModeEventHandlers.forEach((handler) => handler(envelope));
 
 				// Check if user is actively editing - defer refresh until they're done
-				if (documentStore.editingComment) {
+				const hasEditingComment = documentStore.comments.some((c) => c.isEditing);
+				if (hasEditingComment) {
 					documentStore.setPendingViewModeRefresh(true);
 				} else {
 					invalidateAll();

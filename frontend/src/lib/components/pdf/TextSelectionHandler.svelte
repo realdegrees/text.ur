@@ -188,17 +188,15 @@
 				color: DEFAULT_HIGHLIGHT_COLOR
 			};
 
-			const newComment = await documentStore.create({ annotation });
+			const newComment = await documentStore.createComment({ annotation });
 
 			// Clear selection after creating
 			window.getSelection()?.removeAllRanges();
 
 			// Pin the new comment and trigger edit mode
 			if (newComment) {
-				documentStore.setPinned(newComment.id);
-				documentStore.setCommentCardActive(true);
-				documentStore.setSelected(newComment.id);
-				documentStore.setEditing(newComment.id);
+				documentStore.setPinned(newComment.id, true);
+				documentStore.setEditing(newComment.id, true);
 			}
 		} finally {
 			isCreating = false;

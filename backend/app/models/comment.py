@@ -24,6 +24,11 @@ def sanitize_content(value: str | None) -> str | None:
     value = ''.join(c for c in value if c in '\n\t\r' or (ord(c) >= 32 or ord(c) >= 127))
     return value
 
+class Annotation(SQLModel):
+    page_number: int
+    text: str
+    rects: list[dict]
+
 
 class CommentCreate(SQLModel):
     visibility: Visibility

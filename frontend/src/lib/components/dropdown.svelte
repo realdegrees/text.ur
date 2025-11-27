@@ -16,7 +16,8 @@
 		icon,
 		hideCurrentSelection = false,
 		showArrow = true,
-		allowSelection = true // New flag to control selection toggle visibility
+		allowSelection = true, // New flag to control selection toggle visibility
+		showCurrentItemInList = false // Flag to control whether to show current item in dropdown list
 	}: {
 		items: Item[];
 		itemSnippet: Snippet<[Item]>;
@@ -30,6 +31,7 @@
 		hideCurrentSelection?: boolean;
 		showArrow?: boolean;
 		allowSelection?: boolean; // Add type for the new flag
+		showCurrentItemInList?: boolean; // Flag to show current item in list
 	} = $props();
 
 	let dropdownRef: HTMLDivElement;
@@ -100,7 +102,7 @@
 			style:bottom={position.includes('top') ? '100%' : 'auto'}
 			transition:slide={{ duration: 200, easing: quintInOut }}
 		>
-			{#each items.filter((item) => item !== currentItem) as item (item)}
+			{#each items.filter((item) => showCurrentItemInList || item !== currentItem) as item (item)}
 				<button
 					type="button"
 					class="block w-full whitespace-nowrap hover:bg-primary"

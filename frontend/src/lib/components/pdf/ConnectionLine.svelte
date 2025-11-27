@@ -1,51 +1,38 @@
 <script lang="ts">
+	import { documentStore, type CachedComment } from '$lib/runes/document.svelte';
+
 	interface Props {
-		pdfContainer: HTMLDivElement | null;
-		sidebarContainer: HTMLDivElement | null;
-		commentId: number | undefined;
+		comment: CachedComment | null;
+		opacity?: number;
+		yPosition: number;
+		scrollTop?: number;
 	}
 
-	let { pdfContainer, sidebarContainer, commentId }: Props = $props();
+	let { comment, opacity = 1, yPosition, scrollTop }: Props = $props();
 
-	let activeCommentId = $derived(commentId ?? null);
-
-	// Line coordinates (viewport-relative, then converted to container-relative)
-	let lineCoords = $state<{
+	interface LineCoordinates {
 		startX: number;
 		startY: number;
 		endX: number;
 		endY: number;
-	} | null>(null);
+	}
 
-	// Track the parent container for relative positioning
-	let parentContainer: HTMLElement | null = $state(null);
-
-	const calculateLineCoordinates = () => {
-		if (!activeCommentId || !pdfContainer || !sidebarContainer || !parentContainer) {
-			lineCoords = null;
-			return;
-		}
-
+	const calculateLineCoordinates = (): LineCoordinates | null => {
 		// Find all highlight elements for this comment
-		const highlightEls = pdfContainer.querySelectorAll(
-			`.annotation-highlight[data-comment-id="${activeCommentId}"]`
-		);
+		const highlightEls = comment?.highlightElements;
+		const sidebarRect = documentStore.commentSidebarRef?.getBoundingClientRect();
 
-		// Find the badge element in the sidebar
-		const badgeEl = sidebarContainer.querySelector(
-			`[data-comment-badge="${activeCommentId}"]`
-		) as HTMLElement | null;
-
-		if (highlightEls.length === 0 || !badgeEl) {
-			lineCoords = null;
-			return;
+		if (!highlightEls || highlightEls.length === 0 || !sidebarRect) {
+			return null;
 		}
-
-		const parentRect = parentContainer.getBoundingClientRect();
-		const badgeRect = badgeEl.getBoundingClientRect();
 
 		// Get the first highlight for vertical positioning
 		const firstHighlightRect = highlightEls[0].getBoundingClientRect();
+
+		// Calculate cluster position from data instead of reading DOM
+		const LEFT_PADDING = 12; // left-3 class = 0.75rem = 12px
+		const clusterLeft = sidebarRect.left + LEFT_PADDING;
+		const clusterTop = sidebarRect.top + yPosition;
 
 		// Get the rightmost edge from all highlights for horizontal positioning
 		let maxRight = -Infinity;
@@ -55,65 +42,43 @@
 		});
 
 		// End point: rightmost edge of all highlights, vertically centered on first highlight
-		const HIGHLIGHT_OFFSET = 6; // pixels of gap from highlight edge
-		const endX = maxRight - parentRect.left + HIGHLIGHT_OFFSET;
-		const endY = firstHighlightRect.top + firstHighlightRect.height / 2 - parentRect.top;
+		const HIGHLIGHT_OFFSET = 12; // pixels of gap from highlight edge
+		const endX = maxRight + HIGHLIGHT_OFFSET;
+		const endY = firstHighlightRect.top + firstHighlightRect.height / 2;
 
-		// Start point: left edge of badge, near the top (where annotation quote is)
-		const startX = badgeRect.left - parentRect.left;
-		const startY = badgeRect.top + 40 - parentRect.top; // ~40px from top is where quote area is
+		// Start point: at cluster (using calculated position from data)
+		const COMMENT_OFFSET = -1.5; // pixels of offset from left edge of cluster
+		const startX = clusterLeft + COMMENT_OFFSET;
+		const startY = clusterTop + 36; // ~40px from top is where quote area is
 
-		lineCoords = { startX, startY, endX, endY };
+		return { startX, startY, endX, endY };
 	};
 
-	// Recalculate on relevant changes
+	let lineCoords = $state<LineCoordinates | null>(null);
+
 	$effect(() => {
-		// Dependencies
-		void activeCommentId;
+		void documentStore.documentScale;
+		void yPosition;
+		void scrollTop;
+		void comment;
+		void opacity;
 
-		// Calculate after a short delay to allow DOM to update
-		const timeout = setTimeout(calculateLineCoordinates, 10);
-		return () => clearTimeout(timeout);
-	});
-
-	// Also recalculate on scroll
-	$effect(() => {
-		if (!pdfContainer) return;
-
-		const handleScroll = () => {
-			if (activeCommentId) {
-				requestAnimationFrame(calculateLineCoordinates);
-			}
-		};
-
-		pdfContainer.addEventListener('scroll', handleScroll);
-		return () => pdfContainer.removeEventListener('scroll', handleScroll);
-	});
-
-	// Set up a MutationObserver to detect when badges are rendered
-	$effect(() => {
-		if (!sidebarContainer) return;
-
-		const observer = new MutationObserver(() => {
-			if (activeCommentId) {
-				requestAnimationFrame(calculateLineCoordinates);
-			}
+		// Wait 3 RAF: ensures both highlights and clusters have updated
+		requestAnimationFrame(() => {
+			requestAnimationFrame(() => {
+				requestAnimationFrame(() => {
+					lineCoords = calculateLineCoordinates();
+				});
+			});
 		});
-
-		observer.observe(sidebarContainer, {
-			childList: true,
-			subtree: true,
-			attributes: true,
-			attributeFilter: ['data-badge-active']
-		});
-
-		return () => observer.disconnect();
 	});
 </script>
 
-<div class="pointer-events-none fixed inset-0 overflow-visible" bind:this={parentContainer}>
+<div class="pointer-events-none fixed inset-0 overflow-visible">
 	{#if lineCoords}
-		<svg class="absolute inset-0 h-full w-full overflow-visible">
+		<svg class="absolute inset-0 h-full w-full overflow-visible" style="opacity: {opacity}">
+			<!--Start Circle-->
+			<circle cx={lineCoords.startX} cy={lineCoords.startY} r="4" class="fill-primary" />
 			<!-- Main line -->
 			<line
 				x1={lineCoords.startX}
@@ -121,14 +86,15 @@
 				x2={lineCoords.endX}
 				y2={lineCoords.endY}
 				stroke="currentColor"
-				stroke-width="2"
-				stroke-dasharray="4 2"
-				class="text-primary/60"
+				stroke-width="5"
+				class="text-primary/70"
 			/>
-			<!-- Start dot (at badge) -->
-			<circle cx={lineCoords.startX} cy={lineCoords.startY} r="4" class="fill-primary/80" />
 			<!-- End dot (at highlight) -->
-			<circle cx={lineCoords.endX} cy={lineCoords.endY} r="4" class="fill-primary/80" />
+			<circle cx={lineCoords.endX} cy={lineCoords.endY} r="8" class="fill-primary" />
+
+			<!-- End dot inner (at highlight) -->
+			<circle cx={lineCoords.endX} cy={lineCoords.endY} r="3.5" class="fill-text" />
+			<circle cx={lineCoords.endX} cy={lineCoords.endY} r="3.5" class="fill-text" />
 		</svg>
 	{/if}
 </div>

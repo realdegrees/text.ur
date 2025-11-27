@@ -10,17 +10,23 @@ import type {
 import type { Paginated } from '$api/pagination';
 import { notification } from '$lib/stores/notificationStore';
 import type { Annotation } from '$types/pdf';
+import { SvelteMap, SvelteSet } from 'svelte/reactivity';
 
 export interface CachedComment extends CommentRead {
 	replies?: CachedComment[];
+	replyInputContent?: string;
+	showReplyInput?: boolean;
 	// Interaction state flags
+	isCommentHovered?: boolean; // Mouse over the comment
 	isHighlightHovered?: boolean; // Mouse over the PDF highlight
-	isBadgeHovered?: boolean; // Mouse over the comment badge
 	isSelected?: boolean; // Currently selected/active comment
 	isPinned?: boolean; // Clicked to stay open
 	isEditing?: boolean; // In edit mode
+	editInputContent?: string; // Current content in edit input
 	// UI state
 	isRepliesCollapsed?: boolean; // Replies section is collapsed
+	// Element Refs
+	highlightElements?: HTMLElement[];
 }
 
 const toCachedComment = (comment: CommentRead): CachedComment => ({
@@ -74,14 +80,21 @@ const findParentOfComment = (
 
 const createDocumentStore = () => {
 	let comments: CachedComment[] = $state<CachedComment[]>([]);
+	const pinnedComments: SvelteSet<number> = $derived.by(() => {
+		return new SvelteSet(
+			flattenComments(comments)
+				.filter((c) => c.isPinned)
+				.map((c) => c.id)
+		);
+	});
+
 	let loadedDocument: DocumentRead | undefined = $state<DocumentRead | undefined>(undefined);
-	// Track if a comment card is actively being interacted with (badge hovered or tab clicked)
-	let isCommentCardActive: boolean = $state<boolean>(false);
+	let documentScale: number = $state<number>(1);
+
 	let pdfViewerRef: HTMLElement | null = $state<HTMLElement | null>(null);
 	let scrollContainerRef: HTMLElement | null = $state<HTMLElement | null>(null);
 	let commentSidebarRef: HTMLDivElement | null = $state<HTMLDivElement | null>(null);
-	// Track which comment has an active reply input
-	let replyingToCommentId: number | null = $state<number | null>(null);
+
 	// Filter state (local only - doesn't affect fetched data)
 	// Map of user ID -> filter state (include | exclude). Absence = none.
 	type AuthorFilterState = 'include' | 'exclude';
@@ -95,10 +108,6 @@ const createDocumentStore = () => {
 
 	const setDocument = (document: DocumentRead) => {
 		loadedDocument = document;
-	};
-
-	const setCommentCardActive = (active: boolean) => {
-		isCommentCardActive = active;
 	};
 
 	const setPdfViewerRef = (ref: HTMLElement | null) => {
@@ -118,57 +127,115 @@ const createDocumentStore = () => {
 		comments = rootComments.map(toCachedComment);
 	};
 
-	// Helper to update a flag on a specific comment (clears the flag on all others)
+	// Debounce for setCommentFlag - batches multiple updates
+	let commentFlagDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+	let pendingFlagUpdates: Array<{
+		commentId: number;
+		flag: 'isCommentHovered' | 'isHighlightHovered' | 'isSelected' | 'isPinned' | 'isEditing';
+		value: boolean;
+	}> = [];
+
+	// Helper to update a flag on a specific comment (debounced to batch updates)
 	const setCommentFlag = (
-		commentId: number | null,
-		flag: 'isHighlightHovered' | 'isBadgeHovered' | 'isSelected' | 'isPinned' | 'isEditing'
+		commentId: number,
+		flag: 'isCommentHovered' | 'isHighlightHovered' | 'isSelected' | 'isPinned' | 'isEditing',
+		value: boolean = false
 	) => {
-		const allComments = flattenComments(comments);
-		for (const c of allComments) {
-			c[flag] = c.id === commentId;
+		// Queue the update
+		pendingFlagUpdates.push({ commentId, flag, value });
+
+		// Clear existing timer
+		if (commentFlagDebounceTimer) {
+			clearTimeout(commentFlagDebounceTimer);
 		}
-		comments = [...comments]; // trigger reactivity
+
+		// Schedule batch update
+		commentFlagDebounceTimer = setTimeout(() => {
+			// Build a map of commentId -> updates for O(1) lookup
+			const updateMap = new SvelteMap<
+				number,
+				Array<{ flag: (typeof pendingFlagUpdates)[0]['flag']; value: boolean }>
+			>();
+			for (const update of pendingFlagUpdates) {
+				if (!updateMap.has(update.commentId)) {
+					updateMap.set(update.commentId, []);
+				}
+				updateMap.get(update.commentId)!.push({ flag: update.flag, value: update.value });
+			}
+
+			// Iterate through all comments once and apply matching updates
+			const allComments = flattenComments(comments);
+			for (const comment of allComments) {
+				const updates = updateMap.get(comment.id);
+				if (updates) {
+					for (const { flag, value } of updates) {
+						comment[flag] = value;
+					}
+				}
+			}
+
+			// Clear pending updates
+			pendingFlagUpdates = [];
+
+			// Trigger reactivity once
+			comments = [...comments];
+
+			commentFlagDebounceTimer = null;
+		}, 50);
+	};
+
+	const addCommentHighlight = (commentId: number, element: HTMLElement) => {
+		const comment = findComment(comments, commentId);
+		if (comment) {
+			comment.highlightElements = comment.highlightElements || [];
+			comment.highlightElements.push(element);
+		}
+	};
+	const removeCommentHighlight = (commentId: number, element: HTMLElement) => {
+		const comment = findComment(comments, commentId);
+		if (comment && comment.highlightElements) {
+			comment.highlightElements = comment.highlightElements.filter((el) => el !== element);
+		}
 	};
 
 	// Set highlight hovered state (when mouse is over PDF highlight)
-	const setHighlightHovered = (commentId: number | null) => {
-		setCommentFlag(commentId, 'isHighlightHovered');
+	const setHighlightHovered = (commentId: number, hovered: boolean) => {
+		setCommentFlag(commentId, 'isHighlightHovered', hovered);
 	};
 
-	// Set badge hovered state (when mouse is over comment badge)
-	const setBadgeHovered = (commentId: number | null) => {
-		setCommentFlag(commentId, 'isBadgeHovered');
-	};
-
-	// Set selected state
-	const setSelected = (commentId: number | null) => {
-		setCommentFlag(commentId, 'isSelected');
+	// Set comment hovered state (when mouse is over comment in sidebar)
+	const setCommentHovered = (commentId: number, hovered: boolean) => {
+		setCommentFlag(commentId, 'isCommentHovered', hovered);
 	};
 
 	// Set pinned state
-	const setPinned = (commentId: number | null) => {
-		setCommentFlag(commentId, 'isPinned');
+	const setPinned = (commentId: number, pinned: boolean) => {
+		setCommentFlag(commentId, 'isPinned', pinned);
 	};
 
 	// Set editing state
-	const setEditing = (commentId: number | null) => {
-		setCommentFlag(commentId, 'isEditing');
+	const setEditing = (commentId: number, editing: boolean) => {
+		const comment = findComment(comments, commentId);
+		if (!comment) return;
+
+		// Initialize editInputContent with current content when starting to edit
+		if (editing) {
+			comment.editInputContent = comment.content || '';
+		}
+
+		// Set editing flag immediately (not debounced) for instant UI response
+		comment.isEditing = editing;
+		comments = [...comments]; // trigger reactivity
+
 		// When editing ends, check if we have a pending view mode refresh
-		if (commentId === null && pendingViewModeRefresh) {
-			pendingViewModeRefresh = false;
-			// Dynamically import to avoid circular dependency
-			import('$app/navigation').then(({ invalidateAll }) => invalidateAll());
+		if (!editing && pendingViewModeRefresh) {
+			pendingViewModeRefresh = false; // TODO probably should also trigger it here instead of from wherever its triggered now
 		}
 	};
 
 	// Set pending view mode refresh flag (called when view mode changes during editing)
 	const setPendingViewModeRefresh = (pending: boolean) => {
 		pendingViewModeRefresh = pending;
-	};
-
-	// Set replying state (tracks which comment has reply input open)
-	const setReplyingTo = (commentId: number | null) => {
-		replyingToCommentId = commentId;
 	};
 
 	// Filter setters
@@ -213,13 +280,11 @@ const createDocumentStore = () => {
 	const clearAllInteractionState = () => {
 		const allComments = flattenComments(comments);
 		for (const c of allComments) {
-			c.isHighlightHovered = false;
-			c.isBadgeHovered = false;
+			c.isCommentHovered = false;
 			c.isSelected = false;
 			c.isPinned = false;
 			c.isEditing = false;
 		}
-		isCommentCardActive = false;
 		comments = [...comments]; // trigger reactivity
 	};
 
@@ -253,6 +318,10 @@ const createDocumentStore = () => {
 		} satisfies CommentCreate);
 		if (!result.success) {
 			notification(result.error);
+			return;
+		}
+		if (!result.data) {
+			notification('error', 'Failed to create comment: No data returned');
 			return;
 		}
 		const newComment = toCachedComment(result.data);
@@ -387,32 +456,47 @@ const createDocumentStore = () => {
 		}
 	};
 
-	// Helper getters to find comments by state
-	const getHoveredComment = (): CachedComment | undefined => {
-		return flattenComments(comments).find((c) => c.isHighlightHovered || c.isBadgeHovered);
+	const setReplyInputContent = (commentId: number, content: string) => {
+		const comment = findComment(comments, commentId);
+		if (comment) {
+			comment.replyInputContent = content;
+			comments = [...comments]; // trigger reactivity
+		}
 	};
 
-	const getSelectedComment = (): CachedComment | undefined => {
-		return flattenComments(comments).find((c) => c.isSelected);
+	const setShowReplyInput = (commentId: number, show: boolean) => {
+		const comment = findComment(comments, commentId);
+		if (comment) {
+			comment.showReplyInput = show;
+			comments = [...comments]; // trigger reactivity
+		}
 	};
 
-	const getPinnedComment = (): CachedComment | undefined => {
-		return flattenComments(comments).find((c) => c.isPinned);
-	};
-
-	const getEditingComment = (): CachedComment | undefined => {
-		return flattenComments(comments).find((c) => c.isEditing);
+	const setEditingContent = (commentId: number, content: string) => {
+		const comment = findComment(comments, commentId);
+		if (comment) {
+			comment.editInputContent = content;
+			comments = [...comments]; // trigger reactivity
+		}
 	};
 
 	return {
+		// Pinned comments set
+		get pinnedComments() {
+			return pinnedComments;
+		},
+		get documentScale() {
+			return documentScale;
+		},
+		set documentScale(scale: number) {
+			documentScale = scale;
+		},
+		// State getters
 		get comments() {
 			return comments;
 		},
 		get loadedDocument() {
 			return loadedDocument;
-		},
-		get isCommentCardActive() {
-			return isCommentCardActive;
 		},
 		get pdfViewerRef() {
 			return pdfViewerRef;
@@ -439,40 +523,22 @@ const createDocumentStore = () => {
 		get showOtherCursors() {
 			return showOtherCursors;
 		},
-		// Helper getters
-		get hoveredComment() {
-			return getHoveredComment();
-		},
-		get selectedComment() {
-			return getSelectedComment();
-		},
-		get pinnedComment() {
-			return getPinnedComment();
-		},
-		get editingComment() {
-			return getEditingComment();
-		},
-		get replyingToCommentId() {
-			return replyingToCommentId;
-		},
-		// Returns true if any input is active (editing or replying)
-		get hasActiveInput() {
-			return getEditingComment() !== undefined || replyingToCommentId !== null;
-		},
 		// Methods
 		setDocument,
-		setCommentCardActive,
+		setReplyInputContent,
+		setShowReplyInput,
+		setEditingContent,
+		addCommentHighlight,
+		removeCommentHighlight,
 		setPdfViewerRef,
 		setScrollContainerRef,
 		setCommentSidebarRef,
 		setRootComments,
 		// New flag setters
+		setCommentHovered,
 		setHighlightHovered,
-		setBadgeHovered,
-		setSelected,
 		setPinned,
 		setEditing,
-		setReplyingTo,
 		clearAllInteractionState,
 		toggleRepliesCollapsed,
 		// Filter methods
@@ -484,7 +550,7 @@ const createDocumentStore = () => {
 		setPendingViewModeRefresh,
 		// CRUD operations
 		updateComment,
-		create: createComment,
+		createComment,
 		deleteComment,
 		loadReplies,
 		handleWebSocketEvent

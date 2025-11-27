@@ -92,7 +92,7 @@
 				.join(' ')};"
 		>
 			{#if selectable}
-				<div class="flex items-center justify-center">
+				<div class="flex min-w-0 items-center justify-center">
 					<input
 						type="checkbox"
 						checked={allSelected}
@@ -103,7 +103,7 @@
 				</div>
 			{/if}
 			{#each columnConfigs as col (col)}
-				<div>{col.label}</div>
+				<div class="min-w-0">{col.label}</div>
 			{/each}
 		</div>
 	</div>
@@ -121,7 +121,7 @@
 						.join(' ')};"
 				>
 					{#if selectable}
-						<div class="flex items-center justify-center">
+						<div class="flex min-w-0 items-center justify-center">
 							<input
 								type="checkbox"
 								checked={selectedItems.has(item)}
@@ -132,7 +132,7 @@
 						</div>
 					{/if}
 					{#each columnConfigs as col (col)}
-						<div class="text-sm text-gray-700">
+						<div class="min-w-0 text-sm text-gray-700">
 							{#if col.snippet}
 								{@render col.snippet(item)}
 							{:else}
