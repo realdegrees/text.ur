@@ -280,7 +280,7 @@
 				type="button"
 				class="text-muted flex items-center justify-center transition hover:cursor-pointer hover:text-text"
 				onclick={() => {
-					showPassword = !showPassword
+					showPassword = !showPassword;
 					// focus the input
 					searchElement?.focus();
 				}}

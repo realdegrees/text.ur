@@ -73,9 +73,9 @@
 		// Use textLayerRect since bounding boxes are normalized relative to text layer
 		const textLayerRect = textLayer.getBoundingClientRect();
 		const containerRect = viewerContainer.getBoundingClientRect();
-		
+
 		if (textLayerRect.width === 0 || textLayerRect.height === 0) return null;
-		
+
 		// Calculate the CENTER of the annotation box
 		const annotationTopInTextLayer = firstBox.y * textLayerRect.height;
 		const annotationHeight = firstBox.height * textLayerRect.height;
@@ -241,10 +241,7 @@
 <div class="relative h-full" bind:this={containerElement}>
 	{#each clusters as cluster (cluster.comments.map((c) => c.id).join('-'))}
 		{@const clusterKey = cluster.comments.map((c) => c.id).join('-')}
-		<div
-			class="absolute right-3 left-3"
-			style="top: {cluster.adjustedY ?? cluster.yPosition}px;"
-		>
+		<div class="absolute right-3 left-3" style="top: {cluster.adjustedY ?? cluster.yPosition}px;">
 			<CommentCluster
 				comments={cluster.comments}
 				adjustedY={cluster.adjustedY ?? cluster.yPosition}

@@ -2,6 +2,7 @@
 	import SaveIcon from '~icons/material-symbols/save-outline';
 	import CancelIcon from '~icons/material-symbols/close-rounded';
 	import PermissionSelector from '$lib/components/permissionSelector.svelte';
+	import DateTimePicker from '$lib/components/DateTimePicker.svelte';
 	import type { ShareLinkRead, Permission } from '$api/types';
 
 	let {
@@ -31,11 +32,6 @@
 	function removePermission(permission: Permission) {
 		permissions = permissions.filter((p) => p !== permission);
 	}
-
-	function formatDate(date: string | null | undefined): string {
-		if (!date) return 'Never';
-		return new Date(date).toLocaleString();
-	}
 </script>
 
 <div class="flex flex-col gap-3 rounded border border-text/20 bg-background/50 p-4">
@@ -63,29 +59,7 @@
 		/>
 	</div>
 
-	<div class="flex flex-col gap-2">
-		<div class="flex items-center justify-between gap-2">
-			<label for="edit-expires-{link.id}" class="text-xs font-semibold text-text/70"
-				>Expires: {formatDate(expiresAt)}</label
-			>
-			{#if expiresAt}
-				<button
-					type="button"
-					onclick={() => (expiresAt = null)}
-					class="text-text/50 transition hover:text-text"
-					title="Clear expiration"
-				>
-					<CancelIcon class="h-4 w-4" />
-				</button>
-			{/if}
-		</div>
-		<input
-			id="edit-expires-{link.id}"
-			type="datetime-local"
-			bind:value={expiresAt}
-			class="rounded border border-text/20 bg-background px-3 py-2 text-sm transition-colors focus:border-text/50 focus:outline-none"
-		/>
-	</div>
+	<DateTimePicker bind:value={expiresAt} id="edit-expires-{link.id}" />
 
 	<label class="flex items-center gap-2 text-sm">
 		<input type="checkbox" bind:checked={allowAnonymous} class="h-4 w-4 rounded" />

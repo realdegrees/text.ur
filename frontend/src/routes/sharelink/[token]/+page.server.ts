@@ -9,7 +9,6 @@ export const load: PageServerLoad = async ({ locals, params, fetch }) => {
 
 	// If user is authenticated, create membership via access endpoint
 	if (sessionUser) {
-
 		// Adds the user to the group if not already a member
 		const response = await api.post<ShareLinkRead>(`/api/sharelinks/use/${token}`, {}, { fetch });
 

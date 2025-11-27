@@ -29,14 +29,20 @@
 	}
 </script>
 
-<div class="border-text/20 bg-background/50 flex flex-col gap-2 rounded border p-3">
+<div class="flex flex-col gap-2 rounded border border-text/20 bg-background/50 p-3">
 	<div class="flex items-start justify-between gap-2">
 		<div class="flex flex-col gap-1">
 			<div class="flex items-center gap-2">
+				{#if link.num_memberships > 0}
+					<span
+						class="rounded bg-blue-500/20 px-2 py-0.5 text-xs font-semibold text-blue-600"
+						title="Members using this link: {link.num_memberships}">{link.num_memberships}</span
+					>
+				{/if}
 				{#if link.label}
 					<span class="font-semibold">{link.label}</span>
 				{:else}
-					<span class="text-text/50 font-semibold">Untitled Link</span>
+					<span class="font-semibold text-text/50">Untitled Link</span>
 				{/if}
 				{#if link.allow_anonymous_access}
 					<span
@@ -45,7 +51,7 @@
 					>
 				{/if}
 			</div>
-			<p class="text-text/50 text-xs">
+			<p class="text-xs text-text/50">
 				by {link.author?.username || 'Deleted User'} • Expires: {formatDate(link.expires_at)}
 			</p>
 		</div>
@@ -62,7 +68,7 @@
 			<button
 				type="button"
 				onclick={onEdit}
-				class="bg-text/10 hover:bg-text/20 rounded p-2 transition"
+				class="rounded bg-text/10 p-2 transition hover:bg-text/20"
 				title="Edit"
 			>
 				<EditIcon class="h-4 w-4" />
@@ -70,10 +76,7 @@
 
 			<ConfirmButton onConfirm={onRotate} slideoutDirection="left">
 				{#snippet button(isOpen)}
-					<div
-						class="bg-amber-400/30 p-2 transition hover:bg-amber-400/60"
-						title="Rotate Token"
-					>
+					<div class="bg-amber-400/30 p-2 transition hover:bg-amber-400/60" title="Rotate Token">
 						{#if !isOpen}
 							<RotateIcon class="h-4 w-4" />
 						{:else}
@@ -83,8 +86,9 @@
 				{/snippet}
 
 				{#snippet slideout()}
-					<p class="flex w-full h-full items-center bg-amber-400/10 text-xs px-2 text-amber-400">
-						Rotate?
+					<p class="flex h-full w-full items-center bg-amber-400/10 px-2 text-xs text-amber-400">
+						This will remove {link.num_memberships} member{link.num_memberships === 1 ? '' : 's'} from
+						the group. Are you sure?
 					</p>
 				{/snippet}
 			</ConfirmButton>
@@ -101,9 +105,7 @@
 				{/snippet}
 
 				{#snippet slideout()}
-					<p class="flex items-center bg-red-500/10 px-2 py-0.5 text-xs text-red-500">
-						Delete?
-					</p>
+					<p class="flex items-center bg-red-500/10 px-2 py-0.5 text-xs text-red-500">Delete?</p>
 				{/snippet}
 			</ConfirmButton>
 		</div>

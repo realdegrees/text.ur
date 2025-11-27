@@ -180,7 +180,7 @@
 					? 'bg-primary/20 text-primary'
 					: 'text-text/50 hover:text-text/70'}"
 				onclick={() => (mode = 'write')}
-				disabled={disabled}
+				{disabled}
 			>
 				Write
 			</button>
@@ -190,7 +190,7 @@
 					? 'bg-primary/20 text-primary'
 					: 'text-text/50 hover:text-text/70'}"
 				onclick={() => (mode = 'preview')}
-				disabled={disabled}
+				{disabled}
 			>
 				Preview
 			</button>
@@ -233,7 +233,7 @@
 				handleKeydown(e);
 			}}
 			onclick={(e) => e.stopPropagation()}
-			onblur={onblur}
+			{onblur}
 		></textarea>
 	{:else}
 		<!-- Preview -->

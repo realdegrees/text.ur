@@ -13,7 +13,6 @@ from core.auth import (
 from fastapi import HTTPException, Request, Response
 from fastapi.responses import RedirectResponse
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
-from models.auth import ShareLinkTokens
 from models.enums import AppErrorCode
 from models.tables import Membership, ShareLink, User
 from models.user import UserCreate
@@ -78,7 +77,7 @@ def _upgrade_guest_account(
             template="register.jinja",
             template_vars={
                 "verification_link": verification_link,
-                "expiry_minutes": cfg.EMAIL_PRESIGN_EXPIRY // 60
+                "expiry_minutes": cfg.EMAIL_PRESIGN_EXPIRY_DAYS // 60
             }
         )
     except Exception as e:
@@ -95,7 +94,8 @@ def _register_regular_user(
     """Handle regular user registration with email verification."""
     existing_user = db.exec(
         select(User).where(
-            (User.email == user_create.email) | (User.username == user_create.username)
+            (User.email == user_create.email) | (
+                User.username == user_create.username)
         )
     ).first()
 
@@ -140,7 +140,7 @@ def _register_regular_user(
             template="register.jinja",
             template_vars={
                 "verification_link": verification_link,
-                "expiry_minutes": cfg.EMAIL_PRESIGN_EXPIRY // 60
+                "expiry_minutes": cfg.EMAIL_PRESIGN_EXPIRY_DAYS // 60
             }
         )
     except Exception as e:
@@ -163,22 +163,26 @@ def _register_anonymous_user(
     ).first()
 
     if not share_link:
-        raise AppException(status_code=401, detail="Invalid sharelink token", error_code=AppErrorCode.INVALID_TOKEN)
+        raise AppException(status_code=401, detail="Invalid sharelink token",
+                           error_code=AppErrorCode.INVALID_TOKEN)
 
     # Check if expired
     if share_link.expires_at and share_link.expires_at < datetime.now(share_link.expires_at.tzinfo):
-        raise AppException(status_code=403, detail="Share link has expired", error_code=AppErrorCode.SHARELINK_EXPIRED)
-    
+        raise AppException(status_code=403, detail="Share link has expired",
+                           error_code=AppErrorCode.SHARELINK_EXPIRED)
+
     # Check if anonymous access is allowed
     if not share_link.allow_anonymous_access:
-        raise AppException(status_code=403, detail="Anonymous access is not allowed with this sharelink", error_code=AppErrorCode.SHARELINK_ANONYMOUS_DISABLED)
+        raise AppException(status_code=403, detail="Anonymous access is not allowed with this sharelink",
+                           error_code=AppErrorCode.SHARELINK_ANONYMOUS_DISABLED)
 
     # Check if username already exists
     existing_user = db.exec(
         select(User).where(User.username == user_create.username)
     ).first()
     if existing_user:
-        raise AppException(status_code=400, detail="Username already registered", error_code=AppErrorCode.USERNAME_TAKEN)
+        raise AppException(status_code=400, detail="Username already registered",
+                           error_code=AppErrorCode.USERNAME_TAKEN)
 
     # Create anonymous user
     user = User(
@@ -191,38 +195,13 @@ def _register_anonymous_user(
     db.add(user)
     db.flush()  # Get user.id without committing
 
-    # Create membership
-    membership = Membership(
-        user_id=user.id,
-        group_id=share_link.group_id,
-        permissions=share_link.permissions,
-        is_owner=False,
-        accepted=True,
-    )
-    db.add(membership)
     db.commit()
-    db.refresh(user)
 
     # Generate tokens
     token = Token(
         access_token=generate_token(user, "access"),
         refresh_token=generate_token(user, "refresh"),
         token_type="bearer",
-    )
-
-    existing_sharelink_token_data: ShareLinkTokens | None = None
-    try:
-        existing_sharelink_token_data = ShareLinkTokens.model_validate(
-            request.cookies.get("sharelink_tokens")
-        )
-    except Exception:  # noqa: S110
-        pass
-
-    share_link_token_data = ShareLinkTokens(
-        user_id=user.id,
-        groups={share_link.group_id: sharelink_token} | (
-            existing_sharelink_token_data.groups if existing_sharelink_token_data else {}
-        )
     )
 
     # Set cookies with sharelink token for re-authentication
@@ -232,14 +211,16 @@ def _register_anonymous_user(
         httponly=True,
         secure=cfg.COOKIE_SECURE,
         samesite=cfg.COOKIE_SAMESITE,
-        max_age=cfg.JWT_ACCESS_EXPIRATION_MINUTES * 60
+        max_age=int(cfg.JWT_ACCESS_EXPIRATION_MINUTES * 60)
     )
+
     response.set_cookie(
-        key="sharelink_tokens",
-        value=share_link_token_data.model_dump_json(),
+        key="refresh_token",
+        value=token.refresh_token,
         httponly=True,
         secure=cfg.COOKIE_SECURE,
-        samesite=cfg.COOKIE_SAMESITE
+        samesite=cfg.COOKIE_SAMESITE,
+        max_age=int(cfg.JWT_REFRESH_GUEST_EXPIRATION_DAYS * 24 * 60 * 60)
     )
 
     return token
@@ -291,12 +272,13 @@ async def register(
         _register_regular_user(db, mail, user_create)
         return None
 
+
 @router.get("/verify/{token}")
 async def verify(token: str, db: Database) -> RedirectResponse:
     """Verify the user's email address."""
     try:
         email = URLSafeTimedSerializer(cfg.EMAIL_PRESIGN_SECRET).loads(
-            token, max_age=cfg.EMAIL_PRESIGN_EXPIRY, salt="email-verification"
+            token, max_age=int(cfg.EMAIL_PRESIGN_EXPIRY_DAYS), salt="email-verification"
         )
     except (BadSignature, SignatureExpired) as e:
         raise HTTPException(
@@ -333,7 +315,7 @@ async def verify(token: str, db: Database) -> RedirectResponse:
         httponly=True,
         secure=cfg.COOKIE_SECURE,
         samesite=cfg.COOKIE_SAMESITE,
-        max_age=cfg.JWT_ACCESS_EXPIRATION_MINUTES * 60
+        max_age=int(cfg.JWT_ACCESS_EXPIRATION_MINUTES * 60)
     )
     redirect_response.set_cookie(
         key="refresh_token",
@@ -341,7 +323,7 @@ async def verify(token: str, db: Database) -> RedirectResponse:
         httponly=True,
         secure=cfg.COOKIE_SECURE,
         samesite=cfg.COOKIE_SAMESITE,
-        max_age=cfg.JWT_REFRESH_EXPIRATION_DAYS * 24 * 60 * 60
+        max_age=int(cfg.JWT_REFRESH_EXPIRATION_DAYS * 24 * 60 * 60)
     )
 
     return redirect_response

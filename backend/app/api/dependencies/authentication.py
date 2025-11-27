@@ -46,7 +46,7 @@ def Authenticate( # noqa: C901
                 raise AppException(status_code=401, detail="Unauthorized: No access token provided", error_code=AppErrorCode.NOT_AUTHENTICATED)
             return None
 
-        user = parse_jwt(token, db, for_type=token_type, strict=strict, scopes=[context.url.path])
+        user = parse_jwt(token, db, for_type=token_type, strict=strict)
         
         if not user.verified and not user.is_guest:
             raise AppException(status_code=403, detail="Forbidden: Email not verified", error_code=AppErrorCode.EMAIL_NOT_VERIFIED)

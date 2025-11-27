@@ -152,7 +152,10 @@ const createDocumentStore = () => {
 		// Schedule batch update
 		commentFlagDebounceTimer = setTimeout(() => {
 			// Build a map of commentId -> updates for O(1) lookup
-			const updateMap = new SvelteMap<number, Array<{ flag: typeof pendingFlagUpdates[0]['flag']; value: boolean }>>();
+			const updateMap = new SvelteMap<
+				number,
+				Array<{ flag: (typeof pendingFlagUpdates)[0]['flag']; value: boolean }>
+			>();
 			for (const update of pendingFlagUpdates) {
 				if (!updateMap.has(update.commentId)) {
 					updateMap.set(update.commentId, []);
@@ -475,7 +478,7 @@ const createDocumentStore = () => {
 			comment.editInputContent = content;
 			comments = [...comments]; // trigger reactivity
 		}
-	}
+	};
 
 	return {
 		// Pinned comments set

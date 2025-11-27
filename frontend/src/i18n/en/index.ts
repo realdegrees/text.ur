@@ -116,7 +116,7 @@ const en = {
 		title: 'Account Settings',
 		guestWarning: {
 			title: 'Guest Account Warning',
-			description: 'Your account is temporary and bound to this browser. If you clear your cookies or use a different device, you will lose access to this account permanently.',
+			description: 'Your account is temporary and bound to this browser. If you clear your cookies, you will lose access to this account permanently.',
 			upgradeButton: 'Upgrade to Permanent Account →',
 			cancelButton: 'Cancel Upgrade'
 		},

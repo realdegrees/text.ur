@@ -15,7 +15,7 @@
 
 	$effect(() => {
 		const pinnedComments = comments.filter((c) => c.isPinned);
-		if (pinnedComments.length > 1) {			
+		if (pinnedComments.length > 1) {
 			// Ensure only one comment is pinned at a time in this cluster
 			// If one of the pinnedComments matches the highlight hovered comment (prio1) or hovered tab comment (prio2), keep that one pinned
 			const highlightHovered = comments.find((c) => c.isHighlightHovered);
@@ -34,12 +34,12 @@
 			pinnedComments.forEach((c) => {
 				if (c !== toKeepPinned) {
 					documentStore.setPinned(c.id, false);
-				}else {
+				} else {
 					selectedCommentId = c.id;
 				}
 			});
 		}
-	})
+	});
 
 	let { comments, adjustedY, scrollTop, onHeightChange }: Props = $props();
 
@@ -47,8 +47,8 @@
 	let selectedCommentId = $state<number | null>(null);
 	let selectedComment: CachedComment = $derived(
 		comments.find((c) => c.id === selectedCommentId) ??
-		comments.find((c) => c.isPinned) ??
-		comments[0]
+			comments.find((c) => c.isPinned) ??
+			comments[0]
 	);
 	let hoveredTabComment: CachedComment | null = $state(null);
 	let hoveredHighlightComment: CachedComment | null = $derived.by(() => {
@@ -124,7 +124,7 @@
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
 		bind:this={clusterRef}
-		class="bg-background ring-primary/30 relative z-50 overflow-hidden rounded-lg shadow-lg shadow-black/20 ring-0 transition-all {anyCommentPinned
+		class="relative z-50 overflow-hidden rounded-lg bg-background shadow-lg ring-0 shadow-black/20 ring-primary/30 transition-all {anyCommentPinned
 			? 'ring-3'
 			: ''}"
 		tabindex="-1"
@@ -138,8 +138,8 @@
 		}}
 	>
 		<!-- Cluster header: tabs for multiple comments or single author header -->
-		<div class="border-text/30 w-full border-b p-1.5 pb-0">
-			<div class="border-text/10 pb-0! flex items-center justify-between gap-1.5 border-b">
+		<div class="w-full border-b border-text/30 p-1.5 pb-0">
+			<div class="flex items-center justify-between gap-1.5 border-b border-text/10 pb-0!">
 				<div class="flex gap-1.5">
 					{#each comments as c, idx (c.id)}
 						<button
@@ -174,7 +174,7 @@
 
 				<!-- Pin button -->
 				<button
-					class="text-text/60 hover:text-text hover:bg-text/5 rounded-sm p-1 transition-colors"
+					class="rounded-sm p-1 text-text/60 transition-colors hover:bg-text/5 hover:text-text"
 					onclick={(e) => {
 						e.stopPropagation();
 						documentStore.setPinned(selectedComment.id, !selectedComment.isPinned);
@@ -182,9 +182,9 @@
 					title={selectedComment.isPinned ? 'Unpin comment' : 'Pin comment'}
 				>
 					{#if selectedComment.isPinned}
-						<PinIcon class="h-4 w-4 text-text hover:text-red-400 transition-colors" />
+						<PinIcon class="h-4 w-4 text-text transition-colors hover:text-red-400" />
 					{:else}
-						<PinOffIcon class="h-4 w-4 hover:text-text hover:animate-bounce" />
+						<PinOffIcon class="h-4 w-4 hover:animate-bounce hover:text-text" />
 					{/if}
 				</button>
 			</div>
@@ -199,11 +199,21 @@
 
 				{#if hoveredTabComment}
 					<!-- Connection line for hovered tab comment -->
-					<ConnectionLine comment={hoveredTabComment} yPosition={adjustedY} opacity={0.7} {scrollTop} />
+					<ConnectionLine
+						comment={hoveredTabComment}
+						yPosition={adjustedY}
+						opacity={0.7}
+						{scrollTop}
+					/>
 				{/if}
 				{#if anyCommentPinned && hoveredHighlightComment}
 					<!-- Connection line for hovered tab comment -->
-					<ConnectionLine comment={hoveredHighlightComment} yPosition={adjustedY} opacity={0.7} {scrollTop} />
+					<ConnectionLine
+						comment={hoveredHighlightComment}
+						yPosition={adjustedY}
+						opacity={0.7}
+						{scrollTop}
+					/>
 				{/if}
 			{/if}
 		{/if}
@@ -219,12 +229,12 @@
 		}}
 	>
 		<div
-			class="border-background bg-secondary drop-shadow-xs flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border-2 shadow-md shadow-black/20 transition-transform hover:scale-110"
+			class="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border-2 border-background bg-secondary shadow-md shadow-black/20 drop-shadow-xs transition-transform hover:scale-110"
 		>
 			{#if commentCount > 1}
-				<span class="text-text text-xs font-bold">{commentCount}</span>
+				<span class="text-xs font-bold text-text">{commentCount}</span>
 			{:else}
-				<CommentIcon class="text-text h-4 w-4" />
+				<CommentIcon class="h-4 w-4 text-text" />
 			{/if}
 		</div>
 	</button>

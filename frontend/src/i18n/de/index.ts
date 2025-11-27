@@ -116,7 +116,7 @@ const de = {
 		title: 'Kontoeinstellungen',
 		guestWarning: {
 			title: 'Gastkonto-Warnung',
-			description: 'Ihr Konto ist temporär und an diesen Browser gebunden. Wenn Sie Ihre Cookies löschen oder ein anderes Gerät verwenden, verlieren Sie dauerhaft den Zugriff auf dieses Konto.',
+			description: 'Ihr Konto ist temporär und an diesen Browser gebunden. Wenn Sie Ihre Cookies löschen, verlieren Sie dauerhaft den Zugriff auf dieses Konto.',
 			upgradeButton: 'Auf dauerhaftes Konto upgraden →',
 			cancelButton: 'Upgrade abbrechen'
 		},

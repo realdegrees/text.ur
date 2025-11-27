@@ -133,13 +133,13 @@
 
 	const zoomIn = () => {
 		if (!pdfSlick) return;
-		documentStore.documentScale =  documentStore.documentScale + PDF_ZOOM_STEP;
+		documentStore.documentScale = documentStore.documentScale + PDF_ZOOM_STEP;
 		pdfSlick.currentScale = documentStore.documentScale;
 	};
 
 	const zoomOut = () => {
 		if (!pdfSlick) return;
-		documentStore.documentScale =  documentStore.documentScale - PDF_ZOOM_STEP;
+		documentStore.documentScale = documentStore.documentScale - PDF_ZOOM_STEP;
 		pdfSlick.currentScale = documentStore.documentScale;
 	};
 
@@ -195,7 +195,7 @@
 		</div>
 
 		<!-- Annotation highlights are rendered into the PDF pages -->
-		<AnnotationLayer viewerContainer={container}/>
+		<AnnotationLayer viewerContainer={container} />
 
 		<!-- Text selection handler for creating new annotations -->
 		<TextSelectionHandler viewerContainer={container} />

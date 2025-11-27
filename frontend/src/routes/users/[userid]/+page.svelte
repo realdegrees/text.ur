@@ -10,12 +10,11 @@
 	let { data } = $props();
 
 	console.log(data);
-	
+
 	// User info state - use $state for editable fields, initialized from props
 	let username = $derived(data.sessionUser.username);
 	let firstName = $derived(data.sessionUser.first_name ?? '');
 	let lastName = $derived(data.sessionUser.last_name ?? '');
-
 
 	// Password change state
 	let oldPassword = $state('');
@@ -113,8 +112,8 @@
 	}
 </script>
 
-<div class="flex h-full w-full items-center justify-start flex-col">
-	<div class="flex h-full w-[30%] items-start justify-start flex-col gap-6 p-6">
+<div class="flex h-full w-full flex-col items-center justify-start">
+	<div class="flex h-full w-[30%] flex-col items-start justify-start gap-6 p-6">
 		<div class="w-full rounded-lg bg-inset p-6 shadow-inner shadow-black/50">
 			<h1 class="text-3xl font-bold text-text">{$LL.userSettings.title()}</h1>
 		</div>
@@ -151,7 +150,7 @@
 				<h2 class="mb-4 text-xl font-semibold text-text">
 					{$LL.userSettings.upgradeAccount.title()}
 				</h2>
-				<p class="mb-4 text-sm text-muted">
+				<p class="text-muted mb-4 text-sm">
 					{$LL.userSettings.upgradeAccount.description()}
 				</p>
 
@@ -237,39 +236,41 @@
 					<h2 class="mb-4 text-xl font-semibold text-text">
 						{$LL.userSettings.profile.emailLabel()}
 					</h2>
-					<p class="text-sm text-muted">{(data.sessionUser as UserPrivate).email}</p>
+					<p class="text-muted text-sm">{(data.sessionUser as UserPrivate).email}</p>
 				</div>
 			{/if}
 
 			<!-- Password Change Card -->
-			<div class="w-full rounded-lg bg-inset p-6 shadow-inner shadow-black/50">
-				<h2 class="mb-4 text-xl font-semibold text-text">
-					{$LL.userSettings.changePassword.title()}
-				</h2>
+			{#if !data.sessionUser.is_guest}
+				<div class="w-full rounded-lg bg-inset p-6 shadow-inner shadow-black/50">
+					<h2 class="mb-4 text-xl font-semibold text-text">
+						{$LL.userSettings.changePassword.title()}
+					</h2>
 
-				<div class="flex flex-col gap-4">
-					{#if !data.sessionUser.is_guest}
+					<div class="flex flex-col gap-4">
+						{#if !data.sessionUser.is_guest}
+							<Field
+								name="oldPassword"
+								label={$LL.userSettings.changePassword.currentPasswordLabel()}
+								bind:value={oldPassword}
+								hidden
+							/>
+						{/if}
 						<Field
-							name="oldPassword"
-							label={$LL.userSettings.changePassword.currentPasswordLabel()}
-							bind:value={oldPassword}
+							name="newPassword"
+							label={$LL.userSettings.changePassword.newPasswordLabel()}
+							bind:value={newPassword}
 							hidden
 						/>
-					{/if}
-					<Field
-						name="newPassword"
-						label={$LL.userSettings.changePassword.newPasswordLabel()}
-						bind:value={newPassword}
-						hidden
-					/>
-					<Field
-						name="confirmPassword"
-						label={$LL.userSettings.changePassword.confirmPasswordLabel()}
-						bind:value={confirmPassword}
-						hidden
-					/>
+						<Field
+							name="confirmPassword"
+							label={$LL.userSettings.changePassword.confirmPasswordLabel()}
+							bind:value={confirmPassword}
+							hidden
+						/>
+					</div>
 				</div>
-			</div>
+			{/if}
 
 			<!-- Save Button (outside cards) -->
 			<button

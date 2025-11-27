@@ -84,7 +84,7 @@
 		const updateData: ShareLinkUpdate = {
 			permissions: editFormPermissions,
 			label: editFormLabel || null,
-			expires_at: editFormExpiresAt,
+			expires_at: editFormExpiresAt || null,
 			allow_anonymous_access: editFormAllowAnonymous,
 			rotate_token: null
 		};

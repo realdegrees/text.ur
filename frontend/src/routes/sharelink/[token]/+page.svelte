@@ -30,7 +30,7 @@
 				token: data.token,
 				username: username.trim(),
 				first_name: firstName.trim() || undefined,
-				last_name: lastName.trim() || undefined,
+				last_name: lastName.trim() || undefined
 			} satisfies UserCreate);
 
 			if (!response.success) {
@@ -51,7 +51,7 @@
 <div class="flex h-full w-full items-center justify-center p-4">
 	<div class="w-full max-w-md overflow-hidden rounded-lg bg-inset p-8 shadow-lg">
 		<h1 class="mb-2 text-center text-3xl font-bold text-text">{$LL.sharelink.title()}</h1>
-		<p class="mb-6 text-center text-sm text-muted">
+		<p class="text-muted mb-6 text-center text-sm">
 			{$LL.sharelink.description()}
 		</p>
 

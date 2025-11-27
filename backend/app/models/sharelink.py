@@ -30,6 +30,15 @@ class ShareLinkRead(SQLModel):
     token: str
     author: "UserRead | None"
     group_id: str
+    num_memberships: int
+    
+class ShareLinkReadPublic(SQLModel):
+    id: int
+    permissions: set[Permission]
+    expires_at: datetime | None = None
+    label: str | None = None
+    allow_anonymous_access: bool
+    group_id: str
 
 class ShareLinkUpdate(SQLModel):
     permissions: set[Permission] | None = None

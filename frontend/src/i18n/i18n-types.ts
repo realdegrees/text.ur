@@ -391,7 +391,7 @@ type RootTranslation = {
 			 */
 			title: string
 			/**
-			 * Y​o​u​r​ ​a​c​c​o​u​n​t​ ​i​s​ ​t​e​m​p​o​r​a​r​y​ ​a​n​d​ ​b​o​u​n​d​ ​t​o​ ​t​h​i​s​ ​b​r​o​w​s​e​r​.​ ​I​f​ ​y​o​u​ ​c​l​e​a​r​ ​y​o​u​r​ ​c​o​o​k​i​e​s​ ​o​r​ ​u​s​e​ ​a​ ​d​i​f​f​e​r​e​n​t​ ​d​e​v​i​c​e​,​ ​y​o​u​ ​w​i​l​l​ ​l​o​s​e​ ​a​c​c​e​s​s​ ​t​o​ ​t​h​i​s​ ​a​c​c​o​u​n​t​ ​p​e​r​m​a​n​e​n​t​l​y​.
+			 * Y​o​u​r​ ​a​c​c​o​u​n​t​ ​i​s​ ​t​e​m​p​o​r​a​r​y​ ​a​n​d​ ​b​o​u​n​d​ ​t​o​ ​t​h​i​s​ ​b​r​o​w​s​e​r​.​ ​I​f​ ​y​o​u​ ​c​l​e​a​r​ ​y​o​u​r​ ​c​o​o​k​i​e​s​,​ ​y​o​u​ ​w​i​l​l​ ​l​o​s​e​ ​a​c​c​e​s​s​ ​t​o​ ​t​h​i​s​ ​a​c​c​o​u​n​t​ ​p​e​r​m​a​n​e​n​t​l​y​.
 			 */
 			description: string
 			/**
@@ -878,7 +878,7 @@ export type TranslationFunctions = {
 			 */
 			title: () => LocalizedString
 			/**
-			 * Your account is temporary and bound to this browser. If you clear your cookies or use a different device, you will lose access to this account permanently.
+			 * Your account is temporary and bound to this browser. If you clear your cookies, you will lose access to this account permanently.
 			 */
 			description: () => LocalizedString
 			/**

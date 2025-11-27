@@ -5,12 +5,6 @@ from pydantic import BaseModel
 
 TokenType = Literal["access", "refresh"]
 
-class ShareLinkTokens(BaseModel):
-    """A token object that contains the share link token."""
-
-    groups: dict[str, str] = {}  # group_id: sharelink_token
-    user_id: int
-
 class Token(BaseModel):
     """A token object that contains the access and refresh tokens."""
 

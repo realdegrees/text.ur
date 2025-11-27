@@ -47,7 +47,11 @@ export const load: LayoutLoad = async ({ fetch, parent }) => {
 		};
 	}
 
-	if (routeMembership && !memberships.data.find(({ group }) => group.id === routeMembership.group.id)) memberships.data.unshift(routeMembership);
+	if (
+		routeMembership &&
+		!memberships.data.find(({ group }) => group.id === routeMembership.group.id)
+	)
+		memberships.data.unshift(routeMembership);
 
 	return {
 		...(await parent()),

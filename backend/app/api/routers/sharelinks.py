@@ -28,6 +28,7 @@ root_router = APIRouter(
     tags=["Share Links"],
 )
 
+
 @router.get("/", response_model=Paginated[ShareLinkRead], response_class=ExcludableFieldsJSONResponse)
 async def list_share_links(
     _: BasicAuthentication,
@@ -38,6 +39,7 @@ async def list_share_links(
     """Get all share links for the group."""
     return share_links
 
+
 @root_router.get("/{token}", response_model=ShareLinkRead)
 async def get_share_link_from_token(
     _: User = Authenticate(guards=[Guard.sharelink_access()]),
@@ -46,11 +48,13 @@ async def get_share_link_from_token(
     """Get all share links for groups the user has access to."""
     return share_link
 
+
 @router.post("/", response_model=ShareLinkRead)
 async def create_share_link(
     db: Database,
     group: Group = Resource(Group, param_alias="group_id"),
-    user: User = Authenticate([Guard.group_access({Permission.ADMINISTRATOR})]),
+    user: User = Authenticate(
+        [Guard.group_access({Permission.ADMINISTRATOR})]),
     share_link_create: ShareLinkCreate = Body(...)
 ) -> ShareLinkRead:
     """Create a new share link for a group."""
@@ -72,12 +76,48 @@ async def update_share_link(
     group: Group = Resource(Group, param_alias="group_id"),
 ) -> ShareLinkRead:
     """Update a share link."""
+    permissions_changed = share_link_update.permissions is not None and share_link_update.permissions != share_link.permissions
     db.merge(share_link)
-    share_link.sqlmodel_update(share_link_update.model_dump(exclude_unset=True, exclude={"rotate_token"}))
+    share_link.sqlmodel_update(share_link_update.model_dump(
+        exclude_unset=True, exclude={"rotate_token"}))
+    
+    memberships: list[Membership] = db.exec(
+            select(Membership).join(ShareLink, Membership.share_link).where(
+                ShareLink.token == share_link.token,
+                Membership.group_id == group.id,
+            )
+        ).all()
+    
+    if permissions_changed:
+        # Compute minimum permissions: group defaults plus the sharelink's new permissions.
+        new_sharelink_permissions: set[Permission] = set(share_link.permissions)
+        group_default_permissions: set[Permission] = set(group.default_permissions)
+        updated_permissions: set[Permission] = group_default_permissions | new_sharelink_permissions
+
+        # Ensure each membership has at least the required permissions without removing existing ones.
+        for membership in memberships:
+            db.merge(membership)
+            membership.permissions = updated_permissions
+    
+    # Handle token rotation and membership deletions
     if share_link_update.rotate_token:
         share_link.rotate_token()
+        # Delete all memberships that were using this token
+        # Query memberships associated with the sharelink relationship that match the token and group.
+        memberships: list[Membership] = db.exec(
+            select(Membership).join(ShareLink, Membership.share_link).where(
+                ShareLink.token == share_link.token,
+                Membership.group_id == group.id,
+            )
+        ).all()
+        for membership in memberships:
+            db.delete(membership)
+            
+    # Handle permission updates:
+            
     db.commit()
     return share_link
+
 
 @router.delete("/{share_link_id}")
 async def delete_share_link(
@@ -90,6 +130,7 @@ async def delete_share_link(
     db.delete(share_link)
     db.commit()
     return Response(status_code=204)
+
 
 @root_router.post("/use/{token}", response_model=ShareLinkRead)
 async def use_sharelink_token(
@@ -130,9 +171,11 @@ async def use_sharelink_token(
     membership = Membership(
         user_id=user.id,
         group_id=share_link.group_id,
-        permissions=set(share_link.permissions) | set(share_link.group.default_permissions),
+        permissions=set(share_link.permissions) | set(
+            share_link.group.default_permissions),
         is_owner=False,
-        accepted=True  # Auto-accept for sharelink memberships
+        accepted=True,  # Auto-accept for sharelink memberships
+        share_link=share_link
     )
     db.add(membership)
     db.commit()

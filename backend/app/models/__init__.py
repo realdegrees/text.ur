@@ -1,7 +1,7 @@
 """Exports all models and schemas that need to be either rebuilt on start OR included in the pydantic2ts scope for frontend model generation"""
 
 from models.app_error import AppError
-from models.auth import GlobalJWTPayload, ShareLinkTokens, Token, UserJWTPayload
+from models.auth import GlobalJWTPayload, Token, UserJWTPayload
 from models.comment import (
     CommentCreate,
     CommentRead,
@@ -36,7 +36,12 @@ from models.group import (
 )
 from models.pagination import PaginatedBase
 from models.reaction import ReactionCreate, ReactionRead
-from models.sharelink import ShareLinkCreate, ShareLinkRead, ShareLinkUpdate
+from models.sharelink import (
+    ShareLinkCreate,
+    ShareLinkRead,
+    ShareLinkReadPublic,
+    ShareLinkUpdate,
+)
 from models.sort import Sort
 from models.tables import Comment, Document, Group, Membership, User
 from models.user import UserCreate, UserPrivate, UserRead, UserUpdate
@@ -85,6 +90,7 @@ ShareLinkCreate.model_rebuild()
 ShareLinkRead.model_rebuild()
 ShareLinkUpdate.model_rebuild()
 ShareLinkFilter.model_rebuild()
+ShareLinkReadPublic.model_rebuild()
 
 UserCreate.model_rebuild()
 UserRead.model_rebuild()

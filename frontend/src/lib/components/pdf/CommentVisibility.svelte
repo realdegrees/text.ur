@@ -9,9 +9,10 @@
 	interface Props {
 		commentId: number;
 		visibility: Visibility;
+		canEdit?: boolean;
 	}
 
-	let { commentId, visibility, size = 'md' }: Props = $props();
+	let { commentId, visibility, canEdit = false }: Props = $props();
 
 	let isOpen = $state(false);
 	let isUpdating = $state(false);
@@ -59,8 +60,10 @@
 			e.stopPropagation();
 			isOpen = !isOpen;
 		}}
-		disabled={isUpdating}
-		title="Select comment visibility"
+		disabled={isUpdating || !canEdit}
+		title={canEdit
+			? 'Select comment visibility'
+			: `Comment Visibility: ${currentVisibility.valueOf()}`}
 	>
 		{#if currentVisibility === 'private'}
 			<LockIcon class={iconSize} />

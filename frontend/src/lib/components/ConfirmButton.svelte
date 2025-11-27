@@ -18,8 +18,6 @@
 
 	let isOpen = $state(false);
 
-
-
 	function handleKeydown(e: KeyboardEvent) {
 		if (e.key === 'Escape') isOpen = false;
 	}
@@ -27,7 +25,9 @@
 
 <svelte:window on:keydown={handleKeydown} />
 
-<div class="flex flex-{slideoutDirection == 'right' ? 'row' : 'row-reverse'} overflow-hidden rounded">
+<div
+	class="flex flex-{slideoutDirection == 'right' ? 'row' : 'row-reverse'} overflow-hidden rounded"
+>
 	<!-- render the passed snippets using Svelte snippets API -->
 	<button
 		onclick={() => {
@@ -48,7 +48,7 @@
 		{#if slideout}
 			{@render slideout()}
 		{:else}
-			<span class="text-text/60 text-xs">Confirm?</span>
+			<span class="text-xs text-text/60">Confirm?</span>
 		{/if}
 	{/if}
 </div>

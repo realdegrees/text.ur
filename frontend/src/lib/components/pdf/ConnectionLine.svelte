@@ -78,12 +78,7 @@
 	{#if lineCoords}
 		<svg class="absolute inset-0 h-full w-full overflow-visible" style="opacity: {opacity}">
 			<!--Start Circle-->
-			<circle
-				cx={lineCoords.startX}
-				cy={lineCoords.startY}
-				r="4"
-				class="fill-primary"
-			/>
+			<circle cx={lineCoords.startX} cy={lineCoords.startY} r="4" class="fill-primary" />
 			<!-- Main line -->
 			<line
 				x1={lineCoords.startX}
@@ -95,26 +90,11 @@
 				class="text-primary/70"
 			/>
 			<!-- End dot (at highlight) -->
-			<circle
-				cx={lineCoords.endX}
-				cy={lineCoords.endY}
-				r="8"
-				class="fill-primary"
-			/>
+			<circle cx={lineCoords.endX} cy={lineCoords.endY} r="8" class="fill-primary" />
 
 			<!-- End dot inner (at highlight) -->
-			<circle
-				cx={lineCoords.endX}
-				cy={lineCoords.endY}
-				r="3.5"
-				class="fill-text"
-			/>
-			<circle
-				cx={lineCoords.endX}
-				cy={lineCoords.endY}
-				r="3.5"
-				class="fill-text"
-			/>
+			<circle cx={lineCoords.endX} cy={lineCoords.endY} r="3.5" class="fill-text" />
+			<circle cx={lineCoords.endX} cy={lineCoords.endY} r="3.5" class="fill-text" />
 		</svg>
 	{/if}
 </div>

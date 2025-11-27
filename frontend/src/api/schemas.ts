@@ -161,6 +161,7 @@ export const membershipSchema = z.object({
     group_id: z.string(),
     permissions: z.array(permissionSchema).optional(),
     is_owner: z.boolean().optional(),
+    sharelink_id: z.number().optional().nullable(),
     accepted: z.boolean().optional()
 });
 
@@ -178,12 +179,13 @@ export const membershipPermissionUpdateSchema = z.object({
     permissions: z.array(permissionSchema)
 });
 
-export const membershipReadSchema = z.object({
+export const shareLinkReadPublicSchema = z.object({
+    id: z.number(),
     permissions: z.array(permissionSchema),
-    user: userReadSchema,
-    group: groupReadSchema,
-    is_owner: z.boolean(),
-    accepted: z.boolean()
+    expires_at: z.string().optional().nullable(),
+    label: z.string().optional().nullable(),
+    allow_anonymous_access: z.boolean(),
+    group_id: z.string()
 });
 
 export const mousePositionEventSchema = z.object({
@@ -233,12 +235,8 @@ export const shareLinkReadSchema = z.object({
     allow_anonymous_access: z.boolean(),
     token: z.string(),
     author: userReadSchema.nullable(),
-    group_id: z.string()
-});
-
-export const shareLinkTokensSchema = z.object({
-    groups: z.record(z.string(), z.string()).optional(),
-    user_id: z.number()
+    group_id: z.string(),
+    num_memberships: z.number()
 });
 
 export const shareLinkUpdateSchema = z.object({
@@ -332,6 +330,15 @@ export const commentReadSchema = z.object({
     content: z.string().nullable(),
     num_replies: z.number(),
     reactions: z.array(reactionReadSchema)
+});
+
+export const membershipReadSchema = z.object({
+    permissions: z.array(permissionSchema),
+    user: userReadSchema,
+    group: groupReadSchema,
+    is_owner: z.boolean(),
+    accepted: z.boolean(),
+    share_link: shareLinkReadPublicSchema.nullable()
 });
 
 export const paginatedBaseSchema = z.object({

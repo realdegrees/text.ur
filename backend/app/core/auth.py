@@ -43,22 +43,18 @@ def validate_password(user: User, password: str) -> bool:
 
 
 @overload
-def parse_jwt(token: str, db: Database, *, for_type: TokenType | None = None, strict: Literal[True] = True, scopes: list[str] | None = None) -> User: ...
+def parse_jwt(token: str, db: Database, *, for_type: TokenType | None = None, strict: Literal[True] = True) -> User: ...
 
 @overload
-def parse_jwt(token: str, db: Database, *, for_type: TokenType | None = None, strict: Literal[False] = False, scopes: list[str] | None = None) -> User | None: ...
+def parse_jwt(token: str, db: Database, *, for_type: TokenType | None = None, strict: Literal[False] = False) -> User | None: ...
 
-def parse_jwt(token: str, db: Database, *, for_type: TokenType | None = None, strict: bool = True, scopes: list[str] | None = None) -> User | None: # noqa: C901
+def parse_jwt(token: str, db: Database, *, for_type: TokenType | None = None, strict: bool = True) -> User | None:
     """Validate a nested JWT and return the user if valid."""
     try:
         outer_payload: dict[str, Any] = decode(token, JWT_SECRET, algorithms=[ALGORITHM])  # Automatically checks expiry
         user_id: str | None = outer_payload.get("sub")
         inner_token: str | None = outer_payload.get("inner")
         token_type: str | None = outer_payload.get("type")
-        token_scopes: list[str] | None = outer_payload.get("scopes")
-        
-        if token_scopes and scopes and not any(any(scope.startswith(token_scope) for scope in scopes) for token_scope in token_scopes):
-            return None, "Token scope does not cover this route"
 
         def do_validate() -> tuple[User | None, str | None]:
             if for_type and token_type != for_type:

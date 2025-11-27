@@ -245,6 +245,7 @@ export interface Membership {
   group_id: string;
   permissions?: Permission[];
   is_owner?: boolean;
+  sharelink_id?: number | null;
   accepted?: boolean;
 }
 export interface MembershipCreate {
@@ -264,6 +265,15 @@ export interface MembershipRead {
   group: GroupRead;
   is_owner: boolean;
   accepted: boolean;
+  share_link: ShareLinkReadPublic | null;
+}
+export interface ShareLinkReadPublic {
+  id: number;
+  permissions: Permission[];
+  expires_at?: string | null;
+  label?: string | null;
+  allow_anonymous_access: boolean;
+  group_id: string;
 }
 /**
  * Event payload for mouse cursor position - broadcasted to WebSocket clients (with user info).
@@ -323,15 +333,7 @@ export interface ShareLinkRead {
   token: string;
   author: UserRead | null;
   group_id: string;
-}
-/**
- * A token object that contains the share link token.
- */
-export interface ShareLinkTokens {
-  groups?: {
-    [k: string]: string;
-  };
-  user_id: number;
+  num_memberships: number;
 }
 export interface ShareLinkUpdate {
   permissions?: Permission[] | null;

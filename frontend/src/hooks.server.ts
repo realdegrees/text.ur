@@ -72,10 +72,9 @@ export const handleFetch: HandleFetch = async ({ request, fetch, event }) => {
 			// Retry the original request with the new access token
 			if (accessToken) {
 				const retryHeaders = new Headers(request.headers);
-				const cookieHeader = [
-					`access_token=${accessToken}`,
-					`refresh_token=${refreshToken}`
-				].join('; ');
+				const cookieHeader = [`access_token=${accessToken}`, `refresh_token=${refreshToken}`].join(
+					'; '
+				);
 				retryHeaders.set('Cookie', cookieHeader);
 
 				// Clone the original request body if it exists
