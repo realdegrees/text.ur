@@ -112,6 +112,7 @@
 	// Sync value to contenteditable div when value changes from outside
 	$effect(() => {
 		if (searchElement && searchElement.textContent !== value) {
+			// eslint-disable-next-line svelte/no-dom-manipulating
 			searchElement.textContent = value;
 		}
 	});
@@ -195,12 +196,8 @@
 	async function doComplete() {
 		value = options[selectedIndex]?.text ?? value;
 
+		// Let Svelte update the DOM via reactive value-binding/effect; avoid direct DOM manipulation
 		await tick();
-		if (searchElement) {
-			// TODO: this is just a hack, need to fix
-			// eslint-disable-next-line svelte/no-dom-manipulating
-			searchElement.textContent = value;
-		}
 		await tick();
 		const range = document.createRange();
 		const selection = window.getSelection();
@@ -254,16 +251,8 @@
 			onfocus={() => (focused = true)}
 			onblur={() => (focused = false)}
 			oninput={() => {
-				if (searchElement) {
-					const brElements = searchElement.querySelectorAll('br');
-					if (brElements.length > 0) {
-						brElements.forEach((br) => br.remove());
-						if (searchElement.textContent === '') {
-							value = '';
-						}
-					}
-					value = searchElement.textContent || '';
-				}
+				// Read the value from the contenteditable element (textContent strips html)
+				value = searchElement?.textContent || '';
 				onInput();
 			}}
 			onkeydown={(e) => {

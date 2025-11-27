@@ -2,8 +2,6 @@
 	import SaveIcon from '~icons/material-symbols/save-outline';
 	import DeleteIcon from '~icons/material-symbols/delete-outline';
 	import TransferIcon from '~icons/material-symbols/swap-horiz';
-	import AddIcon from '~icons/material-symbols/add-2-rounded';
-	import { permissionSchema } from '$api/schemas';
 	import { api } from '$api/client';
 	import { notification } from '$lib/stores/notificationStore';
 	import { sessionStore } from '$lib/runes/session.svelte.js';
@@ -18,7 +16,6 @@
 	import type { Paginated } from '$api/pagination';
 	import AdvancedInput from '$lib/components/advancedInput.svelte';
 	import PermissionSelector from '$lib/components/permissionSelector.svelte';
-	import LL from '$i18n/i18n-svelte.js';
 
 	let { data } = $props();
 	let group = $derived(data.membership.group);

@@ -32,7 +32,7 @@ def custom_openapi(app: FastAPI) -> None:  # noqa: C901
         openapi_schema["tags"] = [{"name": name} for name in tag_names]
 
     # Sorts tags: Login first, Register second, WebSocket Events last, then alphabetically
-    openapi_schema["tags"].sort(key=lambda x: (x["name"] != "Login", x["name"] != "Register", x["name"] == "WebSocket Events", x["name"]))
+    openapi_schema["tags"].sort(key=lambda x: (x["name"] != "Register", x["name"] != "Login", x["name"] != "Logout", x["name"] == "WebSocket Events", x["name"]))
     
     # Inject the websocket testing route into the OpenAPI schema dynamically
     for route in app.routes:

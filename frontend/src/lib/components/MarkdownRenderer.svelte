@@ -49,6 +49,12 @@
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <!-- svelte-ignore a11y_click_events_have_key_events -->
+<!--
+	The markdown HTML is sanitized below using DOMPurify before being rendered with {@html}.
+	We intentionally use {@html} to render pre-sanitized markup; disabling the rule is safe in
+	this case because DOMPurify ensures no unsafe tags or attributes are present.
+-->
+<!-- eslint-disable svelte/no-at-html-tags -->
 <div
 	class="markdown-content {className}"
 	onclick={(e) => {
@@ -62,6 +68,7 @@
 	}}
 >
 	{@html html}
+	<!-- eslint-enable svelte/no-at-html-tags -->
 </div>
 
 <style>

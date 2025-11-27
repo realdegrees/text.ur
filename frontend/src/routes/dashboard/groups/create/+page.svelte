@@ -1,7 +1,5 @@
 <script lang="ts">
 	import type { GroupCreate, GroupRead, Permission } from '$api/types';
-	import { permissionSchema } from '$api/schemas';
-	import LL from '$i18n/i18n-svelte';
 	import AddIcon from '~icons/material-symbols/add-2-rounded';
 	import GroupIcon from '~icons/material-symbols/group-outline';
 	import Loading from '~icons/svg-spinners/90-ring-with-bg';

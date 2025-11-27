@@ -40,6 +40,7 @@
 		}}
 		onfocusout={() => (isOpen = false)}
 		{disabled}
+		class="grow"
 	>
 		{@render button?.(isOpen)}
 	</button>

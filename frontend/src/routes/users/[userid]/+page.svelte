@@ -1,10 +1,12 @@
 <script lang="ts">
 	import { api } from '$api/client';
-	import { invalidateAll } from '$app/navigation';
+	import { goto, invalidateAll } from '$app/navigation';
 	import { notification } from '$lib/stores/notificationStore';
 	import { LL } from '$i18n/i18n-svelte';
 	import Field from '$lib/components/advancedInput.svelte';
+	import ConfirmButton from '$lib/components/ConfirmButton.svelte';
 	import Loading from '~icons/svg-spinners/90-ring-with-bg';
+	import LogoutIcon from '~icons/mdi/exit-run';
 	import type { UserUpdate, UserPrivate } from '$api/types';
 
 	let { data } = $props();
@@ -110,12 +112,48 @@
 			isUpgrading = false;
 		}
 	}
+
+	async function handleLogoutAllDevices() {
+		const result = await api.post('/logout/all', {});
+
+		if (!result.success) {
+			notification(result.error);
+			return;
+		}
+
+		notification('success', 'Logged out from all devices successfully');
+
+		// Redirect to login page after logout
+		invalidateAll();
+		await goto('/login');
+	}
 </script>
 
 <div class="flex h-full w-full flex-col items-center justify-start">
 	<div class="flex h-full w-[30%] flex-col items-start justify-start gap-6 p-6">
 		<div class="w-full rounded-lg bg-inset p-6 shadow-inner shadow-black/50">
-			<h1 class="text-3xl font-bold text-text">{$LL.userSettings.title()}</h1>
+			<div class="flex items-center justify-between">
+				<h1 class="text-3xl font-bold text-text">{$LL.userSettings.title()}</h1>
+
+				<ConfirmButton onConfirm={handleLogoutAllDevices}>
+					{#snippet button(isOpen)}
+						<div
+							class="flex items-center gap-2 rounded border-2 px-3 py-2 text-sm font-medium transition-colors {isOpen
+								? 'border-red-600/80 bg-red-600/20 text-red-700 dark:text-red-300'
+								: 'border-red-500/50 bg-red-500/10 text-red-600 hover:bg-red-500/20 dark:text-red-400'}"
+						>
+							<LogoutIcon class="h-4 w-4" />
+							{#if !isOpen}<p class="whitespace-nowrap">Logout All Devices</p>{/if}
+						</div>
+					{/snippet}
+
+					{#snippet slideout()}
+						<div class="bg-red-500/10 px-3 py-2 whitespace-nowrap text-red-600 dark:text-red-400">
+							Confirm
+						</div>
+					{/snippet}
+				</ConfirmButton>
+			</div>
 		</div>
 
 		{#if data.sessionUser.is_guest}

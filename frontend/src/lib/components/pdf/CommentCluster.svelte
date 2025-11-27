@@ -229,10 +229,10 @@
 		}}
 	>
 		<div
-			class="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border-2 border-background bg-secondary shadow-md shadow-black/20 drop-shadow-xs transition-transform hover:scale-110"
+			class="flex h-8 w-8 cursor-pointer items-center justify-center rounded bg-inset shadow-md ring-3 shadow-black/20 ring-primary/70 drop-shadow-xs"
 		>
 			{#if commentCount > 1}
-				<span class="text-xs font-bold text-text">{commentCount}</span>
+				<span class="font-bold text-text">{commentCount}</span>
 			{:else}
 				<CommentIcon class="h-4 w-4 text-text" />
 			{/if}
