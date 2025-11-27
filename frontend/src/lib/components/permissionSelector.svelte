@@ -29,7 +29,7 @@
 	);
 </script>
 
-<div class="flex flex-wrap items-center gap-1.5">
+<div class="flex w-full flex-wrap items-center gap-1.5">
 	{#each selectedPermissions as perm (perm)}
 		<Badge
 			item={perm}

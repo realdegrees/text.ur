@@ -9,7 +9,7 @@ export const reactionTypeSchema = z.union([z.literal("like"), z.literal("dislike
 
 export const viewModeSchema = z.union([z.literal("restricted"), z.literal("public")]);
 
-export const permissionSchema = z.union([z.literal("administrator"), z.literal("add_comments"), z.literal("remove_comments"), z.literal("view_restricted_comments"), z.literal("add_members"), z.literal("remove_members"), z.literal("manage_permissions"), z.literal("upload_documents"), z.literal("view_restricted_documents"), z.literal("delete_documents"), z.literal("remove_reactions"), z.literal("add_reactions"), z.literal("manage_share_links")]);
+export const permissionSchema = z.union([z.literal("administrator"), z.literal("add_comments"), z.literal("remove_comments"), z.literal("view_restricted_comments"), z.literal("add_members"), z.literal("remove_members"), z.literal("manage_permissions"), z.literal("upload_documents"), z.literal("view_restricted_documents"), z.literal("delete_documents"), z.literal("remove_reactions"), z.literal("add_reactions")]);
 
 export const appErrorSchema = z.object({
     status_code: z.number(),

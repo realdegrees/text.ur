@@ -56,8 +56,7 @@ export type Permission =
   | "view_restricted_documents"
   | "delete_documents"
   | "remove_reactions"
-  | "add_reactions"
-  | "manage_share_links";
+  | "add_reactions";
 
 /**
  * Base class for all custom exceptions in the application.

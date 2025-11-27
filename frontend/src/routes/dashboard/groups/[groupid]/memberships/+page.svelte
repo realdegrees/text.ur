@@ -22,7 +22,11 @@
 	import PermissionSelector from '$lib/components/permissionSelector.svelte';
 	import { slide } from 'svelte/transition';
 	import AdvancedInput from '$lib/components/advancedInput.svelte';
-	import { invalidateAll } from '$app/navigation';
+	import { goto, invalidate, invalidateAll } from '$app/navigation';
+	import ConfirmButton from '$lib/components/ConfirmButton.svelte';
+	import PromoteIcon from '~icons/mdi/chevron-double-up';
+	import KickIcon from '~icons/ic/sharp-person-remove';
+	import LeaveIcon from '~icons/mdi/exit-run';
 
 	let { data } = $props();
 	let memberships = $derived(data.memberships);
@@ -169,7 +173,7 @@
 			{#if selected.length > 0}
 				{#if sessionStore.validatePermissions(['remove_members'])}
 					<button
-						class="rounded bg-inset px-1 py-1.5 font-semibold shadow-inner shadow-black/30 transition hover:cursor-pointer hover:bg-red-500/30"
+						class="bg-inset rounded px-1 py-1.5 font-semibold shadow-inner shadow-black/30 transition hover:cursor-pointer hover:bg-red-500/30"
 						onclick={() => selected.forEach(async ({ user: { id } }) => kickMember(id))}
 					>
 						Kick
@@ -188,7 +192,7 @@
 					>
 						{#snippet icon()}
 							<div
-								class="rounded bg-inset px-1 py-1.5 font-semibold shadow-inner shadow-black/30 transition hover:cursor-pointer hover:bg-green-500/30"
+								class="bg-inset rounded px-1 py-1.5 font-semibold shadow-inner shadow-black/30 transition hover:cursor-pointer hover:bg-green-500/30"
 							>
 								Add Permission
 							</div>
@@ -212,7 +216,7 @@
 					>
 						{#snippet icon()}
 							<div
-								class="rounded bg-inset px-1 py-1.5 font-semibold shadow-inner shadow-black/30 transition hover:cursor-pointer hover:bg-orange-500/30"
+								class="bg-inset rounded px-1 py-1.5 font-semibold shadow-inner shadow-black/30 transition hover:cursor-pointer hover:bg-orange-500/30"
 							>
 								Remove Permission
 							</div>
@@ -246,7 +250,7 @@
 			{
 				label: $LL.memberships.actions(),
 				width: '1fr',
-				snippet: removeSnippet
+				snippet: actionsSnippet
 			}
 		]}
 		data={memberships}
@@ -278,14 +282,14 @@
 </div>
 
 {#snippet permissionItem(perm: Permission)}
-	<p class="p-1 text-left text-text">{$LL.permissions[perm]?.() || perm}</p>
+	<p class="text-text p-1 text-left">{$LL.permissions[perm]?.() || perm}</p>
 {/snippet}
 
 {#snippet usernameSnippet(membership: Omit<MembershipRead, 'group'>)}
-	<div class="flex flex-row items-center text-text">
+	<div class="text-text flex flex-row items-center">
 		<p class="font-medium">{membership.user.username || 'Unknown User'}</p>
 		{#if membership.user.first_name || membership.user.last_name}
-			<p class="ml-1 whitespace-nowrap text-text/70">
+			<p class="text-text/70 ml-1 whitespace-nowrap">
 				({membership.user.first_name || ''}
 				{membership.user.last_name || ''})
 			</p>
@@ -297,7 +301,7 @@
 	<div class="flex flex-wrap gap-1">
 		{#if membership.share_link}
 			<span
-				class="flex w-fit flex-row rounded-full bg-purple-100 px-2 py-1 text-xs font-semibold text-purple-800 uppercase"
+				class="flex w-fit flex-row rounded-full bg-purple-100 px-2 py-1 text-xs font-semibold uppercase text-purple-800"
 				title={membership.share_link.expires_at
 					? `Expires at ${new Date(membership.share_link.expires_at).toLocaleString()}`
 					: ''}
@@ -344,46 +348,87 @@
 	{/key}
 {/snippet}
 
-{#snippet removeSnippet(membership: Omit<MembershipRead, 'group'>)}
-	{@const useRemoveButton =
+{#snippet actionsSnippet(membership: Omit<MembershipRead, 'group'>)}
+	{@const showRemoveButton =
 		sessionStore.validatePermissions(['remove_members']) &&
 		!membership.is_owner &&
 		!(
-			membership.permissions.includes('administrator') ||
-			membership.permissions.includes('manage_permissions')
+			membership.permissions.includes('administrator')
 		)}
 
-	{@const useLeaveButton = data.sessionUser.id === membership.user.id && !membership.is_owner}
+	{@const showLeaveButton = data.sessionUser.id === membership.user.id && !membership.is_owner}
 
-	{#if useLeaveButton || useRemoveButton}
-		<button
-			onclick={async () => {
-				if (
-					confirm(
-						useLeaveButton
-							? `Are you sure you want to leave the group?`
-							: `Are you sure you want to kick ${membership.user.username} from the group?`
-					)
-				) {
-					const success = useLeaveButton
-						? await leaveGroup()
-						: await kickMember(membership.user.id);
-					if (success) {
-						data.memberships = {
-							...data.memberships,
-							data: data.memberships.data.filter((m) => m.user.id !== membership.user.id)
-						};
-						if (useLeaveButton) {
-							notification('success', 'You have left the group.');
-							invalidateAll();
-						}
+	{#if membership.share_link}
+		<ConfirmButton
+			onConfirm={async () => {
+				const result = await api.post(
+					`/groups/${group.id}/memberships/promote/${membership.user.id}`,
+					{}
+				);
+
+				if (result.success) {
+					notification('success', 'Member promoted successfully.');
+					window.location.reload();
+				} else {
+					notification(result.error);
+				}
+			}}
+			slideoutDirection="left"
+		>
+			{#snippet button()}
+				<div
+					class="text-text h-full w-fit rounded bg-green-500/10 p-1 shadow-black/20 transition hover:cursor-pointer hover:bg-green-500/30 hover:shadow-inner"
+					aria-label="Promote guest {membership.user.username} to a permanent member"
+				>
+					<PromoteIcon class="h-5 w-5" />
+				</div>
+			{/snippet}
+
+			{#snippet slideout()}
+				<p class="flex items-center bg-green-500/10 px-2 py-0.5 text-xs text-green-500 whitespace-nowrap">
+					Promote to a permanent member?
+				</p>
+			{/snippet}
+		</ConfirmButton>
+	{/if}
+
+	{#if showLeaveButton || showRemoveButton}
+		<ConfirmButton
+			onConfirm={async () => {
+				const success = showLeaveButton ? await leaveGroup() : await kickMember(membership.user.id);
+				if (success) {
+					data.memberships = {
+						...data.memberships,
+						data: data.memberships.data.filter((m) => m.user.id !== membership.user.id)
+					};
+					if (showLeaveButton) {
+						notification('success', 'You have left the group.');
+						invalidateAll();
 					}
 				}
 			}}
-			class="h-full w-fit rounded rounded-r bg-red-500/10 p-1 text-text shadow-black/20 transition-all hover:cursor-pointer hover:bg-red-500/30 hover:shadow-inner"
-			aria-label="Kick {membership.user.username} from the group"
+			slideoutDirection="left"
 		>
-			{useLeaveButton ? $LL.memberships.leave() : $LL.memberships.kick()}
-		</button>
+			{#snippet button()}
+				<div
+					class="text-text h-full w-fit rounded bg-red-500/10 p-1 shadow-black/20 transition hover:cursor-pointer hover:bg-red-500/30 hover:shadow-inner"
+					aria-label={showLeaveButton
+						? `Leave the group`
+						: `Kick {membership.user.username} from the group`}
+				>
+					{#if showLeaveButton}
+						<LeaveIcon class="h-5 w-5" />
+					{:else}
+						<KickIcon class="h-5 w-5" />
+					{/if}
+				</div>
+			{/snippet}
+
+			{#snippet slideout()}
+				<p class="flex items-center bg-red-500/10 px-2 py-0.5 text-xs text-red-500 whitespace-nowrap">
+					{showLeaveButton ? 'Leave the group?' : `Remove ${membership.user.username} from the group?`}
+				</p>
+			{/snippet}
+		</ConfirmButton>
 	{/if}
 {/snippet}

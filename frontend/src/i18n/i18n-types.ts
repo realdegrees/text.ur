@@ -245,10 +245,6 @@ type RootTranslation = {
 		 * A​d​d​ ​r​e​a​c​t​i​o​n​s
 		 */
 		add_reactions: string
-		/**
-		 * M​a​n​a​g​e​ ​s​h​a​r​e​ ​l​i​n​k​s
-		 */
-		manage_share_links: string
 	}
 	visibility: {
 		'public': {
@@ -732,10 +728,6 @@ export type TranslationFunctions = {
 		 * Add reactions
 		 */
 		add_reactions: () => LocalizedString
-		/**
-		 * Manage share links
-		 */
-		manage_share_links: () => LocalizedString
 	}
 	visibility: {
 		'public': {

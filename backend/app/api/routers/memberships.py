@@ -247,3 +247,29 @@ async def remove_member(
     db.delete(membership)
     db.commit()
     return Response(status_code=204)
+
+@groupmembership_router.post("/promote/{user_id}")
+def promote_guest_to_member(
+    db: Database,
+    session_user: User = Authenticate(
+        [Guard.group_access({Permission.ADD_MEMBERS})],
+    ),
+    group: Group = Resource(Group, param_alias="group_id"),
+    member: User = Resource(User, param_alias="user_id")
+) -> Response:
+    """Upgrade a guest membership to a regular membership."""
+    membership: Membership | None = db.exec(
+        select(Membership).where(
+            Membership.group_id == group.id,
+            Membership.user_id == member.id,
+        )
+    ).first()
+    db.add(member)
+
+    if not membership:
+        raise HTTPException(
+            status_code=404, detail="Target user is not a member of this group")
+
+    membership.share_link = None
+    db.commit()
+    return Response(status_code=204)
