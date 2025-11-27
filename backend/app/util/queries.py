@@ -394,8 +394,7 @@ class Guard:
                 """Build permission check clause."""
                 return (
                     Membership.is_owner.is_(True) |
-                    Membership.permissions.contains([Permission.ADMINISTRATOR.value]) |
-                    Membership.permissions.contains([Permission.MANAGE_SHARE_LINKS.value])
+                    Membership.permissions.contains([Permission.ADMINISTRATOR.value])
                 )
 
             if multi:
@@ -444,7 +443,7 @@ class Guard:
             return any(
                 (m.user_id == user.id)
                 and m.accepted
-                and (m.is_owner or Permission.ADMINISTRATOR.value in m.permissions or Permission.MANAGE_SHARE_LINKS.value in m.permissions)
+                and (m.is_owner or Permission.ADMINISTRATOR.value in m.permissions)
                 for m in share_link.group.memberships
             )
 

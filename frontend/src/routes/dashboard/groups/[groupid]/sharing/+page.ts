@@ -9,9 +9,8 @@ export const load: PageLoad = async ({ parent, params, fetch }) => {
 
 	// Check permissions directly (don't use sessionStore in load functions - it's for components only)
 	const isAdmin = membership.permissions.includes('administrator') || membership.is_owner;
-	const canManageShareLinks = membership.permissions.includes('manage_share_links');
 
-	if (!isAdmin && !canManageShareLinks) {
+	if (!isAdmin) {
 		throw redirect(302, `/dashboard/groups/${membership.group.id}/documents`);
 	}
 

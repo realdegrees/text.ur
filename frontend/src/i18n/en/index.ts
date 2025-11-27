@@ -67,7 +67,6 @@ const en = {
 		delete_documents: 'Delete documents',
 		remove_reactions: 'Remove reactions',
 		add_reactions: 'Add reactions',
-		manage_share_links: 'Manage share links'
 	},
 	visibility: {
 		public: {

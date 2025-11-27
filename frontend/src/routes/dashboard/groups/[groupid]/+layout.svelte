@@ -28,7 +28,7 @@
 			i18nKey: () => 'Sharing' as LocalizedString,
 			icon: ShareIcon,
 			condition: sessionStore.validatePermissions({
-				or: ['administrator', 'manage_share_links']
+				or: ['administrator']
 			})
 		},
 		{

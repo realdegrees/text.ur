@@ -35,10 +35,6 @@ class Permission(str, Enum):
     # Reactions
     REMOVE_REACTIONS = "remove_reactions"
     ADD_REACTIONS = "add_reactions"
-    
-    # Share Links
-    MANAGE_SHARE_LINKS = "manage_share_links"
-
 
 class ViewMode(str, Enum):
     """Document view mode settings.

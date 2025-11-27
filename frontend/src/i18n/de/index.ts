@@ -67,7 +67,6 @@ const de = {
 		delete_documents: 'Dokumente löschen',
 		remove_reactions: 'Reaktionen entfernen',
 		add_reactions: 'Reaktionen hinzufügen',
-		manage_share_links: 'Freigabelinks verwalten'
 	},
 	visibility: {
 		public: {
