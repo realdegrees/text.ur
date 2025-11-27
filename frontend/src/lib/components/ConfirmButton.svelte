@@ -16,30 +16,23 @@
 		onConfirm?: () => void;
 	} = $props();
 
-	let containerRef: HTMLDivElement | null = null;
 	let isOpen = $state(false);
 
-	function confirm() {
-		onConfirm?.();
-		close();
-	}
+
 
 	function handleKeydown(e: KeyboardEvent) {
-		if (e.key === 'Escape') close();
+		if (e.key === 'Escape') isOpen = false;
 	}
 </script>
 
 <svelte:window on:keydown={handleKeydown} />
 
-<div
-	class="flex flex-{slideoutDirection == 'right' ? 'row' : 'row-reverse'} overflow-hidden rounded"
-	bind:this={containerRef}
->
+<div class="flex flex-{slideoutDirection == 'right' ? 'row' : 'row-reverse'} overflow-hidden rounded">
 	<!-- render the passed snippets using Svelte snippets API -->
 	<button
 		onclick={() => {
 			if (isOpen) {
-				confirm();
+				onConfirm?.();
 				isOpen = false;
 			} else {
 				isOpen = true;

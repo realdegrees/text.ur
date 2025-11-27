@@ -1,21 +1,18 @@
 <script lang="ts">
 	import { documentStore, type CachedComment } from '$lib/runes/document.svelte.js';
 	import { parseAnnotation, type Annotation } from '$types/pdf';
-	import CommentBadge from './CommentBadge.svelte';
+	import CommentCluster from './CommentCluster.svelte';
 	import { onMount } from 'svelte';
-	import { CLUSTER_THRESHOLD_PX, BADGE_HEIGHT_PX, INITIAL_RENDER_DELAY_MS } from './constants';
+	import { CLUSTER_THRESHOLD_PX, BADGE_HEIGHT_PX } from './constants';
 
 	interface Props {
 		viewerContainer: HTMLDivElement | null;
-		sidebarContainer: HTMLDivElement | null;
-		scale: number;
 		scrollTop: number;
 	}
 
-	let { viewerContainer, sidebarContainer, scale, scrollTop }: Props = $props();
+	let { viewerContainer, scrollTop }: Props = $props();
 
-	// Force recalculation trigger
-	let renderTick = $state(0);
+	let containerElement: HTMLDivElement | null = $state(null);
 
 	// Comment with parsed annotation
 	interface CommentWithAnnotation extends CachedComment {
@@ -76,7 +73,9 @@
 		// Use textLayerRect since bounding boxes are normalized relative to text layer
 		const textLayerRect = textLayer.getBoundingClientRect();
 		const containerRect = viewerContainer.getBoundingClientRect();
-
+		
+		if (textLayerRect.width === 0 || textLayerRect.height === 0) return null;
+		
 		// Calculate the CENTER of the annotation box
 		const annotationTopInTextLayer = firstBox.y * textLayerRect.height;
 		const annotationHeight = firstBox.height * textLayerRect.height;
@@ -91,16 +90,29 @@
 	};
 
 	// Group comments by Y position proximity (clustering)
-	interface CommentCluster {
+	interface CommentClusterData {
 		comments: CommentWithAnnotation[];
 		yPosition: number;
+		adjustedY?: number; // Adjusted Y position to prevent overlaps with expanded cards
 	}
 
-	let clusters = $derived.by((): CommentCluster[] => {
-		// Dependencies for recalculation
-		void scale;
+	// Update tick triggered by text layer resizes
+	let clustersUpdateTick = $state(0);
+
+	// Track actual rendered heights of clusters (key is comment IDs joined)
+	let clusterHeights = $state(new Map<string, number>());
+
+	// Helper to check if any comment in a cluster is expanded
+	const isClusterExpanded = (comments: CachedComment[]): boolean => {
+		return comments.some(
+			(c) => c.isCommentHovered || c.isHighlightHovered || c.isPinned || c.isEditing
+		);
+	};
+
+	let baseClusters = $derived.by((): CommentClusterData[] => {
+		// Depend on the update tick (triggered by ResizeObserver)
+		void clustersUpdateTick;
 		void scrollTop;
-		void renderTick;
 
 		const positioned = commentsWithAnnotations
 			.map((comment) => ({
@@ -112,8 +124,8 @@
 
 		if (positioned.length === 0) return [];
 
-		const result: CommentCluster[] = [];
-		let currentCluster: CommentCluster = {
+		const result: CommentClusterData[] = [];
+		let currentCluster: CommentClusterData = {
 			comments: [positioned[0].comment],
 			yPosition: positioned[0].y
 		};
@@ -141,39 +153,107 @@
 		return result;
 	});
 
-	// Watch for PDF pages being rendered
+	// Adjust cluster positions to prevent overlaps with expanded cards
+	let clusters = $derived.by((): CommentClusterData[] => {
+		const adjusted = baseClusters.map((cluster) => ({
+			...cluster,
+			adjustedY: cluster.yPosition
+		}));
+
+		const GAP_PX = 8; // Gap between clusters
+
+		// Iteratively adjust positions from top to bottom
+		for (let i = 0; i < adjusted.length; i++) {
+			const current = adjusted[i];
+			const currentKey = current.comments.map((c) => c.id).join('-');
+
+			// Get the actual rendered height, or use badge height as fallback
+			const currentIsExpanded = isClusterExpanded(current.comments);
+			const currentHeight = currentIsExpanded
+				? clusterHeights.get(currentKey) || BADGE_HEIGHT_PX
+				: BADGE_HEIGHT_PX;
+
+			const currentBottom = current.adjustedY! + currentHeight;
+
+			// Check all clusters below and push them down if they overlap
+			for (let j = i + 1; j < adjusted.length; j++) {
+				const below = adjusted[j];
+
+				// If current cluster's bottom overlaps with the cluster below, push it down
+				if (currentBottom + GAP_PX > below.adjustedY!) {
+					below.adjustedY = currentBottom + GAP_PX;
+				}
+			}
+		}
+
+		return adjusted;
+	});
+
+	// Watch for text layer size changes to recalculate cluster positions
 	onMount(() => {
 		if (!viewerContainer) return;
 
-		const observer = new MutationObserver(() => {
-			// Trigger recalculation when DOM changes (pages rendered)
-			renderTick++;
+		documentStore.setCommentSidebarRef(containerElement);
+
+		// Use ResizeObserver to detect when PDF.js finishes scaling text layers
+		// Wait 2 RAF to match AnnotationLayer timing
+		const resizeObserver = new ResizeObserver(() => {
+			requestAnimationFrame(() => {
+				requestAnimationFrame(() => {
+					clustersUpdateTick++;
+				});
+			});
 		});
 
-		observer.observe(viewerContainer, {
+		// Observe all existing text layers
+		const textLayers = viewerContainer.querySelectorAll('.textLayer');
+		textLayers.forEach((layer) => resizeObserver.observe(layer as HTMLElement));
+
+		// MutationObserver to detect new pages/text layers being added
+		const mutationObserver = new MutationObserver(() => {
+			const newTextLayers = viewerContainer.querySelectorAll('.textLayer');
+			newTextLayers.forEach((layer) => {
+				// ResizeObserver is safe to call multiple times on same element
+				resizeObserver.observe(layer as HTMLElement);
+			});
+			requestAnimationFrame(() => {
+				requestAnimationFrame(() => {
+					clustersUpdateTick++;
+				});
+			});
+		});
+
+		mutationObserver.observe(viewerContainer, {
 			childList: true,
 			subtree: true
 		});
 
-		// Initial render after a delay to let PDF.js finish
-		const timeout = setTimeout(() => {
-			renderTick++;
-		}, INITIAL_RENDER_DELAY_MS);
+		// Initial calculation
+		clustersUpdateTick++;
 
 		return () => {
-			observer.disconnect();
-			clearTimeout(timeout);
+			resizeObserver.disconnect();
+			mutationObserver.disconnect();
 		};
 	});
 </script>
 
-<div class="relative h-full">
+<div class="relative h-full" bind:this={containerElement}>
 	{#each clusters as cluster (cluster.comments.map((c) => c.id).join('-'))}
+		{@const clusterKey = cluster.comments.map((c) => c.id).join('-')}
 		<div
-			class="absolute right-3 left-3 transition-transform duration-75"
-			style="top: {cluster.yPosition}px;"
+			class="absolute right-3 left-3"
+			style="top: {cluster.adjustedY ?? cluster.yPosition}px;"
 		>
-			<CommentBadge comments={cluster.comments} pdfContainer={viewerContainer} {sidebarContainer} />
+			<CommentCluster
+				comments={cluster.comments}
+				adjustedY={cluster.adjustedY ?? cluster.yPosition}
+				{scrollTop}
+				onHeightChange={(height: number) => {
+					clusterHeights.set(clusterKey, height);
+					clusterHeights = clusterHeights; // trigger reactivity
+				}}
+			/>
 		</div>
 	{/each}
 

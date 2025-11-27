@@ -2,14 +2,10 @@
 	import { documentStore, type CachedComment } from '$lib/runes/document.svelte.js';
 	import { parseAnnotation, type Annotation, type BoundingBox } from '$types/pdf';
 	import { SvelteMap } from 'svelte/reactivity';
-	import { RENDER_DEBOUNCE_MS, OPACITY_TRANSITION_MS } from './constants';
+	import { OPACITY_TRANSITION_MS } from './constants';
+	import { onMount } from 'svelte';
 
-	interface Props {
-		viewerContainer: HTMLDivElement | null;
-		scale: number;
-	}
-
-	let { viewerContainer, scale }: Props = $props();
+	let { viewerContainer }: { viewerContainer: HTMLElement } = $props();
 
 	// Apply local filters to comments
 	let filteredComments = $derived.by(() => {
@@ -55,11 +51,10 @@
 		const map = new SvelteMap<
 			number,
 			Array<{
-				commentId: number;
+				comment: CachedComment;
 				box: BoundingBox;
-				color: string;
+				annotation: Annotation;
 				key: string;
-				isSelected: boolean;
 			}>
 		>();
 
@@ -71,59 +66,26 @@
 					map.set(pageNum, []);
 				}
 				map.get(pageNum)!.push({
-					commentId: comment.id,
+					comment,
 					box,
-					color: parsedAnnotation.color,
-					key: `${comment.id}-${idx}`,
-					isSelected: comment.isSelected ?? false
+					annotation: parsedAnnotation,
+					key: `${comment.id}-${idx}`
 				});
 			}
 		}
 		return map;
 	});
 
-	// Get whether any comment is pinned (user actively interacting)
-	let pinnedComment = $derived(documentStore.pinnedComment);
-	// Get whether any comment badge is hovered (not just highlight hover)
-	let badgeHoveredComment = $derived(
-		documentStore.comments.find((c: CachedComment) => c.isBadgeHovered)
-	);
-
-	// Track pending render timeout for cleanup
-	let pendingRenderTimeout: ReturnType<typeof setTimeout> | null = null;
-	let observer: MutationObserver | null = null;
-
 	// Store event listener references for cleanup
 	type HighlightElement = HTMLDivElement & {
 		_listeners?: { mouseenter: () => void; mouseleave: () => void; click: () => void };
 	};
 
-	const cleanupHighlights = (container: HTMLDivElement) => {
-		container.querySelectorAll<HighlightElement>('.annotation-highlight').forEach((el) => {
-			// Remove event listeners before removing element
-			if (el._listeners) {
-				el.removeEventListener('mouseenter', el._listeners.mouseenter);
-				el.removeEventListener('mouseleave', el._listeners.mouseleave);
-				el.removeEventListener('click', el._listeners.click);
-			}
-			el.remove();
-		});
-	};
-
-	// Debounced render to consolidate multiple rapid calls
-	const scheduleRender = () => {
-		if (pendingRenderTimeout) {
-			clearTimeout(pendingRenderTimeout);
-		}
-		pendingRenderTimeout = setTimeout(() => {
-			pendingRenderTimeout = null;
-			renderHighlights();
-		}, RENDER_DEBOUNCE_MS);
-	};
-
 	// Render highlights into the page elements
 	const renderHighlights = () => {
 		if (!viewerContainer) return;
+
+		const isAnyPinned = documentStore.pinnedComments.size > 0;
 
 		// Do not remove all highlights here; we'll reconcile per-page instead.
 
@@ -132,6 +94,7 @@
 			const pageElement = viewerContainer.querySelector(
 				`[data-page-number="${pageNum}"]`
 			) as HTMLElement | null;
+
 			if (!pageElement) continue;
 
 			// Check if page has finished rendering (has a canvas with dimensions)
@@ -139,13 +102,21 @@
 			if (!canvas || canvas.width === 0) continue;
 
 			const textLayer = pageElement.querySelector('.textLayer') as HTMLElement | null;
+
 			if (!textLayer) continue;
 
 			// Bounding boxes are normalized to 0-1 relative to text layer
 			const textLayerRect = textLayer.getBoundingClientRect();
 
+			if (textLayerRect.width === 0 || textLayerRect.height === 0) continue;
 			for (const highlight of highlights) {
-				const { box, color, key, commentId, isSelected } = highlight;
+				const { box, annotation, key, comment } = highlight;
+
+				const left = box.x * textLayerRect.width;
+				const top = box.y * textLayerRect.height;
+				const width = box.width * textLayerRect.width;
+				const height = box.height * textLayerRect.height;
+				const isVisible = !isAnyPinned || comment.isPinned || comment.isCommentHovered;
 
 				// reuse an existing element if one already exists for this key
 				const existingEl = textLayer.querySelector<HighlightElement>(
@@ -153,39 +124,21 @@
 				);
 				if (existingEl) {
 					// update position & visual attributes and keep event listeners
-					const left = box.x * textLayerRect.width;
-					const top = box.y * textLayerRect.height;
-					const width = box.width * textLayerRect.width;
-					const height = box.height * textLayerRect.height;
-					const shouldHideOthers = !!pinnedComment || !!badgeHoveredComment;
-					const isVisible = !shouldHideOthers || isSelected;
-
 					existingEl.style.left = `${left}px`;
 					existingEl.style.top = `${top}px`;
 					existingEl.style.width = `${width}px`;
 					existingEl.style.height = `${height}px`;
-					existingEl.style.backgroundColor = color;
-					existingEl.style.pointerEvents = isVisible ? 'auto' : 'none';
-					existingEl.style.opacity = isVisible ? '1' : '0';
-					existingEl.dataset.commentId = String(commentId);
+					existingEl.style.backgroundColor = annotation.color;
+					existingEl.style.pointerEvents = 'auto';
+					existingEl.style.opacity = isVisible ? '1' : '0.4';
+					existingEl.dataset.commentId = String(comment.id);
 					continue;
 				}
 
-				// Position relative to the text layer (box coordinates are 0-1 relative)
-				const left = box.x * textLayerRect.width;
-				const top = box.y * textLayerRect.height;
-				const width = box.width * textLayerRect.width;
-				const height = box.height * textLayerRect.height;
-
-				// Determine visibility: only hide other highlights when:
-				// - A comment is pinned (user clicked to keep it open), OR
-				// - A badge is being hovered (not just the highlight itself)
-				const shouldHideOthers = !!pinnedComment || !!badgeHoveredComment;
-				const isVisible = !shouldHideOthers || isSelected;
-
 				const div = document.createElement('div') as HighlightElement;
+				documentStore.addCommentHighlight(comment.id, div);
 				div.className = 'annotation-highlight';
-				div.dataset.commentId = String(commentId);
+				div.dataset.commentId = String(comment.id);
 				div.dataset.key = key;
 
 				div.style.cssText = `
@@ -194,24 +147,22 @@
 					top: ${top}px;
 					width: ${width}px;
 					height: ${height}px;
-					background-color: ${color};
+					background-color: ${annotation.color};
 					mix-blend-mode: multiply;
-					pointer-events: ${isVisible ? 'auto' : 'none'};
+					pointer-events: auto;
 					cursor: pointer;
 					z-index: 5;
 					border-radius: 2px;
-					opacity: ${isVisible ? 1 : 0};
+					opacity: ${isVisible ? 1 : 0.4};
 					transition: opacity ${OPACITY_TRANSITION_MS}ms ease-in-out;
 				`;
 
 				// Create named listener functions for cleanup
 				const listeners = {
-					mouseenter: () => documentStore.setHighlightHovered(commentId),
-					mouseleave: () => documentStore.setHighlightHovered(null),
+					mouseenter: () => documentStore.setHighlightHovered(comment.id, true),
+					mouseleave: () => documentStore.setHighlightHovered(comment.id, false),
 					click: () => {
-						documentStore.setPinned(commentId);
-						documentStore.setCommentCardActive(true);
-						documentStore.setSelected(commentId);
+						documentStore.setPinned(comment.id, !comment.isPinned);
 					}
 				};
 
@@ -237,93 +188,76 @@
 						el.removeEventListener('mouseleave', el._listeners.mouseleave);
 						el.removeEventListener('click', el._listeners.click);
 					}
+					documentStore.removeCommentHighlight(parseInt(el.dataset.commentId ?? '0'), el);
 					el.remove();
 				}
 			});
 		}
 	};
 
-	const setupObserver = () => {
-		if (!viewerContainer) return;
+	// Track text layers with ResizeObserver to detect when PDF.js finishes scaling
+	let textLayerObserver: ResizeObserver | null = null;
+	let mutationObserver: MutationObserver | null = null;
 
-		// Clean up existing observer
-		observer?.disconnect();
+	onMount(() => {
+		requestAnimationFrame(() => {
+			renderHighlights();
+		});
 
-		observer = new MutationObserver((mutations) => {
-			// Check if any canvas was added or modified
-			const shouldRerender = mutations.some((mutation) => {
-				if (mutation.type === 'childList') {
-					return Array.from(mutation.addedNodes).some(
-						(node) =>
-							node instanceof HTMLElement &&
-							(node.tagName === 'CANVAS' || node.querySelector?.('canvas'))
-					);
+		// Observe text layer size changes to re-render when PDF.js scales
+		textLayerObserver = new ResizeObserver(() => {
+			requestAnimationFrame(() => {
+				requestAnimationFrame(() => {
+					renderHighlights();
+				});
+			});
+		});
+
+		// Watch for text layers being added to the DOM by PDF.js
+		if (viewerContainer) {
+			mutationObserver = new MutationObserver((mutations) => {
+				if (!viewerContainer) return;
+
+				// Check if any text layers were added
+				let hasNewTextLayers = false;
+				for (const mutation of mutations) {
+					for (const node of mutation.addedNodes) {
+						if (node instanceof HTMLElement) {
+							if (node.classList.contains('textLayer') || node.querySelector('.textLayer')) {
+								hasNewTextLayers = true;
+								break;
+							}
+						}
+					}
+					if (hasNewTextLayers) break;
 				}
-				return false;
+
+				if (!hasNewTextLayers) return;
+
+				// Observe new text layers with ResizeObserver
+				const textLayers = viewerContainer.querySelectorAll('.textLayer');
+				textLayers.forEach((layer) => {
+					textLayerObserver?.observe(layer as HTMLElement);
+				});
+
+				// Trigger a render when new text layers are detected
+				requestAnimationFrame(() => {
+					requestAnimationFrame(() => {
+						renderHighlights();
+					});
+				});
 			});
 
-			if (shouldRerender) {
-				scheduleRender();
-			}
-		});
-
-		observer.observe(viewerContainer, {
-			childList: true,
-			subtree: true
-		});
-
-		// Initial render
-		scheduleRender();
-	};
-
-	// Re-render when comment content, scale, or container changes
-	// Use commentsKey to avoid re-rendering on interaction state changes
-	$effect(() => {
-		// Dependencies - only viewer/container/scale changes should re-run setup.
-		// Do NOT depend on `commentsKey` here: comment websocket events should not
-		// cause the observer / effect teardown and therefore should not cause a
-		// full highlight cleanup (that was causing flicker).
-		void scale;
-
-		if (viewerContainer) {
-			setupObserver();
-
-			return () => {
-				// Clean up all pending operations
-				if (pendingRenderTimeout) {
-					clearTimeout(pendingRenderTimeout);
-					pendingRenderTimeout = null;
-				}
-				observer?.disconnect();
-				observer = null;
-				// Clean up highlights when effect re-runs or component unmounts
-				if (viewerContainer) {
-					cleanupHighlights(viewerContainer);
-				}
-			};
+			mutationObserver.observe(viewerContainer, {
+				childList: true,
+				subtree: true
+			});
 		}
-	});
 
-	// Update highlight visibility without full re-render
-	$effect(() => {
-		// Dependencies - interaction state
-		void pinnedComment;
-		void badgeHoveredComment;
-
-		if (!viewerContainer) return;
-
-		// Update visibility of existing highlights
-		const shouldHideOthers = !!pinnedComment || !!badgeHoveredComment;
-		const selectedId = pinnedComment?.id ?? badgeHoveredComment?.id ?? null;
-
-		viewerContainer.querySelectorAll<HTMLElement>('.annotation-highlight').forEach((el) => {
-			const commentId = parseInt(el.dataset.commentId ?? '0', 10);
-			const isSelected = commentId === selectedId;
-			const isVisible = !shouldHideOthers || isSelected;
-
-			el.style.opacity = isVisible ? '1' : '0';
-			el.style.pointerEvents = isVisible ? 'auto' : 'none';
-		});
+		return () => {
+			textLayerObserver?.disconnect();
+			mutationObserver?.disconnect();
+		};
 	});
 
 	// Schedule a re-render when the highlights content changes (structural updates
@@ -331,7 +265,21 @@
 	// observer or cleanup everything — it only schedules the incremental render.
 	$effect(() => {
 		void highlightsByPage;
-		if (viewerContainer) scheduleRender();
+		void documentStore.documentScale;
+
+		if (!viewerContainer) return;
+
+		// Observe all text layers for resize
+		const textLayers = viewerContainer.querySelectorAll('.textLayer');
+		textLayers.forEach((layer) => {
+			textLayerObserver?.observe(layer as HTMLElement);
+		});
+
+		requestAnimationFrame(() => {
+			requestAnimationFrame(() => {
+				renderHighlights();
+			});
+		});
 	});
 </script>
 

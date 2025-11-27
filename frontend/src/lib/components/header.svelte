@@ -17,7 +17,7 @@
 </script>
 
 <div class="h-15.5 w-full"></div>
-<header class="fixed top-0 right-0 left-0 z-50 h-15.5 w-full bg-background">
+<header class="fixed top-0 right-0 left-0 z-9000 h-15.5 w-full bg-background">
 	<div
 		class="center-content dark:shadow-inner-sym-10 mt-1 grid h-full grid-cols-3
 	items-center overflow-hidden bg-inset shadow-inner-sym-[10px] shadow-black"

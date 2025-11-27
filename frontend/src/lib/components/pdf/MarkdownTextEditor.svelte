@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import DOMPurify from 'dompurify';
+	import MarkdownRenderer from '$lib/components/MarkdownRenderer.svelte';
 	import BoldIcon from '~icons/material-symbols/format-bold';
 	import ItalicIcon from '~icons/material-symbols/format-italic';
 	import UnderlineIcon from '~icons/material-symbols/format-underlined';
@@ -14,9 +15,9 @@
 		rows?: number;
 		disabled?: boolean;
 		autofocus?: boolean;
-		size?: 'sm' | 'md';
 		onchange?: (value: string) => void;
 		onkeydown?: (e: KeyboardEvent) => void;
+		onblur?: (e: FocusEvent) => void;
 	}
 
 	let {
@@ -25,19 +26,20 @@
 		rows = 3,
 		disabled = false,
 		autofocus = false,
-		size = 'md',
 		onchange,
-		onkeydown
+		onkeydown,
+		onblur
 	}: Props = $props();
 
 	let textareaRef: HTMLTextAreaElement | null = $state(null);
+	let mode = $state<'write' | 'preview'>('write');
 
 	// Size classes
 	let sizeClasses = $derived({
-		text: size === 'sm' ? 'text-xs' : 'text-sm',
-		padding: size === 'sm' ? 'p-1.5' : 'p-2',
-		iconSize: size === 'sm' ? 'h-3 w-3' : 'h-3.5 w-3.5',
-		buttonPadding: size === 'sm' ? 'p-0.5' : 'p-1'
+		text: 'text-sm',
+		padding: 'p-2',
+		iconSize: 'h-3.5 w-3.5',
+		buttonPadding: 'p-1'
 	});
 
 	// Sanitize input on change
@@ -168,37 +170,82 @@
 </script>
 
 <div class="flex flex-col rounded border border-text/20 bg-inset focus-within:border-primary">
-	<!-- Toolbar -->
-	<div class="flex items-center gap-0.5 border-b border-text/10 px-1 py-0.5">
-		{#each formatButtons as btn (btn)}
+	<!-- Mode Toggle + Toolbar -->
+	<div class="flex items-center justify-between gap-2 border-b border-text/10 px-2 py-1">
+		<!-- Mode Toggle -->
+		<div class="flex gap-0.5 rounded bg-background p-0.5">
 			<button
 				type="button"
-				class="rounded {sizeClasses.buttonPadding} text-text/50 transition-colors hover:bg-text/10 hover:text-text/70 disabled:opacity-30"
-				onclick={(e) => {
-					e.stopPropagation();
-					btn.action();
-				}}
-				title={btn.title}
-				{disabled}
+				class="rounded px-2 py-0.5 text-xs transition-colors {mode === 'write'
+					? 'bg-primary/20 text-primary'
+					: 'text-text/50 hover:text-text/70'}"
+				onclick={() => (mode = 'write')}
+				disabled={disabled}
 			>
-				<btn.icon class={sizeClasses.iconSize} />
+				Write
 			</button>
-		{/each}
+			<button
+				type="button"
+				class="rounded px-2 py-0.5 text-xs transition-colors {mode === 'preview'
+					? 'bg-primary/20 text-primary'
+					: 'text-text/50 hover:text-text/70'}"
+				onclick={() => (mode = 'preview')}
+				disabled={disabled}
+			>
+				Preview
+			</button>
+		</div>
+
+		<!-- Format Toolbar (only visible in write mode) -->
+		{#if mode === 'write'}
+			<div class="flex items-center gap-0.5">
+				{#each formatButtons as btn (btn)}
+					<button
+						type="button"
+						class="rounded {sizeClasses.buttonPadding} text-text/50 transition-colors hover:bg-text/10 hover:text-text/70 disabled:opacity-30"
+						onclick={(e) => {
+							e.stopPropagation();
+							btn.action();
+						}}
+						title={btn.title}
+						{disabled}
+					>
+						<btn.icon class={sizeClasses.iconSize} />
+					</button>
+				{/each}
+			</div>
+		{/if}
 	</div>
 
-	<!-- Textarea -->
-	<textarea
-		bind:this={textareaRef}
-		class="w-full resize-none bg-transparent {sizeClasses.padding} {sizeClasses.text} text-text placeholder:text-text/40 focus:outline-none"
-		{placeholder}
-		{rows}
-		{disabled}
-		{value}
-		oninput={handleInput}
-		onkeydown={(e) => {
-			handleShortcuts(e);
-			handleKeydown(e);
-		}}
-		onclick={(e) => e.stopPropagation()}
-	></textarea>
+	<!-- Content Area -->
+	{#if mode === 'write'}
+		<!-- Textarea -->
+		<textarea
+			bind:this={textareaRef}
+			class="w-full resize-none bg-transparent {sizeClasses.padding} {sizeClasses.text} text-text placeholder:text-text/40 focus:outline-none"
+			{placeholder}
+			{rows}
+			{disabled}
+			{value}
+			oninput={handleInput}
+			onkeydown={(e) => {
+				handleShortcuts(e);
+				handleKeydown(e);
+			}}
+			onclick={(e) => e.stopPropagation()}
+			onblur={onblur}
+		></textarea>
+	{:else}
+		<!-- Preview -->
+		<div
+			class="w-full bg-transparent {sizeClasses.padding} {sizeClasses.text}"
+			style="min-height: {rows * 1.5}em"
+		>
+			{#if value.trim()}
+				<MarkdownRenderer content={value} class="text-text/80" />
+			{:else}
+				<p class="text-text/40 italic">{placeholder}</p>
+			{/if}
+		</div>
+	{/if}
 </div>

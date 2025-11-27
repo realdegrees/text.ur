@@ -8,6 +8,7 @@
 	import PdfControls from './PdfControls.svelte';
 	import UserCursors from './UserCursors.svelte';
 	import { PDF_ZOOM_STEP, PDF_MIN_SCALE } from './constants';
+	import { documentStore } from '$lib/runes/document.svelte';
 
 	interface Props {
 		document: ArrayBuffer;
@@ -23,7 +24,6 @@
 
 	let pageNumber = $state(1);
 	let numPages = $state(0);
-	let scale = $state(1);
 	let scrollTop = $state(0);
 	let pdfWidth = $state(0);
 	let basePageWidth = $state(0);
@@ -36,8 +36,8 @@
 			const pageRect = page.getBoundingClientRect();
 			pdfWidth = pageRect.width + 16;
 
-			if (scale > 0) {
-				basePageWidth = page.clientWidth / scale;
+			if (documentStore.documentScale > 0) {
+				basePageWidth = page.clientWidth / documentStore.documentScale;
 			}
 		}
 	};
@@ -90,7 +90,7 @@
 				pdfSlick.currentScale = clampedScale;
 			}
 
-			scale = clampedScale;
+			documentStore.documentScale = clampedScale;
 			requestAnimationFrame(() => {
 				updatePdfWidth();
 				captureMaxAvailableWidth();
@@ -133,12 +133,14 @@
 
 	const zoomIn = () => {
 		if (!pdfSlick) return;
-		pdfSlick.currentScale = scale + PDF_ZOOM_STEP;
+		documentStore.documentScale =  documentStore.documentScale + PDF_ZOOM_STEP;
+		pdfSlick.currentScale = documentStore.documentScale;
 	};
 
 	const zoomOut = () => {
 		if (!pdfSlick) return;
-		pdfSlick.currentScale = scale - PDF_ZOOM_STEP;
+		documentStore.documentScale =  documentStore.documentScale - PDF_ZOOM_STEP;
+		pdfSlick.currentScale = documentStore.documentScale;
 	};
 
 	const fitHeight = () => {
@@ -165,7 +167,6 @@
 
 <div class="pdf-viewer-container flex h-full w-full bg-background">
 	<PdfControls
-		{scale}
 		minScale={PDF_MIN_SCALE}
 		{maxScale}
 		{pageNumber}
@@ -194,7 +195,7 @@
 		</div>
 
 		<!-- Annotation highlights are rendered into the PDF pages -->
-		<AnnotationLayer viewerContainer={container} {scale} />
+		<AnnotationLayer viewerContainer={container}/>
 
 		<!-- Text selection handler for creating new annotations -->
 		<TextSelectionHandler viewerContainer={container} />
@@ -210,7 +211,7 @@
 		role="complementary"
 		bind:this={sidebarContainer}
 	>
-		<CommentSidebar viewerContainer={container} {sidebarContainer} {scale} {scrollTop} />
+		<CommentSidebar viewerContainer={container} {scrollTop} />
 	</div>
 </div>
 
