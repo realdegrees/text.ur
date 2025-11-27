@@ -8,6 +8,7 @@
 	import Badge from '$lib/components/badge.svelte';
 	import LL from '$i18n/i18n-svelte.js';
 	import type { ShareLinkRead, Permission } from '$api/types';
+	import { formatDateTime } from '$lib/util/dateFormat';
 
 	let {
 		link,
@@ -22,11 +23,6 @@
 		onCopy: () => void;
 		onRotate: () => void;
 	} = $props();
-
-	function formatDate(date: string | null | undefined): string {
-		if (!date) return 'Never';
-		return new Date(date).toLocaleString();
-	}
 </script>
 
 <div class="flex flex-col gap-2 rounded border border-text/20 bg-background/50 p-3">
@@ -52,7 +48,7 @@
 				{/if}
 			</div>
 			<p class="text-xs text-text/50">
-				by {link.author?.username || 'Deleted User'} • Expires: {formatDate(link.expires_at)}
+				by {link.author?.username || 'Deleted User'} • Expires: {formatDateTime(link.expires_at)}
 			</p>
 		</div>
 		<div class="flex gap-1">

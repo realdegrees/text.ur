@@ -14,6 +14,7 @@
 	import CloseIcon from '~icons/material-symbols/close';
 	import ExpandIcon from '~icons/material-symbols/expand-more';
 	import CollapseIcon from '~icons/material-symbols/expand-less';
+	import { formatDateTime } from '$lib/util/dateFormat';
 
 	interface Props {
 		comment: CachedComment;
@@ -69,15 +70,6 @@
 	let hasReplies = $derived(comment.replies && comment.replies.length > 0);
 
 	// Handlers
-	const formatDate = (dateString?: string) => {
-		if (!dateString) return '';
-		return new Date(dateString).toLocaleDateString(undefined, {
-			month: 'short',
-			day: 'numeric',
-			hour: '2-digit',
-			minute: '2-digit'
-		});
-	};
 
 	const handleReply = async () => {
 		if (!replyContent.trim() || isSubmitting) return;
@@ -224,7 +216,7 @@
 						>{comment.user?.username ?? 'Anonymous'}</span
 					>
 				{/if}
-				<span class="text-xs text-text/40">{formatDate(comment.created_at)}</span>
+				<span class="text-xs text-text/40">{formatDateTime(comment.created_at)}</span>
 				<CommentVisibility
 					commentId={comment.id}
 					visibility={comment.visibility}

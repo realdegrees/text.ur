@@ -1,6 +1,7 @@
 <script lang="ts">
 	import CalendarIcon from '~icons/material-symbols/calendar-month-outline';
 	import ClearIcon from '~icons/material-symbols/close-rounded';
+	import { formatDateTime, getCurrentDateTimeLocal } from '$lib/util/dateFormat';
 
 	let {
 		value = $bindable<string | null>(null),
@@ -13,18 +14,7 @@
 	} = $props();
 
 	let inputRef: HTMLInputElement;
-
-	const formatDateTime = (dateStr: string | null | undefined): string => {
-		if (!dateStr) return 'Never expires';
-		const date = new Date(dateStr);
-		return date.toLocaleString(undefined, {
-			month: 'short',
-			day: 'numeric',
-			year: 'numeric',
-			hour: '2-digit',
-			minute: '2-digit'
-		});
-	};
+	let minDateTime = getCurrentDateTimeLocal();
 
 	const openPicker = () => {
 		inputRef?.showPicker?.();
@@ -78,6 +68,7 @@
 			{id}
 			type="datetime-local"
 			bind:value
+			min={minDateTime}
 			class="pointer-events-none absolute top-[50%] left-0 z-0 h-0 w-0 opacity-0"
 		/>
 	</div>

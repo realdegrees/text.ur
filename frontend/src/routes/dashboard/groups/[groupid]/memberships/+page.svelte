@@ -10,7 +10,6 @@
 	import OwnerIcon from '~icons/material-symbols/admin-panel-settings-outline';
 	import PendingIcon from '~icons/material-symbols/pending-outline';
 	import AcceptedIcon from '~icons/material-symbols/check-circle-outline';
-	import AddIcon from '~icons/material-symbols/add-2-rounded';
 	import TimeIcon from '~icons/ic/baseline-access-time';
 	import { permissionSchema } from '$api/schemas';
 	import LL from '$i18n/i18n-svelte.js';
@@ -22,11 +21,12 @@
 	import PermissionSelector from '$lib/components/permissionSelector.svelte';
 	import { slide } from 'svelte/transition';
 	import AdvancedInput from '$lib/components/advancedInput.svelte';
-	import { goto, invalidate, invalidateAll } from '$app/navigation';
+	import { invalidateAll } from '$app/navigation';
 	import ConfirmButton from '$lib/components/ConfirmButton.svelte';
 	import PromoteIcon from '~icons/mdi/chevron-double-up';
 	import KickIcon from '~icons/ic/sharp-person-remove';
 	import LeaveIcon from '~icons/mdi/exit-run';
+	import { formatDateTime } from '$lib/util/dateFormat';
 
 	let { data } = $props();
 	let memberships = $derived(data.memberships);
@@ -303,7 +303,7 @@
 			<span
 				class="flex w-fit flex-row rounded-full bg-purple-100 px-2 py-1 text-xs font-semibold uppercase text-purple-800"
 				title={membership.share_link.expires_at
-					? `Expires at ${new Date(membership.share_link.expires_at).toLocaleString()}`
+					? `Expires at ${formatDateTime(membership.share_link.expires_at)}`
 					: ''}
 			>
 				<TimeIcon class="mr-1 inline h-4 w-4 align-text-bottom" />
@@ -357,8 +357,10 @@
 		)}
 
 	{@const showLeaveButton = data.sessionUser.id === membership.user.id && !membership.is_owner}
+	{@const showPromoteButton = sessionStore.validatePermissions(['add_members'])}
 
-	{#if membership.share_link}
+	<div class="flex flex-row justify-end items-center gap-2">
+	{#if membership.share_link && showPromoteButton}
 		<ConfirmButton
 			onConfirm={async () => {
 				const result = await api.post(
@@ -431,4 +433,5 @@
 			{/snippet}
 		</ConfirmButton>
 	{/if}
+	</div>
 {/snippet}

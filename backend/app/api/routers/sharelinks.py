@@ -76,7 +76,7 @@ async def update_share_link(
     group: Group = Resource(Group, param_alias="group_id"),
 ) -> ShareLinkRead:
     """Update a share link."""
-    permissions_changed = share_link_update.permissions is not None and share_link_update.permissions != share_link.permissions
+    permissions_changed = share_link_update.permissions is not None and set(share_link_update.permissions) != set(share_link.permissions)
     db.merge(share_link)
     share_link.sqlmodel_update(share_link_update.model_dump(
         exclude_unset=True, exclude={"rotate_token"}))
@@ -152,7 +152,7 @@ async def use_sharelink_token(
         raise HTTPException(status_code=404, detail="Share link not found")
 
     # Check if expired
-    if share_link.expires_at and share_link.expires_at < datetime.now(UTC):
+    if share_link.is_expired:
         raise HTTPException(status_code=403, detail="Share link has expired")
 
     # Check if membership already exists
