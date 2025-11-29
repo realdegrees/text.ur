@@ -1,14 +1,21 @@
+from __future__ import annotations
+
 import json
 import logging
 import os
 from contextvars import ContextVar
-from logging.handlers import RotatingFileHandler
+from logging.handlers import QueueHandler, QueueListener, RotatingFileHandler
+from multiprocessing import Queue
 from typing import Literal
 
 from core.config import LOG_FILE_DIR
 
 # Context variable to store the current user for request-scoped logging
 current_user_context: ContextVar[str | None] = ContextVar("current_user", default=None)
+
+# Global queue and listener for multi-process safe logging
+_log_queue: Queue | None = None
+_queue_listener: QueueListener | None = None
 
 
 def set_current_user(user_identifier: str | None) -> None:
@@ -64,29 +71,92 @@ class JSONFormatter(logging.Formatter):
         return json.dumps(log_dict)
 
 
-def get_logger(name: Literal["requests", "database", "app", "mails", "events", "s3"]) -> logging.Logger:
-    """Return a logger with the specified name."""
-    logger = logging.getLogger(name)
-    if logger.hasHandlers():
-        return logger
+def setup_queue_listener() -> None:
+    """Initialize the queue listener for multi-process safe logging.
+
+    Should be called once on application startup (before workers fork).
+    """
+    global _log_queue, _queue_listener
+
+    if _queue_listener is not None:
+        return  # Already initialized
 
     log_directory = LOG_FILE_DIR if LOG_FILE_DIR else default_log_dir
-
     os.makedirs(log_directory, exist_ok=True)
 
-    file_handler = RotatingFileHandler(
-        os.path.join(log_directory, f"{name}.log"),
-        maxBytes=5 * 1024 * 1024,
-        backupCount=5,
-    )
-    file_handler.setFormatter(JSONFormatter())
+    # Create handlers that will actually write logs (used by listener)
+    handlers: list[logging.Handler] = []
 
+    # Console handler (always enabled)
     console_handler = logging.StreamHandler()
     console_handler.setFormatter(
         logging.Formatter("[%(asctime)s][%(name)s][%(levelname)s] %(message)s")
     )
+    handlers.append(console_handler)
+
+    # File handlers (one per logger name)
+    for logger_name in ["requests", "database", "app", "mails", "events", "s3"]:
+        file_handler = RotatingFileHandler(
+            os.path.join(log_directory, f"{logger_name}.log"),
+            maxBytes=5 * 1024 * 1024,
+            backupCount=5,
+        )
+        file_handler.setFormatter(JSONFormatter())
+        # Add filter to only handle records from this logger
+        file_handler.addFilter(lambda record, name=logger_name: record.name == name)
+        handlers.append(file_handler)
+
+    # Create queue and listener
+    _log_queue = Queue(-1)  # Unlimited size
+    _queue_listener = QueueListener(_log_queue, *handlers, respect_handler_level=True)
+    _queue_listener.start()
+
+
+def stop_queue_listener() -> None:
+    """Stop the queue listener and clean up resources.
+
+    Should be called on application shutdown.
+    """
+    global _queue_listener
+    if _queue_listener is not None:
+        _queue_listener.stop()
+        _queue_listener = None
+
+
+def get_logger(name: Literal["requests", "database", "app", "mails", "events", "s3"]) -> logging.Logger:
+    """Return a logger with the specified name.
+
+    When using multiple workers, logs are sent through a queue to a listener
+    process that handles file I/O, avoiding file locking issues.
+    """
+    logger = logging.getLogger(name)
+    if logger.hasHandlers():
+        return logger
 
     logger.setLevel(logging.DEBUG)
-    logger.addHandler(file_handler)
-    logger.addHandler(console_handler)
+
+    # If queue listener is set up (multi-worker mode), use QueueHandler
+    if _log_queue is not None:
+        queue_handler = QueueHandler(_log_queue)
+        logger.addHandler(queue_handler)
+    else:
+        # Fallback to direct handlers (single worker mode)
+        log_directory = LOG_FILE_DIR if LOG_FILE_DIR else default_log_dir
+        os.makedirs(log_directory, exist_ok=True)
+
+        file_handler = RotatingFileHandler(
+            os.path.join(log_directory, f"{name}.log"),
+            maxBytes=5 * 1024 * 1024,
+            backupCount=5,
+        )
+        file_handler.setFormatter(JSONFormatter())
+
+        console_handler = logging.StreamHandler()
+        console_handler.setFormatter(
+            logging.Formatter("[%(asctime)s][%(name)s][%(levelname)s] %(message)s")
+        )
+
+        logger.addHandler(file_handler)
+        logger.addHandler(console_handler)
+
     return logger

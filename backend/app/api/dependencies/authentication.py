@@ -36,7 +36,7 @@ def Authenticate( # noqa: C901
         HTTPException: If the user is not authenticated or does not pass custom validation.
 
     """
-    async def dependency(
+    async def dependency( # noqa: C901
         db: Database,
         context: Request | WebSocket,
         token: str | None = None,
@@ -47,6 +47,9 @@ def Authenticate( # noqa: C901
             return None
 
         user = parse_jwt(token, db, for_type=token_type, strict=strict)
+        
+        if not user and not strict:
+            return None
         
         if not user.verified and not user.is_guest:
             raise AppException(status_code=403, detail="Forbidden: Email not verified", error_code=AppErrorCode.EMAIL_NOT_VERIFIED)
@@ -105,3 +108,4 @@ def Authenticate( # noqa: C901
 
 
 BasicAuthentication = Annotated[User, Authenticate()]
+WebsocketAuthentication = Annotated[User, Authenticate(endpoint="ws")]

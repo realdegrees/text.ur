@@ -1,4 +1,5 @@
 from collections.abc import AsyncGenerator
+from functools import lru_cache
 from typing import Annotated
 
 import core.config as cfg
@@ -12,6 +13,7 @@ from core.config import (
 from core.logger import get_logger
 from fastapi import Depends, HTTPException
 from sqlalchemy import event, text
+from sqlalchemy.engine import Engine
 from sqlalchemy.exc import (
     DBAPIError,
     OperationalError,
@@ -28,40 +30,57 @@ if cfg.DEBUG:
 
     logging.getLogger("sqlalchemy.engine").setLevel(logging.INFO)
 
-# Create db connection with timeout settings
-_engine = create_engine(
-    DATABASE_URL,
-    echo=False,
-    pool_pre_ping=True,  # Verify connections before using them
-    pool_recycle=300,  # Recycle connections after 5 minutes
-    connect_args={
-        "connect_timeout": DB_CONNECTION_TIMEOUT,
-    },
-)
+def _attach_statement_timeout(engine: Engine) -> None:
+    """Attach a statement timeout listener to a SQLAlchemy engine.
+
+    This is registered after the engine is created to avoid module import
+    side-effects.
+    """
+    @event.listens_for(engine, "connect")
+    def _set_statement_timeout(dbapi_conn, connection_record) -> None:  # noqa: ANN001
+        cursor = dbapi_conn.cursor()
+        cursor.execute(f"SET statement_timeout = {DB_STATEMENT_TIMEOUT}")
+        cursor.close()
+        
+class DatabaseManager:
+    """Manager for SQLAlchemy Engine and Session factory."""
+
+    def __init__(self) -> None:  # noqa: D107
+        self.engine: Engine = create_engine(
+            DATABASE_URL,
+            echo=False,
+            pool_pre_ping=True,
+            pool_recycle=300,
+            connect_args={"connect_timeout": DB_CONNECTION_TIMEOUT},
+        )
+        _attach_statement_timeout(self.engine)
+        self.session_factory: sessionmaker = sessionmaker(bind=self.engine, class_=Session)
+        # Verify connectivity eagerly
+        self.verify_connection()
+
+    def verify_connection(self) -> None:
+        """Run a lightweight query to validate DB connectivity."""
+        try:
+            app_logger.debug("Checking database connection to %s", DATABASE_URL)
+            with self.engine.connect() as conn:
+                conn.execute(text("SELECT 1"))
+            app_logger.info("Database connection verified successfully")
+        except Exception as e:
+            raise RuntimeError(f"Failed to connect to database: {e}") from e
 
 
-# Set statement_timeout when connection is checked out from pool
-@event.listens_for(_engine, "connect")
-def set_statement_timeout(dbapi_conn, connection_record) -> None:  # noqa: ANN001
-    """Set statement timeout for each new database connection."""
-    cursor = dbapi_conn.cursor()
-    cursor.execute(f"SET statement_timeout = {DB_STATEMENT_TIMEOUT}")
-    cursor.close()
 
+@lru_cache(maxsize=1)
+def get_database_manager() -> DatabaseManager:
+    """Return a cached DatabaseManager instance to avoid import-time side effects."""
+    return DatabaseManager()
 
-def verify_database_connection() -> None:
-    """Verify database connection at startup. Raises exception if connection fails."""
-    try:
-        app_logger.debug("Checking database connection to %s", DATABASE_URL)
-        with _engine.connect() as conn:
-            conn.execute(text("SELECT 1"))
-        app_logger.info("Database connection verified successfully")
-    except Exception as e:
-        app_logger.error("Database connection failed: %s", e)
-        raise RuntimeError(f"Failed to connect to database: {e}") from e
+def SessionFactory() -> Session:
+    """Compatibility wrapper returning a Session instance when called.
 
-
-SessionFactory = sessionmaker(bind=_engine, class_=Session)
+    Tests and other modules call `SessionFactory()` to get a new session.
+    """
+    return get_database_manager().session_factory()
 
 async def session() -> AsyncGenerator[Session, None]:
     """Use as a dependency to provide a database session to the route"""

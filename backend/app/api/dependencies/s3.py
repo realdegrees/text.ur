@@ -1,4 +1,5 @@
 from collections.abc import Iterator
+from functools import lru_cache
 from typing import Annotated, Any, BinaryIO
 
 import boto3
@@ -23,11 +24,13 @@ class S3Manager:
 
     def __init__(self) -> None:
         """Initialize the S3Manager with a boto3 client."""
-        self.enabled = all([AWS_ACCESS_KEY, AWS_SECRET_KEY, S3_BUCKET])
-        if not self.enabled:
-            app_logger.warning("S3 is not fully configured. S3 operations are disabled.")
-            return
+        if not all([AWS_ACCESS_KEY, AWS_SECRET_KEY, S3_BUCKET]):
+            raise RuntimeError("Not all required S3 configuration variables are set.")
 
+        self.verify_connection()
+
+    def verify_connection(self) -> None:
+        """Verify S3 connection and bucket access at startup."""
         self._client = boto3.client(
             "s3",
             endpoint_url=AWS_ENDPOINT_URL,
@@ -40,11 +43,7 @@ class S3Manager:
                 read_timeout=30,
             ),
         )
-
-    def verify_connection(self) -> None:
-        """Verify S3 connection and bucket access at startup."""
-        if not self.enabled:
-            return
+                
         try:
             self._client.head_bucket(Bucket=S3_BUCKET)
             app_logger.info("S3 connection verified successfully (bucket: %s)", S3_BUCKET)
@@ -125,5 +124,17 @@ class S3Manager:
         return iter([response["Body"]])
 
 
-manager = S3Manager()
-S3 = Annotated[S3Manager, Depends(lambda: manager)]
+@lru_cache(maxsize=1)
+def get_s3_manager() -> S3Manager:
+    """Lazily instantiate the S3Manager to avoid import-time network checks.
+
+    This keeps module import fast and side effect free while preserving the
+    dependency-injection interface via `S3`.
+    """
+    return S3Manager()
+
+
+S3 = Annotated[S3Manager, Depends(get_s3_manager)]
+
+
+ 

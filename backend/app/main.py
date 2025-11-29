@@ -1,19 +1,18 @@
 # fmt: on
-import os  # noq: I001
-import sys  # noq: I001
+import os
+import sys
 import time
 
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 # fmt: off
-
 from collections.abc import AsyncGenerator, Callable
 from contextlib import asynccontextmanager
 
+import api.dependencies.database as db_dep
 import uvicorn
-from api.dependencies.database import verify_database_connection
-from api.dependencies.events import EventManager
-from api.dependencies.mail import manager as mail_manager
-from api.dependencies.s3 import manager as s3_manager
+from api.dependencies.startup import (
+    verify_all_dependencies_async,
+)
 from api.routers.comments import router as CommentRouter
 from api.routers.documents import router as DocumentsRouter
 from api.routers.groups import router as GroupRouter
@@ -46,27 +45,47 @@ routers = [RegisterRouter, LoginRouter, LogoutRouter, UserRouter, MembershipRout
 logger = get_logger("requests")
 app_logger = get_logger("app")
 
+def get_client_ip(request: Request) -> str:
+    """Extract client IP from proxy headers or direct connection.
+
+    Checks headers in order:
+    1. X-Forwarded-For (set by reverse proxies like Traefik)
+    2. X-Real-IP (alternative proxy header)
+    3. Direct connection IP (fallback for non-proxied requests)
+    """
+    # X-Forwarded-For contains comma-separated list, first is original client
+    forwarded_for = request.headers.get("X-Forwarded-For")
+    if forwarded_for:
+        return forwarded_for.split(",")[0].strip()
+
+    # Fallback to X-Real-IP
+    real_ip = request.headers.get("X-Real-IP")
+    if real_ip:
+        return real_ip
+
+    # Last resort: direct connection (works for non-proxied requests)
+    return request.client.host if request.client else "unknown"
+
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Initialize on app start."""
     app_logger.info("Starting application...")
 
-    # Verify all service connections before accepting requests
-    verify_database_connection()
-    s3_manager.verify_connection()
-    mail_manager.verify_connection()
-
-    # Start event manager (Redis)
-    app.state.event_manager = EventManager()
-    await app.state.event_manager.connect()
+    # Run all dependency verification using the shared verification function
+    try:
+        # Await the async verification in lifespan to avoid blocking the event loop
+        mgrs = await verify_all_dependencies_async()
+    except Exception as e:
+        app_logger.critical("One or more critical dependencies failed verification. Check logs for details and restart the service.")
+        app_logger.error("Error during dependency verification: %s", e, exc_info=True)
+        sys.exit(1)
 
     app_logger.info("Application started successfully")
     try:
         yield
     finally:
         app_logger.info("Shutting down application...")
-        await app.state.event_manager.disconnect()
-        app.state.event_manager = None
+        await mgrs["event_manager"].disconnect()
         app_logger.info("Application shutdown complete")
 
 
@@ -153,7 +172,7 @@ async def log_requests(request: Request, call_next: Callable) -> Response:
     # Skip logging for static files and health checks
     path = request.url.path
     if not path.startswith("/static"):
-        client_ip = request.client.host if request.client else "unknown"
+        client_ip = get_client_ip(request)
         logger.info(
             "%s %s %s %.2fms",
             request.method,

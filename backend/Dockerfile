@@ -7,6 +7,7 @@ COPY requirements.txt .
 RUN apt-get update && \
     apt-get install -y --no-install-recommends build-essential jq postgresql-client && \
     pip install --no-cache-dir -r requirements.txt && \
+    pip install --no-cache-dir uvicorn[standard] && \
     apt-get purge -y --auto-remove build-essential && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
@@ -15,6 +16,8 @@ RUN apt-get update && \
 COPY app ./app
 # Copy database migration files
 COPY database ./database
+# Copy gunicorn configuration
+COPY gunicorn.conf.py ./gunicorn.conf.py
 
 # Copy entrypoint
 COPY docker-entrypoint.sh /docker-entrypoint.sh
