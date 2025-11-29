@@ -187,17 +187,18 @@
 				boundingBoxes: mergedBoxes,
 				color: DEFAULT_HIGHLIGHT_COLOR
 			};
-
-			const newComment = await documentStore.createComment({ annotation });
+			
+			const id = await documentStore.comments.create({ annotation, visibility: 'public' });
 
 			// Clear selection after creating
 			window.getSelection()?.removeAllRanges();
+						
+			if (!id) return;
 
 			// Pin the new comment and trigger edit mode
-			if (newComment) {
-				documentStore.setPinned(newComment.id, true);
-				documentStore.setEditing(newComment.id, true);
-			}
+			documentStore.comments.setPinned(id, true);
+			documentStore.comments.setEditing(id, true);
+
 		} finally {
 			isCreating = false;
 		}

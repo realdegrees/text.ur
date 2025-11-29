@@ -46,8 +46,8 @@
 
 	// Clear filters when view mode changes to restricted and user lacks permission
 	$effect(() => {
-		if (isRestrictedWithoutPermission && documentStore.hasActiveFilter) {
-			documentStore.clearAuthorFilter();
+		if (isRestrictedWithoutPermission && documentStore.filters.authorFilters.size > 0) {
+			documentStore.filters.clearAuthorFilter();
 		}
 	});
 
@@ -150,16 +150,16 @@
 
 		<!-- Other Cursors Toggle -->
 		<button
-			class="{documentStore.showOtherCursors ? activeButtonClass : buttonClass} {isExpanded
+			class="{documentStore.showCursors ? activeButtonClass : buttonClass} {isExpanded
 				? 'w-full justify-start'
 				: ''}"
-			onclick={() => documentStore.setShowOtherCursors(!documentStore.showOtherCursors)}
-			title={documentStore.showOtherCursors ? 'Hide other cursors' : 'Show other cursors'}
+			onclick={() => (documentStore.showCursors = !documentStore.showCursors)}
+			title={documentStore.showCursors ? 'Hide other cursors' : 'Show other cursors'}
 		>
 			<span class="flex items-center gap-2">
 				<CursorIcon class="h-5 w-5" />
 				{#if isExpanded}<span class="text-xs"
-						>{documentStore.showOtherCursors ? 'Cursors On' : 'Cursors Off'}</span
+						>{documentStore.showCursors ? 'Cursors On' : 'Cursors Off'}</span
 					>{/if}
 			</span>
 		</button>

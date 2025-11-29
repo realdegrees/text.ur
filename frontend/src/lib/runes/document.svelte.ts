@@ -1,559 +1,414 @@
+ 
 import { api } from '$api/client';
-import type {
-	CommentCreate,
-	CommentEvent,
-	CommentRead,
-	CommentUpdate,
-	DocumentRead,
-	ViewMode
-} from '$api/types';
+import type { CommentCreate, CommentEvent, CommentRead, DocumentRead, ViewMode } from '$api/types';
 import type { Paginated } from '$api/pagination';
 import { notification } from '$lib/stores/notificationStore';
-import type { Annotation } from '$types/pdf';
-import { SvelteMap, SvelteSet } from 'svelte/reactivity';
+import { annotationSchema, type Annotation } from '$types/pdf';
+import { SvelteMap } from 'svelte/reactivity';
+import { invalidate } from '$app/navigation';
 
-export interface CachedComment extends CommentRead {
-	replies?: CachedComment[];
-	replyInputContent?: string;
-	showReplyInput?: boolean;
+type AuthorFilterState = 'include' | 'exclude';
+export type TypedComment = Omit<CommentRead, 'annotation'> & { annotation: Annotation | null };
+
+export interface CommentState {
+	replies?: number[];
 	// Interaction state flags
 	isCommentHovered?: boolean; // Mouse over the comment
 	isHighlightHovered?: boolean; // Mouse over the PDF highlight
-	isSelected?: boolean; // Currently selected/active comment
 	isPinned?: boolean; // Clicked to stay open
 	isEditing?: boolean; // In edit mode
 	editInputContent?: string; // Current content in edit input
+	replyInputContent?: string; // Current content in reply input
 	// UI state
 	isRepliesCollapsed?: boolean; // Replies section is collapsed
+	showReplyInput?: boolean; // Reply input box is shown
 	// Element Refs
-	highlightElements?: HTMLElement[];
+	highlightElements?: HTMLElement[]; // Associated highlight elements in the PDF
 }
 
-const toCachedComment = (comment: CommentRead): CachedComment => ({
-	...comment
-});
-
-/** Search the comment in root comments and replies recursively */
-const findComment = (inComments: CachedComment[], commentId: number): CachedComment | undefined => {
-	for (const c of inComments) {
-		if (c.id === commentId) return c;
-		if (c.replies) {
-			const found = findComment(c.replies, commentId);
-			if (found) return found;
-		}
-	}
-	return undefined;
-};
-
-/** Get all comments flattened (root + all nested replies) */
-const flattenComments = (inComments: CachedComment[]): CachedComment[] => {
-	const result: CachedComment[] = [];
-	for (const c of inComments) {
-		result.push(c);
-		if (c.replies) {
-			result.push(...flattenComments(c.replies));
-		}
-	}
-	return result;
-};
-
-const removeCommentRecursively = (
-	fromComments: CachedComment[],
-	commentId: number
-): CachedComment[] => {
-	return fromComments
-		.filter((c) => c.id !== commentId)
-		.map((c) => ({
-			...c,
-			replies: c.replies ? removeCommentRecursively(c.replies, commentId) : []
-		}));
-};
-
-/** Find the parent comment of a given comment by its parent_id */
-const findParentOfComment = (
-	inComments: CachedComment[],
-	parentId: number | null | undefined
-): CachedComment | undefined => {
-	if (!parentId) return undefined;
-	return findComment(inComments, parentId);
-};
-
 const createDocumentStore = () => {
-	let comments: CachedComment[] = $state<CachedComment[]>([]);
-	const pinnedComments: SvelteSet<number> = $derived.by(() => {
-		return new SvelteSet(
-			flattenComments(comments)
-				.filter((c) => c.isPinned)
-				.map((c) => c.id)
-		);
-	});
+	const _comments = new SvelteMap<number, TypedComment>();
 
+	// Resets the store and loads root comments for a document
+	const setRootComments = (rootComments: CommentRead[]) => {
+		console.log("rootComments");
+		console.log(rootComments);
+		
+		rootComments.forEach((c) => {
+			const annotationParsed = annotationSchema.safeParse(c.annotation);
+			const cachedComment: TypedComment = {
+				...c,
+				annotation: annotationParsed.success ? annotationParsed.data : null
+			};
+			_comments.set(cachedComment.id, cachedComment);
+		});
+	};
+
+	// TODO maybe the delay when editing is openened can be removed entirely with the new state splitting
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars
+	const setViewMode = (viewMode: ViewMode) => {
+		// ? Since the best approach for view_mode changes is to refetch data from the backend on change,
+		// ? we dont really care about the view mode as it will be updates anyway once the refresh happens.
+		if (!loadedDocument) return;
+		if (comments.editing.size) {
+			refreshFlag = true; // Delay until active comment edit is done
+		}
+	};
+
+	const commentStates: SvelteMap<number, CommentState> = new SvelteMap<number, CommentState>();
+	const authorFilterStates = new SvelteMap<number, AuthorFilterState>();
+	let showCursors: boolean = $state<boolean>(true);
+	let refreshFlag = $state<boolean>(false);
 	let loadedDocument: DocumentRead | undefined = $state<DocumentRead | undefined>(undefined);
 	let documentScale: number = $state<number>(1);
-
+	let numPages: number = $state<number>(0);
 	let pdfViewerRef: HTMLElement | null = $state<HTMLElement | null>(null);
 	let scrollContainerRef: HTMLElement | null = $state<HTMLElement | null>(null);
 	let commentSidebarRef: HTMLDivElement | null = $state<HTMLDivElement | null>(null);
 
-	// Filter state (local only - doesn't affect fetched data)
-	// Map of user ID -> filter state (include | exclude). Absence = none.
-	type AuthorFilterState = 'include' | 'exclude';
-	let authorFilterStates: Map<number, AuthorFilterState> = $state<Map<number, AuthorFilterState>>(
-		new Map()
-	);
-	// Flag to defer invalidation when view mode changes during editing
-	let pendingViewModeRefresh: boolean = $state<boolean>(false);
-	// Toggle for showing other users' cursors
-	let showOtherCursors: boolean = $state<boolean>(true);
+	const filteredComments = $derived.by((): SvelteMap<number, TypedComment> => {		
+		void _comments; // Ensure _comments is tracked as a dependency
 
-	const setDocument = (document: DocumentRead) => {
-		loadedDocument = document;
-	};
+		// Build an array of comment values from the internal SvelteMap for array filtering
+		const allComments: TypedComment[] = [..._comments.values()] as TypedComment[];
+		let filteredArray: TypedComment[] = allComments;
 
-	const setPdfViewerRef = (ref: HTMLElement | null) => {
-		pdfViewerRef = ref;
-	};
+		// Filter by author filter states (include/exclude/none)
+		const included = new Set<number>(
+			[...authorFilterStates.entries()].filter(([, v]) => v === 'include').map(([k]) => k)
+		);
+		const excluded = new Set<number>(
+			[...authorFilterStates.entries()].filter(([, v]) => v === 'exclude').map(([k]) => k)
+		);
 
-	const setScrollContainerRef = (ref: HTMLElement | null) => {
-		scrollContainerRef = ref;
-	};
-
-	const setCommentSidebarRef = (ref: HTMLDivElement | null) => {
-		commentSidebarRef = ref;
-	};
-
-	// Resets the store and loads root comments for a document
-	const setRootComments = async (rootComments: CommentRead[]): Promise<void> => {
-		comments = rootComments.map(toCachedComment);
-	};
-
-	// Debounce for setCommentFlag - batches multiple updates
-	let commentFlagDebounceTimer: ReturnType<typeof setTimeout> | null = null;
-	let pendingFlagUpdates: Array<{
-		commentId: number;
-		flag: 'isCommentHovered' | 'isHighlightHovered' | 'isSelected' | 'isPinned' | 'isEditing';
-		value: boolean;
-	}> = [];
-
-	// Helper to update a flag on a specific comment (debounced to batch updates)
-	const setCommentFlag = (
-		commentId: number,
-		flag: 'isCommentHovered' | 'isHighlightHovered' | 'isSelected' | 'isPinned' | 'isEditing',
-		value: boolean = false
-	) => {
-		// Queue the update
-		pendingFlagUpdates.push({ commentId, flag, value });
-
-		// Clear existing timer
-		if (commentFlagDebounceTimer) {
-			clearTimeout(commentFlagDebounceTimer);
+		// If there are include filters, show only those authors. Otherwise, if exclude filters exist, hide those authors.
+		if (included.size > 0) {
+			filteredArray = filteredArray.filter((c: TypedComment) => !!c.user?.id && included.has(c.user.id));
+		} else if (excluded.size > 0) {
+			filteredArray = filteredArray.filter((c: TypedComment) => !(c.user?.id && excluded.has(c.user.id)));
 		}
 
-		// Schedule batch update
-		commentFlagDebounceTimer = setTimeout(() => {
-			// Build a map of commentId -> updates for O(1) lookup
-			const updateMap = new SvelteMap<
-				number,
-				Array<{ flag: (typeof pendingFlagUpdates)[0]['flag']; value: boolean }>
-			>();
-			for (const update of pendingFlagUpdates) {
-				if (!updateMap.has(update.commentId)) {
-					updateMap.set(update.commentId, []);
-				}
-				updateMap.get(update.commentId)!.push({ flag: update.flag, value: update.value });
+		// Return a SvelteMap constructed from the filtered array
+		const filteredMap = new SvelteMap<number, TypedComment>(filteredArray.map((c) => [c.id, c]));		
+		return filteredMap;
+	});
+
+	const commentsWithAnnotation = $derived.by((): (TypedComment & { annotation: Annotation })[] => {
+		return Array.from(filteredComments.values()).filter((c): c is TypedComment & { annotation: Annotation } => !!c.annotation);
+	});
+
+	// Methods to update local comment data without API calls (on events)
+	const commentsLocal = $derived({
+		update: (existing: TypedComment) => {
+			/** Update an existing comment in the local map. */
+			const existingComment: TypedComment | undefined = _comments.get(existing.id);
+			if (!existingComment) return;
+			const updatedComment: TypedComment = {
+				...existingComment,
+				...existing,
+				visibility: existing.visibility ?? existingComment.visibility
+			};
+			_comments.set(existing.id, updatedComment);
+		},
+		create: (data: TypedComment) => {
+			/** Add new comment to the local store. */
+			// Add new comment to parent replies if applicable
+			const parentState = commentStates.get(data?.parent_id || -1);
+			if (parentState && parentState.replies) {
+				commentStates.set(data?.parent_id || -1, {
+					...parentState,
+					replies: [...parentState.replies, data.id]
+				});
 			}
 
-			// Iterate through all comments once and apply matching updates
-			const allComments = flattenComments(comments);
-			for (const comment of allComments) {
-				const updates = updateMap.get(comment.id);
-				if (updates) {
-					for (const { flag, value } of updates) {
-						comment[flag] = value;
-					}
-				}
-			}
-
-			// Clear pending updates
-			pendingFlagUpdates = [];
-
-			// Trigger reactivity once
-			comments = [...comments];
-
-			commentFlagDebounceTimer = null;
-		}, 50);
-	};
-
-	const addCommentHighlight = (commentId: number, element: HTMLElement) => {
-		const comment = findComment(comments, commentId);
-		if (comment) {
-			comment.highlightElements = comment.highlightElements || [];
-			comment.highlightElements.push(element);
-		}
-	};
-	const removeCommentHighlight = (commentId: number, element: HTMLElement) => {
-		const comment = findComment(comments, commentId);
-		if (comment && comment.highlightElements) {
-			comment.highlightElements = comment.highlightElements.filter((el) => el !== element);
-		}
-	};
-
-	// Set highlight hovered state (when mouse is over PDF highlight)
-	const setHighlightHovered = (commentId: number, hovered: boolean) => {
-		setCommentFlag(commentId, 'isHighlightHovered', hovered);
-	};
-
-	// Set comment hovered state (when mouse is over comment in sidebar)
-	const setCommentHovered = (commentId: number, hovered: boolean) => {
-		setCommentFlag(commentId, 'isCommentHovered', hovered);
-	};
-
-	// Set pinned state
-	const setPinned = (commentId: number, pinned: boolean) => {
-		setCommentFlag(commentId, 'isPinned', pinned);
-	};
-
-	// Set editing state
-	const setEditing = (commentId: number, editing: boolean) => {
-		const comment = findComment(comments, commentId);
-		if (!comment) return;
-
-		// Initialize editInputContent with current content when starting to edit
-		if (editing) {
-			comment.editInputContent = comment.content || '';
-		}
-
-		// Set editing flag immediately (not debounced) for instant UI response
-		comment.isEditing = editing;
-		comments = [...comments]; // trigger reactivity
-
-		// When editing ends, check if we have a pending view mode refresh
-		if (!editing && pendingViewModeRefresh) {
-			pendingViewModeRefresh = false; // TODO probably should also trigger it here instead of from wherever its triggered now
-		}
-	};
-
-	// Set pending view mode refresh flag (called when view mode changes during editing)
-	const setPendingViewModeRefresh = (pending: boolean) => {
-		pendingViewModeRefresh = pending;
-	};
-
-	// Filter setters
-	/**
-	 * Cycle a user's filter state: none -> include -> exclude -> none
-	 */
-	const toggleAuthorFilter = (userId: number): void => {
-		// eslint-disable-next-line svelte/prefer-svelte-reactivity
-		const newStates = new Map(authorFilterStates);
-		const current = newStates.get(userId);
-
-		if (!current) {
-			newStates.set(userId, 'include');
-		} else if (current === 'include') {
-			newStates.set(userId, 'exclude');
-		} else {
-			newStates.delete(userId);
-		}
-
-		authorFilterStates = newStates;
-	};
-
-	/** Clear all author filters (reset to none) */
-	const clearAuthorFilter = (): void => {
-		authorFilterStates = new Map();
-	};
-
-	const setShowOtherCursors = (show: boolean) => {
-		showOtherCursors = show;
-	};
-
-	// Toggle replies collapsed state for a specific comment
-	const toggleRepliesCollapsed = (commentId: number) => {
-		const comment = findComment(comments, commentId);
-		if (comment) {
-			comment.isRepliesCollapsed = !comment.isRepliesCollapsed;
-			comments = [...comments]; // trigger reactivity
-		}
-	};
-
-	// Clear all interaction state on all comments
-	const clearAllInteractionState = () => {
-		const allComments = flattenComments(comments);
-		for (const c of allComments) {
-			c.isCommentHovered = false;
-			c.isSelected = false;
-			c.isPinned = false;
-			c.isEditing = false;
-		}
-		comments = [...comments]; // trigger reactivity
-	};
-
-	const updateComment = async (commentId: number, data: CommentUpdate) => {
-		const result = await api.update(`/comments/${commentId}`, data);
-		if (!result.success) {
-			notification(result.error);
-			return;
-		}
-		const targetComment = findComment(comments, commentId);
-		if (targetComment) {
-			Object.assign(targetComment, data);
-		}
-		comments = [...comments]; // trigger reactivity
-	};
-
-	const createComment = async (options: {
-		annotation?: Annotation;
-		content?: string;
-		parentId?: number;
-	}): Promise<CachedComment | undefined> => {
-		if (!loadedDocument) return;
-		const result = await api.post<CommentRead>('/comments', {
-			annotation: options.annotation
-				? (options.annotation as unknown as Record<string, unknown>)
-				: undefined,
-			content: options.content,
-			parent_id: options.parentId,
-			document_id: loadedDocument.id,
-			visibility: 'public' // New highlight comments are always public by default
-		} satisfies CommentCreate);
-		if (!result.success) {
-			notification(result.error);
-			return;
-		}
-		if (!result.data) {
-			notification('error', 'Failed to create comment: No data returned');
-			return;
-		}
-		const newComment = toCachedComment(result.data);
-		if (options.parentId) {
-			const parentComment = findComment(comments, options.parentId);
+			// Increment num_replies in parent comment
+			const parentComment: TypedComment | undefined = data.parent_id ? _comments.get(data.parent_id) : undefined;
 			if (parentComment) {
-				// Only add to replies array if replies are already loaded
-				// Otherwise, increment num_replies so the "Load replies" button updates
-				if (parentComment.replies) {
-					parentComment.replies.push(newComment);
-				} else if (parentComment.num_replies === 0) {
-					parentComment.replies = [toCachedComment(newComment)];
-				}
 				parentComment.num_replies = (parentComment.num_replies || 0) + 1;
 			}
-			comments = [...comments]; // trigger reactivity
-		} else {
-			// Root comment - add to top level
-			comments = [...comments, newComment];
-		}
-		return newComment;
-	};
 
-	const deleteComment = async (commentId: number) => {
-		// Find the comment first to get its parent_id
-		const commentToDelete = findComment(comments, commentId);
+			// Add new comment to local comments map and add a state entry
+			_comments.set(data.id, data);
+			commentStates.set(data.id, {
+				replies: []
+			});
+		},
+		delete: (commentId: number) => {
+			/** Delete a comment and its replies from the local store. */
+			// Delete all replies and their states from the local map
+			const commentState = commentStates.get(commentId);
+			const commentToDelete: TypedComment | undefined = _comments.get(commentId);
+			commentState?.replies?.forEach((replyId) => {
+				commentStates.delete(replyId);
+				_comments.delete(replyId);
+			});
 
-		const result = await api.delete(`/comments/${commentId}`);
-		if (!result.success) {
-			notification(result.error);
-			return;
-		}
-
-		// Decrement parent's num_replies if this was a reply
-		if (commentToDelete?.parent_id) {
-			const parentComment = findParentOfComment(comments, commentToDelete.parent_id);
-			if (parentComment && parentComment.num_replies > 0) {
-				parentComment.num_replies--;
+			// Remove reply reference in parent comment state
+			const parentCommentState = commentStates.get(commentToDelete?.parent_id || -1);
+			const parentComment: TypedComment | undefined = commentToDelete?.parent_id ? _comments.get(commentToDelete.parent_id) : undefined;
+			if (parentCommentState && !!parentCommentState.replies?.length) {
+				commentStates.set(commentToDelete?.parent_id || -1, {
+					...parentCommentState,
+					replies: parentCommentState.replies?.filter((id) => id !== commentId)
+				});
 			}
-		}
 
-		comments = removeCommentRecursively(comments, commentId);
-	};
+			// Decrement num_replies in parent comment state
+			if (parentComment) {
+				parentComment.num_replies = (parentComment.num_replies || 1) - 1;
+			}
 
-	const loadReplies = async (commentId: number): Promise<CachedComment[] | undefined> => {
-		const result = await api.get<Paginated<CommentRead>>('/comments', {
-			filters: [{ field: 'parent_id', operator: '==', value: commentId.toString() }]
-		});
-		if (!result.success) {
-			notification(result.error);
-			return;
+			// Remove own comment state and comment
+			commentStates.delete(commentId);
+			_comments.delete(commentId);
 		}
+	});
 
-		const replies = result.data.data.map(toCachedComment);
-		const parentComment = findComment(comments, commentId);
-		if (parentComment) {
-			parentComment.replies = replies;
-			comments = [...comments]; // trigger reactivity
-		}
-		return replies;
-	};
+	const comments = $derived({
+		addHighlightElement: (commentId: number, element: HTMLElement) =>
+			commentStates.set(commentId, {
+				...(commentStates.get(commentId) || {}),
+				highlightElements: [...(commentStates.get(commentId)?.highlightElements || []), element]
+			}),
+		removeHighlightElement: (commentId: number, element: HTMLElement) => {
+			const currentElements = commentStates.get(commentId)?.highlightElements || [];
+			commentStates.set(commentId, {
+				...(commentStates.get(commentId) || {}),
+				highlightElements: currentElements.filter((el) => el !== element)
+			});
+		},
+		setHighlightHovered: (commentId: number, hovered: boolean) => {
+			// TODO maybe set all other comments to not hovered?
+			commentStates.set(commentId, {
+				...(commentStates.get(commentId) || {}),
+				isHighlightHovered: hovered
+			});
+		},
+		setCommentHovered: (commentId: number, hovered: boolean) => {
+			// TODO maybe set all other comments to not hovered?
+			commentStates.set(commentId, {
+				...(commentStates.get(commentId) || {}),
+				isCommentHovered: hovered
+			});
+		},
+		setEditing: (commentId: number, editing: boolean) => {
+			// TODO maybe set all other comments to not editing?
+			commentStates.set(commentId, {
+				...(commentStates.get(commentId) || {}),
+				isEditing: editing
+			});
+
+			if (!editing && refreshFlag && loadedDocument) {
+				// Invalidate the comments
+				invalidate(`/documents/${loadedDocument.id}/comments`);
+			}
+		},
+		setPinned: (commentId: number, pinned: boolean) => {
+			commentStates.set(commentId, {
+				...(commentStates.get(commentId) || {}),
+				isPinned: pinned
+			});
+		},
+		setRepliesCollapsed: (commentId: number, collapsed: boolean) => {
+			commentStates.set(commentId, {
+				...(commentStates.get(commentId) || {}),
+				isRepliesCollapsed: collapsed
+			});
+		},
+		setShowReplyInput: (commentId: number, show: boolean) => {
+			commentStates.set(commentId, {
+				...(commentStates.get(commentId) || {}),
+				showReplyInput: show
+			});
+		},
+		setReplyInputContent: (commentId: number, content: string) => {
+			commentStates.set(commentId, {
+				...(commentStates.get(commentId) || {}),
+				replyInputContent: content
+			});
+		},
+		setEditInputContent: (commentId: number, content: string) => {
+			commentStates.set(commentId, {
+				...(commentStates.get(commentId) || {}),
+				editInputContent: content
+			});
+		},
+		update: async (comment: TypedComment) => {
+			const result = await api.update(`/comments/${comment.id}`, comment);
+			if (!result.success) {
+				notification(result.error);
+				return;
+			}
+
+			commentsLocal.update(comment);
+		},
+		create: async (data: Omit<CommentCreate, 'document_id' | 'annotation'> & { annotation: Annotation | null }): Promise<number | undefined> => {	
+			if (!loadedDocument) return;
+			const result = await api.post<CommentRead>('/comments', {
+				...data,
+				document_id: loadedDocument?.id
+			});
+			if (!result.success) {
+				notification(result.error);
+				return ;
+			}
+			const annotationParsed = annotationSchema.safeParse(result.data!.annotation);
+			const cachedComment: TypedComment = {
+				...result.data!,
+				annotation: annotationParsed.success ? annotationParsed.data : null
+			};
+
+			commentsLocal.create(cachedComment);
+			return cachedComment.id;
+		},
+		delete: async (commentId: number) => {
+			const result = await api.delete(`/comments/${commentId}`);
+			if (!result.success) {
+				notification(result.error);
+				return;
+			}
+
+		
+
+			commentsLocal.delete(commentId);
+
+		},
+		loadMoreReplies: async (commentId: number) => {
+			const limit = 20;
+			const offset = commentStates.get(commentId)?.replies?.length || 0;
+			const targetComment: TypedComment | undefined = _comments.get(commentId);
+
+			// Dont load more if all replies are already loaded
+			if (!targetComment || (targetComment.num_replies || 0) <= offset) return;
+			if (!targetComment || targetComment.num_replies <= offset) return;
+
+			const result = await api.get<Paginated<CommentRead>>(
+				`/comments?limit=${limit}&offset=${offset}`,
+				{
+					filters: [{ field: 'parent_id', operator: '==', value: commentId.toString() }]
+				}
+			);
+			if (!result.success) {
+				notification(result.error);
+				return;
+			}
+
+			const data = result.data.data.map((c) => {
+				const annotationParsed = annotationSchema.safeParse(c.annotation);
+				return { ...c, annotation: annotationParsed.success ? annotationParsed.data : null } as TypedComment;
+			});
+
+			// Add loaded replies to local comments array
+			data.forEach((c) => {
+				_comments.set(c.id, c);
+			});
+		},
+		getState: (commentId: number): CommentState | undefined => {
+			return commentStates.get(commentId);
+		},
+		getComment: (commentId: number): TypedComment | undefined => {
+			return _comments.get(commentId);
+		},
+		all: new SvelteMap(_comments),
+		pinned: new SvelteMap(commentStates.entries().filter(([,state]) => state.isPinned)),
+		withAnnotations: commentsWithAnnotation,
+		editing: new SvelteMap(commentStates.entries().filter(([,state]) => state.isEditing)),
+		highlightHovered: new SvelteMap(commentStates.entries().filter(([,state]) => state.isHighlightHovered)),
+		commentHovered: new SvelteMap(commentStates.entries().filter(([,state]) => state.isCommentHovered))
+	});
+
+
+
+	const filters = $derived({
+		toggleAuthorFilter: (userId: number): void => {
+			let state = authorFilterStates.get(userId);
+			if (!state) {
+				state = 'include';
+			} else if (state === 'include') {
+				state = 'exclude';
+			} else {
+				state = undefined;
+			}
+
+			if (state) authorFilterStates.set(userId, state);
+			else authorFilterStates.delete(userId);
+		},
+		/** Clear all author filters (reset to none) */
+		clearAuthorFilter: (): void => {
+			authorFilterStates.clear();
+		},
+
+		authorFilters: authorFilterStates
+	});
 
 	const handleWebSocketEvent = (
 		event:
 			| CommentEvent
 			| { type: 'view_mode_changed'; payload: { document_id?: string; view_mode?: ViewMode } }
 	): void => {
-		// Handle explicit view-mode changed events (no longer delivered as 'custom')
-		if (event.type === 'view_mode_changed') {
-			const vm = event.payload as { document_id?: string; view_mode?: ViewMode };
-			if (vm?.view_mode && vm?.document_id && loadedDocument) {
-				loadedDocument.view_mode = vm.view_mode;
-				console.log(`[WS] Document view_mode updated to ${vm.view_mode}`);
-			}
-			return;
-		}
-
 		if (!event.payload) {
 			console.warn('Received WebSocket event with no payload', event);
 			return;
 		}
 
-		// payload is narrowed per-case; we'll cast to CommentRead when handling comment events below
-
 		switch (event.type) {
-			case 'create':
-				{
-					const comment = event.payload as CommentRead;
-					if (comment.parent_id) {
-						const parentComment = findComment(comments, comment.parent_id);
-						if (parentComment) {
-							// Only add to replies array if replies are already loaded unless the number of replies was 0 then we can safely add it
-							if (parentComment.replies) {
-								parentComment.replies.push(toCachedComment(comment));
-							} else if (parentComment.num_replies === 0) {
-								parentComment.replies = [toCachedComment(comment)];
-							}
-							parentComment.num_replies = (parentComment.num_replies || 0) + 1;
-						}
-						comments = [...comments]; // trigger reactivity
-					} else {
-						comments = [...comments, toCachedComment(comment)];
-					}
-				}
+			case 'create': {
+				const payload = event.payload as CommentRead;
+				const annotationParsed = annotationSchema.safeParse(payload.annotation);
+				const cachedComment: TypedComment = {
+					...payload,
+					annotation: annotationParsed.success ? annotationParsed.data : null
+				};
+				commentsLocal.create(cachedComment);
 				break;
-
+			}
 			case 'update': {
-				const comment = event.payload as CommentRead;
-				const targetComment = findComment(comments, comment.id);
-				if (targetComment) {
-					Object.assign(targetComment, comment);
-					comments = [...comments]; // trigger reactivity
+				const payload = event.payload as CommentRead;
+				const annotationParsed = annotationSchema.safeParse(payload.annotation);
+				const cachedComment: TypedComment = {
+					...payload,
+					annotation: annotationParsed.success ? annotationParsed.data : null
+				};
+				commentsLocal.update(cachedComment);
+				break;
+			}
+			case 'delete':
+				commentsLocal.delete((event.payload as CommentRead).id);
+				break;
+			case 'view_mode_changed': {
+				const vm = event.payload as { view_mode?: ViewMode };
+
+				if (vm?.view_mode) {
+					setViewMode(vm.view_mode);
+					console.log(`[WS] Document view_mode updated to ${vm.view_mode}`);
 				}
 				break;
 			}
-
-			case 'delete': {
-				const comment = event.payload as CommentRead;
-				// Decrement parent's num_replies if this was a reply
-				if (comment.parent_id) {
-					const parentComment = findParentOfComment(comments, comment.parent_id);
-					if (parentComment && parentComment.num_replies > 0) {
-						parentComment.num_replies--;
-					}
-				}
-				comments = removeCommentRecursively(comments, comment.id);
-				break;
-			}
-
 			default:
 				console.warn('Unknown WebSocket event type (unexpected):', event);
 		}
 	};
 
-	const setReplyInputContent = (commentId: number, content: string) => {
-		const comment = findComment(comments, commentId);
-		if (comment) {
-			comment.replyInputContent = content;
-			comments = [...comments]; // trigger reactivity
-		}
-	};
-
-	const setShowReplyInput = (commentId: number, show: boolean) => {
-		const comment = findComment(comments, commentId);
-		if (comment) {
-			comment.showReplyInput = show;
-			comments = [...comments]; // trigger reactivity
-		}
-	};
-
-	const setEditingContent = (commentId: number, content: string) => {
-		const comment = findComment(comments, commentId);
-		if (comment) {
-			comment.editInputContent = content;
-			comments = [...comments]; // trigger reactivity
-		}
-	};
-
 	return {
-		// Pinned comments set
-		get pinnedComments() {
-			return pinnedComments;
-		},
-		get documentScale() {
-			return documentScale;
-		},
-		set documentScale(scale: number) {
-			documentScale = scale;
-		},
-		// State getters
-		get comments() {
-			return comments;
-		},
-		get loadedDocument() {
-			return loadedDocument;
-		},
-		get pdfViewerRef() {
-			return pdfViewerRef;
-		},
-		get scrollContainerRef() {
-			return scrollContainerRef;
-		},
-		get commentSidebarRef() {
-			return commentSidebarRef;
-		},
-		// Filter state getters
-		get authorFilterStates() {
-			return authorFilterStates;
-		},
-		/** Return a set of user IDs that are currently included */
-		get authorFilterIds() {
-			return new Set<number>(
-				[...authorFilterStates.entries()].filter(([, v]) => v === 'include').map(([k]) => k)
-			);
-		},
-		get hasActiveFilter() {
-			return authorFilterStates.size > 0;
-		},
-		get showOtherCursors() {
-			return showOtherCursors;
-		},
-		// Methods
-		setDocument,
-		setReplyInputContent,
-		setShowReplyInput,
-		setEditingContent,
-		addCommentHighlight,
-		removeCommentHighlight,
-		setPdfViewerRef,
-		setScrollContainerRef,
-		setCommentSidebarRef,
+		get comments() { return comments; },
+		get filters() { return filters; },
+		get loadedDocument() { return loadedDocument; },
+		set loadedDocument(value) { loadedDocument = value; },
+		get documentScale() { return documentScale; },
+		set documentScale(value) { documentScale = value; },
+		get numPages() { return numPages; },
+		set numPages(value) { numPages = value; },
+		get scrollContainerRef() { return scrollContainerRef; },
+		set scrollContainerRef(value) { scrollContainerRef = value; },
+		get pdfViewerRef() { return pdfViewerRef; },
+		set pdfViewerRef(value) { pdfViewerRef = value; },
+		get commentSidebarRef() { return commentSidebarRef; },
+		set commentSidebarRef(value) { commentSidebarRef = value; },
+		get showCursors() { return showCursors; },
+		set showCursors(value) { showCursors = value; },
+		handleWebSocketEvent,
 		setRootComments,
-		// New flag setters
-		setCommentHovered,
-		setHighlightHovered,
-		setPinned,
-		setEditing,
-		clearAllInteractionState,
-		toggleRepliesCollapsed,
-		// Filter methods
-		toggleAuthorFilter,
-		clearAuthorFilter,
-		// Cursor visibility
-		setShowOtherCursors,
-		// View mode refresh deferral
-		setPendingViewModeRefresh,
-		// CRUD operations
-		updateComment,
-		createComment,
-		deleteComment,
-		loadReplies,
-		handleWebSocketEvent
+		setViewMode
 	};
 };
 

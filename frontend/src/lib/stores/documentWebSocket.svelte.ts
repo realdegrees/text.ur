@@ -1,4 +1,3 @@
-import { writable, derived, get } from 'svelte/store';
 import { z } from 'zod';
 import { WebSocketManager } from '$lib/websocket/manager';
 import type { ConnectionState } from '$types/websocket';
@@ -18,6 +17,8 @@ import type {
 	MousePositionEventEnvelope,
 	ViewModeChangedEventEnvelope
 } from '$types/websocket';
+import { SvelteMap } from 'svelte/reactivity';
+import { sessionStore } from '$lib/runes/session.svelte';
 
 /** Represents a user's cursor position */
 export interface UserCursor {
@@ -67,18 +68,16 @@ class DocumentWebSocketStore {
 	private currentConnectionId: string | null = null;
 
 	// Connection state
-	private stateStore = writable<ConnectionState>('disconnected');
+	private _state = $state<ConnectionState>('disconnected');
+	public readonly state = $derived(this._state);
 
 	// Active users in the document
-	private activeUsersStore = writable<ConnectedUser[]>([]);
+	private _activeUsers = $state<ConnectedUser[]>([]);
+	public readonly activeUsers = $derived(this._activeUsers);
 
 	// User cursor positions (keyed by user_id)
-	private userCursorsStore = writable<Map<number, UserCursor>>(new Map());
-
-	// Export as readonly
-	public readonly state = derived(this.stateStore, ($state) => $state);
-	public readonly activeUsers = derived(this.activeUsersStore, ($users) => $users);
-	public readonly userCursors = derived(this.userCursorsStore, ($cursors) => $cursors);
+	private _userCursors = new SvelteMap<number, UserCursor>();
+	public readonly userCursors = $derived(this._userCursors);
 
 	// Internal event handlers
 	private commentEventHandlers: ((event: CommentEvent) => void)[] = [];
@@ -91,6 +90,21 @@ class DocumentWebSocketStore {
 	// Buffer messages that are emitted before the WebSocket manager is created
 	// so we don't lose mouse events that happen early in the page lifecycle.
 	private pendingMessageQueue: unknown[] = [];
+
+	constructor() {
+		// Start interval to clean up stale user cursors
+		const CURSOR_TTL_MS = 2000;
+		const CLEANUP_INTERVAL_MS = 1000;
+
+		setInterval(() => {
+			const now = Date.now();
+			this._userCursors.forEach((cursor, userId) => {
+				if (now - cursor.lastUpdate > CURSOR_TTL_MS) {
+					this._userCursors.delete(userId);
+				}
+			});
+		}, CLEANUP_INTERVAL_MS);
+	}
 
 	/**
 	 * Create and connect the WebSocket manager for a given document.
@@ -117,7 +131,7 @@ class DocumentWebSocketStore {
 
 		// Subscribe to state changes and message events, and keep unsubscribes
 		this.managerStateUnsubscribe = this.manager.on<ConnectionState>('stateChange', (state) => {
-			this.stateStore.set(state);
+			this._state = state;
 		});
 
 		this.managerMessageUnsubscribe = this.manager.on<WebSocketEvent>('message', (event) => {
@@ -135,9 +149,6 @@ class DocumentWebSocketStore {
 		// Connect and wait for connected state (or immediate return if already connecting)
 		this.manager.connect();
 
-		// Return a promise that resolves when state becomes 'connected'. This gives
-		// callers confidence that the socket is ready to send (although manager.send
-		// itself will queue messages until socket open).
 		await new Promise<void>((resolve) => {
 			const current = this.manager?.getState();
 			if (current === 'connected') {
@@ -155,9 +166,6 @@ class DocumentWebSocketStore {
 		});
 	}
 
-	/**
-	 * Handle a raw event payload emitted by the WebSocket manager.
-	 */
 	private handleEvent(event: unknown): void {
 		if (!event || typeof event !== 'object') {
 			console.warn('[WS] Received non-object message', event);
@@ -178,7 +186,7 @@ class DocumentWebSocketStore {
 				if (!result.success) break;
 				const payload = result.data;
 				this.currentConnectionId = payload.connection_id;
-				this.activeUsersStore.set(payload.active_users);
+				this._activeUsers = payload.active_users;
 				console.log('[WS] Handshake received, active users:', payload.active_users.length);
 				break;
 			}
@@ -189,10 +197,10 @@ class DocumentWebSocketStore {
 				const result = connectedUserSchema.safeParse(obj.payload);
 				if (!result.success) break;
 				const payload = result.data;
-				this.activeUsersStore.update((users) => {
-					if (users.some((u) => u.user_id === payload.user_id)) return users;
-					return [...users, payload];
-				});
+
+				if (!this.activeUsers.some((u) => u.user_id === payload.user_id)) {
+					this._activeUsers = [...this.activeUsers, payload];
+				}
 				console.log('[WS] User connected:', payload.username);
 				break;
 			}
@@ -201,11 +209,10 @@ class DocumentWebSocketStore {
 				const result = disconnectPayloadSchema.safeParse(obj.payload);
 				if (!result.success) break;
 				const payload = result.data;
-				this.activeUsersStore.update((users) => users.filter((u) => u.user_id !== payload.user_id));
-				this.userCursorsStore.update((cursors) => {
-					cursors.delete(payload.user_id);
-					return new Map(cursors);
-				});
+				this._activeUsers = this.activeUsers.filter(
+					(u) => u.user_id !== payload.user_id || u.user_id === sessionStore.currentUserId
+				);
+				this._userCursors.delete(payload.user_id);
 				console.log('[WS] User disconnected:', payload.user_id);
 				break;
 			}
@@ -214,17 +221,14 @@ class DocumentWebSocketStore {
 				const result = mousePositionEventSchema.safeParse(obj.payload);
 				if (!result.success) break;
 				const payload = result.data;
-				this.userCursorsStore.update((cursors) => {
-					cursors.set(payload.user_id, {
-						user_id: payload.user_id,
-						username: payload.username,
-						x: payload.x,
-						y: payload.y,
-						page: payload.page,
-						visible: payload.visible ?? true,
-						lastUpdate: Date.now()
-					});
-					return new Map(cursors);
+				this._userCursors.set(payload.user_id, {
+					user_id: payload.user_id,
+					username: payload.username,
+					x: payload.x,
+					y: payload.y,
+					page: payload.page,
+					visible: payload.visible ?? true,
+					lastUpdate: Date.now()
 				});
 				break;
 			}
@@ -245,9 +249,9 @@ class DocumentWebSocketStore {
 				this.viewModeEventHandlers.forEach((handler) => handler(envelope));
 
 				// Check if user is actively editing - defer refresh until they're done
-				const hasEditingComment = documentStore.comments.some((c) => c.isEditing);
+				const hasEditingComment = !!documentStore.comments.editing.size;
 				if (hasEditingComment) {
-					documentStore.setPendingViewModeRefresh(true);
+					documentStore.setViewMode(envelope.payload.view_mode);
 				} else {
 					invalidateAll();
 				}
@@ -256,9 +260,6 @@ class DocumentWebSocketStore {
 		}
 	}
 
-	/**
-	 * Disconnect and clear state. Also clean up event subscriptions.
-	 */
 	disconnect(): void {
 		// Clean up manager subscriptions first
 		if (this.managerStateUnsubscribe) {
@@ -275,17 +276,14 @@ class DocumentWebSocketStore {
 			this.manager.disconnect();
 			this.manager = null;
 		}
-		this.stateStore.set('disconnected');
-		this.activeUsersStore.set([]);
-		this.userCursorsStore.set(new Map());
+		this._state = 'disconnected';
+		this._activeUsers = [];
+		this._userCursors.clear();
 		this.currentConnectionId = null;
 		this.commentEventHandlers = [];
 		this.viewModeEventHandlers = [];
 	}
 
-	/**
-	 * Send mouse position update (throttled)
-	 */
 	sendMousePosition(x: number, y: number, page: number, visible: boolean = true): void {
 		const now = Date.now();
 		if (now - this.lastMouseSendTime < this.mouseThrottleMs) {
@@ -299,10 +297,6 @@ class DocumentWebSocketStore {
 		});
 	}
 
-	/**
-	 * Register a handler that will be invoked when comment events arrive.
-	 * Returns an unsubscribe function.
-	 */
 	onCommentEvent(handler: (event: CommentEvent) => void): () => void {
 		this.commentEventHandlers.push(handler);
 		return () => {
@@ -310,9 +304,6 @@ class DocumentWebSocketStore {
 		};
 	}
 
-	/**
-	 * Register a handler invoked when the view mode changes. Returns unsubscribe.
-	 */
 	onViewModeChanged(handler: (event: ViewModeChangedEventEnvelope) => void): () => void {
 		this.viewModeEventHandlers.push(handler);
 		return () => {
@@ -320,25 +311,6 @@ class DocumentWebSocketStore {
 		};
 	}
 
-	/**
-	 * Get the current connection ID
-	 */
-	getConnectionId(): string | null {
-		return this.currentConnectionId;
-	}
-
-	/**
-	 * Get active users as a plain array (for non-store contexts)
-	 */
-	getActiveUsers(): ConnectedUser[] {
-		return get(this.activeUsersStore);
-	}
-
-	/**
-	 * Send a message to the server. If the manager isn't created yet we'll buffer
-	 * the message until it is. The underlying WebSocketManager will also queue
-	 * messages until the socket is fully open.
-	 */
 	send(data: unknown): void {
 		if (this.manager) {
 			this.manager.send(data);

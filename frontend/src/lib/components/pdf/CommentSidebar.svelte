@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { documentStore, type CachedComment } from '$lib/runes/document.svelte.js';
-	import { parseAnnotation, type Annotation } from '$types/pdf';
+	import { documentStore, type TypedComment } from '$lib/runes/document.svelte.js';
 	import CommentCluster from './CommentCluster.svelte';
 	import { onMount } from 'svelte';
 	import { CLUSTER_THRESHOLD_PX, BADGE_HEIGHT_PX } from './constants';
+	import type { Annotation } from '$types/pdf';
 
 	interface Props {
 		viewerContainer: HTMLDivElement | null;
@@ -14,48 +14,12 @@
 
 	let containerElement: HTMLDivElement | null = $state(null);
 
-	// Comment with parsed annotation
-	interface CommentWithAnnotation extends CachedComment {
-		parsedAnnotation: Annotation;
-	}
-
-	// Apply local filters to comments
-	let filteredComments = $derived.by(() => {
-		let result = documentStore.comments;
-
-		// Filter by author filter states (include/exclude/none)
-		const states = documentStore.authorFilterStates;
-		const included = new Set<number>(
-			[...states.entries()].filter(([, v]) => v === 'include').map(([k]) => k)
-		);
-		const excluded = new Set<number>(
-			[...states.entries()].filter(([, v]) => v === 'exclude').map(([k]) => k)
-		);
-
-		// If there are include filters, show only those authors. Otherwise, if exclude filters exist, hide those authors.
-		if (included.size > 0) {
-			result = result.filter((c: CachedComment) => c.user?.id && included.has(c.user.id));
-		} else if (excluded.size > 0) {
-			result = result.filter((c: CachedComment) => !(c.user?.id && excluded.has(c.user.id)));
-		}
-
-		return result;
-	});
-
-	// Get comments with valid annotations
-	let commentsWithAnnotations = $derived(
-		filteredComments
-			.map((c) => ({ ...c, parsedAnnotation: parseAnnotation(c.annotation) }))
-			.filter((c): c is CommentWithAnnotation => c.parsedAnnotation !== null)
-	);
-
 	// Calculate the Y position of each comment relative to the sidebar's scroll position
 	// Returns the CENTER Y position of the first highlight box
-	const getCommentYPosition = (comment: CommentWithAnnotation): number | null => {
-		if (!viewerContainer) return null;
+	const getCommentYPosition = (comment: TypedComment): number | null => {
+		if (!viewerContainer || !comment.annotation) return null;
 
-		const annotation = comment.parsedAnnotation;
-		const firstBox = annotation.boundingBoxes[0];
+		const firstBox = comment.annotation.boundingBoxes[0];
 		if (!firstBox) return null;
 
 		const pageElement = viewerContainer.querySelector(
@@ -91,7 +55,7 @@
 
 	// Group comments by Y position proximity (clustering)
 	interface CommentClusterData {
-		comments: CommentWithAnnotation[];
+		comments: TypedComment[];
 		yPosition: number;
 		adjustedY?: number; // Adjusted Y position to prevent overlaps with expanded cards
 	}
@@ -103,9 +67,12 @@
 	let clusterHeights = $state(new Map<string, number>());
 
 	// Helper to check if any comment in a cluster is expanded
-	const isClusterExpanded = (comments: CachedComment[]): boolean => {
+	const isClusterExpanded = (comments: TypedComment[]): boolean => {
 		return comments.some(
-			(c) => c.isCommentHovered || c.isHighlightHovered || c.isPinned || c.isEditing
+			(c) => {
+				const state = documentStore.comments.getState(c.id);
+				return state?.isCommentHovered || state?.isHighlightHovered || state?.isPinned || state?.isEditing;
+			}
 		);
 	};
 
@@ -114,12 +81,15 @@
 		void clustersUpdateTick;
 		void scrollTop;
 
-		const positioned = commentsWithAnnotations
+		const positioned = documentStore.comments.withAnnotations
 			.map((comment) => ({
 				comment,
 				y: getCommentYPosition(comment)
 			}))
-			.filter((item): item is { comment: CommentWithAnnotation; y: number } => item.y !== null)
+			.filter(
+				(item): item is { comment: TypedComment & { annotation: Annotation }; y: number } =>
+					!!item.y
+			)
 			.sort((a, b) => a.y - b.y);
 
 		if (positioned.length === 0) return [];
@@ -193,7 +163,7 @@
 	onMount(() => {
 		if (!viewerContainer) return;
 
-		documentStore.setCommentSidebarRef(containerElement);
+		documentStore.commentSidebarRef = containerElement;
 
 		// Use ResizeObserver to detect when PDF.js finishes scaling text layers
 		// Wait 2 RAF to match AnnotationLayer timing
@@ -215,11 +185,6 @@
 			newTextLayers.forEach((layer) => {
 				// ResizeObserver is safe to call multiple times on same element
 				resizeObserver.observe(layer as HTMLElement);
-			});
-			requestAnimationFrame(() => {
-				requestAnimationFrame(() => {
-					clustersUpdateTick++;
-				});
 			});
 		});
 
@@ -254,7 +219,7 @@
 		</div>
 	{/each}
 
-	{#if clusters.length === 0 && commentsWithAnnotations.length === 0}
+	{#if !clusters.length && !documentStore.comments.withAnnotations.length}
 		<div class="flex h-full items-center justify-center p-4">
 			<p class="text-center text-sm text-text/40">Select text in the PDF to add a comment</p>
 		</div>

@@ -1,9 +1,8 @@
 <script lang="ts">
-	import { documentWebSocket } from '$lib/stores/documentWebSocket';
-	import type { ConnectedUser } from '$types/websocket';
-	import { documentStore } from '$lib/runes/document.svelte.js';
+	import { documentWebSocket } from '$lib/stores/documentWebSocket.svelte';
+	import { documentStore } from '$lib/runes/document.svelte';
 	import PersonIcon from '~icons/material-symbols/person';
-	import { sessionStore } from '$lib/runes/session.svelte.js';
+	import { sessionStore } from '$lib/runes/session.svelte';
 	import RemoveIcon from '~icons/material-symbols/remove';
 
 	interface Props {
@@ -12,21 +11,14 @@
 
 	let { isExpanded = false }: Props = $props();
 
-	// Get active users from store (reactive)
-	let activeUsers: ConnectedUser[] = $state([]);
-
-	// Subscribe to active users store
-	$effect(() => {
-		const unsubscribe = documentWebSocket.activeUsers.subscribe((users) => {
-			activeUsers = users;
-		});
-		return unsubscribe;
-	});
-
 	// Show current user first (if present) and the rest afterwards
 	let currentUserId = $derived(sessionStore.currentUser?.id);
-	let currentConnection = $derived(activeUsers.find((u) => u.user_id === currentUserId));
-	let otherUsers = $derived(activeUsers.filter((u) => u.user_id !== currentUserId));
+	let currentConnection = $derived(
+		documentWebSocket.activeUsers.find((u) => u.user_id === currentUserId)
+	);
+	let otherUsers = $derived(
+		documentWebSocket.activeUsers.filter((u) => u.user_id !== currentUserId)
+	);
 	// Check if filters should be disabled (restricted mode without view_restricted_comments permission)
 	let isRestrictedWithoutPermission = $derived(
 		documentStore.loadedDocument?.view_mode === 'restricted' &&
@@ -57,7 +49,7 @@
 	};
 
 	const handleUserClick = (userId: number) => {
-		documentStore.toggleAuthorFilter(userId);
+		documentStore.filters.toggleAuthorFilter(userId);
 	};
 
 	// Button styling to match PdfControls
@@ -69,7 +61,7 @@
 	/** Get the filter state for a user: 'include', 'exclude' or undefined (none) */
 	type AuthorFilterState = 'include' | 'exclude';
 	const getFilterState = (userId: number): AuthorFilterState | undefined =>
-		documentStore.authorFilterStates.get(userId);
+		documentStore.filters.authorFilters.get(userId);
 </script>
 
 {#if currentConnection || otherUsers.length > 0}
@@ -77,20 +69,20 @@
 		{#if isExpanded}
 			<span class="px-1 text-[10px] text-text/40">Active Users</span>
 
-			{#if documentStore.hasActiveFilter && !isRestrictedWithoutPermission}
+			{#if documentStore.filters.authorFilters.size > 0 && !isRestrictedWithoutPermission}
 				<button
 					class="{activeButtonClass} {isExpanded ? 'w-full px-2 text-left' : ''}"
-					onclick={() => documentStore.clearAuthorFilter()}
+					onclick={() => documentStore.filters.clearAuthorFilter()}
 				>
 					Clear filters
 				</button>
 			{/if}
 		{/if}
 
-		{#if documentStore.hasActiveFilter && !isRestrictedWithoutPermission && !isExpanded}
+		{#if documentStore.filters.authorFilters.size > 0 && !isRestrictedWithoutPermission && !isExpanded}
 			<button
 				class="{activeButtonClass} p-2"
-				onclick={() => documentStore.clearAuthorFilter()}
+				onclick={() => documentStore.filters.clearAuthorFilter()}
 				title="Clear filters"
 			>
 				<RemoveIcon class="h-4 w-4" />

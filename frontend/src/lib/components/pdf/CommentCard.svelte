@@ -1,7 +1,6 @@
 <script lang="ts">
-	import { documentStore, type CachedComment } from '$lib/runes/document.svelte.js';
+	import { documentStore, type TypedComment } from '$lib/runes/document.svelte.js';
 	import { sessionStore } from '$lib/runes/session.svelte.js';
-	import { parseAnnotation } from '$types/pdf';
 	import CommentCard from './CommentCard.svelte';
 	import CommentVisibility from './CommentVisibility.svelte';
 	import ConfirmButton from '$lib/components/ConfirmButton.svelte';
@@ -17,11 +16,13 @@
 	import { formatDateTime } from '$lib/util/dateFormat';
 
 	interface Props {
-		comment: CachedComment;
+		comment: TypedComment;
 		depth?: number;
 	}
 
 	let { comment, depth = 0 }: Props = $props();
+
+	const commentState = $derived(documentStore.comments.getState(comment.id));
 
 	// Derived state
 	let isTopLevel = $derived(depth === 0);
@@ -52,12 +53,12 @@
 
 	// State
 	let isSubmitting = $state(false);
-	let editContent = $derived(comment?.editInputContent || '');
-	let replyContent = $derived(comment?.replyInputContent || '');
+	let editContent = $derived(commentState?.editInputContent || '');
+	let replyContent = $derived(commentState?.replyInputContent || '');
 	let isLoadingReplies = $state(false);
 
 	let hasUnloadedReplies = $derived(
-		comment?.num_replies > 0 && (!comment.replies || comment.replies.length === 0)
+		comment?.num_replies > 0 && (!commentState?.replies || commentState.replies.length === 0)
 	);
 	let isAuthor = $derived(sessionStore.currentUserId === comment?.user?.id);
 	let canDeleteComment = $derived.by(() => {
@@ -67,7 +68,6 @@
 	let canReply = $derived(
 		sessionStore.routeMembership ? sessionStore.validatePermissions(['add_comments']) : false
 	);
-	let hasReplies = $derived(comment.replies && comment.replies.length > 0);
 
 	// Handlers
 
@@ -75,9 +75,14 @@
 		if (!replyContent.trim() || isSubmitting) return;
 		isSubmitting = true;
 		try {
-			await documentStore.createComment({ content: replyContent.trim(), parentId: comment.id });
-			documentStore.setReplyInputContent(comment.id, '');
-			documentStore.setShowReplyInput(comment.id, false);
+			await documentStore.comments.create({
+				content: replyContent.trim(),
+				parent_id: comment.id,
+				visibility: comment.visibility,
+				annotation: null
+			});
+			documentStore.comments.setReplyInputContent(comment.id, '');
+			documentStore.comments.setShowReplyInput(comment.id, false);
 		} finally {
 			isSubmitting = false;
 		}
@@ -87,8 +92,9 @@
 		if (!editContent.trim() || isSubmitting) return;
 		isSubmitting = true;
 		try {
-			await documentStore.updateComment(comment.id, { content: editContent.trim() });
-			documentStore.setEditing(comment.id, false);
+			comment.content = editContent.trim();
+			await documentStore.comments.update(comment);
+			documentStore.comments.setEditing(comment.id, false);
 		} finally {
 			isSubmitting = false;
 		}
@@ -98,7 +104,7 @@
 		if (isSubmitting) return;
 		isSubmitting = true;
 		try {
-			await documentStore.deleteComment(comment.id);
+			await documentStore.comments.delete(comment.id);
 		} finally {
 			isSubmitting = false;
 		}
@@ -108,7 +114,7 @@
 		if (isLoadingReplies) return;
 		isLoadingReplies = true;
 		try {
-			await documentStore.loadReplies(comment.id);
+			await documentStore.comments.loadMoreReplies(comment.id);
 		} finally {
 			isLoadingReplies = false;
 		}
@@ -120,8 +126,8 @@
 			handleReply();
 		}
 		if (e.key === 'Escape') {
-			documentStore.setShowReplyInput(comment.id, false);
-			documentStore.setReplyInputContent(comment.id, '');
+			documentStore.comments.setShowReplyInput(comment.id, false);
+			documentStore.comments.setReplyInputContent(comment.id, '');
 		}
 	};
 
@@ -131,29 +137,29 @@
 			handleEdit();
 		}
 		if (e.key === 'Escape') {
-			documentStore.setEditing(comment.id, false);
+			documentStore.comments.setEditing(comment.id, false);
 		}
 	};
 
 	$effect(() => {
-		if (comment.replyInputContent !== replyContent)
-			documentStore.setReplyInputContent(comment.id, replyContent);
+		if (commentState?.replyInputContent !== replyContent)
+			documentStore.comments.setReplyInputContent(comment.id, replyContent);
 	});
 	$effect(() => {
-		if (comment.editInputContent !== editContent)
-			documentStore.setEditingContent(comment.id, editContent);
+		if (commentState?.editInputContent !== editContent)
+			documentStore.comments.setEditInputContent(comment.id, editContent);
 	});
 </script>
 
 {#snippet editDeleteButtons()}
-	{#if !comment.isEditing && isAuthor}
+	{#if !commentState?.isEditing && isAuthor}
 		<button
-			class="rounded text-text/40 hover:bg-text/10 hover:text-text/70 {isTopLevel
+			class="text-text/40 hover:bg-text/10 hover:text-text/70 rounded {isTopLevel
 				? 'p-1'
 				: 'p-0.5'} transition-colors"
 			onclick={(e) => {
 				e.stopPropagation();
-				documentStore.setEditing(comment.id, true);
+				documentStore.comments.setEditing(comment.id, true);
 			}}
 			title="Edit"
 		>
@@ -212,16 +218,12 @@
 		<div class="flex items-center justify-between">
 			<div class="flex items-center gap-2">
 				{#if !isTopLevel}
-					<span class="text-xs font-medium text-text/70"
+					<span class="text-text/70 text-xs font-medium"
 						>{comment.user?.username ?? 'Anonymous'}</span
 					>
 				{/if}
-				<span class="text-xs text-text/40">{formatDateTime(comment.created_at)}</span>
-				<CommentVisibility
-					commentId={comment.id}
-					visibility={comment.visibility}
-					canEdit={isAuthor}
-				/>
+				<span class="text-text/40 text-xs">{formatDateTime(comment.created_at)}</span>
+				<CommentVisibility {comment} visibility={comment.visibility} canEdit={isAuthor} />
 			</div>
 			{#if isAuthor || canDeleteComment}
 				<div class="flex items-center gap-1">
@@ -232,15 +234,15 @@
 
 		<!-- Annotation quote (top-level only) -->
 		{#if comment.annotation}
-			<div class="mb-3 border-l-2 border-primary/50 bg-primary/5 py-1.5 pr-2 pl-2.5">
-				<p class="line-clamp-2 text-xs text-text/60 italic">
-					"{parseAnnotation(comment.annotation)?.text}"
+			<div class="border-primary/50 bg-primary/5 mb-3 border-l-2 py-1.5 pl-2.5 pr-2">
+				<p class="text-text/60 line-clamp-2 text-xs italic">
+					"{comment.annotation.text}"
 				</p>
 			</div>
 		{/if}
 
 		<!-- Content / Edit mode -->
-		{#if comment.isEditing}
+		{#if commentState?.isEditing}
 			<div class={sizes.mb}>
 				<MarkdownTextEditor
 					bind:value={editContent}
@@ -251,23 +253,23 @@
 					onkeydown={handleEditKeydown}
 					onblur={() => {
 						if (editContent.trim().length === 0) {
-							documentStore.setEditing(comment.id, false);
+							documentStore.comments.setEditing(comment.id, false);
 						}
 					}}
 				/>
 				<div class="{sizes.mt} flex justify-end {sizes.gap}">
 					<button
-						class="flex items-center gap-1 rounded {sizes.buttonPx} text-xs text-text/50 transition-colors hover:bg-text/10 hover:text-text/70"
+						class="flex items-center gap-1 rounded {sizes.buttonPx} text-text/50 hover:bg-text/10 hover:text-text/70 text-xs transition-colors"
 						onclick={(e) => {
 							e.stopPropagation();
-							documentStore.setEditing(comment.id, false);
+							documentStore.comments.setEditing(comment.id, false);
 						}}
 						disabled={isSubmitting}
 					>
 						<CloseIcon class={sizes.icon} /> Cancel
 					</button>
 					<button
-						class="flex items-center gap-1 rounded bg-primary/20 {sizes.buttonPx} text-xs font-medium text-primary transition-colors hover:bg-primary/30 disabled:opacity-50"
+						class="bg-primary/20 flex items-center gap-1 rounded {sizes.buttonPx} text-primary hover:bg-primary/30 text-xs font-medium transition-colors disabled:opacity-50"
 						onclick={(e) => {
 							e.stopPropagation();
 							handleEdit();
@@ -284,11 +286,11 @@
 				<MarkdownRenderer content={comment.content} class="{sizes.text} {sizes.textMuted}" />
 			</div>
 		{:else if isTopLevel}
-			<p class="mb-3 text-sm text-text/40 italic">No comment text</p>
+			<p class="text-text/40 mb-3 text-sm italic">No comment text</p>
 		{/if}
 
 		<!-- Reply input -->
-		{#if comment.showReplyInput}
+		{#if commentState?.showReplyInput}
 			<div class={isTopLevel ? 'mb-3' : 'mt-2'}>
 				<MarkdownTextEditor
 					bind:value={replyContent}
@@ -299,21 +301,21 @@
 					onkeydown={handleKeydown}
 					onblur={() => {
 						if (replyContent.trim().length === 0) {
-							documentStore.setShowReplyInput(comment.id, false);
+							documentStore.comments.setShowReplyInput(comment.id, false);
 						}
 					}}
 				/>
 				<div class="{sizes.mt} flex justify-end {sizes.gap}">
 					<button
-						class="rounded {sizes.buttonPx} text-xs text-text/50 transition-colors hover:bg-text/10 hover:text-text/70"
+						class="rounded {sizes.buttonPx} text-text/50 hover:bg-text/10 hover:text-text/70 text-xs transition-colors"
 						onclick={(e) => {
 							e.stopPropagation();
-							documentStore.setShowReplyInput(comment.id, false);
-							documentStore.setReplyInputContent(comment.id, '');
+							documentStore.comments.setShowReplyInput(comment.id, false);
+							documentStore.comments.setReplyInputContent(comment.id, '');
 						}}>Cancel</button
 					>
 					<button
-						class="rounded bg-primary/20 {sizes.buttonPx} text-xs font-medium text-primary transition-colors hover:bg-primary/30 disabled:opacity-50"
+						class="bg-primary/20 rounded {sizes.buttonPx} text-primary hover:bg-primary/30 text-xs font-medium transition-colors disabled:opacity-50"
 						onclick={(e) => {
 							e.stopPropagation();
 							handleReply();
@@ -331,7 +333,7 @@
 					: 'text-primary/70 hover:text-primary'} transition-colors"
 				onclick={(e) => {
 					e.stopPropagation();
-					documentStore.setShowReplyInput(comment.id, true);
+					documentStore.comments.setShowReplyInput(comment.id, true);
 				}}
 			>
 				<ReplyIcon class={sizes.icon} /> Reply
@@ -341,7 +343,7 @@
 		<!-- Load replies button -->
 		{#if hasUnloadedReplies}
 			<button
-				class="mt-1.5 flex items-center {sizes.gap} text-xs text-text/60 transition-colors hover:text-text/70"
+				class="mt-1.5 flex items-center {sizes.gap} text-text/60 hover:text-text/70 text-xs transition-colors"
 				onclick={(e) => {
 					e.stopPropagation();
 					handleLoadReplies();
@@ -355,34 +357,62 @@
 			</button>
 		{/if}
 
-		<!-- Replies -->
-		{#if hasReplies}
-			<div class={isTopLevel ? 'border-t border-text/10 pt-2' : 'mt-2'}>
+		{#if comment.num_replies > 0}
+			<!-- Replies -->
+			<div class={isTopLevel ? 'border-text/10 border-t pt-2' : 'mt-2'}>
 				<button
 					class="{isTopLevel
 						? 'mb-2 w-full'
 						: 'mb-1.5'} flex items-center gap-0.5 text-xs {isTopLevel
-						? 'font-medium text-text/50 hover:text-text/70'
+						? 'text-text/50 hover:text-text/70 font-medium'
 						: 'text-text/40 hover:text-text/60'} transition-colors"
+					disabled={isLoadingReplies}
 					onclick={(e) => {
 						e.stopPropagation();
-						documentStore.toggleRepliesCollapsed(comment.id);
+						documentStore.comments.setRepliesCollapsed(
+							comment.id,
+							!commentState?.isRepliesCollapsed
+						);
+
+						if (commentState?.isRepliesCollapsed && !commentState?.replies?.length) {
+							handleLoadReplies();
+						}
 					}}
 				>
-					{#if comment.isRepliesCollapsed}
+					{#if commentState?.isRepliesCollapsed}
 						<ExpandIcon class={sizes.icon} />
 					{:else}
 						<CollapseIcon class={sizes.icon} />
 					{/if}
-					{comment.replies?.length}
-					{comment.replies?.length === 1 ? 'reply' : 'replies'}
+					{commentState?.replies?.length}
+					{commentState?.replies?.length === 1 ? 'reply' : 'replies'}
 				</button>
-				{#if !comment.isRepliesCollapsed}
+				{#if !commentState?.isRepliesCollapsed}
 					<div class="space-y-2">
-						{#each comment.replies ?? [] as reply (reply.id)}
-							<CommentCard comment={reply} depth={depth + 1} />
+						{#each commentState?.replies ?? [] as replyId (replyId)}
+							{@const comment = documentStore.comments.getComment(replyId)}
+							{#if comment}
+								<CommentCard {comment} depth={depth + 1} />
+							{/if}
 						{/each}
 					</div>
+					{#if hasUnloadedReplies}
+						<button
+							class="mt-1.5 flex items-center {sizes.gap} text-text/60 hover:text-text/70 text-xs transition-colors"
+							onclick={(e) => {
+								e.stopPropagation();
+								handleLoadReplies();
+							}}
+							disabled={isLoadingReplies}
+						>
+							<ExpandIcon class={sizes.icon} />
+							{isLoadingReplies
+								? 'Loading...'
+								: `${comment.num_replies - (commentState?.replies?.length ?? 0)} more ${
+										comment.num_replies - (commentState?.replies?.length ?? 0) === 1 ? 'reply' : 'replies'
+									}`}
+						</button>
+					{/if}
 				{/if}
 			</div>
 		{/if}

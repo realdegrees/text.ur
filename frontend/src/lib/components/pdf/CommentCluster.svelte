@@ -1,5 +1,10 @@
 <script lang="ts">
-	import { documentStore, type CachedComment } from '$lib/runes/document.svelte.js';
+	import {
+		documentStore,
+		type CommentState,
+		type TypedComment
+	} from '$lib/runes/document.svelte.js';
+	import { SvelteMap } from 'svelte/reactivity';
 	import CommentCard from './CommentCard.svelte';
 	import ConnectionLine from './ConnectionLine.svelte';
 	import CommentIcon from '~icons/material-symbols/comment-outline';
@@ -7,21 +12,21 @@
 	import PinOffIcon from '~icons/material-symbols/push-pin-outline';
 
 	interface Props {
-		comments: CachedComment[];
+		comments: TypedComment[];
 		adjustedY: number;
 		scrollTop?: number;
 		onHeightChange?: (height: number) => void;
 	}
 
 	$effect(() => {
-		const pinnedComments = comments.filter((c) => c.isPinned);
+		const pinnedComments = Array.from(states.entries()).filter(([, state]) => state?.isPinned).map(([id, state]) => ({id, ...state}));
 		if (pinnedComments.length > 1) {
 			// Ensure only one comment is pinned at a time in this cluster
 			// If one of the pinnedComments matches the highlight hovered comment (prio1) or hovered tab comment (prio2), keep that one pinned
-			const highlightHovered = comments.find((c) => c.isHighlightHovered);
-			const tabHovered = comments.find((c) => c.isCommentHovered);
+			const highlightHovered = pinnedComments.find((c) => c?.isHighlightHovered);
+			const tabHovered = pinnedComments.find((c) => c?.isCommentHovered);
 
-			let toKeepPinned: CachedComment;
+			let toKeepPinned: CommentState;
 			if (highlightHovered && pinnedComments.includes(highlightHovered)) {
 				toKeepPinned = highlightHovered;
 			} else if (tabHovered && pinnedComments.includes(tabHovered)) {
@@ -33,7 +38,7 @@
 			// Unpin all except toKeepPinned
 			pinnedComments.forEach((c) => {
 				if (c !== toKeepPinned) {
-					documentStore.setPinned(c.id, false);
+					documentStore.comments.setPinned(c.id, false);
 				} else {
 					selectedCommentId = c.id;
 				}
@@ -43,23 +48,27 @@
 
 	let { comments, adjustedY, scrollTop, onHeightChange }: Props = $props();
 
+	let states = $derived.by(() =>
+		new SvelteMap(comments.map((c) => ([c.id, documentStore.comments.getState(c.id)])))
+	);
+
 	// Track which comment is selected in this group (defaults to first)
 	let selectedCommentId = $state<number | null>(null);
-	let selectedComment: CachedComment = $derived(
+	let selectedComment: TypedComment = $derived(
 		comments.find((c) => c.id === selectedCommentId) ??
-			comments.find((c) => c.isPinned) ??
+			comments.find((c) => states.get(c.id)?.isPinned) ??
 			comments[0]
 	);
-	let hoveredTabComment: CachedComment | null = $state(null);
-	let hoveredHighlightComment: CachedComment | null = $derived.by(() => {
-		return comments.find((c) => c.isHighlightHovered) ?? null;
+	let hoveredTabComment: TypedComment | null = $state(null);
+	let hoveredHighlightComment: TypedComment | null = $derived.by(() => {
+		return comments.find((c) => states.get(c.id)?.isHighlightHovered) ?? null;
 	});
 
 	// ! This only checks the top level comments, replies are not included
-	let anyCommentHovered = $derived(!!comments.find((c) => c.isCommentHovered));
-	let anyHighlightHovered = $derived(!!comments.find((c) => c.isHighlightHovered));
-	let anyCommentPinned = $derived(!!comments.find((c) => c.isPinned));
-	let anyCommentEditing = $derived(!!comments.find((c) => c.isEditing));
+	let anyCommentHovered = $derived(!!comments.find((c) => states.get(c.id)?.isCommentHovered));
+	let anyHighlightHovered = $derived(!!comments.find((c) => states.get(c.id)?.isHighlightHovered));
+	let anyCommentPinned = $derived(!!comments.find((c) => states.get(c.id)?.isPinned));
+	let anyCommentEditing = $derived(!!comments.find((c) => states.get(c.id)?.isEditing));
 
 	// Show expanded card when badge is hovered, highlight is hovered, comment is pinned, or input is active
 	let showCard = $derived(
@@ -68,34 +77,6 @@
 
 	let commentCount = $derived(comments.length);
 	let clusterRef: HTMLElement | null = $state(null);
-
-	// !!! Click outside functionality is disabled in favor of a pin toggle button
-	// Handle click outside to unpin comments
-	// $effect(() => {
-	// 	if (!anyCommentPinned) return;
-
-	// 	const handleClickOutside = (e: MouseEvent) => {
-	// 		if (clusterRef && !clusterRef.contains(e.target as Node)) {
-	// 			// Unpin all comments in this cluster
-	// 			comments.forEach((c) => {
-	// 				if (c.isPinned) {
-	// 					documentStore.setPinned(c.id, false);
-	// 				}
-	// 			});
-	// 		}
-	// 	};
-
-	// 	// Use setTimeout to avoid the click that pinned the comment from immediately unpinning it
-	// 	// Use capture phase to catch clicks before stopPropagation prevents bubbling
-	// 	const timeoutId = setTimeout(() => {
-	// 		document.addEventListener('click', handleClickOutside, true);
-	// 	}, 0);
-
-	// 	return () => {
-	// 		clearTimeout(timeoutId);
-	// 		document.removeEventListener('click', handleClickOutside, true);
-	// 	};
-	// });
 
 	// Measure and report cluster height when it changes
 	$effect(() => {
@@ -124,22 +105,22 @@
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
 		bind:this={clusterRef}
-		class="relative z-50 overflow-hidden rounded-lg bg-background shadow-lg ring-0 shadow-black/20 ring-primary/30 transition-all {anyCommentPinned
+		class="bg-background ring-primary/30 relative z-50 overflow-hidden rounded-lg shadow-lg shadow-black/20 ring-0 transition-all {anyCommentPinned
 			? 'ring-3'
 			: ''}"
 		tabindex="-1"
 		data-comment-badge={selectedComment?.id}
 		data-badge-active="true"
 		onmouseleave={() => {
-			documentStore.setCommentHovered(selectedComment.id, false);
+			documentStore.comments.setCommentHovered(selectedComment.id, false);
 		}}
 		onmouseenter={() => {
-			documentStore.setCommentHovered(selectedComment.id, true);
+			documentStore.comments.setCommentHovered(selectedComment.id, true);
 		}}
 	>
 		<!-- Cluster header: tabs for multiple comments or single author header -->
-		<div class="w-full border-b border-text/30 p-1.5 pb-0">
-			<div class="flex items-center justify-between gap-1.5 border-b border-text/10 pb-0!">
+		<div class="border-text/30 w-full border-b p-1.5 pb-0">
+			<div class="border-text/10 pb-0! flex items-center justify-between gap-1.5 border-b">
 				<div class="flex gap-1.5">
 					{#each comments as c, idx (c.id)}
 						<button
@@ -148,22 +129,22 @@
 							onclick={(e) => {
 								e.stopPropagation();
 								if (selectedComment === c) return;
-								if (selectedComment.isPinned) {
-									documentStore.setPinned(c.id, true);
+								if (documentStore.comments.getState(selectedComment.id)?.isPinned) {
+									documentStore.comments.setPinned(c.id, true);
 								}
-								if (selectedComment.isCommentHovered) {
-									documentStore.setCommentHovered(selectedComment.id, false);
+								if (documentStore.comments.getState(selectedComment.id)?.isCommentHovered) {
+									documentStore.comments.setCommentHovered(selectedComment.id, false);
 								}
 								selectedCommentId = c.id;
 							}}
 							onmouseenter={() => {
 								if (selectedComment === c) return;
-								documentStore.setCommentHovered(c.id, true);
+								documentStore.comments.setCommentHovered(c.id, true);
 								hoveredTabComment = c;
 							}}
 							onmouseleave={() => {
 								if (selectedComment === c) return;
-								documentStore.setCommentHovered(c.id, false);
+								documentStore.comments.setCommentHovered(c.id, false);
 								hoveredTabComment = null;
 							}}
 						>
@@ -174,17 +155,17 @@
 
 				<!-- Pin button -->
 				<button
-					class="rounded-sm p-1 text-text/60 transition-colors hover:bg-text/5 hover:text-text"
+					class="text-text/60 hover:bg-text/5 hover:text-text rounded-sm p-1 transition-colors"
 					onclick={(e) => {
 						e.stopPropagation();
-						documentStore.setPinned(selectedComment.id, !selectedComment.isPinned);
+						documentStore.comments.setPinned(selectedComment.id, !documentStore.comments.getState(selectedComment.id)?.isPinned);
 					}}
-					title={selectedComment.isPinned ? 'Unpin comment' : 'Pin comment'}
+					title={documentStore.comments.getState(selectedComment.id)?.isPinned ? 'Unpin comment' : 'Pin comment'}
 				>
-					{#if selectedComment.isPinned}
-						<PinIcon class="h-4 w-4 text-text transition-colors hover:text-red-400" />
+					{#if documentStore.comments.getState(selectedComment.id)?.isPinned}
+						<PinIcon class="text-text h-4 w-4 transition-colors hover:text-red-400" />
 					{:else}
-						<PinOffIcon class="h-4 w-4 hover:animate-bounce hover:text-text" />
+						<PinOffIcon class="hover:text-text h-4 w-4 hover:animate-bounce" />
 					{/if}
 				</button>
 			</div>
@@ -225,16 +206,16 @@
 		class="relative z-10 inline-block"
 		data-comment-badge={selectedComment?.id}
 		onmouseenter={() => {
-			documentStore.setCommentHovered(selectedComment.id, true);
+			documentStore.comments.setCommentHovered(selectedComment.id, true);
 		}}
 	>
 		<div
-			class="flex h-8 w-8 cursor-pointer items-center justify-center rounded bg-inset shadow-md ring-3 shadow-black/20 ring-primary/70 drop-shadow-xs"
+			class="bg-inset ring-3 ring-primary/70 drop-shadow-xs flex h-8 w-8 cursor-pointer items-center justify-center rounded shadow-md shadow-black/20"
 		>
 			{#if commentCount > 1}
-				<span class="font-bold text-text">{commentCount}</span>
+				<span class="text-text font-bold">{commentCount}</span>
 			{:else}
-				<CommentIcon class="h-4 w-4 text-text" />
+				<CommentIcon class="text-text h-4 w-4" />
 			{/if}
 		</div>
 	</button>

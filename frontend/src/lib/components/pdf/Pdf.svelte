@@ -23,7 +23,6 @@
 	let unsubscribe: (() => void) | null = $state(null);
 
 	let pageNumber = $state(1);
-	let numPages = $state(0);
 	let scrollTop = $state(0);
 	let pdfWidth = $state(0);
 	let basePageWidth = $state(0);
@@ -76,7 +75,7 @@
 
 		unsubscribe = store.subscribe((s) => {
 			pageNumber = s.pageNumber;
-			numPages = s.numPages;
+			documentStore.numPages = s.numPages;
 
 			// Clamp incoming scale to respect the configured min/max values.
 			// This prevents modes like `page-height` from producing a scale
@@ -148,7 +147,7 @@
 	};
 
 	const prevPage = () => pdfSlick?.gotoPage(Math.max(pageNumber - 1, 1));
-	const nextPage = () => pdfSlick?.gotoPage(Math.min(pageNumber + 1, numPages));
+	const nextPage = () => pdfSlick?.gotoPage(Math.min(pageNumber + 1, documentStore.numPages));
 
 	$effect(() => {
 		if (!pdfAreaWrapper?.parentElement) return;
@@ -170,7 +169,7 @@
 		minScale={PDF_MIN_SCALE}
 		{maxScale}
 		{pageNumber}
-		{numPages}
+		numPages={documentStore.numPages}
 		onZoomIn={zoomIn}
 		onZoomOut={zoomOut}
 		onFitHeight={fitHeight}

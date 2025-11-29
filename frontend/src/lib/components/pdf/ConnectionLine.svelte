@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { documentStore, type CachedComment } from '$lib/runes/document.svelte';
+	import { documentStore, type TypedComment } from '$lib/runes/document.svelte';
 
 	interface Props {
-		comment: CachedComment | null;
+		comment: TypedComment | null;
 		opacity?: number;
 		yPosition: number;
 		scrollTop?: number;
@@ -17,12 +17,17 @@
 		endY: number;
 	}
 
+
+
 	const calculateLineCoordinates = (): LineCoordinates | null => {
 		// Find all highlight elements for this comment
-		const highlightEls = comment?.highlightElements;
+		const state = documentStore.comments.getState(comment?.id ?? -1);
+		const highlightEls = state?.highlightElements;
 		const sidebarRect = documentStore.commentSidebarRef?.getBoundingClientRect();
 
 		if (!highlightEls || highlightEls.length === 0 || !sidebarRect) {
+			console.log('aaaa');
+
 			return null;
 		}
 
@@ -51,26 +56,20 @@
 		const startX = clusterLeft + COMMENT_OFFSET;
 		const startY = clusterTop + 36; // ~40px from top is where quote area is
 
+		console.log(`Line from (${startX}, ${startY}) to (${endX}, ${endY})`);
+
 		return { startX, startY, endX, endY };
 	};
 
-	let lineCoords = $state<LineCoordinates | null>(null);
-
-	$effect(() => {
+	let lineCoords = $derived.by<LineCoordinates | null>(() => {
 		void documentStore.documentScale;
+		void documentStore.loadedDocument;
 		void yPosition;
 		void scrollTop;
-		void comment;
+		// void comment;
 		void opacity;
 
-		// Wait 3 RAF: ensures both highlights and clusters have updated
-		requestAnimationFrame(() => {
-			requestAnimationFrame(() => {
-				requestAnimationFrame(() => {
-					lineCoords = calculateLineCoordinates();
-				});
-			});
-		});
+		return calculateLineCoordinates();
 	});
 </script>
 

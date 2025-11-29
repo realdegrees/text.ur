@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Pdf from '$lib/components/pdf/Pdf.svelte';
 	import { documentStore } from '$lib/runes/document.svelte.js';
-	import { documentWebSocket } from '$lib/stores/documentWebSocket';
+	import { documentWebSocket } from '$lib/stores/documentWebSocket.svelte.js';
 
 	let { data } = $props();
 
@@ -12,7 +12,7 @@
 	// Initialize session and document stores (reactive to data changes)
 	// Use data.X directly so the effect re-runs when invalidateAll() updates data
 	$effect(() => {
-		documentStore.setDocument(data.document);
+		documentStore.loadedDocument = data.document;		
 		documentStore.setRootComments(data.rootComments);
 	});
 
@@ -38,7 +38,6 @@
 			wsUnsubscribe?.();
 			vmUnsubscribe?.();
 			documentWebSocket.disconnect();
-			documentStore.clearAllInteractionState();
 		};
 	});
 </script>
