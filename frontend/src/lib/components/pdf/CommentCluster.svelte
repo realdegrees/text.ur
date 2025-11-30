@@ -1,9 +1,5 @@
 <script lang="ts">
-	import {
-		documentStore,
-		type CommentState,
-		type TypedComment
-	} from '$lib/runes/document.svelte.js';
+	import { documentStore, type CommentState, type TypedComment } from '$lib/runes/document.svelte.js';
 	import { SvelteMap } from 'svelte/reactivity';
 	import CommentCard from './CommentCard.svelte';
 	import ConnectionLine from './ConnectionLine.svelte';
@@ -18,6 +14,7 @@
 		onHeightChange?: (height: number) => void;
 	}
 
+	// ? This is needed for when a comment is pinned by clicking its highlight, then the currently active comment needs to be unpinned
 	$effect(() => {
 		const pinnedComments = Array.from(commentStates.values()).filter(
 			(state): state is CommentState => !!state?.isPinned
@@ -56,18 +53,20 @@
 
 	// Track which comment is selected in this group (defaults to first)
 	let selectedCommentId = $state<number | null>(null);
-	let selectedComment: TypedComment = $derived(
-		comments.find((c) => c.id === selectedCommentId) ??
-			comments.find((c) => commentStates.get(c.id)?.isPinned) ??
-			comments[0]
-	);
-	let selectCommentState = $derived.by(() => commentStates.get(selectedComment.id));
-	let hoveredTabComment: TypedComment | null = $state(null);
-	let hoveredTabCommentState = $derived.by(() => commentStates.get(hoveredTabComment?.id ?? -1));
+
+	let hoveredTabId: number | null = $state(null);
+	let hoveredTabCommentState = $derived.by(() => commentStates.get(hoveredTabId ?? -1));
 	let hoveredHighlightComment: TypedComment | null = $derived.by(() => {
 		return comments.find((c) => commentStates.get(c.id)?.isHighlightHovered) ?? null;
 	});
-	let hoveredHighlightCommentState = $derived.by(() => commentStates.get(hoveredHighlightComment?.id ?? -1));
+
+	let activeComment: TypedComment = $derived(
+		hoveredHighlightComment ??
+			comments.find((c) => c.id === selectedCommentId) ??
+			comments.find((c) => commentStates.get(c.id)?.isPinned) ??
+			comments[0]
+	);
+	let activeCommentState = $derived.by(() => commentStates.get(activeComment.id));
 
 	// ! This only checks the top level comments, replies are not included
 	let anyCommentHovered = $derived(
@@ -118,14 +117,14 @@
 			? 'ring-3'
 			: ''}"
 		tabindex="-1"
-		data-comment-badge={selectedComment?.id}
+		data-comment-badge={activeComment?.id}
 		data-badge-active="true"
 		onmouseleave={() => {
-			const state = commentStates.get(selectedComment.id);
+			const state = commentStates.get(activeComment.id);
 			if (state) state.isCommentHovered = false;
 		}}
 		onmouseenter={() => {
-			const state = commentStates.get(selectedComment.id);
+			const state = commentStates.get(activeComment.id);
 			if (state) state.isCommentHovered = true;
 		}}
 	>
@@ -136,34 +135,36 @@
 					{#each comments as c, idx (c.id)}
 						{@const state = commentStates.get(c.id)}
 						<button
-							class="rounded-t px-2 py-1.5 text-xs font-medium transition-colors cursor-pointer
-							{selectedComment === c ? 'bg-inset text-text' : 'text-text/50 hover:bg-text/5 hover:text-text/70 hover:animate-pulse'}"
+							class="cursor-pointer rounded-t px-2 py-1.5 text-xs font-medium transition-colors
+							{activeComment === c
+								? 'bg-inset text-text'
+								: 'text-text/50 hover:bg-text/5 hover:text-text/70 hover:animate-pulse'}"
 							onclick={(e) => {
 								e.stopPropagation();
-								if (selectedComment === c && state) {
+								if (activeComment === c && state) {
 									state.isPinned = !state.isPinned;
 									return;
 								}
 								if (state) {
 									state.isCommentHovered = true;
-									state.isPinned = selectCommentState?.isPinned;
+									state.isPinned = activeCommentState?.isPinned;
 								}
-								if (selectCommentState) {
-									selectCommentState.isPinned = false;
-									selectCommentState.isCommentHovered = false;
+								if (activeCommentState) {
+									activeCommentState.isPinned = false;
+									activeCommentState.isCommentHovered = false;
 								}
 
 								selectedCommentId = c.id;
 							}}
 							onmouseenter={() => {
-								if (selectedComment === c) return;
+								hoveredTabId = c.id;
 								if (state) state.isCommentHovered = true;
-								hoveredTabComment = c;
+								
 							}}
 							onmouseleave={() => {
-								if (selectedComment === c) return;
+								hoveredTabId = null;
+								if (activeComment === c) return;
 								if (state) state.isCommentHovered = false;
-								hoveredTabComment = null;
 							}}
 						>
 							{c.user?.username?.slice(0, 10) ?? `Comment ${idx + 1}`}
@@ -176,13 +177,11 @@
 					class="text-text/60 hover:bg-text/5 hover:text-text rounded-sm p-1 transition-colors"
 					onclick={(e) => {
 						e.stopPropagation();
-						if (selectCommentState) selectCommentState.isPinned = !selectCommentState.isPinned;
+						if (activeCommentState) activeCommentState.isPinned = !activeCommentState.isPinned;
 					}}
-					title={selectCommentState?.isPinned
-						? 'Unpin comment'
-						: 'Pin comment'}
+					title={activeCommentState?.isPinned ? 'Unpin comment' : 'Pin comment'}
 				>
-					{#if selectCommentState?.isPinned}
+					{#if activeCommentState?.isPinned}
 						<PinIcon class="text-text h-4 w-4 transition-colors hover:text-red-400" />
 					{:else}
 						<PinOffIcon class="hover:text-text h-4 w-4" />
@@ -190,31 +189,17 @@
 				</button>
 			</div>
 		</div>
-		{#if selectedComment}
-			<CommentCard comment={selectedComment} />
+		{#if activeComment}
+			<CommentCard comment={activeComment} />
 
-			{#if (anyCommentHovered && !anyHighlightHovered) || anyCommentPinned}
+			{#if (anyCommentHovered || anyHighlightHovered) && (anyCommentPinned || anyCommentHovered)}
 				<!-- Connection line for this card -->
 
-				<ConnectionLine state={selectCommentState} yPosition={yPosition} {scrollTop} />
+				<ConnectionLine state={activeCommentState} {yPosition} {scrollTop} />
 
-				{#if hoveredTabComment}
+				{#if hoveredTabId !== null && hoveredTabId !== activeComment.id}
 					<!-- Connection line for hovered tab comment -->
-					<ConnectionLine
-						state={hoveredTabCommentState}
-						yPosition={yPosition}
-						opacity={0.7}
-						{scrollTop}
-					/>
-				{/if}
-				{#if anyCommentPinned && hoveredHighlightComment}
-					<!-- Connection line for hovered tab comment -->
-					<ConnectionLine
-						state={hoveredHighlightCommentState}
-						yPosition={yPosition}
-						opacity={0.7}
-						{scrollTop}
-					/>
+					<ConnectionLine state={hoveredTabCommentState} {yPosition} opacity={0.7} {scrollTop} />
 				{/if}
 			{/if}
 		{/if}
@@ -224,9 +209,9 @@
 	<button
 		bind:this={clusterRef}
 		class="relative z-10 inline-block"
-		data-comment-badge={selectedComment?.id}
+		data-comment-badge={activeComment?.id}
 		onmouseenter={() => {
-			if (selectCommentState) selectCommentState.isCommentHovered = true;
+			if (activeCommentState) activeCommentState.isCommentHovered = true;
 		}}
 	>
 		<div
