@@ -1,5 +1,9 @@
 <script lang="ts">
-	import { documentStore, type CommentState, type TypedComment } from '$lib/runes/document.svelte.js';
+	import {
+		documentStore,
+		type CommentState,
+		type TypedComment
+	} from '$lib/runes/document.svelte.js';
 	import { SvelteMap } from 'svelte/reactivity';
 	import CommentCard from './CommentCard.svelte';
 	import ConnectionLine from './ConnectionLine.svelte';
@@ -135,7 +139,7 @@
 					{#each comments as c, idx (c.id)}
 						{@const state = commentStates.get(c.id)}
 						<button
-							class="cursor-pointer rounded-t px-2 py-1.5 text-xs font-medium transition-colors
+							class="cursor-pointer rounded-t px-2 py-1.5 text-xs font-medium transition-colors flex flex-row items-center gap-1.5
 							{activeComment === c
 								? 'bg-inset text-text'
 								: 'text-text/50 hover:bg-text/5 hover:text-text/70 hover:animate-pulse'}"
@@ -159,7 +163,6 @@
 							onmouseenter={() => {
 								hoveredTabId = c.id;
 								if (state) state.isCommentHovered = true;
-								
 							}}
 							onmouseleave={() => {
 								hoveredTabId = null;
@@ -167,26 +170,15 @@
 								if (state) state.isCommentHovered = false;
 							}}
 						>
-							{c.user?.username?.slice(0, 10) ?? `Comment ${idx + 1}`}
+							<p>{c.user?.username?.slice(0, 10) ?? `Comment ${idx + 1}`}</p>
+							{#if state?.isPinned}
+								<PinIcon class="text-text h-4 w-4 transition-colors hover:text-red-400" />
+							{:else if hoveredTabId === c.id && c.id === activeComment.id}
+								<PinOffIcon class="hover:text-text h-4 w-4" />
+							{/if}
 						</button>
 					{/each}
 				</div>
-
-				<!-- Pin button -->
-				<button
-					class="text-text/60 hover:bg-text/5 hover:text-text rounded-sm p-1 transition-colors"
-					onclick={(e) => {
-						e.stopPropagation();
-						if (activeCommentState) activeCommentState.isPinned = !activeCommentState.isPinned;
-					}}
-					title={activeCommentState?.isPinned ? 'Unpin comment' : 'Pin comment'}
-				>
-					{#if activeCommentState?.isPinned}
-						<PinIcon class="text-text h-4 w-4 transition-colors hover:text-red-400" />
-					{:else}
-						<PinOffIcon class="hover:text-text h-4 w-4" />
-					{/if}
-				</button>
 			</div>
 		</div>
 		{#if activeComment}
