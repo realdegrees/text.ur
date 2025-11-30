@@ -1,18 +1,4 @@
 /**
- * Format a date string to "13. Sept 2025" format
- */
-export function formatDate(dateString?: string | null): string {
-	if (!dateString) return 'N/A';
-
-	const date = new Date(dateString);
-	const day = date.getDate();
-	const month = date.toLocaleString('en', { month: 'short' });
-	const year = date.getFullYear();
-
-	return `${day}. ${month} ${year}`;
-}
-
-/**
  * Format a date string to include time: "13. Sept 2025, 14:30"
  */
 export function formatDateTime(dateString?: string | null): string {

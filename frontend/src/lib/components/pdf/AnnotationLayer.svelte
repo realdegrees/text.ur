@@ -28,12 +28,8 @@
 		for (let pageNum = 1; pageNum <= documentStore.numPages; pageNum++) {
 			map.set(pageNum, []);
 		}
-
-		console.log(documentStore.comments.withAnnotations);
 		
-		for (const comment of documentStore.comments.withAnnotations) {	
-			console.log("aaaa");
-					
+		for (const comment of documentStore.comments.withAnnotations) {						
 			for (let idx = 0; idx < comment.annotation.boundingBoxes.length; idx++) {
 				const box = comment.annotation.boundingBoxes[idx];
 				const pageNum = box.pageNumber;
@@ -49,9 +45,6 @@
 				]);
 			}
 		}
-		console.log('updating highlights');
-		console.log(map);
-
 		return map;
 	});
 
@@ -63,13 +56,11 @@
 	// Render highlights into the page elements
 	const renderHighlights = () => {
 		if (!viewerContainer) return;
-		console.log('Rendering highlights');
-		console.log(highlightsByPage);
-
 		const isAnyPinned = documentStore.comments.pinned.size > 0;
 
 		// Do not remove all highlights here; we'll reconcile per-page instead.
 		// For each page with highlights
+		
 		for (const [pageNum, highlights] of highlightsByPage) {
 			const pageElement = viewerContainer.querySelector(
 				`[data-page-number="${pageNum}"]`
@@ -91,6 +82,9 @@
 			if (textLayerRect.width === 0 || textLayerRect.height === 0) continue;
 			for (const highlight of highlights) {
 				const { box, annotation, key, comment, state } = highlight;
+
+				const commentState = documentStore.comments.getState(comment.id);
+				if (!commentState) continue;
 
 				const left = box.x * textLayerRect.width;
 				const top = box.y * textLayerRect.height;
@@ -116,7 +110,10 @@
 				}
 
 				const div = document.createElement('div') as HighlightElement;
-				documentStore.comments.addHighlightElement(comment.id, div);
+				commentState.highlightElements = [
+					...(commentState.highlightElements || []),
+					div
+				];
 				div.className = 'annotation-highlight';
 				div.dataset.commentId = String(comment.id);
 				div.dataset.key = key;
@@ -139,10 +136,10 @@
 
 				// Create named listener functions for cleanup
 				const listeners = {
-					mouseenter: () => documentStore.comments.setHighlightHovered(comment.id, true),
-					mouseleave: () => documentStore.comments.setHighlightHovered(comment.id, false),
+					mouseenter: () => commentState.isHighlightHovered = true,
+					mouseleave: () => commentState.isHighlightHovered = false,
 					click: () => {
-						documentStore.comments.setPinned(comment.id, !state?.isPinned);
+						commentState.isPinned = !commentState.isPinned;
 					}
 				};
 
@@ -168,7 +165,12 @@
 						el.removeEventListener('mouseleave', el._listeners.mouseleave);
 						el.removeEventListener('click', el._listeners.click);
 					}
-					documentStore.comments.removeHighlightElement(parseInt(el.dataset.commentId ?? '0'), el);
+					const commentState = documentStore.comments.getState(parseInt(el.dataset.commentId ?? '-1'));
+					if (commentState) {
+						commentState.highlightElements = commentState.highlightElements?.filter(
+							(he) => he !== el
+						);
+					}
 					el.remove();
 				}
 			});
@@ -180,18 +182,10 @@
 	let mutationObserver: MutationObserver | null = null;
 
 	onMount(() => {
-		requestAnimationFrame(() => {
-			renderHighlights();
-		});
+		renderHighlights();
 
 		// Observe text layer size changes to re-render when PDF.js scales
-		textLayerObserver = new ResizeObserver(() => {
-			requestAnimationFrame(() => {
-				requestAnimationFrame(() => {
-					renderHighlights();
-				});
-			});
-		});
+		textLayerObserver = new ResizeObserver(renderHighlights);
 
 		// Watch for text layers being added to the DOM by PDF.js
 		if (viewerContainer) {
@@ -221,11 +215,7 @@
 				});
 
 				// Trigger a render when new text layers are detected
-				requestAnimationFrame(() => {
-					requestAnimationFrame(() => {
-						renderHighlights();
-					});
-				});
+				renderHighlights();
 			});
 
 			mutationObserver.observe(viewerContainer, {
@@ -251,6 +241,7 @@
 		renderHighlights();
 	});
 
+	// TODO see if this is really needed
 	$effect(() => {
 		void documentStore.loadedDocument;
 
@@ -263,7 +254,12 @@
 				el.removeEventListener('click', el._listeners.click);
 			}
 			el.remove();
-			documentStore.comments.removeHighlightElement(parseInt(el.dataset.commentId ?? '0'), el);
+			const commentState = documentStore.comments.getState(parseInt(el.dataset.commentId ?? '-1'));
+			if (commentState) {
+				commentState.highlightElements = commentState.highlightElements?.filter(
+					(he) => he !== el
+				);
+			}
 		});
 	});
 </script>

@@ -1,100 +1,104 @@
 <script lang="ts">
-	import { api } from '$api/client';
-	import { invalidate, invalidateAll } from '$app/navigation';
-	import { LL } from '$i18n/i18n-svelte';
-	import Field from '$lib/components/advancedInput.svelte';
-	import Loading from '~icons/svg-spinners/90-ring-with-bg';
+	import TabContainer from '$lib/components/TabContainer.svelte';
+	import LoginForm from '$lib/components/LoginForm.svelte';
 	import type { PageData } from './$types';
-	import { page } from '$app/state';
-	import type { UserCreate } from '$api/types';
+	import AnonymousRegistrationForm from '$lib/components/AnonymousRegistrationForm.svelte';
+	import { formatDateTime } from '$lib/util/dateFormat';
+	import { goto, invalidateAll } from '$app/navigation';
+	import { api } from '$api/client';
+	import LL from '$i18n/i18n-svelte.js';
+	import Badge from '$lib/components/badge.svelte';
+	import { get } from 'svelte/store';
 
 	let { data }: { data: PageData } = $props();
 
-	let username = $state('');
-	let firstName = $state('');
-	let lastName = $state('');
-	let isLoading = $state(false);
-	let error = $state('');
+	/**
+	 * Return a localized label for a permission key.
+	 */
+	function permissionLabel(permissionKey: string): string {
+		const ll = get(LL) as any;
+		const permissionsMap = ll.permissions as Record<string, () => string> | undefined;
+		return permissionsMap?.[permissionKey]?.() || permissionKey;
+	}
 
-	async function handleAnonymousRegister() {
-		if (!username.trim()) {
-			error = $LL.sharelink.errors.usernameRequired();
-			return;
-		}
-
-		isLoading = true;
-		error = '';
-
-		try {
-			const response = await api.post('/register', {
-				token: data.token,
-				username: username.trim(),
-				first_name: firstName.trim() || undefined,
-				last_name: lastName.trim() || undefined
-			} satisfies UserCreate);
-
-			if (!response.success) {
-				error = response.error.detail || $LL.sharelink.errors.registerFailed();
-				return;
-			}
-
-			// Now the api login has attached auth cookies so we can invalidate and let the page ssr handle the group join
-			invalidateAll();
-		} catch (err: any) {
-			error = err.detail || $LL.sharelink.errors.registerFailed();
-		} finally {
-			isLoading = false;
+	async function joinGroup() {
+		const joinResponse = await api.post(`/sharelinks/${data.shareLink.token}/use`, {}, { fetch });
+		if (joinResponse.success) {
+			goto(`/dashboard/groups/${data.shareLink.group.id}/documents`);
 		}
 	}
 </script>
 
-<div class="flex h-full w-full items-center justify-center p-4">
-	<div class="w-full max-w-md overflow-hidden rounded-lg bg-inset p-8 shadow-lg">
-		<h1 class="mb-2 text-center text-3xl font-bold text-text">{$LL.sharelink.title()}</h1>
-		<p class="text-muted mb-6 text-center text-sm">
-			{$LL.sharelink.description()}
-		</p>
+<div class="mt-20 flex h-full w-full flex-col items-center gap-6 p-6">
+	<div class="flex w-full max-w-2xl flex-col gap-3">
+		<div class="bg-inset w-full rounded-lg p-6 shadow-md">
+			<div class="mb-4">
+				<h1 class="text-3xl font-bold">You have been invited to {data.shareLink.group.name}</h1>
+				<p class="text-muted text-sm">Members: {data.shareLink.group.member_count}</p>
+				<p class="text-muted text-sm">Owner: {data.shareLink.group.owner?.username}</p>
+				<p class="text-muted text-sm">Created: {formatDateTime(data.shareLink.group.created_at)}</p>
 
-		{#if error}
-			<div
-				class="mb-4 rounded border border-red-300 bg-red-100 p-3 text-red-700 dark:border-red-700 dark:bg-red-900/30 dark:text-red-300"
-			>
-				{error}
+				<p>
+					Your membership will be bound to this invite link. If it is revoked or expires you will be
+					removed from the group.
+				</p>
+			</div>
+		</div>
+
+		{#if data.shareLink.expires_at || data.shareLink.permissions.length > 0 || (!data.shareLink.allow_anonymous_access && !data.sessionUser)}
+			<div class="bg-inset w-full rounded-lg p-6 shadow-md">
+				<h2 class="text-xl font-semibold">Sharelink Details</h2>
+				{#if data.shareLink.expires_at}
+					<p class="text-sm">Expires At: {formatDateTime(data.shareLink.expires_at)}</p>
+				{/if}
+				{#if data.shareLink.permissions.length > 0}
+					<p class="mb-2 text-sm">You will automatically receive these permissions:</p>
+					<div class="flex flex-wrap gap-1">
+						{#each data.shareLink.permissions as perm (perm)}
+							<Badge item={perm} label={permissionLabel(perm)} showRemove={false} />
+						{/each}
+					</div>
+					<p class="mt-2 text-xs">
+						Invite link permissions are continuously synced with your membership permissions.
+					</p>
+				{/if}
+				{#if !data.shareLink.allow_anonymous_access && !data.sessionUser}
+					<p class="text-sm">This invite link requires an account.</p>
+				{/if}
 			</div>
 		{/if}
 
-		<form
-			onsubmit={(e) => {
-				e.preventDefault();
-				handleAnonymousRegister();
-			}}
-			class="flex flex-col gap-4"
-		>
-			<Field name="username" label={$LL.username()} bind:value={username} required />
-			<Field name="firstName" label={$LL.firstName()} bind:value={firstName} />
-			<Field name="lastName" label={$LL.lastName()} bind:value={lastName} />
-
+		{#if !data.sessionUser}
+			<div class="bg-inset w-full rounded-lg p-6 shadow-md">
+				<TabContainer
+					tabs={[
+						...(data.shareLink.allow_anonymous_access
+							? [{ label: 'Guest', snippet: AnonymousRegistration }]
+							: []),
+						{ label: 'Login', snippet: Login }
+					]}
+				/>
+				<a href="/login" class="block text-center text-xs text-blue-500/80"
+					>If you do not have an account you can register here and then visit this link again.</a
+				>
+			</div>
+		{:else}
 			<button
-				type="submit"
-				disabled={isLoading}
-				class="w-full rounded bg-primary px-4 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:bg-gray-400 dark:disabled:bg-gray-600"
+				class="bg-primary h-8 w-full cursor-pointer rounded"
+				onclick={joinGroup}
 			>
-				{#if isLoading}
-					<Loading class="m-auto" />
-				{:else}
-					{$LL.continue()}
-				{/if}
+				Join
 			</button>
-		</form>
-
-		<div class="mt-4 text-center">
-			<a
-				href="/login?redirect=/sharelink/{data.token}"
-				class="text-primary underline transition-colors hover:text-secondary"
-				onclick={() => invalidate(page.url.pathname)}
-			>
-				{$LL.sharelink.alreadyHaveAccount()}
-			</a>
-		</div>
+		{/if}
 	</div>
 </div>
+
+{#snippet Login()}
+	<LoginForm onSuccess={() => invalidateAll()} />
+{/snippet}
+{#snippet AnonymousRegistration()}
+	<AnonymousRegistrationForm onSuccess={() => {
+		invalidateAll();
+		joinGroup();
+	}} token={data.shareLink.token} />
+{/snippet}

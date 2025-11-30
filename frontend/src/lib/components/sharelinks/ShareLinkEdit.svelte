@@ -69,7 +69,7 @@
 	<button
 		type="button"
 		onclick={onSave}
-		class="flex items-center justify-center gap-2 rounded bg-primary px-4 py-2 text-background transition hover:bg-primary/80"
+		class="flex items-center justify-center gap-2 rounded bg-primary px-4 py-2 text-text transition hover:bg-primary/80"
 	>
 		<SaveIcon class="h-5 w-5" />
 		<span>Save</span>

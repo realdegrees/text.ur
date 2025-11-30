@@ -1,14 +1,14 @@
 <script lang="ts">
-	import { documentStore, type TypedComment } from '$lib/runes/document.svelte';
+	import { documentStore, type CommentState } from '$lib/runes/document.svelte';
 
 	interface Props {
-		comment: TypedComment | null;
+		state?: CommentState;
 		opacity?: number;
 		yPosition: number;
 		scrollTop?: number;
 	}
 
-	let { comment, opacity = 1, yPosition, scrollTop }: Props = $props();
+	let { state, opacity = 1, yPosition, scrollTop }: Props = $props();
 
 	interface LineCoordinates {
 		startX: number;
@@ -17,17 +17,20 @@
 		endY: number;
 	}
 
+	let lineCoords = $derived.by<LineCoordinates | null>(() => {
+		void documentStore.documentScale;
+		void documentStore.loadedDocument;
+		void yPosition;
+		void scrollTop;
+		void state;
+		void opacity;
+		void state;
 
-
-	const calculateLineCoordinates = (): LineCoordinates | null => {
 		// Find all highlight elements for this comment
-		const state = documentStore.comments.getState(comment?.id ?? -1);
 		const highlightEls = state?.highlightElements;
 		const sidebarRect = documentStore.commentSidebarRef?.getBoundingClientRect();
 
 		if (!highlightEls || highlightEls.length === 0 || !sidebarRect) {
-			console.log('aaaa');
-
 			return null;
 		}
 
@@ -56,20 +59,7 @@
 		const startX = clusterLeft + COMMENT_OFFSET;
 		const startY = clusterTop + 36; // ~40px from top is where quote area is
 
-		console.log(`Line from (${startX}, ${startY}) to (${endX}, ${endY})`);
-
 		return { startX, startY, endX, endY };
-	};
-
-	let lineCoords = $derived.by<LineCoordinates | null>(() => {
-		void documentStore.documentScale;
-		void documentStore.loadedDocument;
-		void yPosition;
-		void scrollTop;
-		// void comment;
-		void opacity;
-
-		return calculateLineCoordinates();
 	});
 </script>
 

@@ -189,16 +189,14 @@
 			};
 			
 			const id = await documentStore.comments.create({ annotation, visibility: 'public' });
-
 			// Clear selection after creating
 			window.getSelection()?.removeAllRanges();
 						
 			if (!id) return;
-
+			const state = documentStore.comments.getState(id);
+			
 			// Pin the new comment and trigger edit mode
-			documentStore.comments.setPinned(id, true);
-			documentStore.comments.setEditing(id, true);
-
+			state!.isEditing = true;
 		} finally {
 			isCreating = false;
 		}

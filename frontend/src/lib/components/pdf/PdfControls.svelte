@@ -36,7 +36,7 @@
 		onNextPage
 	}: Props = $props();
 
-	let isExpanded = $state(false);
+	let isExpanded = $state(true);
 
 	// Check if filters should be disabled (restricted mode without view_restricted_comments permission)
 	let isRestrictedWithoutPermission = $derived(

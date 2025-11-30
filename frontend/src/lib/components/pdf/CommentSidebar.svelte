@@ -4,6 +4,7 @@
 	import { onMount } from 'svelte';
 	import { CLUSTER_THRESHOLD_PX, BADGE_HEIGHT_PX } from './constants';
 	import type { Annotation } from '$types/pdf';
+	import { SvelteMap } from 'svelte/reactivity';
 
 	interface Props {
 		viewerContainer: HTMLDivElement | null;
@@ -57,14 +58,13 @@
 	interface CommentClusterData {
 		comments: TypedComment[];
 		yPosition: number;
-		adjustedY?: number; // Adjusted Y position to prevent overlaps with expanded cards
 	}
 
 	// Update tick triggered by text layer resizes
 	let clustersUpdateTick = $state(0);
 
 	// Track actual rendered heights of clusters (key is comment IDs joined)
-	let clusterHeights = $state(new Map<string, number>());
+	let clusterHeights = new SvelteMap<string, number>();
 
 	// Helper to check if any comment in a cluster is expanded
 	const isClusterExpanded = (comments: TypedComment[]): boolean => {
@@ -125,16 +125,11 @@
 
 	// Adjust cluster positions to prevent overlaps with expanded cards
 	let clusters = $derived.by((): CommentClusterData[] => {
-		const adjusted = baseClusters.map((cluster) => ({
-			...cluster,
-			adjustedY: cluster.yPosition
-		}));
-
 		const GAP_PX = 8; // Gap between clusters
 
 		// Iteratively adjust positions from top to bottom
-		for (let i = 0; i < adjusted.length; i++) {
-			const current = adjusted[i];
+		for (let i = 0; i < baseClusters.length; i++) {
+			const current = baseClusters[i];
 			const currentKey = current.comments.map((c) => c.id).join('-');
 
 			// Get the actual rendered height, or use badge height as fallback
@@ -143,20 +138,20 @@
 				? clusterHeights.get(currentKey) || BADGE_HEIGHT_PX
 				: BADGE_HEIGHT_PX;
 
-			const currentBottom = current.adjustedY! + currentHeight;
+			const currentBottom = current.yPosition + currentHeight;
 
 			// Check all clusters below and push them down if they overlap
-			for (let j = i + 1; j < adjusted.length; j++) {
-				const below = adjusted[j];
+			for (let j = i + 1; j < baseClusters.length; j++) {
+				const below = baseClusters[j];
 
 				// If current cluster's bottom overlaps with the cluster below, push it down
-				if (currentBottom + GAP_PX > below.adjustedY!) {
-					below.adjustedY = currentBottom + GAP_PX;
+				if (currentBottom + GAP_PX > below.yPosition) {
+					below.yPosition = currentBottom + GAP_PX;
 				}
 			}
 		}
 
-		return adjusted;
+		return baseClusters;
 	});
 
 	// Watch for text layer size changes to recalculate cluster positions
@@ -168,11 +163,7 @@
 		// Use ResizeObserver to detect when PDF.js finishes scaling text layers
 		// Wait 2 RAF to match AnnotationLayer timing
 		const resizeObserver = new ResizeObserver(() => {
-			requestAnimationFrame(() => {
-				requestAnimationFrame(() => {
-					clustersUpdateTick++;
-				});
-			});
+			clustersUpdateTick++;
 		});
 
 		// Observe all existing text layers
@@ -206,10 +197,10 @@
 <div class="relative h-full" bind:this={containerElement}>
 	{#each clusters as cluster (cluster.comments.map((c) => c.id).join('-'))}
 		{@const clusterKey = cluster.comments.map((c) => c.id).join('-')}
-		<div class="absolute right-3 left-3" style="top: {cluster.adjustedY ?? cluster.yPosition}px;">
+		<div class="absolute right-3 left-3" style="top: {cluster.yPosition}px;">
 			<CommentCluster
 				comments={cluster.comments}
-				adjustedY={cluster.adjustedY ?? cluster.yPosition}
+				yPosition={cluster.yPosition}
 				{scrollTop}
 				onHeightChange={(height: number) => {
 					clusterHeights.set(clusterKey, height);

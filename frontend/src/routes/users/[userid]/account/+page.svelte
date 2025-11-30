@@ -11,8 +11,6 @@
 
 	let { data } = $props();
 
-	console.log(data);
-
 	// User info state - use $state for editable fields, initialized from props
 	let username = $derived(data.sessionUser.username);
 	let firstName = $derived(data.sessionUser.first_name ?? '');
@@ -131,9 +129,9 @@
 
 <div class="flex h-full w-full flex-col items-center justify-start">
 	<div class="flex h-full w-[30%] flex-col items-start justify-start gap-6 p-6">
-		<div class="w-full rounded-lg bg-inset p-6 shadow-inner shadow-black/50">
+		<div class="bg-inset w-full rounded-lg p-6 shadow-inner shadow-black/50">
 			<div class="flex items-center justify-between">
-				<h1 class="text-3xl font-bold text-text">{$LL.userSettings.title()}</h1>
+				<h1 class="text-text text-3xl font-bold">{$LL.userSettings.title()}</h1>
 
 				<ConfirmButton onConfirm={handleLogoutAllDevices}>
 					{#snippet button(isOpen)}
@@ -143,13 +141,17 @@
 								: 'border-red-500/50 bg-red-500/10 text-red-600 hover:bg-red-500/20 dark:text-red-400'}"
 						>
 							<LogoutIcon class="h-4 w-4" />
-							{#if !isOpen}<p class="whitespace-nowrap">Logout All Devices</p>{/if}
+							{#if !isOpen}
+							<p class="whitespace-nowrap">
+								{data.sessionUser.is_guest ? 'Logout Guest Session' : 'Logout All Devices'}
+							</p>
+							{/if}
 						</div>
 					{/snippet}
 
 					{#snippet slideout()}
-						<div class="bg-red-500/10 px-3 py-2 whitespace-nowrap text-red-600 dark:text-red-400">
-							Confirm
+						<div class="whitespace-nowrap bg-red-500/10 px-3 py-2 text-red-600 dark:text-red-400">
+							{data.sessionUser.is_guest ? 'This will delete your guest account!' : 'Confirm'}
 						</div>
 					{/snippet}
 				</ConfirmButton>
@@ -184,8 +186,8 @@
 		{/if}
 
 		{#if data.sessionUser.is_guest && showUpgradeForm}
-			<div class="w-full rounded-lg bg-inset p-6 shadow-inner shadow-black/50">
-				<h2 class="mb-4 text-xl font-semibold text-text">
+			<div class="bg-inset w-full rounded-lg p-6 shadow-inner shadow-black/50">
+				<h2 class="text-text mb-4 text-xl font-semibold">
 					{$LL.userSettings.upgradeAccount.title()}
 				</h2>
 				<p class="text-muted mb-4 text-sm">
@@ -223,7 +225,7 @@
 					<button
 						type="submit"
 						disabled={isUpgrading}
-						class="w-full rounded bg-primary px-4 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:bg-gray-400 dark:disabled:bg-gray-600"
+						class="bg-primary w-full rounded px-4 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:bg-gray-400 dark:disabled:bg-gray-600"
 					>
 						{#if isUpgrading}
 							<Loading class="m-auto" />
@@ -243,8 +245,8 @@
 			class="flex w-full flex-col gap-6"
 		>
 			<!-- Profile Information Card -->
-			<div class="w-full rounded-lg bg-inset p-6 shadow-inner shadow-black/50">
-				<h2 class="mb-4 text-xl font-semibold text-text">
+			<div class="bg-inset w-full rounded-lg p-6 shadow-inner shadow-black/50">
+				<h2 class="text-text mb-4 text-xl font-semibold">
 					{$LL.userSettings.profile.title()}
 				</h2>
 
@@ -270,8 +272,8 @@
 
 			<!-- Email Card (for non-guest users) -->
 			{#if !data.sessionUser.is_guest && data.sessionUser.email}
-				<div class="w-full rounded-lg bg-inset p-6 shadow-inner shadow-black/50">
-					<h2 class="mb-4 text-xl font-semibold text-text">
+				<div class="bg-inset w-full rounded-lg p-6 shadow-inner shadow-black/50">
+					<h2 class="text-text mb-4 text-xl font-semibold">
 						{$LL.userSettings.profile.emailLabel()}
 					</h2>
 					<p class="text-muted text-sm">{(data.sessionUser as UserPrivate).email}</p>
@@ -280,8 +282,8 @@
 
 			<!-- Password Change Card -->
 			{#if !data.sessionUser.is_guest}
-				<div class="w-full rounded-lg bg-inset p-6 shadow-inner shadow-black/50">
-					<h2 class="mb-4 text-xl font-semibold text-text">
+				<div class="bg-inset w-full rounded-lg p-6 shadow-inner shadow-black/50">
+					<h2 class="text-text mb-4 text-xl font-semibold">
 						{$LL.userSettings.changePassword.title()}
 					</h2>
 
@@ -314,7 +316,7 @@
 			<button
 				type="submit"
 				disabled={isUpdating}
-				class="w-full rounded bg-primary px-4 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:bg-gray-400 dark:disabled:bg-gray-600"
+				class="bg-primary w-full rounded px-4 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:bg-gray-400 dark:disabled:bg-gray-600"
 			>
 				{#if isUpdating}
 					<Loading class="m-auto" />

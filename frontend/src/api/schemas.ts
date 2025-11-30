@@ -179,11 +179,10 @@ export const membershipPermissionUpdateSchema = z.object({
     permissions: z.array(permissionSchema)
 });
 
-export const shareLinkReadPublicSchema = z.object({
+export const shareLinkReadNoTokenSchema = z.object({
     id: z.number(),
     permissions: z.array(permissionSchema),
     expires_at: z.string().optional().nullable(),
-    label: z.string().optional().nullable(),
     allow_anonymous_access: z.boolean(),
     group_id: z.string()
 });
@@ -237,6 +236,15 @@ export const shareLinkReadSchema = z.object({
     author: userReadSchema.nullable(),
     group_id: z.string(),
     num_memberships: z.number()
+});
+
+export const shareLinkReadFromTokenSchema = z.object({
+    id: z.number(),
+    permissions: z.array(permissionSchema),
+    expires_at: z.string().optional().nullable(),
+    allow_anonymous_access: z.boolean(),
+    group: groupReadSchema,
+    token: z.string()
 });
 
 export const shareLinkUpdateSchema = z.object({
@@ -338,7 +346,7 @@ export const membershipReadSchema = z.object({
     group: groupReadSchema,
     is_owner: z.boolean(),
     accepted: z.boolean(),
-    share_link: shareLinkReadPublicSchema.nullable()
+    share_link: shareLinkReadNoTokenSchema.nullable()
 });
 
 export const paginatedBaseSchema = z.object({

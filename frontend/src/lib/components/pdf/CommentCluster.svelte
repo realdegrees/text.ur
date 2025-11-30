@@ -13,20 +13,22 @@
 
 	interface Props {
 		comments: TypedComment[];
-		adjustedY: number;
+		yPosition: number;
 		scrollTop?: number;
 		onHeightChange?: (height: number) => void;
 	}
 
 	$effect(() => {
-		const pinnedComments = Array.from(states.entries()).filter(([, state]) => state?.isPinned).map(([id, state]) => ({id, ...state}));
+		const pinnedComments = Array.from(commentStates.values()).filter(
+			(state): state is CommentState => !!state?.isPinned
+		);
 		if (pinnedComments.length > 1) {
 			// Ensure only one comment is pinned at a time in this cluster
 			// If one of the pinnedComments matches the highlight hovered comment (prio1) or hovered tab comment (prio2), keep that one pinned
 			const highlightHovered = pinnedComments.find((c) => c?.isHighlightHovered);
 			const tabHovered = pinnedComments.find((c) => c?.isCommentHovered);
 
-			let toKeepPinned: CommentState;
+			let toKeepPinned: CommentState | undefined;
 			if (highlightHovered && pinnedComments.includes(highlightHovered)) {
 				toKeepPinned = highlightHovered;
 			} else if (tabHovered && pinnedComments.includes(tabHovered)) {
@@ -37,38 +39,45 @@
 
 			// Unpin all except toKeepPinned
 			pinnedComments.forEach((c) => {
-				if (c !== toKeepPinned) {
-					documentStore.comments.setPinned(c.id, false);
-				} else {
+				if (c !== toKeepPinned && c.isPinned) {
+					c.isPinned = false;
+				} else if (c === toKeepPinned) {
 					selectedCommentId = c.id;
 				}
 			});
 		}
 	});
 
-	let { comments, adjustedY, scrollTop, onHeightChange }: Props = $props();
+	let { comments, yPosition, scrollTop, onHeightChange }: Props = $props();
 
-	let states = $derived.by(() =>
-		new SvelteMap(comments.map((c) => ([c.id, documentStore.comments.getState(c.id)])))
+	let commentStates = $derived.by(
+		() => new SvelteMap(comments.map((c) => [c.id, documentStore.comments.getState(c.id)]))
 	);
 
 	// Track which comment is selected in this group (defaults to first)
 	let selectedCommentId = $state<number | null>(null);
 	let selectedComment: TypedComment = $derived(
 		comments.find((c) => c.id === selectedCommentId) ??
-			comments.find((c) => states.get(c.id)?.isPinned) ??
+			comments.find((c) => commentStates.get(c.id)?.isPinned) ??
 			comments[0]
 	);
+	let selectCommentState = $derived.by(() => commentStates.get(selectedComment.id));
 	let hoveredTabComment: TypedComment | null = $state(null);
+	let hoveredTabCommentState = $derived.by(() => commentStates.get(hoveredTabComment?.id ?? -1));
 	let hoveredHighlightComment: TypedComment | null = $derived.by(() => {
-		return comments.find((c) => states.get(c.id)?.isHighlightHovered) ?? null;
+		return comments.find((c) => commentStates.get(c.id)?.isHighlightHovered) ?? null;
 	});
+	let hoveredHighlightCommentState = $derived.by(() => commentStates.get(hoveredHighlightComment?.id ?? -1));
 
 	// ! This only checks the top level comments, replies are not included
-	let anyCommentHovered = $derived(!!comments.find((c) => states.get(c.id)?.isCommentHovered));
-	let anyHighlightHovered = $derived(!!comments.find((c) => states.get(c.id)?.isHighlightHovered));
-	let anyCommentPinned = $derived(!!comments.find((c) => states.get(c.id)?.isPinned));
-	let anyCommentEditing = $derived(!!comments.find((c) => states.get(c.id)?.isEditing));
+	let anyCommentHovered = $derived(
+		!!comments.find((c) => commentStates.get(c.id)?.isCommentHovered)
+	);
+	let anyHighlightHovered = $derived(
+		!!comments.find((c) => commentStates.get(c.id)?.isHighlightHovered)
+	);
+	let anyCommentPinned = $derived(!!comments.find((c) => commentStates.get(c.id)?.isPinned));
+	let anyCommentEditing = $derived(!!comments.find((c) => commentStates.get(c.id)?.isEditing));
 
 	// Show expanded card when badge is hovered, highlight is hovered, comment is pinned, or input is active
 	let showCard = $derived(
@@ -112,10 +121,12 @@
 		data-comment-badge={selectedComment?.id}
 		data-badge-active="true"
 		onmouseleave={() => {
-			documentStore.comments.setCommentHovered(selectedComment.id, false);
+			const state = commentStates.get(selectedComment.id);
+			if (state) state.isCommentHovered = false;
 		}}
 		onmouseenter={() => {
-			documentStore.comments.setCommentHovered(selectedComment.id, true);
+			const state = commentStates.get(selectedComment.id);
+			if (state) state.isCommentHovered = true;
 		}}
 	>
 		<!-- Cluster header: tabs for multiple comments or single author header -->
@@ -123,28 +134,35 @@
 			<div class="border-text/10 pb-0! flex items-center justify-between gap-1.5 border-b">
 				<div class="flex gap-1.5">
 					{#each comments as c, idx (c.id)}
+						{@const state = commentStates.get(c.id)}
 						<button
-							class="rounded-t px-2 py-1.5 text-xs font-medium transition-colors hover:animate-pulse
-							{selectedComment === c ? 'bg-inset text-text' : 'text-text/50 hover:bg-text/5 hover:text-text/70'}"
+							class="rounded-t px-2 py-1.5 text-xs font-medium transition-colors cursor-pointer
+							{selectedComment === c ? 'bg-inset text-text' : 'text-text/50 hover:bg-text/5 hover:text-text/70 hover:animate-pulse'}"
 							onclick={(e) => {
 								e.stopPropagation();
-								if (selectedComment === c) return;
-								if (documentStore.comments.getState(selectedComment.id)?.isPinned) {
-									documentStore.comments.setPinned(c.id, true);
+								if (selectedComment === c && state) {
+									state.isPinned = !state.isPinned;
+									return;
 								}
-								if (documentStore.comments.getState(selectedComment.id)?.isCommentHovered) {
-									documentStore.comments.setCommentHovered(selectedComment.id, false);
+								if (state) {
+									state.isCommentHovered = true;
+									state.isPinned = selectCommentState?.isPinned;
 								}
+								if (selectCommentState) {
+									selectCommentState.isPinned = false;
+									selectCommentState.isCommentHovered = false;
+								}
+
 								selectedCommentId = c.id;
 							}}
 							onmouseenter={() => {
 								if (selectedComment === c) return;
-								documentStore.comments.setCommentHovered(c.id, true);
+								if (state) state.isCommentHovered = true;
 								hoveredTabComment = c;
 							}}
 							onmouseleave={() => {
 								if (selectedComment === c) return;
-								documentStore.comments.setCommentHovered(c.id, false);
+								if (state) state.isCommentHovered = false;
 								hoveredTabComment = null;
 							}}
 						>
@@ -158,14 +176,16 @@
 					class="text-text/60 hover:bg-text/5 hover:text-text rounded-sm p-1 transition-colors"
 					onclick={(e) => {
 						e.stopPropagation();
-						documentStore.comments.setPinned(selectedComment.id, !documentStore.comments.getState(selectedComment.id)?.isPinned);
+						if (selectCommentState) selectCommentState.isPinned = !selectCommentState.isPinned;
 					}}
-					title={documentStore.comments.getState(selectedComment.id)?.isPinned ? 'Unpin comment' : 'Pin comment'}
+					title={selectCommentState?.isPinned
+						? 'Unpin comment'
+						: 'Pin comment'}
 				>
-					{#if documentStore.comments.getState(selectedComment.id)?.isPinned}
+					{#if selectCommentState?.isPinned}
 						<PinIcon class="text-text h-4 w-4 transition-colors hover:text-red-400" />
 					{:else}
-						<PinOffIcon class="hover:text-text h-4 w-4 hover:animate-bounce" />
+						<PinOffIcon class="hover:text-text h-4 w-4" />
 					{/if}
 				</button>
 			</div>
@@ -176,13 +196,13 @@
 			{#if (anyCommentHovered && !anyHighlightHovered) || anyCommentPinned}
 				<!-- Connection line for this card -->
 
-				<ConnectionLine comment={selectedComment} yPosition={adjustedY} {scrollTop} />
+				<ConnectionLine state={selectCommentState} yPosition={yPosition} {scrollTop} />
 
 				{#if hoveredTabComment}
 					<!-- Connection line for hovered tab comment -->
 					<ConnectionLine
-						comment={hoveredTabComment}
-						yPosition={adjustedY}
+						state={hoveredTabCommentState}
+						yPosition={yPosition}
 						opacity={0.7}
 						{scrollTop}
 					/>
@@ -190,8 +210,8 @@
 				{#if anyCommentPinned && hoveredHighlightComment}
 					<!-- Connection line for hovered tab comment -->
 					<ConnectionLine
-						comment={hoveredHighlightComment}
-						yPosition={adjustedY}
+						state={hoveredHighlightCommentState}
+						yPosition={yPosition}
 						opacity={0.7}
 						{scrollTop}
 					/>
@@ -206,7 +226,7 @@
 		class="relative z-10 inline-block"
 		data-comment-badge={selectedComment?.id}
 		onmouseenter={() => {
-			documentStore.comments.setCommentHovered(selectedComment.id, true);
+			if (selectCommentState) selectCommentState.isCommentHovered = true;
 		}}
 	>
 		<div

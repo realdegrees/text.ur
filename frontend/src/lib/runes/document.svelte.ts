@@ -1,26 +1,25 @@
- 
 import { api } from '$api/client';
 import type { CommentCreate, CommentEvent, CommentRead, DocumentRead, ViewMode } from '$api/types';
 import type { Paginated } from '$api/pagination';
 import { notification } from '$lib/stores/notificationStore';
 import { annotationSchema, type Annotation } from '$types/pdf';
 import { SvelteMap } from 'svelte/reactivity';
-import { invalidate } from '$app/navigation';
 
 type AuthorFilterState = 'include' | 'exclude';
 export type TypedComment = Omit<CommentRead, 'annotation'> & { annotation: Annotation | null };
 
 export interface CommentState {
+	id: number;
 	replies?: number[];
 	// Interaction state flags
 	isCommentHovered?: boolean; // Mouse over the comment
 	isHighlightHovered?: boolean; // Mouse over the PDF highlight
 	isPinned?: boolean; // Clicked to stay open
 	isEditing?: boolean; // In edit mode
-	editInputContent?: string; // Current content in edit input
-	replyInputContent?: string; // Current content in reply input
+	editInputContent: string; // Current content in edit input
+	replyInputContent: string; // Current content in reply input
 	// UI state
-	isRepliesCollapsed?: boolean; // Replies section is collapsed
+	repliesExpanded?: boolean; // Replies section is collapsed
 	showReplyInput?: boolean; // Reply input box is shown
 	// Element Refs
 	highlightElements?: HTMLElement[]; // Associated highlight elements in the PDF
@@ -31,9 +30,7 @@ const createDocumentStore = () => {
 
 	// Resets the store and loads root comments for a document
 	const setRootComments = (rootComments: CommentRead[]) => {
-		console.log("rootComments");
-		console.log(rootComments);
-		
+		// Add/update comments
 		rootComments.forEach((c) => {
 			const annotationParsed = annotationSchema.safeParse(c.annotation);
 			const cachedComment: TypedComment = {
@@ -41,6 +38,25 @@ const createDocumentStore = () => {
 				annotation: annotationParsed.success ? annotationParsed.data : null
 			};
 			_comments.set(cachedComment.id, cachedComment);
+
+			// Ensure commentState exists for this comment
+			if (!commentStates.has(cachedComment.id)) {
+				const newState = $state<CommentState>({
+					id: cachedComment.id,
+					replies: [],
+					editInputContent: cachedComment.content ?? '',
+					replyInputContent: ''
+				});
+				commentStates.set(cachedComment.id, newState);				
+			}
+		});
+
+		// Remove states that no longer exist
+		const commentKeys = new Set(_comments.keys());
+		Array.from(commentStates.keys()).forEach((commentId) => {
+			if (!commentKeys.has(commentId)) {
+				commentStates.delete(commentId);
+			}
 		});
 	};
 
@@ -66,7 +82,7 @@ const createDocumentStore = () => {
 	let scrollContainerRef: HTMLElement | null = $state<HTMLElement | null>(null);
 	let commentSidebarRef: HTMLDivElement | null = $state<HTMLDivElement | null>(null);
 
-	const filteredComments = $derived.by((): SvelteMap<number, TypedComment> => {		
+	const filteredComments = $derived.by((): SvelteMap<number, TypedComment> => {
 		void _comments; // Ensure _comments is tracked as a dependency
 
 		// Build an array of comment values from the internal SvelteMap for array filtering
@@ -83,22 +99,28 @@ const createDocumentStore = () => {
 
 		// If there are include filters, show only those authors. Otherwise, if exclude filters exist, hide those authors.
 		if (included.size > 0) {
-			filteredArray = filteredArray.filter((c: TypedComment) => !!c.user?.id && included.has(c.user.id));
+			filteredArray = filteredArray.filter(
+				(c: TypedComment) => !!c.user?.id && included.has(c.user.id)
+			);
 		} else if (excluded.size > 0) {
-			filteredArray = filteredArray.filter((c: TypedComment) => !(c.user?.id && excluded.has(c.user.id)));
+			filteredArray = filteredArray.filter(
+				(c: TypedComment) => !(c.user?.id && excluded.has(c.user.id))
+			);
 		}
 
 		// Return a SvelteMap constructed from the filtered array
-		const filteredMap = new SvelteMap<number, TypedComment>(filteredArray.map((c) => [c.id, c]));		
+		const filteredMap = new SvelteMap<number, TypedComment>(filteredArray.map((c) => [c.id, c]));
 		return filteredMap;
 	});
 
 	const commentsWithAnnotation = $derived.by((): (TypedComment & { annotation: Annotation })[] => {
-		return Array.from(filteredComments.values()).filter((c): c is TypedComment & { annotation: Annotation } => !!c.annotation);
+		return Array.from(filteredComments.values()).filter(
+			(c): c is TypedComment & { annotation: Annotation } => !!c.annotation
+		);
 	});
 
 	// Methods to update local comment data without API calls (on events)
-	const commentsLocal = $derived({
+	const commentsLocal = $derived.by(() => ({
 		update: (existing: TypedComment) => {
 			/** Update an existing comment in the local map. */
 			const existingComment: TypedComment | undefined = _comments.get(existing.id);
@@ -122,16 +144,22 @@ const createDocumentStore = () => {
 			}
 
 			// Increment num_replies in parent comment
-			const parentComment: TypedComment | undefined = data.parent_id ? _comments.get(data.parent_id) : undefined;
+			const parentComment: TypedComment | undefined = data.parent_id
+				? _comments.get(data.parent_id)
+				: undefined;
 			if (parentComment) {
 				parentComment.num_replies = (parentComment.num_replies || 0) + 1;
 			}
 
 			// Add new comment to local comments map and add a state entry
 			_comments.set(data.id, data);
-			commentStates.set(data.id, {
-				replies: []
+			const newState = $state<CommentState>({
+				id: data.id,
+				replies: [],
+				editInputContent: data.content ?? '',
+				replyInputContent: ''
 			});
+			commentStates.set(data.id, newState);
 		},
 		delete: (commentId: number) => {
 			/** Delete a comment and its replies from the local store. */
@@ -145,7 +173,9 @@ const createDocumentStore = () => {
 
 			// Remove reply reference in parent comment state
 			const parentCommentState = commentStates.get(commentToDelete?.parent_id || -1);
-			const parentComment: TypedComment | undefined = commentToDelete?.parent_id ? _comments.get(commentToDelete.parent_id) : undefined;
+			const parentComment: TypedComment | undefined = commentToDelete?.parent_id
+				? _comments.get(commentToDelete.parent_id)
+				: undefined;
 			if (parentCommentState && !!parentCommentState.replies?.length) {
 				commentStates.set(commentToDelete?.parent_id || -1, {
 					...parentCommentState,
@@ -162,87 +192,20 @@ const createDocumentStore = () => {
 			commentStates.delete(commentId);
 			_comments.delete(commentId);
 		}
-	});
+	}));
 
-	const comments = $derived({
-		addHighlightElement: (commentId: number, element: HTMLElement) =>
-			commentStates.set(commentId, {
-				...(commentStates.get(commentId) || {}),
-				highlightElements: [...(commentStates.get(commentId)?.highlightElements || []), element]
-			}),
-		removeHighlightElement: (commentId: number, element: HTMLElement) => {
-			const currentElements = commentStates.get(commentId)?.highlightElements || [];
-			commentStates.set(commentId, {
-				...(commentStates.get(commentId) || {}),
-				highlightElements: currentElements.filter((el) => el !== element)
-			});
-		},
-		setHighlightHovered: (commentId: number, hovered: boolean) => {
-			// TODO maybe set all other comments to not hovered?
-			commentStates.set(commentId, {
-				...(commentStates.get(commentId) || {}),
-				isHighlightHovered: hovered
-			});
-		},
-		setCommentHovered: (commentId: number, hovered: boolean) => {
-			// TODO maybe set all other comments to not hovered?
-			commentStates.set(commentId, {
-				...(commentStates.get(commentId) || {}),
-				isCommentHovered: hovered
-			});
-		},
-		setEditing: (commentId: number, editing: boolean) => {
-			// TODO maybe set all other comments to not editing?
-			commentStates.set(commentId, {
-				...(commentStates.get(commentId) || {}),
-				isEditing: editing
-			});
-
-			if (!editing && refreshFlag && loadedDocument) {
-				// Invalidate the comments
-				invalidate(`/documents/${loadedDocument.id}/comments`);
-			}
-		},
-		setPinned: (commentId: number, pinned: boolean) => {
-			commentStates.set(commentId, {
-				...(commentStates.get(commentId) || {}),
-				isPinned: pinned
-			});
-		},
-		setRepliesCollapsed: (commentId: number, collapsed: boolean) => {
-			commentStates.set(commentId, {
-				...(commentStates.get(commentId) || {}),
-				isRepliesCollapsed: collapsed
-			});
-		},
-		setShowReplyInput: (commentId: number, show: boolean) => {
-			commentStates.set(commentId, {
-				...(commentStates.get(commentId) || {}),
-				showReplyInput: show
-			});
-		},
-		setReplyInputContent: (commentId: number, content: string) => {
-			commentStates.set(commentId, {
-				...(commentStates.get(commentId) || {}),
-				replyInputContent: content
-			});
-		},
-		setEditInputContent: (commentId: number, content: string) => {
-			commentStates.set(commentId, {
-				...(commentStates.get(commentId) || {}),
-				editInputContent: content
-			});
-		},
+	const comments = $derived.by(() => ({
 		update: async (comment: TypedComment) => {
 			const result = await api.update(`/comments/${comment.id}`, comment);
 			if (!result.success) {
 				notification(result.error);
 				return;
 			}
-
 			commentsLocal.update(comment);
 		},
-		create: async (data: Omit<CommentCreate, 'document_id' | 'annotation'> & { annotation: Annotation | null }): Promise<number | undefined> => {	
+		create: async (
+			data: Omit<CommentCreate, 'document_id' | 'annotation'> & { annotation: Annotation | null }
+		): Promise<number | undefined> => {
 			if (!loadedDocument) return;
 			const result = await api.post<CommentRead>('/comments', {
 				...data,
@@ -250,7 +213,7 @@ const createDocumentStore = () => {
 			});
 			if (!result.success) {
 				notification(result.error);
-				return ;
+				return;
 			}
 			const annotationParsed = annotationSchema.safeParse(result.data!.annotation);
 			const cachedComment: TypedComment = {
@@ -268,10 +231,7 @@ const createDocumentStore = () => {
 				return;
 			}
 
-		
-
 			commentsLocal.delete(commentId);
-
 		},
 		loadMoreReplies: async (commentId: number) => {
 			const limit = 20;
@@ -295,12 +255,15 @@ const createDocumentStore = () => {
 
 			const data = result.data.data.map((c) => {
 				const annotationParsed = annotationSchema.safeParse(c.annotation);
-				return { ...c, annotation: annotationParsed.success ? annotationParsed.data : null } as TypedComment;
+				return {
+					...c,
+					annotation: annotationParsed.success ? annotationParsed.data : null
+				} as TypedComment;
 			});
 
 			// Add loaded replies to local comments array
 			data.forEach((c) => {
-				_comments.set(c.id, c);
+				commentsLocal.create(c);
 			});
 		},
 		getState: (commentId: number): CommentState | undefined => {
@@ -309,15 +272,26 @@ const createDocumentStore = () => {
 		getComment: (commentId: number): TypedComment | undefined => {
 			return _comments.get(commentId);
 		},
+		unpinAll: (): void => {
+			// Unpin all comments
+			commentStates.forEach((state, id) => {
+				if (state.isPinned) {
+					commentStates.set(id, { ...state, isPinned: false });
+				}
+			});
+		},
+		// Comment subsets
 		all: new SvelteMap(_comments),
-		pinned: new SvelteMap(commentStates.entries().filter(([,state]) => state.isPinned)),
+		pinned: new SvelteMap(commentStates.entries().filter(([, state]) => state.isPinned)),
 		withAnnotations: commentsWithAnnotation,
-		editing: new SvelteMap(commentStates.entries().filter(([,state]) => state.isEditing)),
-		highlightHovered: new SvelteMap(commentStates.entries().filter(([,state]) => state.isHighlightHovered)),
-		commentHovered: new SvelteMap(commentStates.entries().filter(([,state]) => state.isCommentHovered))
-	});
-
-
+		editing: new SvelteMap(commentStates.entries().filter(([, state]) => state.isEditing)),
+		highlightHovered: new SvelteMap(
+			commentStates.entries().filter(([, state]) => state.isHighlightHovered)
+		),
+		commentHovered: new SvelteMap(
+			commentStates.entries().filter(([, state]) => state.isCommentHovered)
+		)
+	}));
 
 	const filters = $derived({
 		toggleAuthorFilter: (userId: number): void => {
@@ -390,22 +364,60 @@ const createDocumentStore = () => {
 	};
 
 	return {
-		get comments() { return comments; },
-		get filters() { return filters; },
-		get loadedDocument() { return loadedDocument; },
-		set loadedDocument(value) { loadedDocument = value; },
-		get documentScale() { return documentScale; },
-		set documentScale(value) { documentScale = value; },
-		get numPages() { return numPages; },
-		set numPages(value) { numPages = value; },
-		get scrollContainerRef() { return scrollContainerRef; },
-		set scrollContainerRef(value) { scrollContainerRef = value; },
-		get pdfViewerRef() { return pdfViewerRef; },
-		set pdfViewerRef(value) { pdfViewerRef = value; },
-		get commentSidebarRef() { return commentSidebarRef; },
-		set commentSidebarRef(value) { commentSidebarRef = value; },
-		get showCursors() { return showCursors; },
-		set showCursors(value) { showCursors = value; },
+		get comments() {
+			return comments;
+		},
+		get filters() {
+			return filters;
+		},
+		get loadedDocument() {
+			return loadedDocument;
+		},
+		set loadedDocument(value) {
+			loadedDocument = value;
+		},
+		get documentScale() {
+			return documentScale;
+		},
+		set documentScale(value) {
+			documentScale = value;
+		},
+		get numPages() {
+			return numPages;
+		},
+		set numPages(value) {
+			numPages = value;
+		},
+		get scrollContainerRef() {
+			return scrollContainerRef;
+		},
+		set scrollContainerRef(value) {
+			scrollContainerRef = value;
+		},
+		get pdfViewerRef() {
+			return pdfViewerRef;
+		},
+		set pdfViewerRef(value) {
+			pdfViewerRef = value;
+		},
+		get commentSidebarRef() {
+			return commentSidebarRef;
+		},
+		set commentSidebarRef(value) {
+			commentSidebarRef = value;
+		},
+		get showCursors() {
+			return showCursors;
+		},
+		set showCursors(value) {
+			showCursors = value;
+		},
+		get refreshFlag() {
+			return refreshFlag;
+		},
+		set refreshFlag(value) {
+			refreshFlag = value;
+		},
 		handleWebSocketEvent,
 		setRootComments,
 		setViewMode

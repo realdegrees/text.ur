@@ -264,13 +264,12 @@ export interface MembershipRead {
   group: GroupRead;
   is_owner: boolean;
   accepted: boolean;
-  share_link: ShareLinkReadPublic | null;
+  share_link: ShareLinkReadNoToken | null;
 }
-export interface ShareLinkReadPublic {
+export interface ShareLinkReadNoToken {
   id: number;
   permissions: Permission[];
   expires_at?: string | null;
-  label?: string | null;
   allow_anonymous_access: boolean;
   group_id: string;
 }
@@ -333,6 +332,17 @@ export interface ShareLinkRead {
   author: UserRead | null;
   group_id: string;
   num_memberships: number;
+}
+/**
+ * Read model for share link fetched via token, includes group info and the token itself.
+ */
+export interface ShareLinkReadFromToken {
+  id: number;
+  permissions: Permission[];
+  expires_at?: string | null;
+  allow_anonymous_access: boolean;
+  group: GroupRead;
+  token: string;
 }
 export interface ShareLinkUpdate {
   permissions?: Permission[] | null;

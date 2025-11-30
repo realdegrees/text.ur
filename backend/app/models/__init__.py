@@ -39,8 +39,9 @@ from models.reaction import ReactionCreate, ReactionRead
 from models.sharelink import (
     ShareLinkCreate,
     ShareLinkRead,
-    ShareLinkReadPublic,
+    ShareLinkReadNoToken,
     ShareLinkUpdate,
+    ShareLinkReadFromToken
 )
 from models.sort import Sort
 from models.tables import Comment, Document, Group, Membership, User
@@ -90,7 +91,8 @@ ShareLinkCreate.model_rebuild()
 ShareLinkRead.model_rebuild()
 ShareLinkUpdate.model_rebuild()
 ShareLinkFilter.model_rebuild()
-ShareLinkReadPublic.model_rebuild()
+ShareLinkReadNoToken.model_rebuild()
+ShareLinkReadFromToken.model_rebuild()
 
 UserCreate.model_rebuild()
 UserRead.model_rebuild()

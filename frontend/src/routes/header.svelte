@@ -7,14 +7,14 @@
 	import { loadingBar } from '$lib/stores/loadingBar.svelte';
 	import { api } from '$api/client';
 	import { notification } from '$lib/stores/notificationStore';
-
+	import LoginIcon from '~icons/material-symbols/login';
 	import type { UserPrivate } from '$api/types';
 	import ProfileImageFallback from '~icons/material-symbols/account-box';
-	import Login from './login.svelte';
 	import Dropdown from '$lib/components/dropdown.svelte';
 	import AccountIcon from '~icons/mdi/account-cog';
 	import LogoutIcon from '~icons/mdi/exit-run';
 	import { page } from '$app/state';
+	import LL from '$i18n/i18n-svelte';
 
 	let { user }: { user?: UserPrivate } = $props();
 
@@ -30,7 +30,7 @@
 
 	async function handleMenuItemSelect(item: UserMenuItem) {
 		if (item === 'account') {
-			await goto(`/users/${user?.id}`);
+			await goto(`/users/${user?.id}/account`);
 		} else if (item === 'logout') {
 			await handleLogout();
 		}
@@ -55,10 +55,10 @@
 </script>
 
 <div class="h-15.5 w-full"></div>
-<header class="fixed top-0 right-0 left-0 z-9000 h-15.5 w-full bg-background">
+<header class="z-9000 h-15.5 bg-background fixed left-0 right-0 top-0 w-full">
 	<div
-		class="center-content dark:shadow-inner-sym-10 mt-1 grid h-full grid-cols-3
-	items-center bg-inset shadow-inner-sym-[10px] shadow-black"
+		class="center-content dark:shadow-inner-sym-10 bg-inset shadow-inner-sym-[10px] mt-1 grid
+	h-full grid-cols-3 items-center shadow-black"
 	>
 		<a
 			href="/"
@@ -70,9 +70,9 @@
 
 		<div class="col-span-1 col-start-3 mr-3 flex flex-row-reverse items-center justify-self-end">
 			{#if user?.id}
-				<div class="relative z-9500">
+				<div class="z-9500 relative">
 					<button
-						class="flex w-full flex-row items-center rounded-lg px-2 py-1 transition-colors hover:bg-text/5"
+						class="hover:bg-text/5 flex w-full flex-row items-center rounded-lg px-2 py-1 transition-colors"
 						onclick={(e) => {
 							e.stopPropagation();
 							showUserMenu = !showUserMenu;
@@ -101,7 +101,7 @@
 									<AccountIcon class="h-5 w-5" />
 									<p>Account Settings</p>
 								</div>
-							{:else if item === 'logout'}
+							{:else if item === 'logout' && !user.is_guest}
 								<div
 									class="flex w-full items-center gap-2 px-3 py-2 text-sm text-red-600 transition-colors dark:text-red-400"
 								>
@@ -113,14 +113,20 @@
 					</Dropdown>
 				</div>
 			{:else if page.url.pathname !== '/login'}
-				<Login />
+				<button
+					class="bg-discord clickable group flex h-full w-full flex-row items-center justify-between rounded p-1"
+					onclick={() => goto('/login')}
+				>
+					<LoginIcon />
+					<p class="ml-1 font-semibold">{$LL.login()}</p>
+				</button>
 			{/if}
 		</div>
 	</div>
 </header>
 {#if loadingBar.visible}
 	<div
-		class="fixed top-0 right-0 left-0 z-60 h-1 rounded-full bg-primary transition-transform duration-500 ease-out"
+		class="z-60 bg-primary fixed left-0 right-0 top-0 h-1 rounded-full transition-transform duration-500 ease-out"
 		class:origin-right={loadingBar.shrinking}
 		class:origin-left={!loadingBar.shrinking}
 		class:scale-x-0={loadingBar.shrinking}
@@ -130,7 +136,7 @@
 {/if}
 
 <style lang="postcss">
-	@reference '../../app.css';
+	@reference '../app.css';
 
 	header * {
 		@apply max-h-16;

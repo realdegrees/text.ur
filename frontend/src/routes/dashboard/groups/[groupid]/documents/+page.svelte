@@ -9,7 +9,7 @@
 	import { sessionStore } from '$lib/runes/session.svelte.js';
 	import { notification } from '$lib/stores/notificationStore';
 	import { goto } from '$app/navigation';
-	import { formatDate } from '$lib/util/dateFormat';
+	import { formatDateTime } from '$lib/util/dateFormat';
 
 	let { data } = $props();
 	let documents = $derived(data.documents);
@@ -104,9 +104,9 @@
 
 {#snippet dateSnippet(document: DocumentRead)}
 	<div class="flex flex-col gap-0.5">
-		<p class="text-sm">{formatDate(document.created_at)}</p>
+		<p class="text-sm">{formatDateTime(document.created_at)}</p>
 		{#if document.updated_at && document.updated_at !== document.created_at}
-			<p class="text-xs text-text/70">Updated: {formatDate(document.updated_at)}</p>
+			<p class="text-xs text-text/70">Updated: {formatDateTime(document.updated_at)}</p>
 		{/if}
 	</div>
 {/snippet}

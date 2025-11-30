@@ -170,7 +170,7 @@
 			<button
 				type="button"
 				onclick={handleSave}
-				class="flex flex-row items-center gap-2 rounded-md bg-primary px-6 py-2 text-background transition-all hover:bg-primary/80"
+				class="flex flex-row items-center gap-2 rounded-md bg-primary px-6 py-2 text-text transition-all hover:bg-primary/80"
 			>
 				<SaveIcon class="h-5 w-5" />
 				<span>Save Changes</span>
