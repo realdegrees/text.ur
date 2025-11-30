@@ -115,11 +115,31 @@
 		for (let i = 0; i < rects.length; i++) {
 			const rect = rects[i];
 
-			// Find which page this rect belongs to
-			const elementAtPoint = document.elementFromPoint(
-				rect.left + rect.width / 2,
-				rect.top + rect.height / 2
-			);
+			// Try multiple points inside each rect to find one that falls inside the text layer.
+			const samplePoints = [
+				{ x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 }, // center
+				{ x: rect.left + 1, y: rect.top + 1 }, // top-left inset
+				{ x: rect.left + rect.width - 1, y: rect.top + 1 }, // top-right inset
+				{ x: rect.left + 1, y: rect.top + rect.height - 1 } // bottom-left inset
+			];
+
+			let elementAtPoint: Element | null = null;
+			for (const p of samplePoints) {
+				const el = document.elementFromPoint(p.x, p.y);
+				if (!el) continue;
+				// Prefer elements from the textLayer so we avoid sampling the canvas/background
+				if (el.closest && el.closest('.textLayer')) {
+					elementAtPoint = el;
+					break;
+				}
+				// Still accept an element if it has a page wrapper but not a textLayer—
+				// this is a fallback to resolve page number for edge cases
+				if (el.closest && el.closest('[data-page-number]')) {
+					elementAtPoint = el;
+					break;
+				}
+			}
+
 			if (!elementAtPoint) continue;
 
 			const pageNumber = getPageNumber(elementAtPoint);
@@ -138,6 +158,17 @@
 
 			// Use the text layer as the reference frame since that's where the text selection comes from
 			const textLayerRect = textLayer.getBoundingClientRect();
+
+			// Guard against degenerate text layers
+			if (textLayerRect.width === 0 || textLayerRect.height === 0) continue;
+
+			// If the rect is nearly the size of the entire text layer, ignore it —
+			// this is typically the cause of full-page highlights when the
+			// selection range produces a block-level bounding rect.
+			const fullWidthRatio = rect.width / textLayerRect.width;
+			const fullHeightRatio = rect.height / textLayerRect.height;
+			const FULL_PAGE_THRESHOLD = 0.95; // 95% of the text layer
+			if (fullWidthRatio >= FULL_PAGE_THRESHOLD && fullHeightRatio >= FULL_PAGE_THRESHOLD) continue;
 
 			// Normalize coordinates to 0-1 range relative to text layer
 			const x = (rect.left - textLayerRect.left) / textLayerRect.width;

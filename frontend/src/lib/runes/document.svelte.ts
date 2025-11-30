@@ -272,13 +272,17 @@ const createDocumentStore = () => {
 		getComment: (commentId: number): TypedComment | undefined => {
 			return _comments.get(commentId);
 		},
-		unpinAll: (): void => {
-			// Unpin all comments
-			commentStates.forEach((state, id) => {
-				if (state.isPinned) {
-					commentStates.set(id, { ...state, isPinned: false });
-				}
-			});
+		/**
+		 * Reset interaction flags for all existing comment states.
+		 */
+		resetStates: (): void => {
+			/** Reset interaction-related boolean flags for all comment states. */
+			for (const state of commentStates.values()) {
+				state.isEditing = false;
+				state.isPinned = false;
+				state.isHighlightHovered = false;
+				state.isCommentHovered = false;
+			}
 		},
 		// Comment subsets
 		all: new SvelteMap(_comments),

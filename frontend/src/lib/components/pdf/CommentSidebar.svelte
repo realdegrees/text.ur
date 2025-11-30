@@ -5,6 +5,7 @@
 	import { CLUSTER_THRESHOLD_PX, BADGE_HEIGHT_PX } from './constants';
 	import type { Annotation } from '$types/pdf';
 	import { SvelteMap } from 'svelte/reactivity';
+	import { fade } from 'svelte/transition';
 
 	interface Props {
 		viewerContainer: HTMLDivElement | null;
