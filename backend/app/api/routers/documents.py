@@ -336,15 +336,33 @@ async def transfer_document(
 async def update_document(
     db: Database,
     events: Events,
-    _: User = Authenticate(guards=[Guard.document_access({Permission.ADD_DOCUMENTS})]), # ? Users with add permissions can also update
+    user: User = Authenticate(guards=[Guard.document_access({Permission.ADD_DOCUMENTS})]), # ? Users with add permissions can also update
     document_update: DocumentUpdate = Body(...),
     document: Document = Resource(Document, param_alias="document_id"),
 ) -> DocumentRead:
     """Update a document and return the updated document."""
     # Store old view_mode to detect changes
     old_view_mode = document.view_mode
+    # Merge returns the persistent instance attached to the session
+    document = db.merge(document)
+    
+    if document_update.visibility is not None:
+        document.visibility = document_update.visibility
+        # Check if the user can still see the document after the update and raise if not
+        required_permissions: set[Permission] | None = None
+        if document_update.visibility == Visibility.RESTRICTED:
+            required_permissions = {Permission.VIEW_RESTRICTED_DOCUMENTS}
+        elif document_update.visibility == Visibility.PRIVATE:
+            required_permissions = {Permission.ADMINISTRATOR}  # No one except admins can see private documents
+        else:
+            required_permissions = None  # Public documents can be seen by all group members
+        guard = Guard.document_access(required_permissions)
 
-    db.merge(document)
+
+        if not guard.predicate(document, user):
+            raise HTTPException(status_code=403, detail="You do not have access to this document after the update.")
+        
+    
     document.sqlmodel_update(document_update.model_dump(exclude_unset=True))
     db.commit()
     db.refresh(document)

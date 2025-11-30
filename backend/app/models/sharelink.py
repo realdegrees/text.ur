@@ -19,32 +19,28 @@ class ShareLinkCreate(SQLModel):
     allow_anonymous_access: bool = False
     expires_at: datetime | None = None
     label: str | None = Field(default=None, max_length=MAX_LABEL_LENGTH)
-
-class ShareLinkRead(SQLModel):
+    
+class ShareLinkReadBase(SQLModel):
     id: int
     permissions: set[Permission]
     expires_at: datetime | None = None
-    label: str | None = None
     allow_anonymous_access: bool
+    created_at: datetime
+    updated_at: datetime
+
+class ShareLinkRead(ShareLinkReadBase):
+    label: str | None = None
     token: str
     author: "UserRead | None"
     group_id: str
     num_memberships: int
     
-class ShareLinkReadNoToken(SQLModel):
-    id: int
-    permissions: set[Permission]
-    expires_at: datetime | None = None
-    allow_anonymous_access: bool
+class ShareLinkReadNoToken(ShareLinkReadBase):
     group_id: str
     
-class ShareLinkReadFromToken(SQLModel):
+class ShareLinkReadFromToken(ShareLinkReadBase):
     """Read model for share link fetched via token, includes group info and the token itself."""
     
-    id: int
-    permissions: set[Permission]
-    expires_at: datetime | None = None
-    allow_anonymous_access: bool
     group: "GroupRead"
     token: str
 

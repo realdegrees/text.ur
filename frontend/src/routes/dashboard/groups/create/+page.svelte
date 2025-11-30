@@ -6,6 +6,7 @@
 	import { api } from '$api/client';
 	import { notification } from '$lib/stores/notificationStore';
 	import PermissionSelector from '$lib/components/permissionSelector.svelte';
+	import { goto, invalidateAll } from '$app/navigation';
 
 	let groupName: string = $state('');
 	let selectedPermissions: Permission[] = $state([]);
@@ -52,8 +53,8 @@
 
 		isLoading = false;
 
-		// Hard navigation to ensure fresh page load
-		window.location.href = `/dashboard/groups/${result.data.id}/documents`;
+		await invalidateAll();
+		goto(`/dashboard/groups/${result.data.id}/documents`);
 	}
 </script>
 

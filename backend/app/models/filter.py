@@ -343,6 +343,7 @@ class MembershipFilter(BaseFilterModel):
     user_id: int = Field()
     group_id: str = Field()
     accepted: bool = Field()
+    sharelink_id: str = Field()
 
     @classmethod
     def get_filter_metadata(cls) -> dict[str, FilterMeta]:
@@ -351,6 +352,7 @@ class MembershipFilter(BaseFilterModel):
             "user_id": FilterMeta(field=Membership.user_id, exclude=Membership.user),
             "group_id": FilterMeta(field=Membership.group_id, exclude=Membership.group),
             "accepted": FilterMeta(field=Membership.accepted),
+            "sharelink_id": FilterMeta(field=Membership.sharelink_id, exclude=Membership.share_link),
         }
 
 

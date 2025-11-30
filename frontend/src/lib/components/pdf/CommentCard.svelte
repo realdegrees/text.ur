@@ -55,12 +55,7 @@
 	let isSubmitting = $state(false);
 	let isLoadingReplies = $state(false);
 
-	let hasUnloadedReplies = $derived.by(() => {
-		const x = comment?.num_replies > 0 && (!commentState?.replies || (commentState.replies.length - comment.num_replies < 0));
-		console.log("aaa: ",x);
-		
-		return x;
-	});
+	let hasUnloadedReplies = $derived(comment?.num_replies > 0 && (!commentState?.replies || (commentState.replies.length - comment.num_replies < 0)));
 	let isAuthor = $derived(sessionStore.currentUserId === comment?.user?.id);
 	let canDeleteComment = $derived.by(() => {
 		if (sessionStore.currentUserId === comment.user?.id) return true;

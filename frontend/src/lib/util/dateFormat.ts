@@ -2,7 +2,7 @@
  * Format a date string to include time: "13. Sept 2025, 14:30"
  */
 export function formatDateTime(dateString?: string | null): string {
-	if (!dateString) return 'Never expires';
+	if (!dateString) return 'Never';
 
 	const date = new Date(dateString);
 	const day = date.getDate();

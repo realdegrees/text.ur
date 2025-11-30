@@ -32,7 +32,7 @@
 				{#if link.num_memberships > 0}
 					<span
 						class="rounded bg-blue-500/20 px-2 py-0.5 text-xs font-semibold text-blue-600"
-						title="Members using this link: {link.num_memberships}">{link.num_memberships}</span
+						title="Members using this link: {link.num_memberships}">{link.num_memberships} User{link.num_memberships === 1 ? '' : 's'}</span
 					>
 				{/if}
 				{#if link.label}
@@ -48,7 +48,10 @@
 				{/if}
 			</div>
 			<p class="text-xs text-text/50">
-				by {link.author?.username || 'Deleted User'} • Expires: {formatDateTime(link.expires_at)}
+				{link.created_at !== link.updated_at ? 'last updated' : 'created'} by {link.author?.username || 'Deleted User'} at {formatDateTime(link.created_at !== link.updated_at ? link.updated_at : link.created_at)}
+			</p>
+			<p class="text-xs text-text/50">
+				Expires: {formatDateTime(link.expires_at)}
 			</p>
 		</div>
 		<div class="flex gap-1">

@@ -14,19 +14,21 @@
 				<MembershipList data={data.invites} sessionUser={data.sessionUser} accepted={false} />
 			</div>
 		{/if}
-		{#if data.memberships}
-			<MembershipList
-				data={data.memberships}
-				sessionUser={data.sessionUser}
-				accepted={true}
-				onSelect={(membership) => {
-					const currentPage = page.url.pathname.split('/').pop();
-					goto(
-						`/dashboard/groups/${membership.group.id}/${(page.params.groupid && currentPage) || 'documents'}`
-					);
-				}}
-			/>
-		{/if}
+		{#key data}
+			{#if data.memberships}
+				<MembershipList
+					data={data.memberships}
+					sessionUser={data.sessionUser}
+					accepted={true}
+					onSelect={(membership) => {
+						const currentPage = page.url.pathname.split('/').pop();
+						goto(
+							`/dashboard/groups/${membership.group.id}/${(page.params.groupid && currentPage) || 'documents'}`
+						);
+					}}
+				/>
+			{/if}
+		{/key}
 	</div>
 
 	<!-- right column (subpage content, scrollable) -->

@@ -173,7 +173,8 @@ export const membershipCreateSchema = z.object({
 export const membershipFilterSchema = z.object({
     user_id: z.number(),
     group_id: z.string(),
-    accepted: z.boolean()
+    accepted: z.boolean(),
+    sharelink_id: z.string()
 });
 
 export const membershipPermissionUpdateSchema = z.object({
@@ -185,6 +186,8 @@ export const shareLinkReadNoTokenSchema = z.object({
     permissions: z.array(permissionSchema),
     expires_at: z.string().optional().nullable(),
     allow_anonymous_access: z.boolean(),
+    created_at: z.string(),
+    updated_at: z.string(),
     group_id: z.string()
 });
 
@@ -231,8 +234,10 @@ export const shareLinkReadSchema = z.object({
     id: z.number(),
     permissions: z.array(permissionSchema),
     expires_at: z.string().optional().nullable(),
-    label: z.string().optional().nullable(),
     allow_anonymous_access: z.boolean(),
+    created_at: z.string(),
+    updated_at: z.string(),
+    label: z.string().optional().nullable(),
     token: z.string(),
     author: userReadSchema.nullable(),
     group_id: z.string(),
@@ -244,6 +249,8 @@ export const shareLinkReadFromTokenSchema = z.object({
     permissions: z.array(permissionSchema),
     expires_at: z.string().optional().nullable(),
     allow_anonymous_access: z.boolean(),
+    created_at: z.string(),
+    updated_at: z.string(),
     group: groupReadSchema,
     token: z.string()
 });

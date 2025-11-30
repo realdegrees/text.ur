@@ -255,6 +255,7 @@ export interface MembershipFilter {
   user_id: number;
   group_id: string;
   accepted: boolean;
+  sharelink_id: string;
 }
 export interface MembershipPermissionUpdate {
   permissions: Permission[];
@@ -272,6 +273,8 @@ export interface ShareLinkReadNoToken {
   permissions: Permission[];
   expires_at?: string | null;
   allow_anonymous_access: boolean;
+  created_at: string;
+  updated_at: string;
   group_id: string;
 }
 /**
@@ -327,8 +330,10 @@ export interface ShareLinkRead {
   id: number;
   permissions: Permission[];
   expires_at?: string | null;
-  label?: string | null;
   allow_anonymous_access: boolean;
+  created_at: string;
+  updated_at: string;
+  label?: string | null;
   token: string;
   author: UserRead | null;
   group_id: string;
@@ -342,6 +347,8 @@ export interface ShareLinkReadFromToken {
   permissions: Permission[];
   expires_at?: string | null;
   allow_anonymous_access: boolean;
+  created_at: string;
+  updated_at: string;
   group: GroupRead;
   token: string;
 }
