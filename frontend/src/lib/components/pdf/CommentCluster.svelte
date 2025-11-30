@@ -10,6 +10,7 @@
 	import CommentIcon from '~icons/material-symbols/comment-outline';
 	import PinIcon from '~icons/material-symbols/push-pin';
 	import PinOffIcon from '~icons/material-symbols/push-pin-outline';
+	import { fade } from 'svelte/transition';
 
 	interface Props {
 		comments: TypedComment[];

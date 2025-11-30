@@ -5,7 +5,6 @@
 	import { CLUSTER_THRESHOLD_PX, BADGE_HEIGHT_PX } from './constants';
 	import type { Annotation } from '$types/pdf';
 	import { SvelteMap } from 'svelte/reactivity';
-	import { fade } from 'svelte/transition';
 
 	interface Props {
 		viewerContainer: HTMLDivElement | null;
@@ -128,9 +127,13 @@
 	let clusters = $derived.by((): CommentClusterData[] => {
 		const GAP_PX = 8; // Gap between clusters
 
-		// Iteratively adjust positions from top to bottom
-		for (let i = 0; i < baseClusters.length; i++) {
-			const current = baseClusters[i];
+		// Work on a shallow clone of baseClusters to avoid mutating the original
+		// (Svelte needs new object references to ensure the template updates)
+		const adjusted = baseClusters.map((c) => ({ ...c, comments: c.comments.slice() }));
+
+		// Iteratively adjust positions from top to bottom using the clones
+		for (let i = 0; i < adjusted.length; i++) {
+			const current = adjusted[i];
 			const currentKey = current.comments.map((c) => c.id).join('-');
 
 			// Get the actual rendered height, or use badge height as fallback
@@ -142,8 +145,8 @@
 			const currentBottom = current.yPosition + currentHeight;
 
 			// Check all clusters below and push them down if they overlap
-			for (let j = i + 1; j < baseClusters.length; j++) {
-				const below = baseClusters[j];
+			for (let j = i + 1; j < adjusted.length; j++) {
+				const below = adjusted[j];
 
 				// If current cluster's bottom overlaps with the cluster below, push it down
 				if (currentBottom + GAP_PX > below.yPosition) {
@@ -152,7 +155,7 @@
 			}
 		}
 
-		return baseClusters;
+		return adjusted;
 	});
 
 	// Watch for text layer size changes to recalculate cluster positions

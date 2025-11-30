@@ -10,7 +10,8 @@ export type TypedComment = Omit<CommentRead, 'annotation'> & { annotation: Annot
 
 export interface CommentState {
 	id: number;
-	replies?: number[];
+	replies: number[];
+	source: 'api' | 'client';
 	// Interaction state flags
 	isCommentHovered?: boolean; // Mouse over the comment
 	isHighlightHovered?: boolean; // Mouse over the PDF highlight
@@ -45,9 +46,10 @@ const createDocumentStore = () => {
 					id: cachedComment.id,
 					replies: [],
 					editInputContent: cachedComment.content ?? '',
-					replyInputContent: ''
+					replyInputContent: '',
+					source: 'api'
 				});
-				commentStates.set(cachedComment.id, newState);				
+				commentStates.set(cachedComment.id, newState);
 			}
 		});
 
@@ -120,7 +122,7 @@ const createDocumentStore = () => {
 	});
 
 	// Methods to update local comment data without API calls (on events)
-	const commentsLocal = $derived.by(() => ({
+	const commentsLocal = $derived({
 		update: (existing: TypedComment) => {
 			/** Update an existing comment in the local map. */
 			const existingComment: TypedComment | undefined = _comments.get(existing.id);
@@ -132,32 +134,46 @@ const createDocumentStore = () => {
 			};
 			_comments.set(existing.id, updatedComment);
 		},
-		create: (data: TypedComment) => {
-			/** Add new comment to the local store. */
-			// Add new comment to parent replies if applicable
-			const parentState = commentStates.get(data?.parent_id || -1);
-			if (parentState && parentState.replies) {
-				commentStates.set(data?.parent_id || -1, {
-					...parentState,
-					replies: [...parentState.replies, data.id]
-				});
+		create: (data: TypedComment, skip_num_replies_increment?: boolean, source: 'api' | 'client' = 'client') => {
+			const existingComment: TypedComment | undefined = _comments.get(data.id);
+			if (existingComment) {
+				// Comment already exists, perform an update instead
+				commentsLocal.update(data);
+				return;
 			}
-
 			// Increment num_replies in parent comment
 			const parentComment: TypedComment | undefined = data.parent_id
 				? _comments.get(data.parent_id)
 				: undefined;
-			if (parentComment) {
-				parentComment.num_replies = (parentComment.num_replies || 0) + 1;
+			if (parentComment && !skip_num_replies_increment) {
+				// ! Set on map directly here because comments are not deeply reactive, only states
+				_comments.set(parentComment.id, {
+					...parentComment,
+					num_replies: parentComment.num_replies + 1
+				});
+			}
+
+			// Add new comment to parent replies if applicable
+			const parentState = commentStates.get(data?.parent_id || -1);
+			if (parentState) {
+				parentState.replies = [...parentState.replies, data.id]; // TODO the new comment needs to be sorted by created_at
+				parentState.repliesExpanded = true;
 			}
 
 			// Add new comment to local comments map and add a state entry
 			_comments.set(data.id, data);
+
+			const stateExists = commentStates.has(data.id);
+			if (stateExists) {
+				return;
+			}
+
 			const newState = $state<CommentState>({
 				id: data.id,
 				replies: [],
 				editInputContent: data.content ?? '',
-				replyInputContent: ''
+				replyInputContent: '',
+				source: source
 			});
 			commentStates.set(data.id, newState);
 		},
@@ -166,10 +182,32 @@ const createDocumentStore = () => {
 			// Delete all replies and their states from the local map
 			const commentState = commentStates.get(commentId);
 			const commentToDelete: TypedComment | undefined = _comments.get(commentId);
-			commentState?.replies?.forEach((replyId) => {
-				commentStates.delete(replyId);
-				_comments.delete(replyId);
-			});
+			/**
+			 * Recursively delete replies for a given comment id.
+			 */
+			const deleteRepliesRecursively = (rootId: number): void => {
+				// Get the state for the current comment id
+				const stateForRoot: CommentState | undefined = commentStates.get(rootId);
+				// Copy reply ids to avoid mutation during iteration
+				const replyIds: number[] = [...(stateForRoot?.replies ?? [])];
+
+				// Recursively delete each reply and its nested replies
+				for (const replyId of replyIds) {
+					deleteRepliesRecursively(replyId);
+					_comments.delete(replyId);
+					commentStates.delete(replyId);
+				}
+			};
+
+			// Start recursive deletion from immediate replies of the comment to delete
+			if (commentState?.replies?.length) {
+				const immediateReplyIds: number[] = [...commentState.replies];
+				for (const replyId of immediateReplyIds) {
+					deleteRepliesRecursively(replyId);
+					_comments.delete(replyId);
+					commentStates.delete(replyId);
+				}
+			}
 
 			// Remove reply reference in parent comment state
 			const parentCommentState = commentStates.get(commentToDelete?.parent_id || -1);
@@ -177,24 +215,19 @@ const createDocumentStore = () => {
 				? _comments.get(commentToDelete.parent_id)
 				: undefined;
 			if (parentCommentState && !!parentCommentState.replies?.length) {
-				commentStates.set(commentToDelete?.parent_id || -1, {
-					...parentCommentState,
-					replies: parentCommentState.replies?.filter((id) => id !== commentId)
-				});
+				parentCommentState.replies = parentCommentState.replies.filter((id) => id !== commentId);
 			}
 
 			// Decrement num_replies in parent comment state
-			if (parentComment) {
-				parentComment.num_replies = (parentComment.num_replies || 1) - 1;
-			}
+			if (parentComment) parentComment.num_replies--;
 
 			// Remove own comment state and comment
 			commentStates.delete(commentId);
 			_comments.delete(commentId);
 		}
-	}));
+	});
 
-	const comments = $derived.by(() => ({
+	const comments = $derived({
 		update: async (comment: TypedComment) => {
 			const result = await api.update(`/comments/${comment.id}`, comment);
 			if (!result.success) {
@@ -235,17 +268,24 @@ const createDocumentStore = () => {
 		},
 		loadMoreReplies: async (commentId: number) => {
 			const limit = 20;
-			const offset = commentStates.get(commentId)?.replies?.length || 0;
+			// Offset by the amount of comments that were already received from the api
+			const offset = commentStates.get(commentId)?.replies.map((id) => commentStates.get(id)).reduce((acc, state) => acc + (state?.source === 'api' ? 1 : 0), 0) || 0;
 			const targetComment: TypedComment | undefined = _comments.get(commentId);
+			const targetState: CommentState | undefined = commentStates.get(commentId);
 
 			// Dont load more if all replies are already loaded
 			if (!targetComment || (targetComment.num_replies || 0) <= offset) return;
 			if (!targetComment || targetComment.num_replies <= offset) return;
+			if (!targetState) return;
 
 			const result = await api.get<Paginated<CommentRead>>(
 				`/comments?limit=${limit}&offset=${offset}`,
 				{
-					filters: [{ field: 'parent_id', operator: '==', value: commentId.toString() }]
+					filters: [
+						{ field: 'parent_id', operator: '==', value: commentId.toString() },
+						// Exclude comments that were created locally
+						{ field: 'id', operator: 'notin', value: `[${targetState.replies.filter((id) => commentStates.get(id)?.source === 'client').join(',')}]` }
+					]
 				}
 			);
 			if (!result.success) {
@@ -263,7 +303,7 @@ const createDocumentStore = () => {
 
 			// Add loaded replies to local comments array
 			data.forEach((c) => {
-				commentsLocal.create(c);
+				commentsLocal.create(c, true, 'api');
 			});
 		},
 		getState: (commentId: number): CommentState | undefined => {
@@ -295,7 +335,7 @@ const createDocumentStore = () => {
 		commentHovered: new SvelteMap(
 			commentStates.entries().filter(([, state]) => state.isCommentHovered)
 		)
-	}));
+	});
 
 	const filters = $derived({
 		toggleAuthorFilter: (userId: number): void => {

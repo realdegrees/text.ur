@@ -10,9 +10,10 @@
 		comment: TypedComment;
 		visibility: Visibility;
 		canEdit?: boolean;
+		isTopLevel?: boolean;
 	}
 
-	let { comment, visibility, canEdit = false }: Props = $props();
+	let { comment, visibility, canEdit = false, isTopLevel = false }: Props = $props();
 
 	let isOpen = $state(false);
 	let isUpdating = $state(false);
@@ -79,7 +80,7 @@
 		items={visibilityOptions}
 		bind:currentItem={currentVisibility}
 		bind:show={isOpen}
-		position="bottom-left"
+		position={isTopLevel ? "bottom-left" : "top-left"}
 		allowSelection={false}
 		showCurrentItemInList={true}
 		onSelect={handleSelect}

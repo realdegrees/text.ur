@@ -39,9 +39,9 @@ from models.reaction import ReactionCreate, ReactionRead
 from models.sharelink import (
     ShareLinkCreate,
     ShareLinkRead,
+    ShareLinkReadFromToken,
     ShareLinkReadNoToken,
     ShareLinkUpdate,
-    ShareLinkReadFromToken
 )
 from models.sort import Sort
 from models.tables import Comment, Document, Group, Membership, User

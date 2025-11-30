@@ -58,7 +58,8 @@ export const commentFilterSchema = z.object({
     user_id: z.number(),
     document_id: z.string(),
     parent_id: z.number(),
-    annotation: z.record(z.string(), z.unknown())
+    annotation: z.record(z.string(), z.unknown()),
+    id: z.number()
 });
 
 export const commentUpdateSchema = z.object({
@@ -205,7 +206,7 @@ export const mousePositionInputSchema = z.object({
 
 export const filterSchema = z.record(z.string(), z.unknown()).and(z.object({
     field: z.string(),
-    operator: z.union([z.literal("=="), z.literal(">="), z.literal("<="), z.literal(">"), z.literal("<"), z.literal("ilike"), z.literal("like"), z.literal("exists"), z.literal("!=")]),
+    operator: z.union([z.literal("=="), z.literal(">="), z.literal("<="), z.literal(">"), z.literal("<"), z.literal("ilike"), z.literal("like"), z.literal("exists"), z.literal("!="), z.literal("in"), z.literal("notin")]),
     value: z.string()
 }));
 

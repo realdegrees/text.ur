@@ -8,7 +8,7 @@ def get_filters_dependency(filterable_field_data: list[FilterableField]) -> Call
     """Generate a FastAPI dependency to parse filters from query parameters."""
     def format_field_description(field: FilterableField) -> str:
         """Format a field description with exclusion indicator if applicable."""
-        base = f"❖ {field.name}"
+        base = f"❖ \"[{field.name}][{", ".join(field.allowed_operators)}]\": \"{field.inferred_type.__qualname__}\""
         if field.exclude_field:
             base += f" 🚫 (excludes: {field.exclude_field})"
         return base

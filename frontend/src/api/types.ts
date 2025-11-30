@@ -139,6 +139,7 @@ export interface CommentFilter {
   annotation: {
     [k: string]: unknown;
   };
+  id: number;
 }
 export interface CommentUpdate {
   visibility?: Visibility | null;
@@ -304,7 +305,7 @@ export interface PaginatedBase {
 }
 export interface Filter {
   field: string;
-  operator: "==" | ">=" | "<=" | ">" | "<" | "ilike" | "like" | "exists" | "!=";
+  operator: "==" | ">=" | "<=" | ">" | "<" | "ilike" | "like" | "exists" | "!=" | "in" | "notin";
   value: string;
   [k: string]: unknown;
 }

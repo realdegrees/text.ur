@@ -277,7 +277,7 @@ class ApiClient {
 	 */
 	async get<
 		T,
-		TData = T extends Paginated<infer U, any> ? U : T,
+		TData = T extends Paginated<infer U> ? U : T,
 		TExclude extends keyof TData = never,
 		TFilter = GetFilterModel<TData>,
 		TFilters extends readonly TypedFilter<TFilter>[] = readonly TypedFilter<TFilter>[]

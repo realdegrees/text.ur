@@ -22,7 +22,7 @@
 
 	let { comment, depth = 0 }: Props = $props();
 
-	const commentState = $derived.by(() => documentStore.comments.getState(comment.id));
+	const commentState = $derived(documentStore.comments.getState(comment.id));
 
 	// Derived state
 	let isTopLevel = $derived(depth === 0);
@@ -55,9 +55,12 @@
 	let isSubmitting = $state(false);
 	let isLoadingReplies = $state(false);
 
-	let hasUnloadedReplies = $derived(
-		comment?.num_replies > 0 && (!commentState?.replies || commentState.replies.length === 0)
-	);
+	let hasUnloadedReplies = $derived.by(() => {
+		const x = comment?.num_replies > 0 && (!commentState?.replies || (commentState.replies.length - comment.num_replies < 0));
+		console.log("aaa: ",x);
+		
+		return x;
+	});
 	let isAuthor = $derived(sessionStore.currentUserId === comment?.user?.id);
 	let canDeleteComment = $derived.by(() => {
 		if (sessionStore.currentUserId === comment.user?.id) return true;
@@ -219,14 +222,14 @@
 	<div class={isTopLevel ? 'p-3' : ''}>
 		<!-- Nested header (username + date inline) -->
 		<div class="flex items-center justify-between">
-			<div class="flex items-center gap-2">
+			<div class="flex items-center gap-2 ">
 				{#if !isTopLevel}
 					<span class="text-text/70 text-xs font-medium"
 						>{comment.user?.username ?? 'Anonymous'}</span
 					>
 				{/if}
 				<span class="text-text/40 text-xs">{formatDateTime(comment.created_at)}</span>
-				<CommentVisibility {comment} visibility={comment.visibility} canEdit={isAuthor} />
+				<CommentVisibility {comment} visibility={comment.visibility} canEdit={isAuthor} isTopLevel={isTopLevel} />
 			</div>
 			{#if isAuthor || canDeleteComment}
 				<div class="flex items-center gap-1">
@@ -355,24 +358,25 @@
 					disabled={isLoadingReplies}
 					onclick={(e) => {
 						e.stopPropagation();
-						commentState.repliesExpanded = !commentState?.repliesExpanded;
-
-						if (!commentState?.repliesExpanded && !commentState?.replies?.length) {
+						
+						if (!commentState.repliesExpanded && !commentState.replies.length) {
 							handleLoadReplies();
 						}
+						commentState.repliesExpanded = !commentState.repliesExpanded;						
 					}}
 				>
-					{#if !commentState?.repliesExpanded}
+					{#if !commentState.repliesExpanded}
 						<ExpandIcon class={sizes.icon} />
+						{comment.num_replies}
+						{comment.num_replies === 1 ? 'reply' : 'replies'}
 					{:else}
 						<ExpandIcon class="{sizes.icon} rotate-180" />
+						Collapse
 					{/if}
-					{commentState?.replies?.length}
-					{commentState?.replies?.length === 1 ? 'reply' : 'replies'}
 				</button>
-				{#if commentState?.repliesExpanded}
+				{#if commentState.repliesExpanded}
 					<div class="space-y-2">
-						{#each commentState?.replies ?? [] as replyId (replyId)}
+						{#each commentState.replies ?? [] as replyId (replyId)}
 							{@const comment = documentStore.comments.getComment(replyId)}
 							{#if comment}
 								<CommentCard {comment} depth={depth + 1} />
@@ -391,8 +395,8 @@
 							<ExpandIcon class={sizes.icon} />
 							{isLoadingReplies
 								? 'Loading...'
-								: `${comment.num_replies - (commentState?.replies?.length ?? 0)} more ${
-										comment.num_replies - (commentState?.replies?.length ?? 0) === 1
+								: `${comment.num_replies - (commentState.replies?.length ?? 0)} more ${
+										comment.num_replies - (commentState.replies?.length ?? 0) === 1
 											? 'reply'
 											: 'replies'
 									}`}
