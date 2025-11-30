@@ -6,7 +6,9 @@ import type { ShareLinkReadFromToken } from '$api/types';
 export const load: PageLoad = async ({ params, fetch }) => {
 	const { token } = params;
 
-	const sharelinkResponse = await api.get<ShareLinkReadFromToken>(`/api/sharelinks/${token}`, { fetch });
+	const sharelinkResponse = await api.get<ShareLinkReadFromToken>(`/api/sharelinks/${token}`, {
+		fetch
+	});
 	if (!sharelinkResponse.success || !sharelinkResponse.data) {
 		throw error(404, 'Share link not found or has expired.');
 	}

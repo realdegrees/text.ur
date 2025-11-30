@@ -9,7 +9,7 @@
 	}
 </script>
 
-<div class="flex h-fit w-full justify-center mt-20">
+<div class="mt-20 flex h-fit w-full justify-center">
 	<div class="w-full max-w-md overflow-hidden rounded-lg bg-inset shadow-lg">
 		<TabContainer
 			tabs={[

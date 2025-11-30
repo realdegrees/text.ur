@@ -68,12 +68,12 @@
 
 	// Helper to check if any comment in a cluster is expanded
 	const isClusterExpanded = (comments: TypedComment[]): boolean => {
-		return comments.some(
-			(c) => {
-				const state = documentStore.comments.getState(c.id);
-				return state?.isCommentHovered || state?.isHighlightHovered || state?.isPinned || state?.isEditing;
-			}
-		);
+		return comments.some((c) => {
+			const state = documentStore.comments.getState(c.id);
+			return (
+				state?.isCommentHovered || state?.isHighlightHovered || state?.isPinned || state?.isEditing
+			);
+		});
 	};
 
 	let baseClusters = $derived.by((): CommentClusterData[] => {

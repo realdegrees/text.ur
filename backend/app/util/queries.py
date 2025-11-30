@@ -295,7 +295,7 @@ class Guard:
             else:
                 return build_visibility_clause()
 
-        def predicate(doc: Document, user: User) -> bool:
+        def predicate(doc: Document, user: User) -> bool: # noqa: C901
 
             if doc.group is None:
                 return False

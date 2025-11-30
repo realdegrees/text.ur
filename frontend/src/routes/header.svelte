@@ -55,10 +55,10 @@
 </script>
 
 <div class="h-15.5 w-full"></div>
-<header class="z-9000 h-15.5 bg-background fixed left-0 right-0 top-0 w-full">
+<header class="fixed top-0 right-0 left-0 z-9000 h-15.5 w-full bg-background">
 	<div
-		class="center-content dark:shadow-inner-sym-10 bg-inset shadow-inner-sym-[10px] mt-1 grid
-	h-full grid-cols-3 items-center shadow-black"
+		class="center-content dark:shadow-inner-sym-10 mt-1 grid h-full grid-cols-3
+	items-center bg-inset shadow-inner-sym-[10px] shadow-black"
 	>
 		<a
 			href="/"
@@ -70,9 +70,9 @@
 
 		<div class="col-span-1 col-start-3 mr-3 flex flex-row-reverse items-center justify-self-end">
 			{#if user?.id}
-				<div class="z-9500 relative">
+				<div class="relative z-9500">
 					<button
-						class="hover:bg-text/5 flex w-full flex-row items-center rounded-lg px-2 py-1 transition-colors"
+						class="flex w-full flex-row items-center rounded-lg px-2 py-1 transition-colors hover:bg-text/5"
 						onclick={(e) => {
 							e.stopPropagation();
 							showUserMenu = !showUserMenu;
@@ -114,7 +114,7 @@
 				</div>
 			{:else if page.url.pathname !== '/login'}
 				<button
-					class="bg-discord clickable group flex h-full w-full flex-row items-center justify-between rounded p-1"
+					class="bg-discord group flex h-full w-full clickable flex-row items-center justify-between rounded p-1"
 					onclick={() => goto('/login')}
 				>
 					<LoginIcon />
@@ -126,7 +126,7 @@
 </header>
 {#if loadingBar.visible}
 	<div
-		class="z-60 bg-primary fixed left-0 right-0 top-0 h-1 rounded-full transition-transform duration-500 ease-out"
+		class="fixed top-0 right-0 left-0 z-60 h-1 rounded-full bg-primary transition-transform duration-500 ease-out"
 		class:origin-right={loadingBar.shrinking}
 		class:origin-left={!loadingBar.shrinking}
 		class:scale-x-0={loadingBar.shrinking}

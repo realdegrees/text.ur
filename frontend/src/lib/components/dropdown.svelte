@@ -18,7 +18,7 @@
 		hideCurrentSelection = false,
 		showArrow = true,
 		allowSelection = true, // New flag to control selection toggle visibility
-		showCurrentItemInList = false, // Flag to control whether to show current item in dropdown list
+		showCurrentItemInList = false // Flag to control whether to show current item in dropdown list
 		// no appendToBody prop - always render menu as fixed overlay
 	}: {
 		items: Item[];
@@ -98,7 +98,9 @@
 			styles.transformOrigin = position.includes('right') ? 'top right' : 'top left';
 		}
 
-		menuStyle = Object.entries(styles).map(([k, v]) => `${k}: ${v};`).join(' ');
+		menuStyle = Object.entries(styles)
+			.map(([k, v]) => `${k}: ${v};`)
+			.join(' ');
 
 		// Detailed debug logs
 		console.log('Dropdown position:', position);

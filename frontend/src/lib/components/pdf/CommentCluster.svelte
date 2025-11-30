@@ -10,7 +10,6 @@
 	import CommentIcon from '~icons/material-symbols/comment-outline';
 	import PinIcon from '~icons/material-symbols/push-pin';
 	import PinOffIcon from '~icons/material-symbols/push-pin-outline';
-	import { fade } from 'svelte/transition';
 
 	interface Props {
 		comments: TypedComment[];
@@ -118,7 +117,7 @@
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
 		bind:this={clusterRef}
-		class="bg-background ring-primary/30 relative z-50 overflow-hidden rounded-lg shadow-lg shadow-black/20 ring-0 transition-all {anyCommentPinned
+		class="relative z-50 overflow-hidden rounded-lg bg-background shadow-lg ring-0 shadow-black/20 ring-primary/30 transition-all {anyCommentPinned
 			? 'ring-3'
 			: ''}"
 		tabindex="-1"
@@ -134,16 +133,16 @@
 		}}
 	>
 		<!-- Cluster header: tabs for multiple comments or single author header -->
-		<div class="border-text/30 w-full border-b p-1.5 pb-0">
-			<div class="border-text/10 pb-0! flex items-center justify-between gap-1.5 border-b">
+		<div class="w-full border-b border-text/30 p-1.5 pb-0">
+			<div class="flex items-center justify-between gap-1.5 border-b border-text/10 pb-0!">
 				<div class="flex gap-1.5">
 					{#each comments as c, idx (c.id)}
 						{@const state = commentStates.get(c.id)}
 						<button
-							class="cursor-pointer rounded-t px-2 py-1.5 text-xs font-medium transition-colors flex flex-row items-center gap-1.5
+							class="flex cursor-pointer flex-row items-center gap-1.5 rounded-t px-2 py-1.5 text-xs font-medium transition-colors
 							{activeComment === c
 								? 'bg-inset text-text'
-								: 'text-text/50 hover:bg-text/5 hover:text-text/70 hover:animate-pulse'}"
+								: 'text-text/50 hover:animate-pulse hover:bg-text/5 hover:text-text/70'}"
 							onclick={(e) => {
 								e.stopPropagation();
 								if (activeComment === c && state) {
@@ -173,9 +172,9 @@
 						>
 							<p>{c.user?.username?.slice(0, 10) ?? `Comment ${idx + 1}`}</p>
 							{#if state?.isPinned}
-								<PinIcon class="text-text h-4 w-4 transition-colors hover:text-red-400" />
+								<PinIcon class="h-4 w-4 text-text transition-colors hover:text-red-400" />
 							{:else if hoveredTabId === c.id && c.id === activeComment.id}
-								<PinOffIcon class="hover:text-text h-4 w-4" />
+								<PinOffIcon class="h-4 w-4 hover:text-text" />
 							{/if}
 						</button>
 					{/each}
@@ -208,12 +207,12 @@
 		}}
 	>
 		<div
-			class="bg-inset ring-3 ring-primary/70 drop-shadow-xs flex h-8 w-8 cursor-pointer items-center justify-center rounded shadow-md shadow-black/20"
+			class="flex h-8 w-8 cursor-pointer items-center justify-center rounded bg-inset shadow-md ring-3 shadow-black/20 ring-primary/70 drop-shadow-xs"
 		>
 			{#if commentCount > 1}
-				<span class="text-text font-bold">{commentCount}</span>
+				<span class="font-bold text-text">{commentCount}</span>
 			{:else}
-				<CommentIcon class="text-text h-4 w-4" />
+				<CommentIcon class="h-4 w-4 text-text" />
 			{/if}
 		</div>
 	</button>

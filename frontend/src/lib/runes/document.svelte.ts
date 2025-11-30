@@ -134,7 +134,11 @@ const createDocumentStore = () => {
 			};
 			_comments.set(existing.id, updatedComment);
 		},
-		create: (data: TypedComment, skip_num_replies_increment?: boolean, source: 'api' | 'client' = 'client') => {
+		create: (
+			data: TypedComment,
+			skip_num_replies_increment?: boolean,
+			source: 'api' | 'client' = 'client'
+		) => {
 			const existingComment: TypedComment | undefined = _comments.get(data.id);
 			if (existingComment) {
 				// Comment already exists, perform an update instead
@@ -269,7 +273,11 @@ const createDocumentStore = () => {
 		loadMoreReplies: async (commentId: number) => {
 			const limit = 20;
 			// Offset by the amount of comments that were already received from the api
-			const offset = commentStates.get(commentId)?.replies.map((id) => commentStates.get(id)).reduce((acc, state) => acc + (state?.source === 'api' ? 1 : 0), 0) || 0;
+			const offset =
+				commentStates
+					.get(commentId)
+					?.replies.map((id) => commentStates.get(id))
+					.reduce((acc, state) => acc + (state?.source === 'api' ? 1 : 0), 0) || 0;
 			const targetComment: TypedComment | undefined = _comments.get(commentId);
 			const targetState: CommentState | undefined = commentStates.get(commentId);
 
@@ -284,7 +292,11 @@ const createDocumentStore = () => {
 					filters: [
 						{ field: 'parent_id', operator: '==', value: commentId.toString() },
 						// Exclude comments that were created locally
-						{ field: 'id', operator: 'notin', value: `[${targetState.replies.filter((id) => commentStates.get(id)?.source === 'client').join(',')}]` }
+						{
+							field: 'id',
+							operator: 'notin',
+							value: `[${targetState.replies.filter((id) => commentStates.get(id)?.source === 'client').join(',')}]`
+						}
 					]
 				}
 			);

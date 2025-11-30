@@ -31,7 +31,7 @@
 
 <div class="mt-20 flex h-full w-full flex-col items-center gap-6 p-6">
 	<div class="flex w-full max-w-2xl flex-col gap-3">
-		<div class="bg-inset w-full rounded-lg p-6 shadow-md">
+		<div class="w-full rounded-lg bg-inset p-6 shadow-md">
 			<div class="mb-4">
 				<h1 class="text-3xl font-bold">You have been invited to {data.shareLink.group.name}</h1>
 				<p class="text-muted text-sm">Members: {data.shareLink.group.member_count}</p>
@@ -46,7 +46,7 @@
 		</div>
 
 		{#if data.shareLink.expires_at || data.shareLink.permissions.length > 0 || (!data.shareLink.allow_anonymous_access && !data.sessionUser)}
-			<div class="bg-inset w-full rounded-lg p-6 shadow-md">
+			<div class="w-full rounded-lg bg-inset p-6 shadow-md">
 				<h2 class="text-xl font-semibold">Sharelink Details</h2>
 				{#if data.shareLink.expires_at}
 					<p class="text-sm">Expires At: {formatDateTime(data.shareLink.expires_at)}</p>
@@ -69,7 +69,7 @@
 		{/if}
 
 		{#if !data.sessionUser}
-			<div class="bg-inset w-full rounded-lg p-6 shadow-md">
+			<div class="w-full rounded-lg bg-inset p-6 shadow-md">
 				<TabContainer
 					tabs={[
 						...(data.shareLink.allow_anonymous_access
@@ -83,10 +83,7 @@
 				>
 			</div>
 		{:else}
-			<button
-				class="bg-primary h-8 w-full cursor-pointer rounded"
-				onclick={joinGroup}
-			>
+			<button class="h-8 w-full cursor-pointer rounded bg-primary" onclick={joinGroup}>
 				Join
 			</button>
 		{/if}
@@ -97,8 +94,11 @@
 	<LoginForm onSuccess={() => invalidateAll()} />
 {/snippet}
 {#snippet AnonymousRegistration()}
-	<AnonymousRegistrationForm onSuccess={() => {
-		invalidateAll();
-		joinGroup();
-	}} token={data.shareLink.token} />
+	<AnonymousRegistrationForm
+		onSuccess={() => {
+			invalidateAll();
+			joinGroup();
+		}}
+		token={data.shareLink.token}
+	/>
 {/snippet}

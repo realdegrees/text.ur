@@ -90,7 +90,7 @@
 {#snippet nameSnippet(document: DocumentRead)}
 	<button
 		onclick={() => handleDocumentClick(document)}
-		class="text-text hover:text-primary flex w-full flex-row items-center gap-2 text-left transition-colors"
+		class="flex w-full flex-row items-center gap-2 text-left text-text transition-colors hover:text-primary"
 	>
 		<DocumentIcon class="h-5 w-5" />
 		<p class="text-sm font-semibold">{document.name}</p>
@@ -99,7 +99,10 @@
 
 {#snippet visibilitySnippet(document: DocumentRead)}
 	<div class="flex w-full items-center justify-start">
-		<DocumentVisibility document={document} canEdit={sessionStore.validatePermissions(['upload_documents'])} />
+		<DocumentVisibility
+			{document}
+			canEdit={sessionStore.validatePermissions(['upload_documents'])}
+		/>
 	</div>
 {/snippet}
 
@@ -107,7 +110,7 @@
 	<div class="flex flex-col gap-0.5">
 		<p class="text-sm">{formatDateTime(document.created_at)}</p>
 		{#if document.updated_at && document.updated_at !== document.created_at}
-			<p class="text-text/70 text-xs">Updated: {formatDateTime(document.updated_at)}</p>
+			<p class="text-xs text-text/70">Updated: {formatDateTime(document.updated_at)}</p>
 		{/if}
 	</div>
 {/snippet}
@@ -128,7 +131,7 @@
 			<DeleteIcon class="h-5 w-5 text-red-600 hover:text-red-800" />
 		{/snippet}
 		{#snippet slideout()}
-			<div class="whitespace-nowrap bg-red-500/10 px-3 py-2 text-red-600 dark:text-red-400">
+			<div class="bg-red-500/10 px-3 py-2 whitespace-nowrap text-red-600 dark:text-red-400">
 				Delete?
 			</div>
 		{/snippet}

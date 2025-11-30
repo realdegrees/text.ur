@@ -28,8 +28,8 @@
 		for (let pageNum = 1; pageNum <= documentStore.numPages; pageNum++) {
 			map.set(pageNum, []);
 		}
-		
-		for (const comment of documentStore.comments.withAnnotations) {						
+
+		for (const comment of documentStore.comments.withAnnotations) {
 			for (let idx = 0; idx < comment.annotation.boundingBoxes.length; idx++) {
 				const box = comment.annotation.boundingBoxes[idx];
 				const pageNum = box.pageNumber;
@@ -60,7 +60,7 @@
 
 		// Do not remove all highlights here; we'll reconcile per-page instead.
 		// For each page with highlights
-		
+
 		for (const [pageNum, highlights] of highlightsByPage) {
 			const pageElement = viewerContainer.querySelector(
 				`[data-page-number="${pageNum}"]`
@@ -110,10 +110,7 @@
 				}
 
 				const div = document.createElement('div') as HighlightElement;
-				commentState.highlightElements = [
-					...(commentState.highlightElements || []),
-					div
-				];
+				commentState.highlightElements = [...(commentState.highlightElements || []), div];
 				div.className = 'annotation-highlight';
 				div.dataset.commentId = String(comment.id);
 				div.dataset.key = key;
@@ -136,8 +133,8 @@
 
 				// Create named listener functions for cleanup
 				const listeners = {
-					mouseenter: () => commentState.isHighlightHovered = true,
-					mouseleave: () => commentState.isHighlightHovered = false,
+					mouseenter: () => (commentState.isHighlightHovered = true),
+					mouseleave: () => (commentState.isHighlightHovered = false),
 					click: () => {
 						commentState.isPinned = !commentState.isPinned;
 					}
@@ -165,7 +162,9 @@
 						el.removeEventListener('mouseleave', el._listeners.mouseleave);
 						el.removeEventListener('click', el._listeners.click);
 					}
-					const commentState = documentStore.comments.getState(parseInt(el.dataset.commentId ?? '-1'));
+					const commentState = documentStore.comments.getState(
+						parseInt(el.dataset.commentId ?? '-1')
+					);
 					if (commentState) {
 						commentState.highlightElements = commentState.highlightElements?.filter(
 							(he) => he !== el
@@ -256,9 +255,7 @@
 			el.remove();
 			const commentState = documentStore.comments.getState(parseInt(el.dataset.commentId ?? '-1'));
 			if (commentState) {
-				commentState.highlightElements = commentState.highlightElements?.filter(
-					(he) => he !== el
-				);
+				commentState.highlightElements = commentState.highlightElements?.filter((he) => he !== el);
 			}
 		});
 	});

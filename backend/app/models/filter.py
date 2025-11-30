@@ -181,7 +181,7 @@ class FilterMeta:
             inferred_type=inferred_type,
         )
 
-    def _convert_value(self, value: Any, inferred_type: type, operator: Operator) -> Any:  # noqa: ANN401
+    def _convert_value(self, value: Any, inferred_type: type, operator: Operator) -> Any:  # noqa: ANN401, C901
         """Convert value to the appropriate type based on inferred_type."""
         try:
             if inferred_type is bool or operator == "exists":

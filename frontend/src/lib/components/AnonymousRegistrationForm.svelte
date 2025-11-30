@@ -37,12 +37,12 @@
 
 <form onsubmit={handleAnonymousRegister} class="flex flex-col gap-4">
 	{#if errorMessage}
-		<div class="text-red-500 text-sm">{errorMessage}</div>
+		<div class="text-sm text-red-500">{errorMessage}</div>
 	{/if}
 	<Field bind:value={username} label="Username" required />
-	<button 
-		type="submit" 
-		class="bg-primary text-text py-3 rounded-md font-bold  disabled:cursor-not-allowed disabled:opacity-50"
+	<button
+		type="submit"
+		class="rounded-md bg-primary py-3 font-bold text-text disabled:cursor-not-allowed disabled:opacity-50"
 		disabled={isLoading || !username.trim()}
 	>
 		{#if isLoading}

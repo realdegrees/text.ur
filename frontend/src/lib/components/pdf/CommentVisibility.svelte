@@ -80,7 +80,7 @@
 		items={visibilityOptions}
 		bind:currentItem={currentVisibility}
 		bind:show={isOpen}
-		position={isTopLevel ? "bottom-left" : "top-left"}
+		position={isTopLevel ? 'bottom-left' : 'top-left'}
 		allowSelection={false}
 		showCurrentItemInList={true}
 		onSelect={handleSelect}

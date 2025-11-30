@@ -55,7 +55,10 @@
 	let isSubmitting = $state(false);
 	let isLoadingReplies = $state(false);
 
-	let hasUnloadedReplies = $derived(comment?.num_replies > 0 && (!commentState?.replies || (commentState.replies.length - comment.num_replies < 0)));
+	let hasUnloadedReplies = $derived(
+		comment?.num_replies > 0 &&
+			(!commentState?.replies || commentState.replies.length - comment.num_replies < 0)
+	);
 	let isAuthor = $derived(sessionStore.currentUserId === comment?.user?.id);
 	let canDeleteComment = $derived.by(() => {
 		if (sessionStore.currentUserId === comment.user?.id) return true;
@@ -155,7 +158,7 @@
 {#snippet editDeleteButtons()}
 	{#if commentState && !commentState.isEditing && isAuthor}
 		<button
-			class="text-text/40 hover:bg-text/10 hover:text-text/70 rounded {isTopLevel
+			class="rounded text-text/40 hover:bg-text/10 hover:text-text/70 {isTopLevel
 				? 'p-1'
 				: 'p-0.5'} transition-colors"
 			onclick={(e) => {
@@ -217,14 +220,19 @@
 	<div class={isTopLevel ? 'p-3' : ''}>
 		<!-- Nested header (username + date inline) -->
 		<div class="flex items-center justify-between">
-			<div class="flex items-center gap-2 ">
+			<div class="flex items-center gap-2">
 				{#if !isTopLevel}
-					<span class="text-text/70 text-xs font-medium"
+					<span class="text-xs font-medium text-text/70"
 						>{comment.user?.username ?? 'Anonymous'}</span
 					>
 				{/if}
-				<span class="text-text/40 text-xs">{formatDateTime(comment.created_at)}</span>
-				<CommentVisibility {comment} visibility={comment.visibility} canEdit={isAuthor} isTopLevel={isTopLevel} />
+				<span class="text-xs text-text/40">{formatDateTime(comment.created_at)}</span>
+				<CommentVisibility
+					{comment}
+					visibility={comment.visibility}
+					canEdit={isAuthor}
+					{isTopLevel}
+				/>
 			</div>
 			{#if isAuthor || canDeleteComment}
 				<div class="flex items-center gap-1">
@@ -235,8 +243,8 @@
 
 		<!-- Annotation quote (top-level only) -->
 		{#if comment.annotation}
-			<div class="border-primary/50 bg-primary/5 mb-3 border-l-2 py-1.5 pl-2.5 pr-2">
-				<p class="text-text/60 line-clamp-2 text-xs italic">
+			<div class="mb-3 border-l-2 border-primary/50 bg-primary/5 py-1.5 pr-2 pl-2.5">
+				<p class="line-clamp-2 text-xs text-text/60 italic">
 					"{comment.annotation.text}"
 				</p>
 			</div>
@@ -260,7 +268,7 @@
 				/>
 				<div class="{sizes.mt} flex justify-end {sizes.gap}">
 					<button
-						class="flex items-center gap-1 rounded {sizes.buttonPx} text-text/50 hover:bg-text/10 hover:text-text/70 text-xs transition-colors"
+						class="flex items-center gap-1 rounded {sizes.buttonPx} text-xs text-text/50 transition-colors hover:bg-text/10 hover:text-text/70"
 						onclick={(e) => {
 							e.stopPropagation();
 							commentState.isEditing = false;
@@ -270,7 +278,7 @@
 						<CloseIcon class={sizes.icon} /> Cancel
 					</button>
 					<button
-						class="bg-primary/20 flex items-center gap-1 rounded {sizes.buttonPx} text-primary hover:bg-primary/30 text-xs font-medium transition-colors disabled:opacity-50"
+						class="flex items-center gap-1 rounded bg-primary/20 {sizes.buttonPx} text-xs font-medium text-primary transition-colors hover:bg-primary/30 disabled:opacity-50"
 						onclick={(e) => {
 							e.stopPropagation();
 							handleEdit();
@@ -287,7 +295,7 @@
 				<MarkdownRenderer content={comment.content} class="{sizes.text} {sizes.textMuted}" />
 			</div>
 		{:else if isTopLevel}
-			<p class="text-text/40 mb-3 text-sm italic">No comment text</p>
+			<p class="mb-3 text-sm text-text/40 italic">No comment text</p>
 		{/if}
 
 		<!-- Reply input -->
@@ -308,7 +316,7 @@
 				/>
 				<div class="{sizes.mt} flex justify-end {sizes.gap}">
 					<button
-						class="rounded {sizes.buttonPx} text-text/50 hover:bg-text/10 hover:text-text/70 text-xs transition-colors"
+						class="rounded {sizes.buttonPx} text-xs text-text/50 transition-colors hover:bg-text/10 hover:text-text/70"
 						onclick={(e) => {
 							e.stopPropagation();
 							commentState.showReplyInput = false;
@@ -316,7 +324,7 @@
 						}}>Cancel</button
 					>
 					<button
-						class="bg-primary/20 rounded {sizes.buttonPx} text-primary hover:bg-primary/30 text-xs font-medium transition-colors disabled:opacity-50"
+						class="rounded bg-primary/20 {sizes.buttonPx} text-xs font-medium text-primary transition-colors hover:bg-primary/30 disabled:opacity-50"
 						onclick={(e) => {
 							e.stopPropagation();
 							handleReply();
@@ -343,21 +351,21 @@
 
 		{#if commentState && comment.num_replies > 0}
 			<!-- Replies -->
-			<div class={isTopLevel ? 'border-text/10 border-t pt-2' : 'mt-2'}>
+			<div class={isTopLevel ? 'border-t border-text/10 pt-2' : 'mt-2'}>
 				<button
 					class="{isTopLevel
 						? 'mb-2 w-full'
 						: 'mb-1.5'} flex items-center gap-0.5 text-xs {isTopLevel
-						? 'text-text/50 hover:text-text/70 font-medium'
+						? 'font-medium text-text/50 hover:text-text/70'
 						: 'text-text/40 hover:text-text/60'} transition-colors"
 					disabled={isLoadingReplies}
 					onclick={(e) => {
 						e.stopPropagation();
-						
+
 						if (!commentState.repliesExpanded && !commentState.replies.length) {
 							handleLoadReplies();
 						}
-						commentState.repliesExpanded = !commentState.repliesExpanded;						
+						commentState.repliesExpanded = !commentState.repliesExpanded;
 					}}
 				>
 					{#if !commentState.repliesExpanded}
@@ -380,7 +388,7 @@
 					</div>
 					{#if hasUnloadedReplies}
 						<button
-							class="mt-1.5 flex items-center {sizes.gap} text-text/60 hover:text-text/70 text-xs transition-colors"
+							class="mt-1.5 flex items-center {sizes.gap} text-xs text-text/60 transition-colors hover:text-text/70"
 							onclick={(e) => {
 								e.stopPropagation();
 								handleLoadReplies();

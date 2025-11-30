@@ -218,14 +218,14 @@
 				boundingBoxes: mergedBoxes,
 				color: DEFAULT_HIGHLIGHT_COLOR
 			};
-			
+
 			const id = await documentStore.comments.create({ annotation, visibility: 'public' });
 			// Clear selection after creating
 			window.getSelection()?.removeAllRanges();
-						
+
 			if (!id) return;
 			const state = documentStore.comments.getState(id);
-			
+
 			// Pin the new comment and trigger edit mode
 			state!.isEditing = true;
 		} finally {

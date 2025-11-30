@@ -162,7 +162,7 @@
 	onDestroy(() => unsubscribe?.());
 </script>
 
-<div class="pdf-viewer-container bg-background flex h-full w-full">
+<div class="pdf-viewer-container flex h-full w-full bg-background">
 	<PdfControls
 		minScale={PDF_MIN_SCALE}
 		{maxScale}
@@ -177,7 +177,7 @@
 
 	<!-- PDF Viewer Area - shrinks to fit content when zoomed out -->
 	<div
-		class="bg-text/5 relative h-full overflow-hidden transition-[width] duration-150"
+		class="relative h-full overflow-hidden bg-text/5 transition-[width] duration-150"
 		style="width: {pdfWidth > 0 ? `${pdfWidth}px` : '100%'}; max-width: 100%;"
 		bind:this={pdfAreaWrapper}
 	>
@@ -203,7 +203,7 @@
 
 	<!-- Right Sidebar - Comments (expands to fill remaining space) -->
 	<div
-		class="border-text/10 bg-inset relative min-w-72 flex-1 overflow-hidden border-l"
+		class="relative min-w-72 flex-1 overflow-hidden border-l border-text/10 bg-inset"
 		onwheel={handleCommentsWheel}
 		role="complementary"
 		bind:this={sidebarContainer}

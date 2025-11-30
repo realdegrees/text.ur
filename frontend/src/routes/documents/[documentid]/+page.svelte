@@ -13,7 +13,7 @@
 
 	// Initialize session and document stores (reactive to data changes)
 	// Use data.X directly so the effect re-runs when invalidateAll() updates data
-	$effect(() => {		
+	$effect(() => {
 		if (JSON.stringify(prevRootComments) !== JSON.stringify(data.rootComments)) {
 			prevRootComments = data.rootComments;
 			documentStore.setRootComments(data.rootComments);
