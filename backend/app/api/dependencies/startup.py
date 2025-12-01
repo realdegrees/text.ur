@@ -55,7 +55,7 @@ async def verify_all_dependencies_async() -> dict:
     # Redis (Event manager)
     try:
         event_manager = get_event_manager()
-        await event_manager.connect()
+        await event_manager.check_connection()
         result["event_manager"] = event_manager
     except Exception:
         app_logger.error("Redis verification failed")

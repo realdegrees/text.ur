@@ -63,6 +63,17 @@ class EventManager:
         
         self._subscriber_task = asyncio.create_task(self._subscriber_loop())
         events_logger.info("Started subscriber loop")
+        
+    async def check_connection(self) -> None:
+        """Check Redis connection and reconnect if necessary."""
+        r = redis.from_url(
+            f"redis://{cfg.REDIS_HOST}:{cfg.REDIS_PORT}",
+            decode_responses=True,
+            password=cfg.REDIS_PASSWORD,
+        )
+
+        await r.ping()
+        events_logger.debug("Redis connection is healthy")
             
     async def disconnect(self) -> None:
         """Cleanup Redis connection."""
