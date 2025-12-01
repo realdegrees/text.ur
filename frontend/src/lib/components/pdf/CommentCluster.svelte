@@ -1,7 +1,6 @@
 <script lang="ts">
 	import {
 		documentStore,
-		type CommentState,
 		type TypedComment
 	} from '$lib/runes/document.svelte.js';
 	import { SvelteMap } from 'svelte/reactivity';
@@ -18,37 +17,6 @@
 		onHeightChange?: (height: number) => void;
 	}
 
-	// ? This is needed for when a comment is pinned by clicking its highlight, then the currently active comment needs to be unpinned
-	$effect(() => {
-		const pinnedComments = Array.from(commentStates.values()).filter(
-			(state): state is CommentState => !!state?.isPinned
-		);
-		if (pinnedComments.length > 1) {
-			// Ensure only one comment is pinned at a time in this cluster
-			// If one of the pinnedComments matches the highlight hovered comment (prio1) or hovered tab comment (prio2), keep that one pinned
-			const highlightHovered = pinnedComments.find((c) => c?.isHighlightHovered);
-			const tabHovered = pinnedComments.find((c) => c?.isCommentHovered);
-
-			let toKeepPinned: CommentState | undefined;
-			if (highlightHovered && pinnedComments.includes(highlightHovered)) {
-				toKeepPinned = highlightHovered;
-			} else if (tabHovered && pinnedComments.includes(tabHovered)) {
-				toKeepPinned = tabHovered;
-			} else {
-				toKeepPinned = pinnedComments[0];
-			}
-
-			// Unpin all except toKeepPinned
-			pinnedComments.forEach((c) => {
-				if (c !== toKeepPinned && c.isPinned) {
-					c.isPinned = false;
-				} else if (c === toKeepPinned) {
-					selectedCommentId = c.id;
-				}
-			});
-		}
-	});
-
 	let { comments, yPosition, scrollTop, onHeightChange }: Props = $props();
 
 	let commentStates = $derived.by(
@@ -56,39 +24,53 @@
 	);
 
 	// Track which comment is selected in this group (defaults to first)
-	let selectedCommentId = $state<number | null>(null);
+	// eslint-disable-next-line svelte/prefer-writable-derived
+	let selectedTabId = $state<number | null>(null);
 
 	let hoveredTabId: number | null = $state(null);
 	let hoveredTabCommentState = $derived.by(() => commentStates.get(hoveredTabId ?? -1));
-	let hoveredHighlightComment: TypedComment | null = $derived.by(() => {
+	let highlightHoveredComment: TypedComment | null = $derived.by(() => {
 		return comments.find((c) => commentStates.get(c.id)?.isHighlightHovered) ?? null;
 	});
-	let activeEditingComment: TypedComment | null = $derived.by(() => {
+	let firstCommentHovered: TypedComment | null = $derived.by(() => {
+		return comments.find((c) => commentStates.get(c.id)?.isCommentHovered) ?? null;
+	});
+	let firstEditingComment: TypedComment | null = $derived.by(() => {
 		return comments.find((c) => commentStates.get(c.id)?.isEditing) ?? null;
+	});
+	let firstReplyingComment: TypedComment | null = $derived.by(() => {
+		return comments.find((c) => commentStates.get(c.id)?.isReplying) ?? null;
+	});
+	let firstPinnedComment: TypedComment | null = $derived.by(() => {
+		return comments.find((c) => commentStates.get(c.id)?.isPinned) ?? null;
+	});
+	let selectedTabComment = $derived.by(() => {
+		return comments.find((c) => c.id === selectedTabId) ?? null;
 	});
 
 	let activeComment: TypedComment = $derived(
-		hoveredHighlightComment ??
-			activeEditingComment ??
-			comments.find((c) => c.id === selectedCommentId) ??
-			comments.find((c) => commentStates.get(c.id)?.isPinned) ??
+		highlightHoveredComment ??
+			firstEditingComment ??
+			firstReplyingComment ??
+			selectedTabComment ??
+			firstPinnedComment ??
 			comments[0]
 	);
-	let activeCommentState = $derived.by(() => commentStates.get(activeComment.id));
 
-	// ! This only checks the top level comments, replies are not included
-	let anyCommentHovered = $derived(
-		!!comments.find((c) => commentStates.get(c.id)?.isCommentHovered)
-	);
-	let anyHighlightHovered = $derived(
-		!!comments.find((c) => commentStates.get(c.id)?.isHighlightHovered)
-	);
-	let anyCommentPinned = $derived(!!comments.find((c) => commentStates.get(c.id)?.isPinned));
-	let anyCommentEditing = $derived(!!comments.find((c) => commentStates.get(c.id)?.isEditing));
+	$effect(() => {
+		selectedTabId = activeComment.id;
+	});
+
+	let activeCommentState = $derived.by(() => commentStates.get(activeComment.id));
 
 	// Show expanded card when badge is hovered, highlight is hovered, comment is pinned, or input is active
 	let showCard = $derived(
-		anyCommentHovered || anyHighlightHovered || anyCommentPinned || anyCommentEditing
+		hoveredTabCommentState ||
+			highlightHoveredComment ||
+			firstPinnedComment ||
+			firstEditingComment ||
+			firstReplyingComment ||
+			firstCommentHovered
 	);
 
 	let commentCount = $derived(comments.length);
@@ -121,7 +103,7 @@
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
 		bind:this={clusterRef}
-		class="relative z-50 overflow-hidden rounded-lg bg-background shadow-lg ring-0 shadow-black/20 ring-primary/30 transition-all {anyCommentPinned
+		class="relative z-50 overflow-hidden rounded-lg bg-background shadow-lg ring-0 shadow-black/20 ring-primary/30 transition-all {firstPinnedComment
 			? 'ring-3'
 			: ''}"
 		tabindex="-1"
@@ -155,14 +137,14 @@
 								}
 								if (state) {
 									state.isCommentHovered = true;
-									state.isPinned = activeCommentState?.isPinned;
+									// state.isPinned = activeCommentState?.isPinned;
 								}
 								if (activeCommentState) {
-									activeCommentState.isPinned = false;
+									// activeCommentState.isPinned = false;
 									activeCommentState.isCommentHovered = false;
 								}
 
-								selectedCommentId = c.id;
+								selectedTabId = c.id;
 							}}
 							onmouseenter={() => {
 								hoveredTabId = c.id;
@@ -177,7 +159,7 @@
 							<p>{c.user?.username?.slice(0, 10) ?? `Comment ${idx + 1}`}</p>
 							{#if state?.isPinned}
 								<PinIcon class="h-4 w-4 text-text transition-colors hover:text-red-400" />
-							{:else if hoveredTabId === c.id && c.id === activeComment.id}
+							{:else if c.id === activeComment.id}
 								<PinOffIcon class="h-4 w-4 hover:text-text" />
 							{/if}
 						</button>
@@ -188,7 +170,7 @@
 		{#if activeComment}
 			<CommentCard comment={activeComment} />
 
-			{#if (anyCommentHovered || anyHighlightHovered) && (anyCommentPinned || anyCommentHovered)}
+			{#if hoveredTabCommentState || firstCommentHovered || highlightHoveredComment}
 				<!-- Connection line for this card -->
 
 				<ConnectionLine commentState={activeCommentState} {yPosition} {scrollTop} />

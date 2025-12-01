@@ -41,7 +41,7 @@
 			columns={[
 				{
 					label: 'Document Name',
-					width: '3fr',
+					width: '1fr',
 					snippet: nameSnippet
 				},
 				{
@@ -54,11 +54,15 @@
 					width: '1fr',
 					snippet: dateSnippet
 				},
-				{
-					label: 'Actions',
-					width: '1fr',
-					snippet: actionsSnippet
-				}
+				...(sessionStore.validatePermissions(['delete_documents'])
+					? [
+							{
+								label: 'Actions',
+								width: 'auto',
+								snippet: actionsSnippet
+							}
+						]
+					: [])
 			]}
 			data={documents}
 			loadMore={async (offset, limit) => {
@@ -116,24 +120,28 @@
 {/snippet}
 
 {#snippet actionsSnippet(document: DocumentRead)}
-	<ConfirmButton
-		onConfirm={async () => {
-			const result = await api.delete(`/documents/${document.id}`);
-			if (!result.success) {
-				notification(result.error);
-				return;
-			}
-			notification('success', 'Document deleted successfully');
-			invalidateAll();
-		}}
-	>
-		{#snippet button()}
-			<DeleteIcon class="h-5 w-5 text-red-600 hover:text-red-800" />
-		{/snippet}
-		{#snippet slideout()}
-			<div class="bg-red-500/10 px-3 py-2 whitespace-nowrap text-red-600 dark:text-red-400">
-				Delete?
-			</div>
-		{/snippet}
-	</ConfirmButton>
+	<div class="flex w-full flex-row items-center justify-end">
+		{#if sessionStore.validatePermissions(['delete_documents'])}
+			<ConfirmButton
+				onConfirm={async () => {
+					const result = await api.delete(`/documents/${document.id}`);
+					if (!result.success) {
+						notification(result.error);
+						return;
+					}
+					notification('success', 'Document deleted successfully');
+					invalidateAll();
+				}}
+			>
+				{#snippet button()}
+					<DeleteIcon class="h-5 w-5 text-red-600 hover:text-red-800" />
+				{/snippet}
+				{#snippet slideout()}
+					<div class="bg-red-500/10 px-3 py-2 whitespace-nowrap text-red-600 dark:text-red-400">
+						Delete?
+					</div>
+				{/snippet}
+			</ConfirmButton>
+		{/if}
+	</div>
 {/snippet}

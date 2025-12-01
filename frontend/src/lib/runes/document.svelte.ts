@@ -22,7 +22,7 @@ export interface CommentState {
 	replyInputContent: string; // Current content in reply input
 	// UI state
 	repliesExpanded?: boolean; // Replies section is collapsed
-	showReplyInput?: boolean; // Reply input box is shown
+	isReplying?: boolean; // Reply input box is shown
 	// Element Refs
 	highlightElements?: HTMLElement[]; // Associated highlight elements in the PDF
 }
@@ -192,7 +192,7 @@ const createDocumentStore = () => {
 			});
 			commentStates.set(data.id, newState);
 		},
-		delete: (commentId: number) => {
+		delete: (commentId: number, deleteState = false) => {
 			/** Delete a comment and its replies from the local store. */
 			// Delete all replies and their states from the local map
 			const commentState = commentStates.get(commentId);
@@ -242,6 +242,9 @@ const createDocumentStore = () => {
 				commentState.isCommentHovered = false;
 			}
 			_comments.delete(commentId);
+			if (deleteState) {
+				commentStates.delete(commentId);
+			}
 		}
 	});
 
@@ -282,8 +285,7 @@ const createDocumentStore = () => {
 				return;
 			}
 
-			commentsLocal.delete(commentId);
-			commentStates.delete(commentId); // Here we can fully delete the state instead of soft resetting it because the comment is gone for good
+			commentsLocal.delete(commentId, true);
 		},
 		loadMoreReplies: async (commentId: number) => {
 			const limit = 20;
@@ -347,6 +349,7 @@ const createDocumentStore = () => {
 		pinned: new SvelteMap(commentStates.entries().filter(([, state]) => state.isPinned)),
 		topLevelComments: filteredTopLevelComments,
 		editing: new SvelteMap(commentStates.entries().filter(([, state]) => state.isEditing)),
+		replying: new SvelteMap(commentStates.entries().filter(([, state]) => state.isReplying)),
 		highlightHovered: new SvelteMap(
 			commentStates.entries().filter(([, state]) => state.isHighlightHovered)
 		),

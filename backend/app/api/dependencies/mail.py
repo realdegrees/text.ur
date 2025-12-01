@@ -25,7 +25,6 @@ from jinja2 import (
 )
 from util.api_router import APIRouter
 
-app_logger = get_logger("app")
 mail_logger = get_logger("mails")
 
 
@@ -48,7 +47,7 @@ class EmailManager:
         the verification fails in non-debug (production) mode.
         """
         try:
-            app_logger.debug(
+            mail_logger.debug(
                 "Attempting SMTP connection: server=%s, port=%s, tls=%s, user=%s",
                 SMTP_SERVER, SMTP_PORT, SMTP_TLS, SMTP_USER
             )
@@ -56,7 +55,7 @@ class EmailManager:
                 if SMTP_TLS:
                     server.starttls()
                 server.login(SMTP_USER, SMTP_PASSWORD)
-            app_logger.info("SMTP connection verified successfully")
+            mail_logger.info("SMTP connection verified successfully")
             return True
         except smtplib.SMTPAuthenticationError as e:
             raise RuntimeError(f"SMTP authentication failed for user '{SMTP_USER}': {e}") from e

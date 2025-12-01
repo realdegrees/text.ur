@@ -13,7 +13,6 @@ from fastapi import Request, WebSocket
 from fastapi.params import Depends
 from pydantic import BaseModel
 
-app_logger = get_logger("app")
 events_logger = get_logger("events")
 
 # Heartbeat interval for active user tracking (in seconds)
@@ -53,11 +52,17 @@ class EventManager:
                 decode_responses=True,
                 password=cfg.REDIS_PASSWORD,
             )
-            app_logger.info("EventManager connected to Redis")
+            events_logger.info("Connected to Redis")
             await self._redis.ping()
+            
+        # Clear all active_users: keys on startup to avoid stale data
+        keys = await self._redis.keys("active_users:*")
+        if keys:
+            await self._redis.delete(*keys)
+            events_logger.info("Cleared %d stale active user keys", len(keys))
         
         self._subscriber_task = asyncio.create_task(self._subscriber_loop())
-        app_logger.info("EventManager connected to Redis and started subscriber loop")
+        events_logger.info("Started subscriber loop")
             
     async def disconnect(self) -> None:
         """Cleanup Redis connection."""
@@ -65,7 +70,7 @@ class EventManager:
         with contextlib.suppress(asyncio.CancelledError):
             await self._subscriber_task
         await self._redis.aclose()
-        app_logger.info("EventManager disconnected")
+        events_logger.info("Disconnected from Redis")
 
     # ---------------- Active User Tracking ----------------
     def _active_users_key(self, channel_key: str) -> str:

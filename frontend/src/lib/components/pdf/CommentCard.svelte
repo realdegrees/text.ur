@@ -80,7 +80,7 @@
 				annotation: null
 			});
 			commentState.replyInputContent = '';
-			commentState.showReplyInput = false;
+			commentState.isReplying = false;
 		} finally {
 			isSubmitting = false;
 		}
@@ -124,7 +124,7 @@
 			handleReply();
 		}
 		if (e.key === 'Escape' && commentState) {
-			commentState.showReplyInput = false;
+			commentState.isReplying = false;
 			commentState.replyInputContent = '';
 		}
 	};
@@ -293,7 +293,7 @@
 		{/if}
 
 		<!-- Reply input -->
-		{#if commentState?.showReplyInput}
+		{#if commentState?.isReplying}
 			<div class={isTopLevel ? 'mb-3' : 'mt-2'}>
 				<MarkdownTextEditor
 					bind:value={commentState.replyInputContent}
@@ -304,7 +304,7 @@
 					onkeydown={handleKeydown}
 					onblur={() => {
 						if (commentState.replyInputContent.trim().length === 0) {
-							commentState.showReplyInput = false;
+							commentState.isReplying = false;
 						}
 					}}
 				/>
@@ -313,7 +313,7 @@
 						class="rounded {sizes.buttonPx} text-xs text-text/50 transition-colors hover:bg-text/10 hover:text-text/70"
 						onclick={(e) => {
 							e.stopPropagation();
-							commentState.showReplyInput = false;
+							commentState.isReplying = false;
 							commentState.replyInputContent = '';
 						}}>Cancel</button
 					>
@@ -336,7 +336,7 @@
 					: 'text-primary/70 hover:text-primary'} transition-colors"
 				onclick={(e) => {
 					e.stopPropagation();
-					commentState.showReplyInput = true;
+					commentState.isReplying = true;
 				}}
 			>
 				<ReplyIcon class={sizes.icon} /> Reply

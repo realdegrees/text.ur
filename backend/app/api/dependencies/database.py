@@ -22,7 +22,6 @@ from sqlalchemy.exc import (
 from sqlalchemy.orm import UOWTransaction, sessionmaker
 from sqlmodel import Session, create_engine
 
-app_logger = get_logger("app")
 db_logger = get_logger("database")
 
 if cfg.DEBUG:
@@ -61,10 +60,10 @@ class DatabaseManager:
     def verify_connection(self) -> None:
         """Run a lightweight query to validate DB connectivity."""
         try:
-            app_logger.debug("Checking database connection to %s", DATABASE_URL)
+            db_logger.debug("Checking connection to %s", DATABASE_URL)
             with self.engine.connect() as conn:
                 conn.execute(text("SELECT 1"))
-            app_logger.info("Database connection verified successfully")
+            db_logger.info("Connection verified successfully")
         except Exception as e:
             raise RuntimeError(f"Failed to connect to database: {e}") from e
 

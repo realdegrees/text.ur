@@ -16,7 +16,6 @@ from core.config import (
 from core.logger import get_logger
 from fastapi import Depends
 
-app_logger = get_logger("app")
 s3_logger = get_logger("s3")
 
 
@@ -47,18 +46,18 @@ class S3Manager:
                 
         try:
             self._client.head_bucket(Bucket=S3_BUCKET)
-            app_logger.info("S3 connection verified successfully (bucket: %s)", S3_BUCKET)
+            s3_logger.info("Connection verified successfully (bucket: %s)", S3_BUCKET)
         except ClientError as e:
             error_code = e.response.get("Error", {}).get("Code", "Unknown")
             if error_code == "404":
-                raise RuntimeError(f"S3 bucket '{S3_BUCKET}' does not exist") from e
+                raise RuntimeError(f"Bucket '{S3_BUCKET}' does not exist") from e
             elif error_code == "403":
-                raise RuntimeError(f"Access denied to S3 bucket '{S3_BUCKET}'") from e
+                raise RuntimeError(f"Access denied to bucket '{S3_BUCKET}'") from e
             else:
                 raise RuntimeError(f"Failed to connect to S3: {e}") from e
         except Exception as e:
-            app_logger.error("S3 connection failed: %s", e)
-            raise RuntimeError(f"Failed to connect to S3: {e}") from e
+            s3_logger.error("S3 connection failed: %s", e)
+            raise RuntimeError(f"Failed to connect: {e}") from e
 
     def metadata(self, key: str) -> dict | None:
         """Check if an object exists in S3 and return its metadata."""
