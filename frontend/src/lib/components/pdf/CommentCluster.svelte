@@ -1,8 +1,5 @@
 <script lang="ts">
-	import {
-		documentStore,
-		type TypedComment
-	} from '$lib/runes/document.svelte.js';
+	import { documentStore, type TypedComment } from '$lib/runes/document.svelte.js';
 	import { SvelteMap } from 'svelte/reactivity';
 	import CommentCard from './CommentCard.svelte';
 	import ConnectionLine from './ConnectionLine.svelte';
@@ -173,17 +170,13 @@
 			{#if hoveredTabCommentState || firstCommentHovered || highlightHoveredComment}
 				<!-- Connection line for this card -->
 
-				<ConnectionLine commentState={activeCommentState} {yPosition} {scrollTop} />
-
-				{#if hoveredTabId !== null && hoveredTabId !== activeComment.id}
-					<!-- Connection line for hovered tab comment -->
+				{#key hoveredTabCommentState?.id ?? activeCommentState?.id}
 					<ConnectionLine
-						commentState={hoveredTabCommentState}
+						commentState={hoveredTabCommentState ?? activeCommentState}
 						{yPosition}
-						opacity={0.7}
 						{scrollTop}
 					/>
-				{/if}
+				{/key}
 			{/if}
 		{/if}
 	</div>

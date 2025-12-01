@@ -60,7 +60,7 @@
 	const renderHighlights = () => {
 		if (!viewerContainer) return;
 
-		const isAnyPinned = documentStore.comments.pinned.size > 0;
+		const isAnyCommentHovered = documentStore.comments.commentHovered.size > 0;
 
 		// Do not remove all highlights here; we'll reconcile per-page instead.
 		// For each page with highlights
@@ -91,7 +91,7 @@
 				const top = box.y * textLayerRect.height;
 				const width = box.width * textLayerRect.width;
 				const height = box.height * textLayerRect.height;
-				const isVisible = !isAnyPinned || !!state?.isPinned || !!state?.isCommentHovered;
+				const isVisible = !isAnyCommentHovered || !!state?.isPinned || !!state?.isCommentHovered;
 
 				// reuse an existing element if one already exists for this key
 				const existingEl = textLayer.querySelector<HighlightElement>(

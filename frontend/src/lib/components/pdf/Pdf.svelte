@@ -186,7 +186,7 @@
 			onscroll={handleScroll}
 			onwheel={handlePdfWheel}
 		>
-			<div id="viewer" class="pdfSlickViewer pdfViewer"></div>
+			<div id="viewer" class="pdfSlickViewer pdfViewer m-0! p-0!"></div>
 		</div>
 		<!-- Annotation highlights are rendered into the PDF pages -->
 		<AnnotationLayer viewerContainer={container} />
@@ -212,7 +212,7 @@
 <style>
 	/* Override PDF.js CSS variables to reduce spacing */
 	:global(.pdf-viewer-container) {
-		--page-margin: 6px 0;
+		--page-margin: 0px 0px;
 		--page-padding: 0px 0;
 		--page-border: none;
 		--pdfViewer-padding-bottom: 0;
