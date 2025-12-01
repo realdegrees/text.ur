@@ -1,4 +1,5 @@
 import enum
+import json
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
@@ -22,11 +23,11 @@ from models.tables import (
 )
 
 Base = default_registry.generate_base()
-Operator = Literal["==", ">=", "<=", ">", "<", "ilike", "like", "exists", "!="]
+Operator = Literal["==", ">=", "<=", ">", "<", "ilike", "like", "exists", "!=", "in", "notin"]
 OperatorMap = {
-    "equals": {"==", "!="},
-    "contains": {"ilike", "like", "==", "!="},
-    "numeric": {"==", ">=", "<=", ">", "<", "!="},
+    "equals": {"==", "!=", "in", "notin"},
+    "contains": {"ilike", "like", "==", "!=", "in", "notin"},
+    "numeric": {"==", ">=", "<=", ">", "<", "!=", "in", "notin"},
     "exists": {"exists"},
 }
 
@@ -64,6 +65,7 @@ class FilterableField:
     allow_sorting: bool = False
     requires_user: bool = False
     exclude_field: str | None = None
+    inferred_type: type = str
 
 
 @dataclass
@@ -176,15 +178,51 @@ class FilterMeta:
             allow_sorting=self.allow_sorting,
             requires_user=self.user_condition is not None,
             exclude_field=exclude_field,
+            inferred_type=inferred_type,
         )
 
-    def _convert_value(self, value: Any, inferred_type: type, operator: Operator) -> Any:  # noqa: ANN401
+    def _convert_value(self, value: Any, inferred_type: type, operator: Operator) -> Any:  # noqa: ANN401, C901
         """Convert value to the appropriate type based on inferred_type."""
         try:
             if inferred_type is bool or operator == "exists":
                 return str(value).lower() in ("1", "true")
             elif inferred_type is datetime:
                 return datetime.fromisoformat(value)
+            elif operator in ("in", "notin"):
+                # Parse value into a list
+                items: list[Any]
+                try:
+                    parsed = json.loads(value)
+                    if not isinstance(parsed, list):
+                        raise ValueError("Parsed JSON is not a list")
+                    items = parsed
+                except Exception as e:
+                    raise ValueError("Value for 'in'/'notin' operator must be a JSON array") from e
+
+                # Only support string and numeric inferred types
+                if inferred_type is str:
+                    converted: list[str] = []
+                    for elem in items:
+                        if isinstance(elem, (str, int, float)):
+                            converted.append(str(elem))
+                        else:
+                            raise ValueError(f"Invalid array element type: {type(elem)}")
+                    return converted
+                elif inferred_type in (int, float):
+                    converted: list[Any] = []
+                    for elem in items:
+                        if isinstance(elem, (int, float)):
+                            converted.append(inferred_type(elem))
+                        elif isinstance(elem, str):
+                            try:
+                                converted.append(inferred_type(elem))
+                            except Exception as exc:
+                                raise ValueError(f"Invalid numeric value '{elem}': {exc}") from exc
+                        else:
+                            raise ValueError(f"Invalid array element type: {type(elem)}")
+                    return converted
+                else:
+                    raise ValueError("Only string and numeric types supported for 'in'/'notin' operator")
             else:
                 return inferred_type(value)
         except Exception as e:
@@ -213,6 +251,10 @@ class FilterMeta:
         if operator == "exists":
             exists_flag = str(value).lower() in ("1", "true", "yes", "on")
             return self.field != None if exists_flag else self.field == None  # noqa: E711
+        if operator == "in":
+            return self.field.in_(value)
+        if operator == "notin":
+            return ~self.field.in_(value)
         raise ValueError(f"Unknown operator: {operator}")
 
     def _build_clause(self, operator: Operator, value: Any, filter_type: str, inferred_type: type, user: User | None = None) -> ColumnElement[bool]:  # noqa: ANN401
@@ -301,6 +343,7 @@ class MembershipFilter(BaseFilterModel):
     user_id: int = Field()
     group_id: str = Field()
     accepted: bool = Field()
+    sharelink_id: str = Field()
 
     @classmethod
     def get_filter_metadata(cls) -> dict[str, FilterMeta]:
@@ -309,6 +352,7 @@ class MembershipFilter(BaseFilterModel):
             "user_id": FilterMeta(field=Membership.user_id, exclude=Membership.user),
             "group_id": FilterMeta(field=Membership.group_id, exclude=Membership.group),
             "accepted": FilterMeta(field=Membership.accepted),
+            "sharelink_id": FilterMeta(field=Membership.sharelink_id, exclude=Membership.share_link),
         }
 
 
@@ -323,6 +367,7 @@ class CommentFilter(BaseFilterModel):
     document_id: str = Field()
     parent_id: int = Field()
     annotation: dict = Field()
+    id: int = Field()
     
     @classmethod
     def get_filter_metadata(cls) -> dict[str, FilterMeta]:
@@ -336,6 +381,7 @@ class CommentFilter(BaseFilterModel):
                 field=Comment.annotation,
                 include_operators={"exists"},
             ),
+            "id": FilterMeta(field=Comment.id),
         }
 
 # ================================================================

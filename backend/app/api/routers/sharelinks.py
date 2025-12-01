@@ -12,7 +12,12 @@ from fastapi import Body, HTTPException, Path, Response
 from models.enums import Permission
 from models.filter import ShareLinkFilter
 from models.pagination import Paginated
-from models.sharelink import ShareLinkCreate, ShareLinkRead, ShareLinkUpdate
+from models.sharelink import (
+    ShareLinkCreate,
+    ShareLinkRead,
+    ShareLinkReadFromToken,
+    ShareLinkUpdate,
+)
 from models.tables import Group, Membership, ShareLink, User
 from sqlmodel import select
 from util.api_router import APIRouter
@@ -40,12 +45,11 @@ async def list_share_links(
     return share_links
 
 
-@root_router.get("/{token}", response_model=ShareLinkRead)
+@root_router.get("/{token}", response_model=ShareLinkReadFromToken)
 async def get_share_link_from_token(
-    _: User = Authenticate(guards=[Guard.sharelink_access()]),
-    share_link: ShareLink = Resource(ShareLink, param_alias="token"),
-) -> ShareLinkRead:
-    """Get all share links for groups the user has access to."""
+    share_link: ShareLink = Resource(ShareLink, param_alias="token", key_column=ShareLink.token),
+) -> ShareLinkReadFromToken:
+    """Get a single share link by token."""
     return share_link
 
 
@@ -70,7 +74,7 @@ async def create_share_link(
 @router.put("/{share_link_id}", response_model=ShareLinkRead)
 async def update_share_link(
     db: Database,
-    _: User = Authenticate([Guard.group_access({Permission.ADMINISTRATOR})]),
+    user: User = Authenticate([Guard.group_access({Permission.ADMINISTRATOR})]),
     share_link: ShareLink = Resource(ShareLink, param_alias="share_link_id"),
     share_link_update: ShareLinkUpdate = Body(...),
     group: Group = Resource(Group, param_alias="group_id"),
@@ -80,6 +84,8 @@ async def update_share_link(
     db.merge(share_link)
     share_link.sqlmodel_update(share_link_update.model_dump(
         exclude_unset=True, exclude={"rotate_token"}))
+    
+    share_link.author = user # Update author to the user making the change
     
     memberships: list[Membership] = db.exec(
             select(Membership).join(ShareLink, Membership.share_link).where(
@@ -122,9 +128,9 @@ async def update_share_link(
 @router.delete("/{share_link_id}")
 async def delete_share_link(
     db: Database,
-    _: User = Authenticate([Guard.group_access({Permission.ADMINISTRATOR})]),
+    _user: User = Authenticate([Guard.group_access({Permission.ADMINISTRATOR})]),
     share_link: ShareLink = Resource(ShareLink, param_alias="share_link_id"),
-    group: Group = Resource(Group, param_alias="group_id"),
+    _group: Group = Resource(Group, param_alias="group_id"),
 ) -> Response:
     """Delete a share link."""
     db.delete(share_link)
@@ -132,12 +138,12 @@ async def delete_share_link(
     return Response(status_code=204)
 
 
-@root_router.post("/use/{token}", response_model=ShareLinkRead)
+@root_router.post("/{token}/use")
 async def use_sharelink_token(
     db: Database,
     token: str,
     user: User = Authenticate(),
-) -> ShareLinkRead:
+) -> Response:
     """Create a membership for an authenticated user via sharelink token.
 
     This endpoint is only for authenticated users. Anonymous users should
@@ -165,7 +171,7 @@ async def use_sharelink_token(
 
     if existing_membership:
         # User is already a member
-        return share_link
+        return Response(status_code=204)
 
     # Create new membership
     membership = Membership(
@@ -179,4 +185,4 @@ async def use_sharelink_token(
     )
     db.add(membership)
     db.commit()
-    return share_link
+    return Response(status_code=204)

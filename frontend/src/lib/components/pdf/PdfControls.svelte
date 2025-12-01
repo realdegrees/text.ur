@@ -10,7 +10,6 @@
 	import ViewModeSelector from './ViewModeSelector.svelte';
 	import ActiveUsers from './ActiveUsers.svelte';
 	import { documentStore } from '$lib/runes/document.svelte.js';
-	import { sessionStore } from '$lib/runes/session.svelte.js';
 
 	interface Props {
 		minScale: number;
@@ -36,20 +35,7 @@
 		onNextPage
 	}: Props = $props();
 
-	let isExpanded = $state(false);
-
-	// Check if filters should be disabled (restricted mode without view_restricted_comments permission)
-	let isRestrictedWithoutPermission = $derived(
-		documentStore.loadedDocument?.view_mode === 'restricted' &&
-			!sessionStore.validatePermissions(['view_restricted_comments'])
-	);
-
-	// Clear filters when view mode changes to restricted and user lacks permission
-	$effect(() => {
-		if (isRestrictedWithoutPermission && documentStore.hasActiveFilter) {
-			documentStore.clearAuthorFilter();
-		}
-	});
+	let isExpanded = $state(true);
 
 	const buttonClass =
 		'rounded p-2 text-text/70 transition-colors hover:bg-text/10 hover:text-text disabled:opacity-30 disabled:hover:bg-transparent';
@@ -58,7 +44,7 @@
 </script>
 
 <div
-	class="flex shrink-0 flex-col border-r border-text/10 bg-inset transition-all duration-200 {isExpanded
+	class="no-scrollbar flex shrink-0 flex-col overflow-x-hidden overflow-y-auto border-r border-text/10 bg-inset transition-all duration-200 {isExpanded
 		? 'w-40'
 		: 'w-12'}"
 >
@@ -150,16 +136,16 @@
 
 		<!-- Other Cursors Toggle -->
 		<button
-			class="{documentStore.showOtherCursors ? activeButtonClass : buttonClass} {isExpanded
+			class="{documentStore.showCursors ? activeButtonClass : buttonClass} {isExpanded
 				? 'w-full justify-start'
 				: ''}"
-			onclick={() => documentStore.setShowOtherCursors(!documentStore.showOtherCursors)}
-			title={documentStore.showOtherCursors ? 'Hide other cursors' : 'Show other cursors'}
+			onclick={() => (documentStore.showCursors = !documentStore.showCursors)}
+			title={documentStore.showCursors ? 'Hide other cursors' : 'Show other cursors'}
 		>
 			<span class="flex items-center gap-2">
 				<CursorIcon class="h-5 w-5" />
 				{#if isExpanded}<span class="text-xs"
-						>{documentStore.showOtherCursors ? 'Cursors On' : 'Cursors Off'}</span
+						>{documentStore.showCursors ? 'Cursors On' : 'Cursors Off'}</span
 					>{/if}
 			</span>
 		</button>

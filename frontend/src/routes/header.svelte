@@ -7,14 +7,14 @@
 	import { loadingBar } from '$lib/stores/loadingBar.svelte';
 	import { api } from '$api/client';
 	import { notification } from '$lib/stores/notificationStore';
-
+	import LoginIcon from '~icons/material-symbols/login';
 	import type { UserPrivate } from '$api/types';
 	import ProfileImageFallback from '~icons/material-symbols/account-box';
-	import Login from './login.svelte';
 	import Dropdown from '$lib/components/dropdown.svelte';
 	import AccountIcon from '~icons/mdi/account-cog';
 	import LogoutIcon from '~icons/mdi/exit-run';
 	import { page } from '$app/state';
+	import LL from '$i18n/i18n-svelte';
 
 	let { user }: { user?: UserPrivate } = $props();
 
@@ -30,7 +30,7 @@
 
 	async function handleMenuItemSelect(item: UserMenuItem) {
 		if (item === 'account') {
-			await goto(`/users/${user?.id}`);
+			await goto(`/users/${user?.id}/account`);
 		} else if (item === 'logout') {
 			await handleLogout();
 		}
@@ -54,7 +54,7 @@
 	}
 </script>
 
-<div class="h-15.5 w-full"></div>
+<div class="h-16.5 w-full"></div>
 <header class="fixed top-0 right-0 left-0 z-9000 h-15.5 w-full bg-background">
 	<div
 		class="center-content dark:shadow-inner-sym-10 mt-1 grid h-full grid-cols-3
@@ -101,7 +101,7 @@
 									<AccountIcon class="h-5 w-5" />
 									<p>Account Settings</p>
 								</div>
-							{:else if item === 'logout'}
+							{:else if item === 'logout' && !user.is_guest}
 								<div
 									class="flex w-full items-center gap-2 px-3 py-2 text-sm text-red-600 transition-colors dark:text-red-400"
 								>
@@ -113,7 +113,13 @@
 					</Dropdown>
 				</div>
 			{:else if page.url.pathname !== '/login'}
-				<Login />
+				<button
+					class="bg-discord group flex h-full w-full clickable flex-row items-center justify-between rounded p-1"
+					onclick={() => goto('/login')}
+				>
+					<LoginIcon />
+					<p class="ml-1 font-semibold">{$LL.login()}</p>
+				</button>
 			{/if}
 		</div>
 	</div>
@@ -130,7 +136,7 @@
 {/if}
 
 <style lang="postcss">
-	@reference '../../app.css';
+	@reference '../app.css';
 
 	header * {
 		@apply max-h-16;

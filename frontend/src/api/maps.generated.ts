@@ -26,6 +26,7 @@ export const ExclusionMaps = {
   MembershipFilter: {
     user_id: 'user',
     group_id: 'group',
+    sharelink_id: 'share_link',
   },
   ShareLinkFilter: {
     author_id: 'author',

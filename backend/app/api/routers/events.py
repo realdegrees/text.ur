@@ -4,16 +4,16 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path as PathLibPath
-from typing import Annotated, Any, Literal
 from uuid import uuid4
 
-from api.dependencies.authentication import Authenticate
+from api.dependencies.authentication import (
+    WebsocketAuthentication,
+)
 from api.dependencies.database import Database
 from api.dependencies.events import (
     HEARTBEAT_INTERVAL,
     ConnectedUser,
-    EventManager,
-    ProvideEvents,
+    WebsocketEvents,
 )
 from core.logger import get_logger
 from fastapi import HTTPException, WebSocket, WebSocketDisconnect
@@ -27,6 +27,27 @@ from sqlmodel import Session, SQLModel
 from util.api_router import APIRouter
 
 logger = get_logger("app")
+
+def get_websocket_client_ip(websocket: WebSocket) -> str:
+    """Extract client IP from WebSocket proxy headers or direct connection.
+
+    Checks headers in order:
+    1. X-Forwarded-For (set by reverse proxies like Traefik)
+    2. X-Real-IP (alternative proxy header)
+    3. Direct connection IP (fallback for non-proxied requests)
+    """
+    # X-Forwarded-For contains comma-separated list, first is original client
+    forwarded_for = websocket.headers.get("X-Forwarded-For")
+    if forwarded_for:
+        return forwarded_for.split(",")[0].strip()
+
+    # Fallback to X-Real-IP
+    real_ip = websocket.headers.get("X-Real-IP")
+    if real_ip:
+        return real_ip
+
+    # Last resort: direct connection (works for non-proxied requests)
+    return websocket.client.host if websocket.client else "unknown"
 
 # Load the WebSocket description template
 WEBSOCKET_TEMPLATE_PATH = PathLibPath(__file__).parent.parent / "docs" / "websocket.jinja"
@@ -112,10 +133,13 @@ def get_events_router[RelatedResourceModel: BaseModel](  # noqa: C901
 
     # Create the WebSocket handler function
     async def client_endpoint(  # noqa: C901
-        websocket: WebSocket, db: Database, events: Annotated[EventManager, ProvideEvents(endpoint="ws")], resource_id: str, user: User = Authenticate(endpoint="ws")
+        websocket: WebSocket, db: Database, events: WebsocketEvents, resource_id: str, user: WebsocketAuthentication
     ) -> None:
         """Connect a client to the event stream."""
-        logger.info(f"[WS] Connection attempt for resource_id={resource_id}, user={user.id if user else None}")
+        client_ip = get_websocket_client_ip(websocket)
+        logger.info(
+            f"[WS] Connection attempt for resource_id={resource_id}, user={user.id if user else None}, ip={client_ip}"
+        )
         logger.info(f"[WS] Cookies: {websocket.cookies}")
 
         related_resource = db.get(related_resource_model, resource_id)
@@ -138,7 +162,9 @@ def get_events_router[RelatedResourceModel: BaseModel](  # noqa: C901
         if config.setup_connection:
             config.setup_connection(websocket, related_resource, user, db)
 
-        logger.info(f"[WS] Accepting connection for resource_id={resource_id}, connection_id={connection_id}")
+        logger.info(
+            f"[WS] Accepting connection for resource_id={resource_id}, connection_id={connection_id}, ip={client_ip}"
+        )
         await websocket.accept()
 
         # Build endpoint-specific channel key (matches subscription/publish channel)

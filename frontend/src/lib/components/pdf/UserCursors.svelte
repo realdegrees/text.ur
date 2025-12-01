@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { documentWebSocket, type UserCursor } from '$lib/stores/documentWebSocket';
+	import { documentWebSocket, type UserCursor } from '$lib/stores/documentWebSocket.svelte';
 	import { documentStore } from '$lib/runes/document.svelte';
 	import { fade } from 'svelte/transition';
 	import { SvelteMap } from 'svelte/reactivity';
@@ -13,19 +13,9 @@
 	// Check if cursor sharing is enabled (disabled in restricted mode)
 	let isCursorSharingEnabled = $derived(documentStore.loadedDocument?.view_mode !== 'restricted');
 
-	// Subscribe to user cursors
-	let cursorsMap: Map<number, UserCursor> = $state(new Map());
-
-	$effect(() => {
-		const unsubscribe = documentWebSocket.userCursors.subscribe((cursors) => {
-			cursorsMap = cursors;
-		});
-		return unsubscribe;
-	});
-
 	// Apply author filters to cursors (same logic as AnnotationLayer)
 	let filteredCursorsMap = $derived.by(() => {
-		const states = documentStore.authorFilterStates;
+		const states = documentStore.filters.authorFilters;
 		const included = new Set<number>(
 			[...states.entries()].filter(([, v]) => v === 'include').map(([k]) => k)
 		);
@@ -35,12 +25,12 @@
 
 		// No filters applied
 		if (included.size === 0 && excluded.size === 0) {
-			return cursorsMap;
+			return documentWebSocket.userCursors;
 		}
 
 		const filtered = new SvelteMap<number, UserCursor>();
 
-		for (const [userId, cursor] of cursorsMap.entries()) {
+		for (const [userId, cursor] of documentWebSocket.userCursors.entries()) {
 			// If include filter is active, only show cursors from included users
 			if (included.size > 0) {
 				if (included.has(userId)) {
@@ -146,36 +136,11 @@
 			documentWebSocket.sendMousePosition(0, 0, 1, false);
 		};
 	});
-
-	// Cleanup timer to hide stale cursors
-	// TTL: 200ms (4x the 50ms throttle interval) - cursors disappear quickly when user stops sending
-	const CURSOR_TTL_MS = 200;
-	const CLEANUP_INTERVAL_MS = 100;
-
-	$effect(() => {
-		const interval = setInterval(() => {
-			const now = Date.now();
-			let hasChanges = false;
-			cursorsMap.forEach((cursor, userId) => {
-				if (cursor.visible && now - cursor.lastUpdate > CURSOR_TTL_MS) {
-					// Mark as invisible if stale
-					cursorsMap.set(userId, { ...cursor, visible: false });
-					hasChanges = true;
-				}
-			});
-			if (hasChanges) {
-				// eslint-disable-next-line svelte/prefer-svelte-reactivity
-				cursorsMap = new Map(cursorsMap);
-			}
-		}, CLEANUP_INTERVAL_MS);
-
-		return () => clearInterval(interval);
-	});
 </script>
 
 <!-- Cursor overlay layer - positioned within the PDF viewer container -->
 <!-- Only show cursors when cursor sharing is enabled (not in restricted mode) and user hasn't toggled them off -->
-{#if isCursorSharingEnabled && documentStore.showOtherCursors}
+{#if isCursorSharingEnabled && documentStore.showCursors}
 	{#each filteredCursorsMap.entries() as [userId, cursor] (userId)}
 		{@const position = getCursorPosition(cursor)}
 		{#if cursor.visible && position}

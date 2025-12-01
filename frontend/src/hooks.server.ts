@@ -29,6 +29,19 @@ export const handleFetch: HandleFetch = async ({ request, fetch, event }) => {
 	let accessToken = event.cookies.get('access_token');
 	const refreshToken = event.cookies.get('refresh_token');
 
+	const headers = new Headers(request.headers);
+
+	// Forward IP-related headers from the original client request
+	const forwardedFor = event.request.headers.get('X-Forwarded-For');
+	const realIp = event.request.headers.get('X-Real-IP');
+	const forwardedProto = event.request.headers.get('X-Forwarded-Proto');
+	const forwardedHost = event.request.headers.get('X-Forwarded-Host');
+
+	if (forwardedFor) headers.set('X-Forwarded-For', forwardedFor);
+	if (realIp) headers.set('X-Real-IP', realIp);
+	if (forwardedProto) headers.set('X-Forwarded-Proto', forwardedProto);
+	if (forwardedHost) headers.set('X-Forwarded-Host', forwardedHost);
+
 	if (accessToken || refreshToken) {
 		const cookieHeader = [
 			accessToken ? `access_token=${accessToken}` : '',
@@ -37,15 +50,15 @@ export const handleFetch: HandleFetch = async ({ request, fetch, event }) => {
 			.filter(Boolean)
 			.join('; ');
 
-		const headers = new Headers(request.headers);
 		headers.set('Cookie', cookieHeader);
-		request = new Request(request.url, {
-			method: request.method,
-			headers,
-			body: request.body,
-			duplex: 'half'
-		} as RequestInit);
 	}
+
+	request = new Request(request.url, {
+		method: request.method,
+		headers,
+		body: request.body,
+		duplex: request.body ? 'half' : undefined
+	} as RequestInit);
 
 	let response = await fetch(request);
 

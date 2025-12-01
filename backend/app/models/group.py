@@ -6,7 +6,7 @@ from models.base import BaseModel
 from models.enums import Permission
 
 if TYPE_CHECKING:
-    from models.sharelink import ShareLinkReadPublic
+    from models.sharelink import ShareLinkReadNoToken
     from models.user import UserRead
 
 MAX_GROUP_NAME_LENGTH = 80
@@ -54,4 +54,4 @@ class MembershipRead(SQLModel):
     group: GroupRead
     is_owner: bool
     accepted: bool
-    share_link: "ShareLinkReadPublic | None"
+    share_link: "ShareLinkReadNoToken | None"

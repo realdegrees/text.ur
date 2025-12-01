@@ -139,6 +139,7 @@ export interface CommentFilter {
   annotation: {
     [k: string]: unknown;
   };
+  id: number;
 }
 export interface CommentUpdate {
   visibility?: Visibility | null;
@@ -254,6 +255,7 @@ export interface MembershipFilter {
   user_id: number;
   group_id: string;
   accepted: boolean;
+  sharelink_id: string;
 }
 export interface MembershipPermissionUpdate {
   permissions: Permission[];
@@ -264,14 +266,15 @@ export interface MembershipRead {
   group: GroupRead;
   is_owner: boolean;
   accepted: boolean;
-  share_link: ShareLinkReadPublic | null;
+  share_link: ShareLinkReadNoToken | null;
 }
-export interface ShareLinkReadPublic {
+export interface ShareLinkReadNoToken {
   id: number;
   permissions: Permission[];
   expires_at?: string | null;
-  label?: string | null;
   allow_anonymous_access: boolean;
+  created_at: string;
+  updated_at: string;
   group_id: string;
 }
 /**
@@ -305,7 +308,7 @@ export interface PaginatedBase {
 }
 export interface Filter {
   field: string;
-  operator: "==" | ">=" | "<=" | ">" | "<" | "ilike" | "like" | "exists" | "!=";
+  operator: "==" | ">=" | "<=" | ">" | "<" | "ilike" | "like" | "exists" | "!=" | "in" | "notin";
   value: string;
   [k: string]: unknown;
 }
@@ -327,12 +330,27 @@ export interface ShareLinkRead {
   id: number;
   permissions: Permission[];
   expires_at?: string | null;
-  label?: string | null;
   allow_anonymous_access: boolean;
+  created_at: string;
+  updated_at: string;
+  label?: string | null;
   token: string;
   author: UserRead | null;
   group_id: string;
   num_memberships: number;
+}
+/**
+ * Read model for share link fetched via token, includes group info and the token itself.
+ */
+export interface ShareLinkReadFromToken {
+  id: number;
+  permissions: Permission[];
+  expires_at?: string | null;
+  allow_anonymous_access: boolean;
+  created_at: string;
+  updated_at: string;
+  group: GroupRead;
+  token: string;
 }
 export interface ShareLinkUpdate {
   permissions?: Permission[] | null;

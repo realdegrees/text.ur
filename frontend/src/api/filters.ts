@@ -1,11 +1,12 @@
 import type { ExclusionMaps, GetFilterModel, FilterTypeToName } from "./maps.generated";
+import type { Filter } from "./types";
 
 /**
  * Typed filter wrapper that constrains field names to those in the filter model.
  */
 export type TypedFilter<TFilter> = {
 	field: keyof TFilter;
-	operator: "==" | ">=" | "<=" | ">" | "<" | "ilike" | "like" | "exists" | "!=";
+	operator: Filter["operator"];
 	value: string;
 };
 

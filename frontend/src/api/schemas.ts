@@ -58,7 +58,8 @@ export const commentFilterSchema = z.object({
     user_id: z.number(),
     document_id: z.string(),
     parent_id: z.number(),
-    annotation: z.record(z.string(), z.unknown())
+    annotation: z.record(z.string(), z.unknown()),
+    id: z.number()
 });
 
 export const commentUpdateSchema = z.object({
@@ -172,19 +173,21 @@ export const membershipCreateSchema = z.object({
 export const membershipFilterSchema = z.object({
     user_id: z.number(),
     group_id: z.string(),
-    accepted: z.boolean()
+    accepted: z.boolean(),
+    sharelink_id: z.string()
 });
 
 export const membershipPermissionUpdateSchema = z.object({
     permissions: z.array(permissionSchema)
 });
 
-export const shareLinkReadPublicSchema = z.object({
+export const shareLinkReadNoTokenSchema = z.object({
     id: z.number(),
     permissions: z.array(permissionSchema),
     expires_at: z.string().optional().nullable(),
-    label: z.string().optional().nullable(),
     allow_anonymous_access: z.boolean(),
+    created_at: z.string(),
+    updated_at: z.string(),
     group_id: z.string()
 });
 
@@ -206,7 +209,7 @@ export const mousePositionInputSchema = z.object({
 
 export const filterSchema = z.record(z.string(), z.unknown()).and(z.object({
     field: z.string(),
-    operator: z.union([z.literal("=="), z.literal(">="), z.literal("<="), z.literal(">"), z.literal("<"), z.literal("ilike"), z.literal("like"), z.literal("exists"), z.literal("!=")]),
+    operator: z.union([z.literal("=="), z.literal(">="), z.literal("<="), z.literal(">"), z.literal("<"), z.literal("ilike"), z.literal("like"), z.literal("exists"), z.literal("!="), z.literal("in"), z.literal("notin")]),
     value: z.string()
 }));
 
@@ -231,12 +234,25 @@ export const shareLinkReadSchema = z.object({
     id: z.number(),
     permissions: z.array(permissionSchema),
     expires_at: z.string().optional().nullable(),
-    label: z.string().optional().nullable(),
     allow_anonymous_access: z.boolean(),
+    created_at: z.string(),
+    updated_at: z.string(),
+    label: z.string().optional().nullable(),
     token: z.string(),
     author: userReadSchema.nullable(),
     group_id: z.string(),
     num_memberships: z.number()
+});
+
+export const shareLinkReadFromTokenSchema = z.object({
+    id: z.number(),
+    permissions: z.array(permissionSchema),
+    expires_at: z.string().optional().nullable(),
+    allow_anonymous_access: z.boolean(),
+    created_at: z.string(),
+    updated_at: z.string(),
+    group: groupReadSchema,
+    token: z.string()
 });
 
 export const shareLinkUpdateSchema = z.object({
@@ -338,7 +354,7 @@ export const membershipReadSchema = z.object({
     group: groupReadSchema,
     is_owner: z.boolean(),
     accepted: z.boolean(),
-    share_link: shareLinkReadPublicSchema.nullable()
+    share_link: shareLinkReadNoTokenSchema.nullable()
 });
 
 export const paginatedBaseSchema = z.object({

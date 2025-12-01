@@ -215,7 +215,7 @@
 
 <svelte:window on:keydown={navigate} />
 
-<div>
+<div class="w-full">
 	{#if label}
 		<label for={name} class="mb-2 block font-medium text-text">
 			{label} <span class="text-red-600 dark:text-red-400">{required ? '*' : ''}</span>

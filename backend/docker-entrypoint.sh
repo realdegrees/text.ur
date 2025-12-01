@@ -107,4 +107,12 @@ fi
 echo "Starting FastAPI..."
 cd ..
 unset PGPASSWORD
-exec uvicorn app.main:app --host 0.0.0.0 --port 8000
+
+# Start gunicorn with uvicorn workers for production-grade multi-worker setup
+# Uses gunicorn.conf.py for configuration including:
+# - Multi-process safe logging via QueueListener (setup in on_starting hook)
+# - Proxy header support (--forwarded-allow-ips)
+# - Worker configuration from UVICORN_WORKERS env var
+exec gunicorn app.main:app \
+  --config /annotation-software/gunicorn.conf.py \
+  --forwarded-allow-ips="*"

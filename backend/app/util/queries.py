@@ -16,7 +16,7 @@ from models.tables import (
     ShareLink,
     User,
 )
-from sqlalchemy import and_, or_, select, true
+from sqlalchemy import and_, false, or_, select, true
 from sqlalchemy.sql import ColumnElement
 from sqlmodel import SQLModel
 
@@ -185,7 +185,32 @@ class Guard:
                     status_code=500, detail="Endpoint Guard misconfiguration: missing document_id parameter")
 
             def has_required_permissions() -> ColumnElement[bool]:
-                """Check if user has all required permissions."""
+                """Check if user has all required permissions (SQL clause).
+
+                Returns a clause that evaluates to True only when `require_permissions`
+                is provided and all those permissions are present on the membership.
+                When `require_permissions` is None this will evaluate to False for
+                the purpose of *restricted* access checks so that we don't
+                accidentally grant access to every accepted member.
+                For public access checks we rely on accepted membership rather
+                than turning this into a True clause.
+                """
+                if not require_permissions:
+                    # When no explicit permissions are required, do not grant
+                    # automatic access here for restricted checks - return a
+                    # falsey clause. For public checks we allow accepted
+                    # members separately.
+                    return false()
+                return and_(*(Membership.permissions.contains([permission.value]) for permission in require_permissions))
+
+            def has_required_permissions_for_public() -> ColumnElement[bool]:
+                """Verify membership has required permissions for public docs.
+
+                For public documents, if `require_permissions` is None we allow any
+                accepted member, so this helper returns true() in that case; when
+                `require_permissions` is set it returns the corresponding contains
+                AND expression.
+                """
                 if not require_permissions:
                     return true()
                 return and_(*(Membership.permissions.contains([permission.value]) for permission in require_permissions))
@@ -211,7 +236,9 @@ class Guard:
                                 admin_bypass,
                             ))
                     ),
-                    # Restricted documents: owner/admins OR members with VIEW_RESTRICTED_DOCUMENTS OR required permissions
+                    # Restricted documents: owner/admins OR members with VIEW_RESTRICTED_DOCUMENTS OR required permissions.
+                    # When `require_permissions` is set we require those permissions explicitly
+                    # instead of allowing VIEW_RESTRICTED_DOCUMENTS alone to grant access.
                     and_(
                         *base_conditions,
                         Document.visibility == Visibility.RESTRICTED,
@@ -219,11 +246,23 @@ class Guard:
                             select(Membership.group_id).where(
                                 Membership.user_id == user.id,
                                 Membership.accepted.is_(True),
+                                # For RESTRICTED documents: owner/admin bypasses access.
+                                # Otherwise the member must have VIEW_RESTRICTED_DOCUMENTS
+                                # and, if `require_permissions` is supplied, must also have
+                                # the required permissions. This preserves the intended
+                                # semantics that VIEW_RESTRICTED_DOCUMENTS is always
+                                # necessary for RESTRICTED documents.
                                 or_(
                                     admin_bypass,
-                                    Membership.permissions.contains(
-                                        [Permission.VIEW_RESTRICTED_DOCUMENTS.value]),
-                                    has_required_permissions()
+                                    # For non-admins: require VIEW_RESTRICTED_DOCUMENTS
+                                    # always, and if a set of required permissions is
+                                    # provided, require those as well.
+                                    and_(
+                                        Membership.permissions.contains(
+                                            [Permission.VIEW_RESTRICTED_DOCUMENTS.value]
+                                        ),
+                                        has_required_permissions() if require_permissions else true(),
+                                    ),
                                 ),
                             )
                         ),
@@ -238,7 +277,7 @@ class Guard:
                                 Membership.accepted.is_(True),
                                 or_(
                                     admin_bypass,
-                                    has_required_permissions()
+                                    has_required_permissions_for_public(),
                                 )
                             )
                         ),
@@ -256,15 +295,21 @@ class Guard:
             else:
                 return build_visibility_clause()
 
-        def predicate(doc: Document, user: User) -> bool:
+        def predicate(doc: Document, user: User) -> bool: # noqa: C901
 
             if doc.group is None:
                 return False
 
             # Check if user has required permissions (if any)
             def user_has_required_permissions(membership: Membership) -> bool:
+                """Return whether the given membership satisfies the required permissions.
+
+                When `require_permissions` is None, this function returns False so it
+                doesn't accidentally grant access to RESTRICTED documents. Public
+                access permitting logic is handled separately below.
+                """
                 if not require_permissions:
-                    return True
+                    return False
                 return all(permission.value in membership.permissions for permission in require_permissions)
 
             if doc.visibility == Visibility.PRIVATE:
@@ -277,18 +322,33 @@ class Guard:
                     for m in doc.group.memberships
                 )
             elif doc.visibility == Visibility.RESTRICTED:
-                # Restricted: owner, admin, VIEW_RESTRICTED_DOCUMENTS, or required permissions
-                return any(
-                    m.accepted and m.user_id == user.id and (
-                        m.is_owner or
-                        Permission.ADMINISTRATOR.value in m.permissions or
-                        Permission.VIEW_RESTRICTED_DOCUMENTS.value in m.permissions or
-                        user_has_required_permissions(m)
-                    )
-                    for m in doc.group.memberships
-                )
+                # Restricted: owner/admin always bypass. Non-admins require
+                # VIEW_RESTRICTED_DOCUMENTS, and if there are extra required
+                # permissions, those must also be present.
+                def membership_allows_restricted(m: Membership) -> bool:
+                    if not m.accepted or m.user_id != user.id:
+                        return False
+                    if m.is_owner or Permission.ADMINISTRATOR.value in m.permissions:
+                        return True
+                    # Must have the VIEW_RESTRICTED_DOCUMENTS permission
+                    if Permission.VIEW_RESTRICTED_DOCUMENTS.value not in m.permissions:
+                        return False
+                    # If additional required permissions provided, require them as well
+                    if require_permissions:
+                        return all(permission.value in m.permissions for permission in require_permissions)
+                    return True
+
+                return any(membership_allows_restricted(m) for m in doc.group.memberships)
             elif doc.visibility == Visibility.PUBLIC:
-                # Public: owner, admin, or required permissions
+                # Public: if there are no special required permissions, any
+                # accepted member may view the document. If `require_permissions`
+                # is set, only members that either are owner/admin or that
+                # satisfy the listed permissions may view it.
+                if not require_permissions:
+                    return any(
+                        m.accepted and m.user_id == user.id
+                        for m in doc.group.memberships
+                    )
                 return any(
                     m.accepted and m.user_id == user.id and (
                         m.is_owner or

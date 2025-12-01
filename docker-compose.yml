@@ -14,7 +14,7 @@ services:
       - "8000:8000"
     volumes:
       - ./templates:/annotation-software/templates
-      # - ./logs:/annotation-software/logs
+      - logs:/annotation-software/logs
     depends_on:
       - pgbouncer
       - minio
@@ -47,7 +47,7 @@ services:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_DB=${POSTGRES_DB}
     volumes:
-      - postgres_data:/var/lib/postgresql
+      - postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB} || exit 1"]
       timeout: 10s
@@ -81,7 +81,6 @@ services:
       - MINIO_REGION_NAME=${AWS_REGION}
       - S3_BUCKET=${S3_BUCKET}
     ports:
-      - "${AWS_ENDPOINT_PORT}:9000" # MinIO S3 Port
       - "${MINIO_CONSOLE_PORT}:9001" # MinIO Console Port
     volumes:
       - /etc/localtime:/etc/localtime:ro
@@ -115,7 +114,7 @@ services:
       start_period: 10s
 
   redis-commander:
-    image: rediscommander/redis-commander:snyk-fix-08c85f17c94a7f00df6fb21e8ea1d10d
+    image: rediscommander/redis-commander:latest
     container_name: text.ur-redis-commander
     restart: always
     environment:
@@ -144,6 +143,7 @@ volumes:
   postgres_data:
   s3_data:
   redis_data:
+  logs:
 
 networks:
   textur:

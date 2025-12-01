@@ -1,9 +1,10 @@
 <script lang="ts">
-	import { documentStore, type CachedComment } from '$lib/runes/document.svelte.js';
-	import { parseAnnotation, type Annotation } from '$types/pdf';
+	import { documentStore, type TypedComment } from '$lib/runes/document.svelte.js';
 	import CommentCluster from './CommentCluster.svelte';
 	import { onMount } from 'svelte';
 	import { CLUSTER_THRESHOLD_PX, BADGE_HEIGHT_PX } from './constants';
+	import type { Annotation } from '$types/pdf';
+	import { SvelteMap } from 'svelte/reactivity';
 
 	interface Props {
 		viewerContainer: HTMLDivElement | null;
@@ -14,48 +15,12 @@
 
 	let containerElement: HTMLDivElement | null = $state(null);
 
-	// Comment with parsed annotation
-	interface CommentWithAnnotation extends CachedComment {
-		parsedAnnotation: Annotation;
-	}
-
-	// Apply local filters to comments
-	let filteredComments = $derived.by(() => {
-		let result = documentStore.comments;
-
-		// Filter by author filter states (include/exclude/none)
-		const states = documentStore.authorFilterStates;
-		const included = new Set<number>(
-			[...states.entries()].filter(([, v]) => v === 'include').map(([k]) => k)
-		);
-		const excluded = new Set<number>(
-			[...states.entries()].filter(([, v]) => v === 'exclude').map(([k]) => k)
-		);
-
-		// If there are include filters, show only those authors. Otherwise, if exclude filters exist, hide those authors.
-		if (included.size > 0) {
-			result = result.filter((c: CachedComment) => c.user?.id && included.has(c.user.id));
-		} else if (excluded.size > 0) {
-			result = result.filter((c: CachedComment) => !(c.user?.id && excluded.has(c.user.id)));
-		}
-
-		return result;
-	});
-
-	// Get comments with valid annotations
-	let commentsWithAnnotations = $derived(
-		filteredComments
-			.map((c) => ({ ...c, parsedAnnotation: parseAnnotation(c.annotation) }))
-			.filter((c): c is CommentWithAnnotation => c.parsedAnnotation !== null)
-	);
-
 	// Calculate the Y position of each comment relative to the sidebar's scroll position
 	// Returns the CENTER Y position of the first highlight box
-	const getCommentYPosition = (comment: CommentWithAnnotation): number | null => {
-		if (!viewerContainer) return null;
+	const getCommentYPosition = (comment: TypedComment): number | null => {
+		if (!viewerContainer || !comment.annotation) return null;
 
-		const annotation = comment.parsedAnnotation;
-		const firstBox = annotation.boundingBoxes[0];
+		const firstBox = comment.annotation.boundingBoxes[0];
 		if (!firstBox) return null;
 
 		const pageElement = viewerContainer.querySelector(
@@ -91,22 +56,24 @@
 
 	// Group comments by Y position proximity (clustering)
 	interface CommentClusterData {
-		comments: CommentWithAnnotation[];
+		comments: TypedComment[];
 		yPosition: number;
-		adjustedY?: number; // Adjusted Y position to prevent overlaps with expanded cards
 	}
 
 	// Update tick triggered by text layer resizes
 	let clustersUpdateTick = $state(0);
 
 	// Track actual rendered heights of clusters (key is comment IDs joined)
-	let clusterHeights = $state(new Map<string, number>());
+	let clusterHeights = new SvelteMap<string, number>();
 
 	// Helper to check if any comment in a cluster is expanded
-	const isClusterExpanded = (comments: CachedComment[]): boolean => {
-		return comments.some(
-			(c) => c.isCommentHovered || c.isHighlightHovered || c.isPinned || c.isEditing
-		);
+	const isClusterExpanded = (comments: TypedComment[]): boolean => {
+		return comments.some((c) => {
+			const state = documentStore.comments.getState(c.id);
+			return (
+				state?.isCommentHovered || state?.isHighlightHovered || state?.isPinned || state?.isEditing
+			);
+		});
 	};
 
 	let baseClusters = $derived.by((): CommentClusterData[] => {
@@ -114,12 +81,15 @@
 		void clustersUpdateTick;
 		void scrollTop;
 
-		const positioned = commentsWithAnnotations
+		const positioned = documentStore.comments.topLevelComments
 			.map((comment) => ({
 				comment,
 				y: getCommentYPosition(comment)
 			}))
-			.filter((item): item is { comment: CommentWithAnnotation; y: number } => item.y !== null)
+			.filter(
+				(item): item is { comment: TypedComment & { annotation: Annotation }; y: number } =>
+					!!item.y
+			)
 			.sort((a, b) => a.y - b.y);
 
 		if (positioned.length === 0) return [];
@@ -155,14 +125,13 @@
 
 	// Adjust cluster positions to prevent overlaps with expanded cards
 	let clusters = $derived.by((): CommentClusterData[] => {
-		const adjusted = baseClusters.map((cluster) => ({
-			...cluster,
-			adjustedY: cluster.yPosition
-		}));
-
 		const GAP_PX = 8; // Gap between clusters
 
-		// Iteratively adjust positions from top to bottom
+		// Work on a shallow clone of baseClusters to avoid mutating the original
+		// (Svelte needs new object references to ensure the template updates)
+		const adjusted = baseClusters.map((c) => ({ ...c, comments: c.comments.slice() }));
+
+		// Iteratively adjust positions from top to bottom using the clones
 		for (let i = 0; i < adjusted.length; i++) {
 			const current = adjusted[i];
 			const currentKey = current.comments.map((c) => c.id).join('-');
@@ -173,15 +142,15 @@
 				? clusterHeights.get(currentKey) || BADGE_HEIGHT_PX
 				: BADGE_HEIGHT_PX;
 
-			const currentBottom = current.adjustedY! + currentHeight;
+			const currentBottom = current.yPosition + currentHeight;
 
 			// Check all clusters below and push them down if they overlap
 			for (let j = i + 1; j < adjusted.length; j++) {
 				const below = adjusted[j];
 
 				// If current cluster's bottom overlaps with the cluster below, push it down
-				if (currentBottom + GAP_PX > below.adjustedY!) {
-					below.adjustedY = currentBottom + GAP_PX;
+				if (currentBottom + GAP_PX > below.yPosition) {
+					below.yPosition = currentBottom + GAP_PX;
 				}
 			}
 		}
@@ -193,16 +162,12 @@
 	onMount(() => {
 		if (!viewerContainer) return;
 
-		documentStore.setCommentSidebarRef(containerElement);
+		documentStore.commentSidebarRef = containerElement;
 
 		// Use ResizeObserver to detect when PDF.js finishes scaling text layers
 		// Wait 2 RAF to match AnnotationLayer timing
 		const resizeObserver = new ResizeObserver(() => {
-			requestAnimationFrame(() => {
-				requestAnimationFrame(() => {
-					clustersUpdateTick++;
-				});
-			});
+			clustersUpdateTick++;
 		});
 
 		// Observe all existing text layers
@@ -215,11 +180,6 @@
 			newTextLayers.forEach((layer) => {
 				// ResizeObserver is safe to call multiple times on same element
 				resizeObserver.observe(layer as HTMLElement);
-			});
-			requestAnimationFrame(() => {
-				requestAnimationFrame(() => {
-					clustersUpdateTick++;
-				});
 			});
 		});
 
@@ -241,10 +201,10 @@
 <div class="relative h-full" bind:this={containerElement}>
 	{#each clusters as cluster (cluster.comments.map((c) => c.id).join('-'))}
 		{@const clusterKey = cluster.comments.map((c) => c.id).join('-')}
-		<div class="absolute right-3 left-3" style="top: {cluster.adjustedY ?? cluster.yPosition}px;">
+		<div class="absolute right-3 left-3" style="top: {cluster.yPosition}px;">
 			<CommentCluster
 				comments={cluster.comments}
-				adjustedY={cluster.adjustedY ?? cluster.yPosition}
+				yPosition={cluster.yPosition}
 				{scrollTop}
 				onHeightChange={(height: number) => {
 					clusterHeights.set(clusterKey, height);
@@ -254,7 +214,7 @@
 		</div>
 	{/each}
 
-	{#if clusters.length === 0 && commentsWithAnnotations.length === 0}
+	{#if !clusters.length}
 		<div class="flex h-full items-center justify-center p-4">
 			<p class="text-center text-sm text-text/40">Select text in the PDF to add a comment</p>
 		</div>

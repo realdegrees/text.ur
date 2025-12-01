@@ -1,8 +1,8 @@
-name: text.ur
+name: text.ur-dev
 services:
   postgres:
     image: postgres:16
-    container_name: text.ur-postgres
+    container_name: text.ur-dev-postgres
     restart: always
     environment:
       - POSTGRES_USER=${POSTGRES_USER}
@@ -11,7 +11,7 @@ services:
     ports:
       - "${POSTGRES_PORT}:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql
+      - postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB} || exit 1"]
       interval: 10s
@@ -21,7 +21,7 @@ services:
 
   pgbouncer:
     image: edoburu/pgbouncer:v1.24.1-p0
-    container_name: text.ur-pgbouncer
+    container_name: text.ur-dev-pgbouncer
     restart: always
     environment:
       DB_USER: ${POSTGRES_USER}
@@ -40,7 +40,7 @@ services:
 
   minio:
     image: minio/minio:RELEASE.2025-09-07T16-13-09Z
-    container_name: text.ur-minio
+    container_name: text.ur-dev-minio
     restart: always
     environment:
       - MINIO_ROOT_USER=${AWS_ACCESS_KEY}
@@ -65,7 +65,7 @@ services:
 
   redis:
     image: redis:8
-    container_name: text.ur-redis
+    container_name: text.ur-dev-redis
     restart: always
     environment:
       - REDIS_PASSWORD=${REDIS_PASSWORD}
@@ -82,8 +82,8 @@ services:
       start_period: 10s
 
   redis-commander:
-    image: rediscommander/redis-commander:snyk-fix-08c85f17c94a7f00df6fb21e8ea1d10d
-    container_name: text.ur-redis-commander
+    image: rediscommander/redis-commander:latest
+    container_name: text.ur-dev-redis-commander
     restart: always
     environment:
       - REDIS_HOST=redis
@@ -97,7 +97,7 @@ services:
   # Only for development to mock actual emails
   mailhog:
     image: mailhog/mailhog:v1.0.1
-    container_name: text.ur-mailhog
+    container_name: text.ur-dev-mailhog
     restart: always
     ports:
       - "${SMTP_PORT}:1025"   # SMTP port

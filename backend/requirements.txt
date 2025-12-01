@@ -17,6 +17,7 @@ factory_boy==3.3.3
 Faker==37.12.0
 fastapi==0.121.0
 greenlet==3.2.4
+gunicorn==23.0.0
 h11==0.16.0
 httpcore==1.0.9
 httptools==0.7.1

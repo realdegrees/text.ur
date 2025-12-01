@@ -52,7 +52,7 @@
 			<div class="flex flex-col gap-4 text-left">
 				<div class="flex items-start gap-3">
 					<div
-						class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-bold text-background"
+						class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-bold text-text"
 					>
 						1
 					</div>
@@ -60,7 +60,7 @@
 				</div>
 				<div class="flex items-start gap-3">
 					<div
-						class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-bold text-background"
+						class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-bold text-text"
 					>
 						2
 					</div>
@@ -68,7 +68,7 @@
 				</div>
 				<div class="flex items-start gap-3">
 					<div
-						class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-bold text-background"
+						class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-bold text-text"
 					>
 						3
 					</div>
@@ -78,7 +78,7 @@
 
 			<a
 				href="/dashboard/groups/create"
-				class="mt-2 flex items-center gap-2 rounded-lg bg-primary px-6 py-3 font-semibold text-background transition-all hover:bg-primary/80"
+				class="mt-2 flex items-center gap-2 rounded-lg bg-primary px-6 py-3 font-semibold text-text transition-all hover:bg-primary/80"
 			>
 				<AddIcon class="h-5 w-5" />
 				<span>{$LL.dashboard.createGroup()}</span>

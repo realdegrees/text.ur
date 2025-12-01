@@ -12,7 +12,7 @@
 	import type { Locales } from '$i18n/i18n-types';
 	import language from '$lib/stores/language.svelte';
 	import { invalidateAll } from '$app/navigation';
-	import Dropdown from './dropdown.svelte';
+	import Dropdown from '../lib/components/dropdown.svelte';
 
 	let currentLanguage = $derived(language.locale);
 

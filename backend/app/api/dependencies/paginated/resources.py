@@ -62,7 +62,6 @@ def PaginatedResource(  # noqa: C901
     key_columns: list[ColumnElement] | None = None,
     validate: Callable[[Paginated[Model], User | None], Paginated[Model]] | None = None,
     guards: Sequence[EndpointGuard] = (),
-    description_suffix: str | None = None,
 ) -> Callable[..., Paginated[Model]]:
     """Generate an advanced filter+sort query dependency with pagination.
     
@@ -72,7 +71,6 @@ def PaginatedResource(  # noqa: C901
         key_columns: Custom primary key columns (defaults to base_model.id)
         validate: Optional validator function to transform results
         guards: Sequence of EndpointGuard instances for access control
-        description_suffix: Additional text to append to auto-generated description
     
     """
     filterable_field_data = FilterMeta.from_filter(filter_model)

@@ -11,8 +11,6 @@
 
 	let { data } = $props();
 
-	console.log(data);
-
 	// User info state - use $state for editable fields, initialized from props
 	let username = $derived(data.sessionUser.username);
 	let firstName = $derived(data.sessionUser.first_name ?? '');
@@ -143,13 +141,17 @@
 								: 'border-red-500/50 bg-red-500/10 text-red-600 hover:bg-red-500/20 dark:text-red-400'}"
 						>
 							<LogoutIcon class="h-4 w-4" />
-							{#if !isOpen}<p class="whitespace-nowrap">Logout All Devices</p>{/if}
+							{#if !isOpen}
+								<p class="whitespace-nowrap">
+									{data.sessionUser.is_guest ? 'Logout Guest Session' : 'Logout All Devices'}
+								</p>
+							{/if}
 						</div>
 					{/snippet}
 
 					{#snippet slideout()}
 						<div class="bg-red-500/10 px-3 py-2 whitespace-nowrap text-red-600 dark:text-red-400">
-							Confirm
+							{data.sessionUser.is_guest ? 'This will delete your guest account!' : 'Confirm'}
 						</div>
 					{/snippet}
 				</ConfirmButton>

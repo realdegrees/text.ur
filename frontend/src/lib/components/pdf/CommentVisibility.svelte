@@ -1,18 +1,19 @@
 <script lang="ts">
 	import type { Visibility } from '$api/types';
-	import { documentStore } from '$lib/runes/document.svelte.js';
+	import { documentStore, type TypedComment } from '$lib/runes/document.svelte';
 	import Dropdown from '$lib/components/dropdown.svelte';
 	import LockIcon from '~icons/material-symbols/lock';
 	import GroupIcon from '~icons/material-symbols/group';
 	import PublicIcon from '~icons/material-symbols/public';
 
 	interface Props {
-		commentId: number;
+		comment: TypedComment;
 		visibility: Visibility;
 		canEdit?: boolean;
+		isTopLevel?: boolean;
 	}
 
-	let { commentId, visibility, canEdit = false }: Props = $props();
+	let { comment, visibility, canEdit = false, isTopLevel = false }: Props = $props();
 
 	let isOpen = $state(false);
 	let isUpdating = $state(false);
@@ -45,7 +46,8 @@
 		isUpdating = true;
 
 		try {
-			await documentStore.updateComment(commentId, { visibility: newVisibility });
+			comment.visibility = newVisibility;
+			await documentStore.comments.update(comment);
 			currentVisibility = newVisibility;
 		} finally {
 			isUpdating = false;
@@ -78,7 +80,7 @@
 		items={visibilityOptions}
 		bind:currentItem={currentVisibility}
 		bind:show={isOpen}
-		position="bottom-left"
+		position={isTopLevel ? 'bottom-left' : 'top-left'}
 		allowSelection={false}
 		showCurrentItemInList={true}
 		onSelect={handleSelect}

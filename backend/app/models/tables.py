@@ -139,7 +139,7 @@ class Group(BaseModel, table=True):
     documents: list["Document"] = Relationship(
         back_populates="group", sa_relationship_kwargs={"lazy": "noload", "cascade": "all, delete-orphan", "passive_deletes": True})
     memberships: list["Membership"] = Relationship(
-        back_populates="group", sa_relationship_kwargs={"lazy": "noload", "cascade": "all, delete-orphan", "passive_deletes": True})
+        back_populates="group", sa_relationship_kwargs={"lazy": "selectin", "cascade": "all, delete-orphan", "passive_deletes": True})
     share_links: list["ShareLink"] = Relationship(
         back_populates="group", sa_relationship_kwargs={"lazy": "noload", "cascade": "all, delete-orphan", "passive_deletes": True})
 

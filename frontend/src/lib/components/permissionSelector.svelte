@@ -15,8 +15,8 @@
 		allowSelection = true
 	} = $props<{
 		selectedPermissions: Permission[];
-		onAdd: (permission: Permission) => void;
-		onRemove: (permission: Permission) => void;
+		onAdd?: (permission: Permission) => void;
+		onRemove?: (permission: Permission) => void;
 		disabled?: boolean;
 		showRemove?: boolean;
 		allowSelection?: boolean;
@@ -35,7 +35,7 @@
 			item={perm}
 			label={$LL.permissions[perm as Permission]?.() || perm}
 			{showRemove}
-			onRemove={() => onRemove(perm)}
+			onRemove={() => onRemove?.(perm)}
 			{disabled}
 		/>
 	{/each}
@@ -43,7 +43,7 @@
 	{#if availableToAdd.length > 0}
 		<Dropdown
 			items={availableToAdd}
-			onSelect={(perm) => onAdd(perm)}
+			onSelect={(perm) => onAdd?.(perm)}
 			position="bottom-left"
 			title="Add Permission"
 			showArrow={false}

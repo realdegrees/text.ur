@@ -1,7 +1,6 @@
 <script lang="ts">
-	import { documentStore, type CachedComment } from '$lib/runes/document.svelte.js';
+	import { documentStore, type TypedComment } from '$lib/runes/document.svelte.js';
 	import { sessionStore } from '$lib/runes/session.svelte.js';
-	import { parseAnnotation } from '$types/pdf';
 	import CommentCard from './CommentCard.svelte';
 	import CommentVisibility from './CommentVisibility.svelte';
 	import ConfirmButton from '$lib/components/ConfirmButton.svelte';
@@ -13,15 +12,16 @@
 	import CheckIcon from '~icons/material-symbols/check';
 	import CloseIcon from '~icons/material-symbols/close';
 	import ExpandIcon from '~icons/material-symbols/expand-more';
-	import CollapseIcon from '~icons/material-symbols/expand-less';
 	import { formatDateTime } from '$lib/util/dateFormat';
 
 	interface Props {
-		comment: CachedComment;
+		comment: TypedComment;
 		depth?: number;
 	}
 
 	let { comment, depth = 0 }: Props = $props();
+
+	const commentState = $derived(documentStore.comments.getState(comment.id));
 
 	// Derived state
 	let isTopLevel = $derived(depth === 0);
@@ -52,12 +52,11 @@
 
 	// State
 	let isSubmitting = $state(false);
-	let editContent = $derived(comment?.editInputContent || '');
-	let replyContent = $derived(comment?.replyInputContent || '');
 	let isLoadingReplies = $state(false);
 
 	let hasUnloadedReplies = $derived(
-		comment?.num_replies > 0 && (!comment.replies || comment.replies.length === 0)
+		comment?.num_replies > 0 &&
+			(!commentState?.replies || commentState.replies.length - comment.num_replies < 0)
 	);
 	let isAuthor = $derived(sessionStore.currentUserId === comment?.user?.id);
 	let canDeleteComment = $derived.by(() => {
@@ -67,28 +66,33 @@
 	let canReply = $derived(
 		sessionStore.routeMembership ? sessionStore.validatePermissions(['add_comments']) : false
 	);
-	let hasReplies = $derived(comment.replies && comment.replies.length > 0);
 
 	// Handlers
 
 	const handleReply = async () => {
-		if (!replyContent.trim() || isSubmitting) return;
+		if (!commentState?.replyInputContent?.trim() || isSubmitting) return;
 		isSubmitting = true;
 		try {
-			await documentStore.createComment({ content: replyContent.trim(), parentId: comment.id });
-			documentStore.setReplyInputContent(comment.id, '');
-			documentStore.setShowReplyInput(comment.id, false);
+			await documentStore.comments.create({
+				content: commentState.replyInputContent.trim(),
+				parent_id: comment.id,
+				visibility: comment.visibility,
+				annotation: null
+			});
+			commentState.replyInputContent = '';
+			commentState.isReplying = false;
 		} finally {
 			isSubmitting = false;
 		}
 	};
 
 	const handleEdit = async () => {
-		if (!editContent.trim() || isSubmitting) return;
+		if (!commentState?.editInputContent?.trim() || isSubmitting) return;
 		isSubmitting = true;
 		try {
-			await documentStore.updateComment(comment.id, { content: editContent.trim() });
-			documentStore.setEditing(comment.id, false);
+			comment.content = commentState.editInputContent.trim();
+			await documentStore.comments.update(comment);
+			commentState.isEditing = false;
 		} finally {
 			isSubmitting = false;
 		}
@@ -98,7 +102,7 @@
 		if (isSubmitting) return;
 		isSubmitting = true;
 		try {
-			await documentStore.deleteComment(comment.id);
+			await documentStore.comments.delete(comment.id);
 		} finally {
 			isSubmitting = false;
 		}
@@ -108,7 +112,7 @@
 		if (isLoadingReplies) return;
 		isLoadingReplies = true;
 		try {
-			await documentStore.loadReplies(comment.id);
+			await documentStore.comments.loadMoreReplies(comment.id);
 		} finally {
 			isLoadingReplies = false;
 		}
@@ -119,9 +123,9 @@
 			e.preventDefault();
 			handleReply();
 		}
-		if (e.key === 'Escape') {
-			documentStore.setShowReplyInput(comment.id, false);
-			documentStore.setReplyInputContent(comment.id, '');
+		if (e.key === 'Escape' && commentState) {
+			commentState.isReplying = false;
+			commentState.replyInputContent = '';
 		}
 	};
 
@@ -130,30 +134,30 @@
 			e.preventDefault();
 			handleEdit();
 		}
-		if (e.key === 'Escape') {
-			documentStore.setEditing(comment.id, false);
+		if (e.key === 'Escape' && commentState) {
+			commentState.isEditing = false;
 		}
 	};
 
-	$effect(() => {
-		if (comment.replyInputContent !== replyContent)
-			documentStore.setReplyInputContent(comment.id, replyContent);
-	});
-	$effect(() => {
-		if (comment.editInputContent !== editContent)
-			documentStore.setEditingContent(comment.id, editContent);
-	});
+	// $effect(() => {
+	// 	if (commentState?.replyInputContent !== replyContent)
+	// 		documentStore.comments.setReplyInputContent(comment.id, replyContent);
+	// });
+	// $effect(() => {
+	// 	if (commentState?.editInputContent !== editContent)
+	// 		documentStore.comments.setEditInputContent(comment.id, editContent);
+	// });
 </script>
 
 {#snippet editDeleteButtons()}
-	{#if !comment.isEditing && isAuthor}
+	{#if commentState && !commentState.isEditing && isAuthor}
 		<button
 			class="rounded text-text/40 hover:bg-text/10 hover:text-text/70 {isTopLevel
 				? 'p-1'
 				: 'p-0.5'} transition-colors"
 			onclick={(e) => {
 				e.stopPropagation();
-				documentStore.setEditing(comment.id, true);
+				commentState.isEditing = true;
 			}}
 			title="Edit"
 		>
@@ -218,9 +222,10 @@
 				{/if}
 				<span class="text-xs text-text/40">{formatDateTime(comment.created_at)}</span>
 				<CommentVisibility
-					commentId={comment.id}
+					{comment}
 					visibility={comment.visibility}
 					canEdit={isAuthor}
+					{isTopLevel}
 				/>
 			</div>
 			{#if isAuthor || canDeleteComment}
@@ -234,24 +239,24 @@
 		{#if comment.annotation}
 			<div class="mb-3 border-l-2 border-primary/50 bg-primary/5 py-1.5 pr-2 pl-2.5">
 				<p class="line-clamp-2 text-xs text-text/60 italic">
-					"{parseAnnotation(comment.annotation)?.text}"
+					"{comment.annotation.text}"
 				</p>
 			</div>
 		{/if}
 
 		<!-- Content / Edit mode -->
-		{#if comment.isEditing}
+		{#if commentState && commentState.isEditing}
 			<div class={sizes.mb}>
 				<MarkdownTextEditor
-					bind:value={editContent}
+					bind:value={commentState.editInputContent}
 					placeholder="Edit your comment..."
 					rows={3}
 					disabled={isSubmitting}
 					autofocus={true}
 					onkeydown={handleEditKeydown}
 					onblur={() => {
-						if (editContent.trim().length === 0) {
-							documentStore.setEditing(comment.id, false);
+						if (commentState.editInputContent.trim().length === 0) {
+							commentState.isEditing = false;
 						}
 					}}
 				/>
@@ -260,7 +265,7 @@
 						class="flex items-center gap-1 rounded {sizes.buttonPx} text-xs text-text/50 transition-colors hover:bg-text/10 hover:text-text/70"
 						onclick={(e) => {
 							e.stopPropagation();
-							documentStore.setEditing(comment.id, false);
+							commentState.isEditing = false;
 						}}
 						disabled={isSubmitting}
 					>
@@ -272,7 +277,7 @@
 							e.stopPropagation();
 							handleEdit();
 						}}
-						disabled={!editContent.trim() || isSubmitting}
+						disabled={!commentState.editInputContent.trim() || isSubmitting}
 					>
 						<CheckIcon class={sizes.icon} />
 						{isSubmitting ? 'Saving...' : 'Save'}
@@ -288,18 +293,18 @@
 		{/if}
 
 		<!-- Reply input -->
-		{#if comment.showReplyInput}
+		{#if commentState?.isReplying}
 			<div class={isTopLevel ? 'mb-3' : 'mt-2'}>
 				<MarkdownTextEditor
-					bind:value={replyContent}
+					bind:value={commentState.replyInputContent}
 					placeholder="Write a reply..."
 					rows={2}
 					disabled={isSubmitting}
 					autofocus={true}
 					onkeydown={handleKeydown}
 					onblur={() => {
-						if (replyContent.trim().length === 0) {
-							documentStore.setShowReplyInput(comment.id, false);
+						if (commentState.replyInputContent.trim().length === 0) {
+							commentState.isReplying = false;
 						}
 					}}
 				/>
@@ -308,8 +313,8 @@
 						class="rounded {sizes.buttonPx} text-xs text-text/50 transition-colors hover:bg-text/10 hover:text-text/70"
 						onclick={(e) => {
 							e.stopPropagation();
-							documentStore.setShowReplyInput(comment.id, false);
-							documentStore.setReplyInputContent(comment.id, '');
+							commentState.isReplying = false;
+							commentState.replyInputContent = '';
 						}}>Cancel</button
 					>
 					<button
@@ -318,45 +323,28 @@
 							e.stopPropagation();
 							handleReply();
 						}}
-						disabled={!replyContent.trim() || isSubmitting}
+						disabled={!commentState.replyInputContent.trim() || isSubmitting}
 					>
 						{isSubmitting ? (isTopLevel ? 'Sending...' : '...') : 'Reply'}
 					</button>
 				</div>
 			</div>
-		{:else if canReply}
+		{:else if commentState && canReply}
 			<button
 				class="{isTopLevel ? 'mb-3' : 'mt-1'} flex items-center {sizes.gap} text-xs {isTopLevel
 					? 'text-primary hover:text-primary/80'
 					: 'text-primary/70 hover:text-primary'} transition-colors"
 				onclick={(e) => {
 					e.stopPropagation();
-					documentStore.setShowReplyInput(comment.id, true);
+					commentState.isReplying = true;
 				}}
 			>
 				<ReplyIcon class={sizes.icon} /> Reply
 			</button>
 		{/if}
 
-		<!-- Load replies button -->
-		{#if hasUnloadedReplies}
-			<button
-				class="mt-1.5 flex items-center {sizes.gap} text-xs text-text/60 transition-colors hover:text-text/70"
-				onclick={(e) => {
-					e.stopPropagation();
-					handleLoadReplies();
-				}}
-				disabled={isLoadingReplies}
-			>
-				<ExpandIcon class={sizes.icon} />
-				{isLoadingReplies
-					? 'Loading...'
-					: `${comment.num_replies} ${comment.num_replies === 1 ? 'reply' : 'replies'}`}
-			</button>
-		{/if}
-
-		<!-- Replies -->
-		{#if hasReplies}
+		{#if commentState && comment.num_replies > 0}
+			<!-- Replies -->
 			<div class={isTopLevel ? 'border-t border-text/10 pt-2' : 'mt-2'}>
 				<button
 					class="{isTopLevel
@@ -364,25 +352,53 @@
 						: 'mb-1.5'} flex items-center gap-0.5 text-xs {isTopLevel
 						? 'font-medium text-text/50 hover:text-text/70'
 						: 'text-text/40 hover:text-text/60'} transition-colors"
+					disabled={isLoadingReplies}
 					onclick={(e) => {
 						e.stopPropagation();
-						documentStore.toggleRepliesCollapsed(comment.id);
+
+						if (!commentState.repliesExpanded && !commentState.replies.length) {
+							handleLoadReplies();
+						}
+						commentState.repliesExpanded = !commentState.repliesExpanded;
 					}}
 				>
-					{#if comment.isRepliesCollapsed}
+					{#if !commentState.repliesExpanded}
 						<ExpandIcon class={sizes.icon} />
+						{comment.num_replies}
+						{comment.num_replies === 1 ? 'reply' : 'replies'}
 					{:else}
-						<CollapseIcon class={sizes.icon} />
+						<ExpandIcon class="{sizes.icon} rotate-180" />
+						Collapse
 					{/if}
-					{comment.replies?.length}
-					{comment.replies?.length === 1 ? 'reply' : 'replies'}
 				</button>
-				{#if !comment.isRepliesCollapsed}
+				{#if commentState.repliesExpanded}
 					<div class="space-y-2">
-						{#each comment.replies ?? [] as reply (reply.id)}
-							<CommentCard comment={reply} depth={depth + 1} />
+						{#each commentState.replies ?? [] as replyId (replyId)}
+							{@const comment = documentStore.comments.getComment(replyId)}
+							{#if comment}
+								<CommentCard {comment} depth={depth + 1} />
+							{/if}
 						{/each}
 					</div>
+					{#if hasUnloadedReplies}
+						<button
+							class="mt-1.5 flex items-center {sizes.gap} text-xs text-text/60 transition-colors hover:text-text/70"
+							onclick={(e) => {
+								e.stopPropagation();
+								handleLoadReplies();
+							}}
+							disabled={isLoadingReplies}
+						>
+							<ExpandIcon class={sizes.icon} />
+							{isLoadingReplies
+								? 'Loading...'
+								: `${comment.num_replies - (commentState.replies?.length ?? 0)} more ${
+										comment.num_replies - (commentState.replies?.length ?? 0) === 1
+											? 'reply'
+											: 'replies'
+									}`}
+						</button>
+					{/if}
 				{/if}
 			</div>
 		{/if}

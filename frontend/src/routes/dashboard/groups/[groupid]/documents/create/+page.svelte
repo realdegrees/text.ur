@@ -138,7 +138,7 @@
 		}
 
 		notification('success', 'Document uploaded successfully');
-		goto(`/documents/${result.data.id}`);
+		goto(`/dashboard/groups/${groupId}/documents`);
 	}
 </script>
 
@@ -268,7 +268,7 @@
 			<button
 				type="submit"
 				disabled={isLoading || !selectedFile}
-				class="flex flex-row items-center gap-2 rounded-md bg-primary px-6 py-2 text-background transition-all hover:bg-primary/80 disabled:cursor-not-allowed disabled:bg-text/30"
+				class="flex flex-row items-center gap-2 rounded-md bg-primary px-6 py-2 text-text transition-all hover:bg-primary/80 disabled:cursor-not-allowed disabled:bg-text/30"
 			>
 				{#if isLoading}
 					<Loading class="h-5 w-5" />

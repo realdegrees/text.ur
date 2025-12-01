@@ -104,7 +104,7 @@ const de = {
 	continue: 'Weiter',
 	sharelink: {
 		title: 'Gruppe beitreten',
-		description: 'Sie wurden eingeladen, einer Gruppe beizutreten. Geben Sie Ihre Daten ein, um als Gast fortzufahren.',
+		description: 'Sie wurden eingeladen, "{name:string}" beizutreten.',
 		alreadyHaveAccount: 'Haben Sie bereits ein Konto? Anmelden',
 		errors: {
 			usernameRequired: 'Bitte geben Sie einen Benutzernamen ein',

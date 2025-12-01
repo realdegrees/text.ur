@@ -151,10 +151,10 @@
 			<button
 				type="button"
 				onclick={() => (showCreateForm = true)}
-				class="flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-background transition-all hover:bg-primary/80"
+				class="flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-text transition-all hover:bg-primary/80"
 			>
 				<AddIcon class="h-5 w-5" />
-				<span>Create Link</span>
+				<p>Create Link</p>
 			</button>
 		{/if}
 	</div>

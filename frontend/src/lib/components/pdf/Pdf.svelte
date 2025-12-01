@@ -23,7 +23,6 @@
 	let unsubscribe: (() => void) | null = $state(null);
 
 	let pageNumber = $state(1);
-	let numPages = $state(0);
 	let scrollTop = $state(0);
 	let pdfWidth = $state(0);
 	let basePageWidth = $state(0);
@@ -34,7 +33,7 @@
 		const page = container.querySelector('.page') as HTMLElement | null;
 		if (page) {
 			const pageRect = page.getBoundingClientRect();
-			pdfWidth = pageRect.width + 16;
+			pdfWidth = pageRect.width + 10;
 
 			if (documentStore.documentScale > 0) {
 				basePageWidth = page.clientWidth / documentStore.documentScale;
@@ -76,7 +75,7 @@
 
 		unsubscribe = store.subscribe((s) => {
 			pageNumber = s.pageNumber;
-			numPages = s.numPages;
+			documentStore.numPages = s.numPages;
 
 			// Clamp incoming scale to respect the configured min/max values.
 			// This prevents modes like `page-height` from producing a scale
@@ -91,10 +90,8 @@
 			}
 
 			documentStore.documentScale = clampedScale;
-			requestAnimationFrame(() => {
-				updatePdfWidth();
-				captureMaxAvailableWidth();
-			});
+			updatePdfWidth();
+			captureMaxAvailableWidth();
 		});
 	};
 
@@ -133,14 +130,12 @@
 
 	const zoomIn = () => {
 		if (!pdfSlick) return;
-		documentStore.documentScale = documentStore.documentScale + PDF_ZOOM_STEP;
-		pdfSlick.currentScale = documentStore.documentScale;
+		pdfSlick.currentScale = documentStore.documentScale + PDF_ZOOM_STEP;
 	};
 
 	const zoomOut = () => {
 		if (!pdfSlick) return;
-		documentStore.documentScale = documentStore.documentScale - PDF_ZOOM_STEP;
-		pdfSlick.currentScale = documentStore.documentScale;
+		pdfSlick.currentScale = documentStore.documentScale - PDF_ZOOM_STEP;
 	};
 
 	const fitHeight = () => {
@@ -148,7 +143,7 @@
 	};
 
 	const prevPage = () => pdfSlick?.gotoPage(Math.max(pageNumber - 1, 1));
-	const nextPage = () => pdfSlick?.gotoPage(Math.min(pageNumber + 1, numPages));
+	const nextPage = () => pdfSlick?.gotoPage(Math.min(pageNumber + 1, documentStore.numPages));
 
 	$effect(() => {
 		if (!pdfAreaWrapper?.parentElement) return;
@@ -170,7 +165,7 @@
 		minScale={PDF_MIN_SCALE}
 		{maxScale}
 		{pageNumber}
-		{numPages}
+		numPages={documentStore.numPages}
 		onZoomIn={zoomIn}
 		onZoomOut={zoomOut}
 		onFitHeight={fitHeight}
@@ -186,14 +181,13 @@
 	>
 		<div
 			id="viewerContainer"
-			class="pdfSlickContainer scrollbar-none absolute inset-0 overflow-x-hidden overflow-y-scroll"
+			class="pdfSlickContainer absolute inset-0 custom-scrollbar overflow-x-hidden overflow-y-scroll"
 			bind:this={container}
 			onscroll={handleScroll}
 			onwheel={handlePdfWheel}
 		>
-			<div id="viewer" class="pdfSlickViewer pdfViewer"></div>
+			<div id="viewer" class="pdfSlickViewer pdfViewer m-0! p-0!"></div>
 		</div>
-
 		<!-- Annotation highlights are rendered into the PDF pages -->
 		<AnnotationLayer viewerContainer={container} />
 
@@ -218,7 +212,8 @@
 <style>
 	/* Override PDF.js CSS variables to reduce spacing */
 	:global(.pdf-viewer-container) {
-		--page-margin: 4px 0;
+		--page-margin: 0px 0px;
+		--page-padding: 0px 0;
 		--page-border: none;
 		--pdfViewer-padding-bottom: 0;
 	}
@@ -226,10 +221,6 @@
 	:global(.pdf-viewer-container .pdfViewer .page) {
 		margin: var(--page-margin);
 		border: var(--page-border);
-	}
-
-	:global(.pdf-viewer-container .pdfViewer) {
-		padding: 4px 8px;
 	}
 
 	/* Improve clarity on high DPI displays by preferring crisp edges for

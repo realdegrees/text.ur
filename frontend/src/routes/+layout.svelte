@@ -1,8 +1,8 @@
 <script lang="ts">
 	import '../app.css';
 	import favicon from '$lib/assets/favicon.svg';
-	import Footer from '$lib/components/footer.svelte';
-	import Header from '$lib/components/header.svelte';
+	import Footer from './footer.svelte';
+	import Header from './header.svelte';
 	import Notification from '$lib/components/notifications.svelte';
 	import { LL } from '$i18n/i18n-svelte';
 	import { notification } from '$lib/stores/notificationStore';

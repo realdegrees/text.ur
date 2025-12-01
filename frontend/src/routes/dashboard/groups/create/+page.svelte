@@ -6,6 +6,7 @@
 	import { api } from '$api/client';
 	import { notification } from '$lib/stores/notificationStore';
 	import PermissionSelector from '$lib/components/permissionSelector.svelte';
+	import { goto, invalidateAll } from '$app/navigation';
 
 	let groupName: string = $state('');
 	let selectedPermissions: Permission[] = $state([]);
@@ -52,8 +53,8 @@
 
 		isLoading = false;
 
-		// Hard navigation to ensure fresh page load
-		window.location.href = `/dashboard/groups/${result.data.id}/documents`;
+		await invalidateAll();
+		goto(`/dashboard/groups/${result.data.id}/documents`);
 	}
 </script>
 
@@ -134,7 +135,7 @@
 			<button
 				type="submit"
 				disabled={isLoading || !groupName.trim()}
-				class="flex flex-row items-center gap-2 rounded-md bg-primary px-6 py-2 text-background transition-all hover:bg-primary/80 disabled:cursor-not-allowed disabled:bg-text/30"
+				class="flex flex-row items-center gap-2 rounded-md bg-primary px-6 py-2 text-text transition-all hover:bg-primary/80 disabled:cursor-not-allowed disabled:bg-text/30"
 			>
 				{#if isLoading}
 					<Loading class="h-5 w-5" />

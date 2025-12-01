@@ -104,7 +104,7 @@ const en = {
 	continue: 'Continue',
 	sharelink: {
 		title: 'Join Group',
-		description: 'You\'ve been invited to join a group. Enter your details to continue as a guest.',
+		description: 'You\'ve been invited to join "{name:string}"',
 		alreadyHaveAccount: 'Already have an account? Log in',
 		errors: {
 			usernameRequired: 'Please enter a username',
