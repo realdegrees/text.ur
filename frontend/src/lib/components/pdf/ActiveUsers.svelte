@@ -69,7 +69,7 @@
 {/snippet}
 
 {#if documentWebSocket.activeUsers.length > 0}
-	<div class="flex flex-col {!isExpanded && 'items-center'} w-full gap-2">
+	<div class="flex flex-col {!isExpanded && 'items-center'} w-full h-full gap-2 overflow-y-auto">
 		<!--Header if expanded-->
 		{#if isExpanded}
 			<span class="text-text/40 px-1 text-[10px]">Active Users</span>
@@ -77,7 +77,7 @@
 
 		<!--Clear filters button-->
 		<button
-			class="text-primary bg-primary/50 mx-2 flex w-full items-center justify-center gap-2 rounded {isExpanded
+			class="text-primary bg-primary/50 flex items-center justify-center gap-2 rounded px-0 {isExpanded
 				? 'w-full px-2 text-left'
 				: ''}"
 			onclick={() => documentStore.filters.clearAuthorFilter()}
@@ -86,7 +86,7 @@
 			{#if isExpanded}
 				{documentStore.filters.authorFilters.size === 0 ? 'No filters' : 'Clear filters'}
 			{:else}
-				<RemoveIcon class="h-4 w-4" />
+				<RemoveIcon class="h-7 w-7" />
 			{/if}
 		</button>
 

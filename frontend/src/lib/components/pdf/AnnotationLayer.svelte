@@ -97,6 +97,7 @@
 				const existingEl = textLayer.querySelector<HighlightElement>(
 					`.annotation-highlight[data-key="${key}"]`
 				);
+
 				if (existingEl) {
 					// update position & visual attributes and keep event listeners
 					existingEl.style.left = `${left}px`;
@@ -182,9 +183,8 @@
 	let mutationObserver: MutationObserver | null = null;
 
 	onMount(() => {
-		requestAnimationFrame(() => {
-			renderHighlights();
-		});
+		// Clear all existing highlight element references from comment states
+		documentStore.clearHighlightReferences();
 
 		// Observe text layer size changes to re-render when PDF.js scales
 		textLayerObserver = new ResizeObserver(renderHighlights);
@@ -199,7 +199,7 @@
 				for (const mutation of mutations) {
 					for (const node of mutation.addedNodes) {
 						if (node instanceof HTMLElement) {
-							if (node.classList.contains('textLayer') || node.querySelector('.textLayer')) {
+							if (node.classList.contains('textLayer')) {
 								hasNewTextLayers = true;
 								break;
 							}
@@ -241,26 +241,6 @@
 
 		if (!viewerContainer) return;
 		renderHighlights();
-	});
-
-	// TODO see if this is really needed
-	$effect(() => {
-		void documentStore.loadedDocument;
-
-		// Clear the text layer of all highlights when document changes or updates
-		if (!viewerContainer) return;
-		viewerContainer.querySelectorAll<HighlightElement>('.annotation-highlight').forEach((el) => {
-			if (el._listeners) {
-				el.removeEventListener('mouseenter', el._listeners.mouseenter);
-				el.removeEventListener('mouseleave', el._listeners.mouseleave);
-				el.removeEventListener('click', el._listeners.click);
-			}
-			el.remove();
-			const commentState = documentStore.comments.getState(parseInt(el.dataset.commentId ?? '-1'));
-			if (commentState) {
-				commentState.highlightElements = commentState.highlightElements?.filter((he) => he !== el);
-			}
-		});
 	});
 </script>
 

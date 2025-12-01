@@ -60,9 +60,6 @@ export const load: PageLoad = async ({ params, parent, fetch }) => {
 		throw redirect(303, '/dashboard');
 	}
 
-	// TODO establish a websocket connection to the document for real-time editing,
-	// TODO return an interface where the page can listen to and send updates via websocket
-
 	return {
 		document: documentResult.data,
 		group: membership.group,

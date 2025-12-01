@@ -33,7 +33,7 @@
 		const page = container.querySelector('.page') as HTMLElement | null;
 		if (page) {
 			const pageRect = page.getBoundingClientRect();
-			pdfWidth = pageRect.width + 16;
+			pdfWidth = pageRect.width + 10;
 
 			if (documentStore.documentScale > 0) {
 				basePageWidth = page.clientWidth / documentStore.documentScale;
@@ -131,13 +131,11 @@
 	const zoomIn = () => {
 		if (!pdfSlick) return;
 		pdfSlick.currentScale = documentStore.documentScale + PDF_ZOOM_STEP;
-		documentStore.comments.resetState();
 	};
 
 	const zoomOut = () => {
 		if (!pdfSlick) return;
 		pdfSlick.currentScale = documentStore.documentScale - PDF_ZOOM_STEP;
-		documentStore.comments.resetState();
 	};
 
 	const fitHeight = () => {
@@ -183,14 +181,13 @@
 	>
 		<div
 			id="viewerContainer"
-			class="pdfSlickContainer scrollbar-none absolute inset-0 overflow-x-hidden overflow-y-scroll"
+			class="pdfSlickContainer absolute inset-0 overflow-x-hidden overflow-y-scroll custom-scrollbar"
 			bind:this={container}
 			onscroll={handleScroll}
 			onwheel={handlePdfWheel}
 		>
 			<div id="viewer" class="pdfSlickViewer pdfViewer"></div>
 		</div>
-
 		<!-- Annotation highlights are rendered into the PDF pages -->
 		<AnnotationLayer viewerContainer={container} />
 
@@ -215,7 +212,8 @@
 <style>
 	/* Override PDF.js CSS variables to reduce spacing */
 	:global(.pdf-viewer-container) {
-		--page-margin: 4px 0;
+		--page-margin: 6px 0;
+		--page-padding: 0px 0;
 		--page-border: none;
 		--pdfViewer-padding-bottom: 0;
 	}
@@ -223,10 +221,6 @@
 	:global(.pdf-viewer-container .pdfViewer .page) {
 		margin: var(--page-margin);
 		border: var(--page-border);
-	}
-
-	:global(.pdf-viewer-container .pdfViewer) {
-		padding: 4px 8px;
 	}
 
 	/* Improve clarity on high DPI displays by preferring crisp edges for

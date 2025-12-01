@@ -2,13 +2,13 @@
 	import { documentStore, type CommentState } from '$lib/runes/document.svelte';
 
 	interface Props {
-		state?: CommentState;
+		commentState?: CommentState;
 		opacity?: number;
 		yPosition: number;
 		scrollTop?: number;
 	}
 
-	let { state, opacity = 1, yPosition, scrollTop }: Props = $props();
+	let { commentState, opacity = 1, yPosition, scrollTop }: Props = $props();
 
 	interface LineCoordinates {
 		startX: number;
@@ -19,40 +19,42 @@
 
 	let lineCoords = $derived.by<LineCoordinates | null>(() => {
 		void documentStore.documentScale;
-		void documentStore.loadedDocument;
 		void yPosition;
 		void scrollTop;
-		void state;
 		void opacity;
-		void state;
 
 		// Find all highlight elements for this comment
-		const highlightEls = state?.highlightElements;
+		const highlightEls = commentState?.highlightElements;
 		const sidebarRect = documentStore.commentSidebarRef?.getBoundingClientRect();
 
 		if (!highlightEls || highlightEls.length === 0 || !sidebarRect) {
 			return null;
-		}
-
-		// Get the first highlight for vertical positioning
-		const firstHighlightRect = highlightEls[0].getBoundingClientRect();
+		}		
 
 		// Calculate cluster position from data instead of reading DOM
 		const LEFT_PADDING = 12; // left-3 class = 0.75rem = 12px
 		const clusterLeft = sidebarRect.left + LEFT_PADDING;
 		const clusterTop = sidebarRect.top + yPosition;
 
+		console.log(`num els: ${highlightEls.length}`);
+		
 		// Get the rightmost edge from all highlights for horizontal positioning
 		let maxRight = -Infinity;
+		let minTop = +Infinity;
+		let heightTotal = 0;
 		highlightEls.forEach((el) => {
 			const rect = el.getBoundingClientRect();
+			console.log(el.dataset);
+			heightTotal += rect.height;
 			maxRight = Math.max(maxRight, rect.right);
+			minTop = Math.min(minTop, rect.top);
 		});
 
 		// End point: rightmost edge of all highlights, vertically centered on first highlight
 		const HIGHLIGHT_OFFSET = 12; // pixels of gap from highlight edge
 		const endX = maxRight + HIGHLIGHT_OFFSET;
-		const endY = firstHighlightRect.top + firstHighlightRect.height / 2;
+		const endY = minTop + heightTotal / 2;
+		
 
 		// Start point: at cluster (using calculated position from data)
 		const COMMENT_OFFSET = -1.5; // pixels of offset from left edge of cluster

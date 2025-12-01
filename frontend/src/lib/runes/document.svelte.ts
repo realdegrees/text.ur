@@ -4,6 +4,7 @@ import type { Paginated } from '$api/pagination';
 import { notification } from '$lib/stores/notificationStore';
 import { annotationSchema, type Annotation } from '$types/pdf';
 import { SvelteMap } from 'svelte/reactivity';
+import { invalidateAll } from '$app/navigation';
 
 export type AuthorFilterState = 'include' | 'exclude';
 export type TypedComment = Omit<CommentRead, 'annotation'> & { annotation: Annotation | null };
@@ -31,7 +32,6 @@ const createDocumentStore = () => {
 	const commentStates: SvelteMap<number, CommentState> = new SvelteMap<number, CommentState>();
 	const authorFilterStates = new SvelteMap<number, AuthorFilterState>();
 	let showCursors: boolean = $state<boolean>(true);
-	let refreshFlag = $state<boolean>(false);
 	let loadedDocument: DocumentRead | undefined = $state<DocumentRead | undefined>(undefined);
 	let documentScale: number = $state<number>(1);
 	let numPages: number = $state<number>(0);
@@ -40,7 +40,7 @@ const createDocumentStore = () => {
 	let commentSidebarRef: HTMLDivElement | null = $state<HTMLDivElement | null>(null);
 
 	// Resets the store and loads root comments for a document
-	const setComments = (comments: CommentRead[]) => {
+	const setTopLevelComments = (comments: CommentRead[]) => {
 		// Add/update comments
 		comments.forEach((c) => {
 			const annotationParsed = annotationSchema.safeParse(c.annotation);
@@ -63,24 +63,35 @@ const createDocumentStore = () => {
 			}
 		});
 
-		// Remove states that no longer exist
-		const commentKeys = new Set(_comments.keys());
-		Array.from(commentStates.keys()).forEach((commentId) => {
-			if (!commentKeys.has(commentId)) {
-				commentStates.delete(commentId);
+		// Recursively remove replies as well
+		const removeComment = (commentId: number) => {
+			console.log(`Removing stale comment ${commentId}`);
+			const commentState = commentStates.get(commentId);
+			if (commentState?.replies?.length) {
+				commentState.replies.forEach((replyId) => {
+					removeComment(replyId);
+				});
+			}
+			if (commentState) {
+				// Reset hover state, preserve everything else for when its available again
+				const state = commentStates.get(commentId);
+				if (state) {
+					state.isHighlightHovered = false;
+					state.isCommentHovered = false;
+				}
+			}
+			_comments.delete(commentId);
+		};
+
+		// Remove top level comments and their replies from the local store that are not present in the new set
+		const commentKeys = new Set(comments.map(({ id }) => id));
+		[...topLevelComments].forEach(({ id }) => {
+			if (!commentKeys.has(id)) {
+				console.log(`Top Level comment ${id} not found in new set, removing.`);
+
+				removeComment(id);
 			}
 		});
-	};
-
-	// TODO maybe the delay when editing is openened can be removed entirely with the new state splitting
-	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	const setViewMode = (viewMode: ViewMode) => {
-		// ? Since the best approach for view_mode changes is to refetch data from the backend on change,
-		// ? we dont really care about the view mode as it will be updates anyway once the refresh happens.
-		if (!loadedDocument) return;
-		if (comments.editing.size) {
-			refreshFlag = true; // Delay until active comment edit is done
-		}
 	};
 
 	const topLevelComments = $derived.by(() => {
@@ -109,10 +120,13 @@ const createDocumentStore = () => {
 			filteredArray = filteredArray.filter((c) => !(c.user?.id && excluded.has(c.user.id)));
 		}
 
-		// if a comment is excluded from view then it needs to have its state reset
+		// if a comment is excluded from view then it needs to have its hover state reset, everything else can be preserved for when it shows again
 		const hiddenCommentIds = allComments.filter((c) => !filteredArray.includes(c)).map((c) => c.id);
 		for (const commentId of hiddenCommentIds) {
-			resetState(commentId);
+			const state = commentStates.get(commentId);
+			if (!state) continue;
+			state.isHighlightHovered = false;
+			state.isCommentHovered = false;
 		}
 
 		return filteredArray;
@@ -228,29 +242,6 @@ const createDocumentStore = () => {
 		}
 	});
 
-	const resetState = (onlyForComment?: number): void => {
-		/** Reset interaction-related boolean flags for all comment states or the specified one.
-		 * Only resets immediate visual states like highlight or edit mode.
-		 * Preserve other state like collapsed or edit content. */
-
-		if (onlyForComment !== undefined) {
-			const onlyForState = commentStates.get(onlyForComment);
-			if (onlyForState) {
-				onlyForState.isEditing = false;
-				onlyForState.isPinned = false;
-				onlyForState.isHighlightHovered = false;
-				onlyForState.isCommentHovered = false;
-			}
-			return;
-		}
-		for (const state of commentStates.values()) {
-			state.isEditing = false;
-			state.isPinned = false;
-			state.isHighlightHovered = false;
-			state.isCommentHovered = false;
-		}
-	};
-
 	const comments = $derived({
 		update: async (comment: TypedComment) => {
 			const result = await api.update(`/comments/${comment.id}`, comment);
@@ -347,7 +338,6 @@ const createDocumentStore = () => {
 		/**
 		 * Reset interaction flags for all existing comment states.
 		 */
-		resetState: resetState,
 		// Comment subsets
 		all: new SvelteMap(_comments),
 		pinned: new SvelteMap(commentStates.entries().filter(([, state]) => state.isPinned)),
@@ -382,6 +372,13 @@ const createDocumentStore = () => {
 
 		authorFilters: authorFilterStates
 	});
+
+	const clearHighlightReferences = (): void => {
+		/** Clear all highlight element references from comment states. */
+		for (const state of commentStates.values()) {
+			state.highlightElements = undefined;
+		}
+	}
 
 	const handleWebSocketEvent = (
 		event:
@@ -418,12 +415,7 @@ const createDocumentStore = () => {
 				commentsLocal.delete((event.payload as CommentRead).id);
 				break;
 			case 'view_mode_changed': {
-				const vm = event.payload as { view_mode?: ViewMode };
-
-				if (vm?.view_mode) {
-					setViewMode(vm.view_mode);
-					console.log(`[WS] Document view_mode updated to ${vm.view_mode}`);
-				}
+				invalidateAll();
 				break;
 			}
 			default:
@@ -480,15 +472,9 @@ const createDocumentStore = () => {
 		set showCursors(value) {
 			showCursors = value;
 		},
-		get refreshFlag() {
-			return refreshFlag;
-		},
-		set refreshFlag(value) {
-			refreshFlag = value;
-		},
 		handleWebSocketEvent,
-		setRootComments: setComments,
-		setViewMode
+		setTopLevelComments,
+		clearHighlightReferences
 	};
 };
 

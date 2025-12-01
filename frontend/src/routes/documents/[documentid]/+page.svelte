@@ -16,7 +16,7 @@
 	$effect(() => {
 		if (JSON.stringify(prevRootComments) !== JSON.stringify(data.rootComments)) {
 			prevRootComments = data.rootComments;
-			documentStore.setRootComments(data.rootComments);
+			documentStore.setTopLevelComments(data.rootComments);
 		}
 	});
 	$effect(() => {

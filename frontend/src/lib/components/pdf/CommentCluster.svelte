@@ -187,11 +187,11 @@
 			{#if (anyCommentHovered || anyHighlightHovered) && (anyCommentPinned || anyCommentHovered)}
 				<!-- Connection line for this card -->
 
-				<ConnectionLine state={activeCommentState} {yPosition} {scrollTop} />
+				<ConnectionLine commentState={activeCommentState} {yPosition} {scrollTop} />
 
 				{#if hoveredTabId !== null && hoveredTabId !== activeComment.id}
 					<!-- Connection line for hovered tab comment -->
-					<ConnectionLine state={hoveredTabCommentState} {yPosition} opacity={0.7} {scrollTop} />
+					<ConnectionLine commentState={hoveredTabCommentState} {yPosition} opacity={0.7} {scrollTop} />
 				{/if}
 			{/if}
 		{/if}

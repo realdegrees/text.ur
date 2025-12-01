@@ -4,8 +4,6 @@ import type { ConnectionState } from '$types/websocket';
 import { browser } from '$app/environment';
 import { api } from '$api/client';
 import { env } from '$env/dynamic/public';
-import { invalidateAll } from '$app/navigation';
-import { documentStore } from '$lib/runes/document.svelte';
 import { mousePositionEventSchema } from '$api/schemas';
 import type { CommentEvent } from '$api/types';
 
@@ -247,14 +245,6 @@ class DocumentWebSocketStore {
 				const envelope = obj as unknown as ViewModeChangedEventEnvelope | undefined | null;
 				if (!envelope || !envelope.payload) break;
 				this.viewModeEventHandlers.forEach((handler) => handler(envelope));
-
-				// Check if user is actively editing - defer refresh until they're done
-				const hasEditingComment = !!documentStore.comments.editing.size;
-				if (hasEditingComment) {
-					documentStore.setViewMode(envelope.payload.view_mode);
-				} else {
-					invalidateAll();
-				}
 				break;
 			}
 		}

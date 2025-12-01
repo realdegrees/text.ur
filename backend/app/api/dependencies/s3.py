@@ -1,4 +1,5 @@
 from collections.abc import Iterator
+from datetime import UTC, datetime, timezone
 from functools import lru_cache
 from typing import Annotated, Any, BinaryIO
 
@@ -71,6 +72,13 @@ class S3Manager:
     def exists(self, key: str) -> bool:
         """Check if an object exists in S3."""
         return self.metadata(key) is not None
+    
+    def get_last_modified(self, key: str) -> datetime:
+        """Get the Last-Modified timestamp of an object in S3."""
+        metadata = self.metadata(key)
+        last_modified: datetime = metadata["LastModified"]
+        # Ensure a timezone-aware UTC datetime is returned
+        return last_modified.astimezone(UTC)
 
     def delete(self, key: str) -> bool:
         """Delete an object from S3."""

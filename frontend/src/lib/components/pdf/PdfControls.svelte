@@ -10,7 +10,6 @@
 	import ViewModeSelector from './ViewModeSelector.svelte';
 	import ActiveUsers from './ActiveUsers.svelte';
 	import { documentStore } from '$lib/runes/document.svelte.js';
-	import { sessionStore } from '$lib/runes/session.svelte.js';
 
 	interface Props {
 		minScale: number;
@@ -38,18 +37,6 @@
 
 	let isExpanded = $state(true);
 
-	// Check if filters should be disabled (restricted mode without view_restricted_comments permission)
-	let isRestrictedWithoutPermission = $derived(
-		documentStore.loadedDocument?.view_mode === 'restricted' &&
-			!sessionStore.validatePermissions(['view_restricted_comments'])
-	);
-
-	// Clear filters when view mode changes to restricted and user lacks permission
-	$effect(() => {
-		if (isRestrictedWithoutPermission && documentStore.filters.authorFilters.size > 0) {
-			documentStore.filters.clearAuthorFilter();
-		}
-	});
 
 	const buttonClass =
 		'rounded p-2 text-text/70 transition-colors hover:bg-text/10 hover:text-text disabled:opacity-30 disabled:hover:bg-transparent';
@@ -58,7 +45,7 @@
 </script>
 
 <div
-	class="flex shrink-0 flex-col border-r border-text/10 bg-inset transition-all duration-200 {isExpanded
+	class="flex shrink-0 flex-col border-r border-text/10 bg-inset transition-all duration-200 overflow-y-auto overflow-x-hidden no-scrollbar {isExpanded
 		? 'w-40'
 		: 'w-12'}"
 >
