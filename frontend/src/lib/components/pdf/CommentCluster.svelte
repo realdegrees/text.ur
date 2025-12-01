@@ -63,9 +63,12 @@
 	let hoveredHighlightComment: TypedComment | null = $derived.by(() => {
 		return comments.find((c) => commentStates.get(c.id)?.isHighlightHovered) ?? null;
 	});
+	let activeEditingComment: TypedComment | null = $derived.by(() => {
+		return comments.find((c) => commentStates.get(c.id)?.isEditing) ?? null;
+	});
 
 	let activeComment: TypedComment = $derived(
-		hoveredHighlightComment ??
+		hoveredHighlightComment ?? activeEditingComment ??
 			comments.find((c) => c.id === selectedCommentId) ??
 			comments.find((c) => commentStates.get(c.id)?.isPinned) ??
 			comments[0]
