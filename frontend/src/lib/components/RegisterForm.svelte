@@ -58,7 +58,7 @@
 	{/if}
 	<Field bind:value={username} label="Username" required />
 	<Field bind:value={email} label="Email" required />
-	<div class="flex flex-row gap-4 w-full">
+	<div class="flex w-full flex-row gap-4">
 		<Field bind:value={firstName} label="First Name" />
 		<Field bind:value={lastName} label="Last Name" />
 	</div>

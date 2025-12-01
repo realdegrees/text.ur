@@ -29,7 +29,7 @@
 
 		if (!highlightEls || highlightEls.length === 0 || !sidebarRect) {
 			return null;
-		}		
+		}
 
 		// Calculate cluster position from data instead of reading DOM
 		const LEFT_PADDING = 12; // left-3 class = 0.75rem = 12px
@@ -37,7 +37,7 @@
 		const clusterTop = sidebarRect.top + yPosition;
 
 		console.log(`num els: ${highlightEls.length}`);
-		
+
 		// Get the rightmost edge from all highlights for horizontal positioning
 		let maxRight = -Infinity;
 		let minTop = +Infinity;
@@ -54,7 +54,6 @@
 		const HIGHLIGHT_OFFSET = 12; // pixels of gap from highlight edge
 		const endX = maxRight + HIGHLIGHT_OFFSET;
 		const endY = minTop + heightTotal / 2;
-		
 
 		// Start point: at cluster (using calculated position from data)
 		const COMMENT_OFFSET = -1.5; // pixels of offset from left edge of cluster

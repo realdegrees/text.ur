@@ -37,7 +37,6 @@
 
 	let isExpanded = $state(true);
 
-
 	const buttonClass =
 		'rounded p-2 text-text/70 transition-colors hover:bg-text/10 hover:text-text disabled:opacity-30 disabled:hover:bg-transparent';
 	const activeButtonClass =
@@ -45,7 +44,7 @@
 </script>
 
 <div
-	class="flex shrink-0 flex-col border-r border-text/10 bg-inset transition-all duration-200 overflow-y-auto overflow-x-hidden no-scrollbar {isExpanded
+	class="no-scrollbar flex shrink-0 flex-col overflow-x-hidden overflow-y-auto border-r border-text/10 bg-inset transition-all duration-200 {isExpanded
 		? 'w-40'
 		: 'w-12'}"
 >

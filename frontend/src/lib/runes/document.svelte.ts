@@ -283,7 +283,7 @@ const createDocumentStore = () => {
 			}
 
 			commentsLocal.delete(commentId);
-			commentStates.delete(commentId); // Here we can fully delete the state instead of soft resetting it because the comment is gone for good 
+			commentStates.delete(commentId); // Here we can fully delete the state instead of soft resetting it because the comment is gone for good
 		},
 		loadMoreReplies: async (commentId: number) => {
 			const limit = 20;
@@ -382,7 +382,7 @@ const createDocumentStore = () => {
 		for (const state of commentStates.values()) {
 			state.highlightElements = undefined;
 		}
-	}
+	};
 
 	const handleWebSocketEvent = (
 		event:

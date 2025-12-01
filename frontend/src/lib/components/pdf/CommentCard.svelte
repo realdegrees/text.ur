@@ -13,7 +13,6 @@
 	import CloseIcon from '~icons/material-symbols/close';
 	import ExpandIcon from '~icons/material-symbols/expand-more';
 	import { formatDateTime } from '$lib/util/dateFormat';
-	import { invalidateAll } from '$app/navigation';
 
 	interface Props {
 		comment: TypedComment;

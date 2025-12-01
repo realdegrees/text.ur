@@ -68,7 +68,8 @@
 	});
 
 	let activeComment: TypedComment = $derived(
-		hoveredHighlightComment ?? activeEditingComment ??
+		hoveredHighlightComment ??
+			activeEditingComment ??
 			comments.find((c) => c.id === selectedCommentId) ??
 			comments.find((c) => commentStates.get(c.id)?.isPinned) ??
 			comments[0]
@@ -194,7 +195,12 @@
 
 				{#if hoveredTabId !== null && hoveredTabId !== activeComment.id}
 					<!-- Connection line for hovered tab comment -->
-					<ConnectionLine commentState={hoveredTabCommentState} {yPosition} opacity={0.7} {scrollTop} />
+					<ConnectionLine
+						commentState={hoveredTabCommentState}
+						{yPosition}
+						opacity={0.7}
+						{scrollTop}
+					/>
 				{/if}
 			{/if}
 		{/if}

@@ -181,7 +181,7 @@
 	>
 		<div
 			id="viewerContainer"
-			class="pdfSlickContainer absolute inset-0 overflow-x-hidden overflow-y-scroll custom-scrollbar"
+			class="pdfSlickContainer absolute inset-0 custom-scrollbar overflow-x-hidden overflow-y-scroll"
 			bind:this={container}
 			onscroll={handleScroll}
 			onwheel={handlePdfWheel}

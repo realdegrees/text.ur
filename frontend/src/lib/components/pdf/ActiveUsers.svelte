@@ -69,15 +69,15 @@
 {/snippet}
 
 {#if documentWebSocket.activeUsers.length > 0}
-	<div class="flex flex-col {!isExpanded && 'items-center'} w-full h-full gap-2 overflow-y-auto">
+	<div class="flex flex-col {!isExpanded && 'items-center'} h-full w-full gap-2 overflow-y-auto">
 		<!--Header if expanded-->
 		{#if isExpanded}
-			<span class="text-text/40 px-1 text-[10px]">Active Users</span>
+			<span class="px-1 text-[10px] text-text/40">Active Users</span>
 		{/if}
 
 		<!--Clear filters button-->
 		<button
-			class="text-primary bg-primary/50 flex items-center justify-center gap-2 rounded px-0 {isExpanded
+			class="flex items-center justify-center gap-2 rounded bg-primary/50 px-0 text-primary {isExpanded
 				? 'w-full px-2 text-left'
 				: ''}"
 			onclick={() => documentStore.filters.clearAuthorFilter()}
@@ -101,7 +101,7 @@
 				{@const hovered = hoveredUserId === user.user_id}
 				{@const isSessionUser = user.user_id === sessionStore.currentUser?.id}
 				<button
-					class="text-text/70 flex cursor-pointer items-center justify-between gap-2 rounded"
+					class="flex cursor-pointer items-center justify-between gap-2 rounded text-text/70"
 					onclick={() => handleUserClick(user.user_id)}
 					title="{user.username} - Click to cycle include → exclude → none"
 					onmouseenter={() => (hoveredUserId = user.user_id)}
@@ -110,10 +110,10 @@
 					<div class="flex flex-row items-center gap-2">
 						<div class="relative">
 							{#if isSessionUser}
-								<PersonIcon class="text-text/70 h-7 w-7 shrink-0 rounded-full" />
+								<PersonIcon class="h-7 w-7 shrink-0 rounded-full text-text/70" />
 							{:else}
 								<div
-									class="text-text flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-medium {getUserColor(
+									class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-medium text-text {getUserColor(
 										user.user_id
 									)}"
 								>
@@ -129,7 +129,7 @@
 							{/if}
 						</div>
 						{#if isExpanded}
-							<span class="text-text/70 truncate text-xs"
+							<span class="truncate text-xs text-text/70"
 								>{user.username} {isSessionUser ? '(You)' : ''}</span
 							>
 						{/if}
@@ -142,5 +142,5 @@
 		</div>
 	</div>
 {:else if isExpanded}
-	<span class="text-text/40 px-1 text-[10px]">No other users viewing</span>
+	<span class="px-1 text-[10px] text-text/40">No other users viewing</span>
 {/if}
