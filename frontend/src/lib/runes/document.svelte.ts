@@ -5,7 +5,7 @@ import { notification } from '$lib/stores/notificationStore';
 import { annotationSchema, type Annotation } from '$types/pdf';
 import { SvelteMap } from 'svelte/reactivity';
 
-type AuthorFilterState = 'include' | 'exclude';
+export type AuthorFilterState = 'include' | 'exclude';
 export type TypedComment = Omit<CommentRead, 'annotation'> & { annotation: Annotation | null };
 
 export interface CommentState {

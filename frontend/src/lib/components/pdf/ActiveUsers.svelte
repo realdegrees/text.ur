@@ -1,32 +1,17 @@
 <script lang="ts">
 	import { documentWebSocket } from '$lib/stores/documentWebSocket.svelte';
-	import { documentStore } from '$lib/runes/document.svelte';
+	import { documentStore, type AuthorFilterState } from '$lib/runes/document.svelte';
 	import PersonIcon from '~icons/material-symbols/person';
 	import { sessionStore } from '$lib/runes/session.svelte';
 	import RemoveIcon from '~icons/material-symbols/remove';
+	import EyeOpen from '~icons/mdi/eye';
+	import EyeClosed from '~icons/mdi/eye-off';
 
 	interface Props {
 		isExpanded?: boolean;
 	}
 
 	let { isExpanded = false }: Props = $props();
-
-	// Show current user first (if present) and the rest afterwards
-	let currentUserId = $derived(sessionStore.currentUser?.id);
-	let currentConnection = $derived(
-		documentWebSocket.activeUsers.find((u) => u.user_id === currentUserId)
-	);
-	let otherUsers = $derived(
-		documentWebSocket.activeUsers.filter((u) => u.user_id !== currentUserId)
-	);
-	// Check if filters should be disabled (restricted mode without view_restricted_comments permission)
-	let isRestrictedWithoutPermission = $derived(
-		documentStore.loadedDocument?.view_mode === 'restricted' &&
-			!sessionStore.validatePermissions(['view_restricted_comments'])
-	);
-
-	// Show more users when expanded
-	let displayLimit = $derived(isExpanded ? 10 : 3);
 
 	// Get initials from username
 	const getInitials = (username: string): string => {
@@ -50,102 +35,112 @@
 
 	const handleUserClick = (userId: number) => {
 		documentStore.filters.toggleAuthorFilter(userId);
+		hoveredUserId = null; // Reset hover state on click to not show the hover icon immediately which would be confusing
 	};
-
-	// Button styling to match PdfControls
-	const buttonClass =
-		'flex items-center gap-2 rounded p-1 text-text/70 transition-colors hover:bg-text/10 hover:text-text';
-	const activeButtonClass =
-		'flex items-center gap-2 rounded text-primary bg-primary/10 transition-colors hover:bg-primary/20';
-
-	/** Get the filter state for a user: 'include', 'exclude' or undefined (none) */
-	type AuthorFilterState = 'include' | 'exclude';
-	const getFilterState = (userId: number): AuthorFilterState | undefined =>
-		documentStore.filters.authorFilters.get(userId);
+	let hoveredUserId = $state<number | null>(null);
 </script>
 
-{#if currentConnection || otherUsers.length > 0}
-	<div class="flex {isExpanded ? 'w-full flex-col' : 'flex-col items-center'} gap-2">
-		{#if isExpanded}
-			<span class="px-1 text-[10px] text-text/40">Active Users</span>
-
-			{#if documentStore.filters.authorFilters.size > 0 && !isRestrictedWithoutPermission}
-				<button
-					class="{activeButtonClass} {isExpanded ? 'w-full px-2 text-left' : ''}"
-					onclick={() => documentStore.filters.clearAuthorFilter()}
-				>
-					Clear filters
-				</button>
-			{/if}
-		{/if}
-
-		{#if documentStore.filters.authorFilters.size > 0 && !isRestrictedWithoutPermission && !isExpanded}
-			<button
-				class="{activeButtonClass} p-2"
-				onclick={() => documentStore.filters.clearAuthorFilter()}
-				title="Clear filters"
-			>
-				<RemoveIcon class="h-4 w-4" />
-			</button>
-		{/if}
-
-		{#if currentConnection}
-			<!-- Session user shown first with PersonIcon and same click behavior -->
-			<button
-				class="{buttonClass} {getFilterState(currentConnection.user_id) === 'include'
-					? 'ring-2 ring-green-500/70'
-					: getFilterState(currentConnection.user_id) === 'exclude'
-						? 'ring-2 ring-red-500/70'
-						: ''} justify-start"
-				onclick={() => handleUserClick(currentConnection.user_id)}
-				title="{currentConnection.username} - Click to cycle include → exclude → none"
-			>
-				<PersonIcon class="h-7 w-7 shrink-0 text-text/70" />
-				{#if isExpanded}
-					<span class="truncate text-xs text-text/70">{currentConnection.username} (you)</span>
-				{/if}
-			</button>
-		{/if}
-
-		{#each otherUsers.slice(0, displayLimit - (currentConnection ? 1 : 0)) as user (user.user_id)}
-			<button
-				class="{buttonClass} {getFilterState(user.user_id) === 'include'
-					? 'ring-2 ring-green-500/70'
-					: getFilterState(user.user_id) === 'exclude'
-						? 'ring-2 ring-red-500/70'
-						: ''}"
-				onclick={() => handleUserClick(user.user_id)}
-				title="{user.username} - Click to cycle include → exclude → none"
-			>
-				<div
-					class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-medium text-white {getUserColor(
-						user.user_id
-					)}"
-				>
-					{getInitials(user.username)}
-				</div>
-				{#if isExpanded}
-					<span class="truncate text-xs text-text/70">{user.username}</span>
-				{/if}
-			</button>
-		{/each}
-
-		<!-- Show count if more than display limit -->
-		{#if otherUsers.length > displayLimit}
-			<div
-				class="flex {isExpanded
-					? 'items-center gap-2 p-1'
-					: ''} h-7 w-7 items-center justify-center rounded-full bg-text/30 text-[10px] font-medium text-text"
-				title="{otherUsers.length - displayLimit} more users viewing"
-			>
-				{#if isExpanded}
-					<span>+{otherUsers.length - displayLimit} more</span>
-				{:else}
-					+{otherUsers.length - displayLimit}
-				{/if}
+{#snippet filterStateElement(hovered: boolean, filterState?: AuthorFilterState)}
+	{#if filterState === 'include'}
+		{#if hovered}
+			<div title="Hide highlights by this user" class="opacity-40">
+				<EyeClosed />
+			</div>
+		{:else}
+			<div>
+				<EyeOpen />
 			</div>
 		{/if}
+	{:else if filterState === 'exclude'}
+		{#if hovered}
+			<div title="Clear Filter" class="opacity-40">
+				<RemoveIcon />
+			</div>
+		{:else}
+			<div>
+				<EyeClosed />
+			</div>
+		{/if}
+	{:else if hovered}
+		<div title="Include highlights by this user" class="opacity-40">
+			<EyeOpen />
+		</div>
+	{/if}
+{/snippet}
+
+{#if documentWebSocket.activeUsers.length > 0}
+	<div class="flex flex-col {!isExpanded && 'items-center'} w-full gap-2">
+		<!--Header if expanded-->
+		{#if isExpanded}
+			<span class="text-text/40 px-1 text-[10px]">Active Users</span>
+		{/if}
+
+		<!--Clear filters button-->
+		<button
+			class="text-primary bg-primary/50 mx-2 flex w-full items-center justify-center gap-2 rounded {isExpanded
+				? 'w-full px-2 text-left'
+				: ''}"
+			onclick={() => documentStore.filters.clearAuthorFilter()}
+			disabled={documentStore.filters.authorFilters.size === 0}
+		>
+			{#if isExpanded}
+				{documentStore.filters.authorFilters.size === 0 ? 'No filters' : 'Clear filters'}
+			{:else}
+				<RemoveIcon class="h-4 w-4" />
+			{/if}
+		</button>
+
+		<!--Scrollable List of active users-->
+		<div
+			class="flex h-full w-full flex-col {isExpanded
+				? 'justify-between'
+				: 'items-center'} gap-3 overflow-y-auto"
+		>
+			{#each documentWebSocket.activeUsers as user (user.user_id)}
+				{@const filterState = documentStore.filters.authorFilters.get(user.user_id)}
+				{@const hovered = hoveredUserId === user.user_id}
+				{@const isSessionUser = user.user_id === sessionStore.currentUser?.id}
+				<button
+					class="text-text/70 flex cursor-pointer items-center justify-between gap-2 rounded"
+					onclick={() => handleUserClick(user.user_id)}
+					title="{user.username} - Click to cycle include → exclude → none"
+					onmouseenter={() => (hoveredUserId = user.user_id)}
+					onmouseleave={() => (hoveredUserId = null)}
+				>
+					<div class="flex flex-row items-center gap-2">
+						<div class="relative">
+							{#if isSessionUser}
+								<PersonIcon class="text-text/70 h-7 w-7 shrink-0 rounded-full" />
+							{:else}
+								<div
+									class="text-text flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-medium {getUserColor(
+										user.user_id
+									)}"
+								>
+									{getInitials(user.username)}
+								</div>
+							{/if}
+							{#if !isExpanded}
+								<div
+									class="absolute -top-1 left-0.5 flex h-3 w-3 items-center justify-center rounded-full p-0.5"
+								>
+									{@render filterStateElement(hovered, filterState)}
+								</div>
+							{/if}
+						</div>
+						{#if isExpanded}
+							<span class="text-text/70 truncate text-xs"
+								>{user.username} {isSessionUser ? '(You)' : ''}</span
+							>
+						{/if}
+					</div>
+					{#if isExpanded}
+						{@render filterStateElement(hovered, filterState)}
+					{/if}
+				</button>
+			{/each}
+		</div>
 	</div>
 {:else if isExpanded}
-	<span class="px-1 text-[10px] text-text/40">No other users viewing</span>
+	<span class="text-text/40 px-1 text-[10px]">No other users viewing</span>
 {/if}
