@@ -236,8 +236,11 @@ const createDocumentStore = () => {
 			// Decrement num_replies in parent comment state
 			if (parentComment) parentComment.num_replies--;
 
-			// Remove own comment state and comment
-			commentStates.delete(commentId);
+			// Remove own comment and reset hover state, preserve rest of the state
+			if (commentState) {
+				commentState.isHighlightHovered = false;
+				commentState.isCommentHovered = false;
+			}
 			_comments.delete(commentId);
 		}
 	});
@@ -280,6 +283,7 @@ const createDocumentStore = () => {
 			}
 
 			commentsLocal.delete(commentId);
+			commentStates.delete(commentId); // Here we can fully delete the state instead of soft resetting it because the comment is gone for good 
 		},
 		loadMoreReplies: async (commentId: number) => {
 			const limit = 20;

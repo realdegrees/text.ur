@@ -94,11 +94,6 @@
 			comment.content = commentState.editInputContent.trim();
 			await documentStore.comments.update(comment);
 			commentState.isEditing = false;
-
-			if (documentStore.refreshFlag) {
-				documentStore.refreshFlag = false;
-				invalidateAll();
-			}
 		} finally {
 			isSubmitting = false;
 		}
