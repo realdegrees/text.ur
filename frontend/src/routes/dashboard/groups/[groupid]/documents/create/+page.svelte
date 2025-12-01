@@ -138,7 +138,7 @@
 		}
 
 		notification('success', 'Document uploaded successfully');
-		goto(`/documents/${result.data.id}`);
+		goto(`/dashboard/groups/${groupId}/documents`);
 	}
 </script>
 
