@@ -28,11 +28,21 @@ export interface CommentState {
 
 const createDocumentStore = () => {
 	const _comments = new SvelteMap<number, TypedComment>();
+	const commentStates: SvelteMap<number, CommentState> = new SvelteMap<number, CommentState>();
+	const authorFilterStates = new SvelteMap<number, AuthorFilterState>();
+	let showCursors: boolean = $state<boolean>(true);
+	let refreshFlag = $state<boolean>(false);
+	let loadedDocument: DocumentRead | undefined = $state<DocumentRead | undefined>(undefined);
+	let documentScale: number = $state<number>(1);
+	let numPages: number = $state<number>(0);
+	let pdfViewerRef: HTMLElement | null = $state<HTMLElement | null>(null);
+	let scrollContainerRef: HTMLElement | null = $state<HTMLElement | null>(null);
+	let commentSidebarRef: HTMLDivElement | null = $state<HTMLDivElement | null>(null);
 
 	// Resets the store and loads root comments for a document
-	const setRootComments = (rootComments: CommentRead[]) => {
+	const setComments = (comments: CommentRead[]) => {
 		// Add/update comments
-		rootComments.forEach((c) => {
+		comments.forEach((c) => {
 			const annotationParsed = annotationSchema.safeParse(c.annotation);
 			const cachedComment: TypedComment = {
 				...c,
@@ -73,23 +83,16 @@ const createDocumentStore = () => {
 		}
 	};
 
-	const commentStates: SvelteMap<number, CommentState> = new SvelteMap<number, CommentState>();
-	const authorFilterStates = new SvelteMap<number, AuthorFilterState>();
-	let showCursors: boolean = $state<boolean>(true);
-	let refreshFlag = $state<boolean>(false);
-	let loadedDocument: DocumentRead | undefined = $state<DocumentRead | undefined>(undefined);
-	let documentScale: number = $state<number>(1);
-	let numPages: number = $state<number>(0);
-	let pdfViewerRef: HTMLElement | null = $state<HTMLElement | null>(null);
-	let scrollContainerRef: HTMLElement | null = $state<HTMLElement | null>(null);
-	let commentSidebarRef: HTMLDivElement | null = $state<HTMLDivElement | null>(null);
+	const topLevelComments = $derived.by(() => {
+		return Array.from(_comments.values()).filter(
+			(c): c is TypedComment & { annotation: Annotation } => !!c.annotation
+		);
+	});
 
-	const filteredComments = $derived.by((): SvelteMap<number, TypedComment> => {
-		void _comments; // Ensure _comments is tracked as a dependency
-
+	const filteredTopLevelComments = $derived.by(() => {
 		// Build an array of comment values from the internal SvelteMap for array filtering
-		const allComments: TypedComment[] = [..._comments.values()] as TypedComment[];
-		let filteredArray: TypedComment[] = allComments;
+		const allComments = [...topLevelComments.values()];
+		let filteredArray = allComments;
 
 		// Filter by author filter states (include/exclude/none)
 		const included = new Set<number>(
@@ -101,24 +104,18 @@ const createDocumentStore = () => {
 
 		// If there are include filters, show only those authors. Otherwise, if exclude filters exist, hide those authors.
 		if (included.size > 0) {
-			filteredArray = filteredArray.filter(
-				(c: TypedComment) => !!c.user?.id && included.has(c.user.id)
-			);
+			filteredArray = filteredArray.filter((c) => !!c.user?.id && included.has(c.user.id));
 		} else if (excluded.size > 0) {
-			filteredArray = filteredArray.filter(
-				(c: TypedComment) => !(c.user?.id && excluded.has(c.user.id))
-			);
+			filteredArray = filteredArray.filter((c) => !(c.user?.id && excluded.has(c.user.id)));
 		}
 
-		// Return a SvelteMap constructed from the filtered array
-		const filteredMap = new SvelteMap<number, TypedComment>(filteredArray.map((c) => [c.id, c]));
-		return filteredMap;
-	});
+		// if a comment is excluded from view then it needs to have its state reset
+		const hiddenCommentIds = allComments.filter((c) => !filteredArray.includes(c)).map((c) => c.id);
+		for (const commentId of hiddenCommentIds) {
+			resetState(commentId);
+		}
 
-	const commentsWithAnnotation = $derived.by((): (TypedComment & { annotation: Annotation })[] => {
-		return Array.from(filteredComments.values()).filter(
-			(c): c is TypedComment & { annotation: Annotation } => !!c.annotation
-		);
+		return filteredArray;
 	});
 
 	// Methods to update local comment data without API calls (on events)
@@ -231,6 +228,29 @@ const createDocumentStore = () => {
 		}
 	});
 
+	const resetState = (onlyForComment?: number): void => {
+		/** Reset interaction-related boolean flags for all comment states or the specified one.
+		 * Only resets immediate visual states like highlight or edit mode.
+		 * Preserve other state like collapsed or edit content. */
+
+		if (onlyForComment !== undefined) {
+			const onlyForState = commentStates.get(onlyForComment);
+			if (onlyForState) {
+				onlyForState.isEditing = false;
+				onlyForState.isPinned = false;
+				onlyForState.isHighlightHovered = false;
+				onlyForState.isCommentHovered = false;
+			}
+			return;
+		}
+		for (const state of commentStates.values()) {
+			state.isEditing = false;
+			state.isPinned = false;
+			state.isHighlightHovered = false;
+			state.isCommentHovered = false;
+		}
+	};
+
 	const comments = $derived({
 		update: async (comment: TypedComment) => {
 			const result = await api.update(`/comments/${comment.id}`, comment);
@@ -327,19 +347,11 @@ const createDocumentStore = () => {
 		/**
 		 * Reset interaction flags for all existing comment states.
 		 */
-		resetStates: (): void => {
-			/** Reset interaction-related boolean flags for all comment states. */
-			for (const state of commentStates.values()) {
-				state.isEditing = false;
-				state.isPinned = false;
-				state.isHighlightHovered = false;
-				state.isCommentHovered = false;
-			}
-		},
+		resetState: resetState,
 		// Comment subsets
 		all: new SvelteMap(_comments),
 		pinned: new SvelteMap(commentStates.entries().filter(([, state]) => state.isPinned)),
-		withAnnotations: commentsWithAnnotation,
+		topLevelComments: filteredTopLevelComments,
 		editing: new SvelteMap(commentStates.entries().filter(([, state]) => state.isEditing)),
 		highlightHovered: new SvelteMap(
 			commentStates.entries().filter(([, state]) => state.isHighlightHovered)
@@ -475,7 +487,7 @@ const createDocumentStore = () => {
 			refreshFlag = value;
 		},
 		handleWebSocketEvent,
-		setRootComments,
+		setRootComments: setComments,
 		setViewMode
 	};
 };

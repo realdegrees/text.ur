@@ -81,7 +81,7 @@
 		void clustersUpdateTick;
 		void scrollTop;
 
-		const positioned = documentStore.comments.withAnnotations
+		const positioned = documentStore.comments.topLevelComments
 			.map((comment) => ({
 				comment,
 				y: getCommentYPosition(comment)
@@ -214,7 +214,7 @@
 		</div>
 	{/each}
 
-	{#if !clusters.length && !documentStore.comments.withAnnotations.length}
+	{#if !clusters.length}
 		<div class="flex h-full items-center justify-center p-4">
 			<p class="text-center text-sm text-text/40">Select text in the PDF to add a comment</p>
 		</div>

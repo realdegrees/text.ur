@@ -58,8 +58,11 @@
 	{/if}
 	<Field bind:value={username} label="Username" required />
 	<Field bind:value={email} label="Email" required />
-	<Field bind:value={firstName} label="First Name" />
-	<Field bind:value={lastName} label="Last Name" />
+	<div class="flex flex-row gap-4 w-full">
+		<Field bind:value={firstName} label="First Name" />
+		<Field bind:value={lastName} label="Last Name" />
+	</div>
+
 	<Field bind:value={password} label="Password" hidden required />
 	<Field bind:value={confirmPassword} label="Confirm Password" hidden required />
 	<button type="submit" class="submit-button" disabled={isLoading}>

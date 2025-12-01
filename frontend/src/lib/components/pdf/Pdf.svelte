@@ -131,13 +131,13 @@
 	const zoomIn = () => {
 		if (!pdfSlick) return;
 		pdfSlick.currentScale = documentStore.documentScale + PDF_ZOOM_STEP;
-		documentStore.comments.resetStates();
+		documentStore.comments.resetState();
 	};
 
 	const zoomOut = () => {
 		if (!pdfSlick) return;
 		pdfSlick.currentScale = documentStore.documentScale - PDF_ZOOM_STEP;
-		documentStore.comments.resetStates();
+		documentStore.comments.resetState();
 	};
 
 	const fitHeight = () => {

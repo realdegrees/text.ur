@@ -19,7 +19,7 @@
 				comment: TypedComment;
 				box: BoundingBox;
 				annotation: Annotation;
-				state?: CommentState;
+				state: CommentState;
 				key: string;
 			}>
 		>();
@@ -29,20 +29,23 @@
 			map.set(pageNum, []);
 		}
 
-		for (const comment of documentStore.comments.withAnnotations) {
+		for (const comment of documentStore.comments.topLevelComments) {
 			for (let idx = 0; idx < comment.annotation.boundingBoxes.length; idx++) {
 				const box = comment.annotation.boundingBoxes[idx];
 				const pageNum = box.pageNumber;
-				map.set(pageNum, [
-					...(map.get(pageNum) ?? []),
-					{
-						comment,
-						box,
-						annotation: comment.annotation,
-						state: documentStore.comments.getState(comment.id),
-						key: `${comment.id}-${idx}`
-					}
-				]);
+				const state = documentStore.comments.getState(comment.id);
+				if (state) {
+					map.set(pageNum, [
+						...(map.get(pageNum) ?? []),
+						{
+							comment,
+							box,
+							state,
+							annotation: comment.annotation,
+							key: `${comment.id}-${idx}`
+						}
+					]);
+				}
 			}
 		}
 		return map;
@@ -56,6 +59,7 @@
 	// Render highlights into the page elements
 	const renderHighlights = () => {
 		if (!viewerContainer) return;
+
 		const isAnyPinned = documentStore.comments.pinned.size > 0;
 
 		// Do not remove all highlights here; we'll reconcile per-page instead.
@@ -83,9 +87,6 @@
 			for (const highlight of highlights) {
 				const { box, annotation, key, comment, state } = highlight;
 
-				const commentState = documentStore.comments.getState(comment.id);
-				if (!commentState) continue;
-
 				const left = box.x * textLayerRect.width;
 				const top = box.y * textLayerRect.height;
 				const width = box.width * textLayerRect.width;
@@ -110,7 +111,7 @@
 				}
 
 				const div = document.createElement('div') as HighlightElement;
-				commentState.highlightElements = [...(commentState.highlightElements || []), div];
+				state.highlightElements = [...(state.highlightElements || []), div];
 				div.className = 'annotation-highlight';
 				div.dataset.commentId = String(comment.id);
 				div.dataset.key = key;
@@ -133,10 +134,10 @@
 
 				// Create named listener functions for cleanup
 				const listeners = {
-					mouseenter: () => (commentState.isHighlightHovered = true),
-					mouseleave: () => (commentState.isHighlightHovered = false),
+					mouseenter: () => (state.isHighlightHovered = true),
+					mouseleave: () => (state.isHighlightHovered = false),
 					click: () => {
-						commentState.isPinned = !commentState.isPinned;
+						state.isPinned = !state.isPinned;
 					}
 				};
 
@@ -181,7 +182,9 @@
 	let mutationObserver: MutationObserver | null = null;
 
 	onMount(() => {
-		renderHighlights();
+		requestAnimationFrame(() => {
+			renderHighlights();
+		});
 
 		// Observe text layer size changes to re-render when PDF.js scales
 		textLayerObserver = new ResizeObserver(renderHighlights);
