@@ -138,7 +138,7 @@
 		<!-- Cluster header: tabs for multiple comments or single author header -->
 		<div class="w-full border-b border-text/30 p-1.5 pb-0">
 			<div class="flex items-center justify-between gap-1.5 border-b border-text/10 pb-0!">
-				<div class="flex gap-1.5">
+				<div class="flex flex-wrap items-center gap-1.5">
 					{#each comments as c, idx (c.id)}
 						{@const state = commentStates.get(c.id)}
 						<button
