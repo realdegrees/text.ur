@@ -18,7 +18,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 from models.enums import AppErrorCode
 from models.tables import Membership, User
-from sqlmodel import select
+from sqlmodel import or_, select
 from util.api_router import APIRouter
 
 router = APIRouter(
@@ -32,7 +32,7 @@ async def login(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()], db: Database, response: Response
 ) -> Token:
     """Return a JWT if the user is authenticated successfully."""
-    query = select(User).where(User.username == form_data.username)
+    query = select(User).where(or_(User.username == form_data.username, User.email == form_data.username))
     user = db.exec(query).first()
     if user is None or not validate_password(user, form_data.password):
         raise HTTPException(
