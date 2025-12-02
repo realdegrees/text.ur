@@ -154,8 +154,8 @@
 
 				// Create named listener functions for cleanup
 				const listeners = {
-					mouseenter: () => (state.isHighlightHovered = true),
-					mouseleave: () => (state.isHighlightHovered = false),
+					mouseenter: () => documentStore.setHighlightHoveredDebounced(comment.id, true),
+					mouseleave: () => documentStore.setHighlightHoveredDebounced(comment.id, false),
 					click: () => {
 						state.isPinned = !state.isPinned;
 					}

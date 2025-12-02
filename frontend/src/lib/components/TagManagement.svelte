@@ -19,6 +19,9 @@
 	let tags = $derived(document.tags || []);
 	let isAddingTag = $state(false);
 	let editingTagId = $state<number | null>(null);
+	let activeColorPicker = $state<'new' | 'edit' | null>(null);
+	let draggedTagId = $state<number | null>(null);
+	let dragOverTagId = $state<number | null>(null);
 
 	// New tag form state
 	let newTag = $state({
@@ -26,6 +29,13 @@
 		description: '',
 		color: '#3B82F6' // Default blue color
 	});
+
+	function handleClickOutside(event: MouseEvent) {
+		const target = event.target as HTMLElement;
+		if (!target.closest('[data-color-picker]')) {
+			activeColorPicker = null;
+		}
+	}
 
 	// Edit tag form state
 	let editTag = $state<{ label: string; description: string; color: string }>({
@@ -90,6 +100,67 @@
 		await invalidateAll();
 	}
 
+	async function reorderTags(newOrder: number[]) {
+		const result = await api.update(`/documents/${document.id}/tags/reorder`, {
+			tag_ids: newOrder
+		});
+
+		if (!result.success) {
+			notification(result.error);
+			return;
+		}
+
+		await invalidateAll();
+	}
+
+	function handleDragStart(tagId: number) {
+		draggedTagId = tagId;
+	}
+
+	function handleDragOver(e: DragEvent, tagId: number) {
+		e.preventDefault();
+		if (draggedTagId !== tagId) {
+			dragOverTagId = tagId;
+		}
+	}
+
+	function handleDragLeave() {
+		dragOverTagId = null;
+	}
+
+	async function handleDrop(e: DragEvent, targetTagId: number) {
+		e.preventDefault();
+		if (draggedTagId === null || draggedTagId === targetTagId) {
+			draggedTagId = null;
+			dragOverTagId = null;
+			return;
+		}
+
+		const tagsCopy = [...tags];
+		const draggedIndex = tagsCopy.findIndex((t) => t.id === draggedTagId);
+		const targetIndex = tagsCopy.findIndex((t) => t.id === targetTagId);
+
+		if (draggedIndex === -1 || targetIndex === -1) {
+			draggedTagId = null;
+			dragOverTagId = null;
+			return;
+		}
+
+		const [draggedTag] = tagsCopy.splice(draggedIndex, 1);
+		tagsCopy.splice(targetIndex, 0, draggedTag);
+
+		const newOrder = tagsCopy.map((t) => t.id);
+		await reorderTags(newOrder);
+
+		draggedTagId = null;
+		dragOverTagId = null;
+	}
+
+	function handleDragEnd() {
+		draggedTagId = null;
+		dragOverTagId = null;
+	}
+
 	function startEditingTag(tag: TagRead) {
 		editingTagId = tag.id;
 		editTag = {
@@ -102,6 +173,7 @@
 	function cancelEdit() {
 		editingTagId = null;
 		editTag = { label: '', description: '', color: '' };
+		activeColorPicker = null;
 	}
 
 	function resetNewTagForm() {
@@ -111,8 +183,110 @@
 			description: '',
 			color: '#3B82F6'
 		};
+		activeColorPicker = null;
+	}
+
+	function hslToHex(h: number, s: number, l: number): string {
+		l /= 100;
+		const a = (s * Math.min(l, 1 - l)) / 100;
+		const f = (n: number) => {
+			const k = (n + h / 30) % 12;
+			const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+			return Math.round(255 * color)
+				.toString(16)
+				.padStart(2, '0');
+		};
+		return `#${f(0)}${f(8)}${f(4)}`;
+	}
+
+	function hexToHue(hex: string): number {
+		const r = parseInt(hex.slice(1, 3), 16) / 255;
+		const g = parseInt(hex.slice(3, 5), 16) / 255;
+		const b = parseInt(hex.slice(5, 7), 16) / 255;
+
+		const max = Math.max(r, g, b);
+		const min = Math.min(r, g, b);
+		const delta = max - min;
+
+		if (delta === 0) return 0;
+
+		let hue = 0;
+		if (max === r) {
+			hue = ((g - b) / delta) % 6;
+		} else if (max === g) {
+			hue = (b - r) / delta + 2;
+		} else {
+			hue = (r - g) / delta + 4;
+		}
+
+		hue = Math.round(hue * 60);
+		return hue < 0 ? hue + 360 : hue;
 	}
 </script>
+
+{#snippet tagForm(formData: { label: string; description: string; color: string }, isEdit: boolean, tagId?: number)}
+	<div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+		<div class="flex flex-col gap-1.5">
+			<label for={isEdit ? `edit-tag-label-${tagId}` : 'new-tag-label'} class="text-xs font-semibold text-text/70">Label *</label>
+			<input
+				id={isEdit ? `edit-tag-label-${tagId}` : 'new-tag-label'}
+				type="text"
+				bind:value={formData.label}
+				placeholder={isEdit ? 'e.g., Bug, Question' : 'Tag label'}
+				maxlength="50"
+				class="rounded-md border border-text/20 bg-text/5 px-3 py-2 text-sm outline-none transition-colors focus:border-text/50"
+			/>
+		</div>
+		<div class="flex flex-col gap-1.5">
+			<label for={isEdit ? `edit-tag-color-${tagId}` : 'new-tag-color'} class="text-xs font-semibold text-text/70">Color *</label>
+			<div class="relative" data-color-picker>
+				<button
+					type="button"
+					aria-label={isEdit ? "Choose color for tag " + tagId : "Choose color for new tag"}
+					onclick={() => (activeColorPicker = activeColorPicker === (isEdit ? 'edit' : 'new') ? null : (isEdit ? 'edit' : 'new'))}
+					class="flex w-fit items-center gap-2 rounded-md border border-text/20 bg-text/5 px-3 py-2 transition hover:border-text/30"
+				>
+					<div
+						class="h-6 w-6 rounded border border-text/20"
+						style="background-color: {formData.color};"
+					></div>
+				</button>
+				{#if activeColorPicker === (isEdit ? 'edit' : 'new')}
+					<div 
+						class="absolute left-0 top-full z-10 mt-2 flex flex-col gap-2 rounded-md border border-text/20 bg-bg p-3 shadow-lg"
+					>
+						<input
+							id={isEdit ? `edit-tag-color-${tagId}` : 'new-tag-color'}
+							type="range"
+							min="0"
+							max="360"
+							value={hexToHue(formData.color)}
+							oninput={(e) => {
+								const hue = (e.target as HTMLInputElement).value;
+								formData.color = hslToHex(parseInt(hue), 70, 55);
+							}}
+							class="w-48 h-2 rounded-lg appearance-none cursor-pointer"
+							style="background: linear-gradient(to right, #ff0000 0%, #ffff00 17%, #00ff00 33%, #00ffff 50%, #0000ff 67%, #ff00ff 83%, #ff0000 100%);"
+						/>
+					</div>
+				{/if}
+			</div>
+		</div>
+		<div class="flex flex-col gap-1.5 md:col-span-2">
+			<label for={isEdit ? `edit-tag-description-${tagId}` : 'new-tag-description'} class="text-xs font-semibold text-text/70">Description</label>
+			<textarea
+				id={isEdit ? `edit-tag-description-${tagId}` : 'new-tag-description'}
+				bind:value={formData.description}
+				placeholder="Optional description for this tag"
+				maxlength="200"
+				rows="2"
+				class="rounded-md border border-text/20 bg-text/5 px-3 py-2 text-sm outline-none transition-colors focus:border-text/50"
+			></textarea>
+		</div>
+	</div>
+{/snippet}
+
+<svelte:body onclick={handleClickOutside} />
 
 <div class="flex flex-col gap-4">
 	<div class="flex items-center justify-between">
@@ -130,51 +304,7 @@
 	{#if isAddingTag}
 		<div class="flex flex-col gap-3 rounded-md border border-text/20 bg-text/5 p-4">
 			<div class="text-sm font-semibold">New Tag</div>
-			<div class="grid grid-cols-1 gap-3 md:grid-cols-2">
-				<div class="flex flex-col gap-1.5">
-					<label for="new-tag-label" class="text-xs font-semibold text-text/70">Label *</label>
-					<input
-						id="new-tag-label"
-						type="text"
-						bind:value={newTag.label}
-						placeholder="Tag label"
-						maxlength="50"
-						class="rounded-md border border-text/20 bg-text/5 px-3 py-2 text-sm outline-none transition-colors focus:border-text/50"
-					/>
-				</div>
-				<div class="flex flex-col gap-1.5">
-					<label for="new-tag-color" class="text-xs font-semibold text-text/70">Color *</label>
-					<div class="flex items-center gap-2">
-						<input
-							id="new-tag-color"
-							type="color"
-							bind:value={newTag.color}
-							class="h-10 w-16 cursor-pointer rounded-md border border-text/20"
-						/>
-						<input
-							type="text"
-							bind:value={newTag.color}
-							pattern={"^#[0-9A-Fa-f]{6}$"}
-							placeholder="#3B82F6"
-							maxlength="7"
-							class="flex-1 rounded-md border border-text/20 bg-text/5 px-3 py-2 text-sm font-mono uppercase outline-none transition-colors focus:border-text/50"
-						/>
-					</div>
-				</div>
-				<div class="flex flex-col gap-1.5 md:col-span-2">
-					<label for="new-tag-description" class="text-xs font-semibold text-text/70"
-						>Description</label
-					>
-					<textarea
-						id="new-tag-description"
-						bind:value={newTag.description}
-						placeholder="Optional description for this tag"
-						maxlength="200"
-						rows="2"
-						class="rounded-md border border-text/20 bg-text/5 px-3 py-2 text-sm outline-none transition-colors focus:border-text/50"
-					></textarea>
-				</div>
-			</div>
+			{@render tagForm(newTag, false)}
 			<div class="flex items-center gap-2">
 				<button
 					onclick={createTag}
@@ -204,55 +334,7 @@
 					<!-- Edit Form -->
 					<div class="flex flex-col gap-3 rounded-md border border-text/20 bg-text/5 p-4">
 						<div class="text-sm font-semibold">Edit Tag</div>
-						<div class="grid grid-cols-1 gap-3 md:grid-cols-2">
-							<div class="flex flex-col gap-1.5">
-								<label for="edit-tag-label-{tag.id}" class="text-xs font-semibold text-text/70"
-									>Label *</label
-								>
-								<input
-									id="edit-tag-label-{tag.id}"
-									type="text"
-									bind:value={editTag.label}
-									placeholder="e.g., Bug, Question"
-									maxlength="50"
-									class="rounded-md border border-text/20 bg-text/5 px-3 py-2 text-sm outline-none transition-colors focus:border-text/50"
-								/>
-							</div>
-							<div class="flex flex-col gap-1.5">
-								<label for="edit-tag-color-{tag.id}" class="text-xs font-semibold text-text/70"
-									>Color *</label
-								>
-								<div class="flex items-center gap-2">
-									<input
-										id="edit-tag-color-{tag.id}"
-										type="color"
-										bind:value={editTag.color}
-										class="h-10 w-16 cursor-pointer rounded-md border border-text/20"
-									/>
-									<input
-										type="text"
-										bind:value={editTag.color}
-										pattern={"^#[0-9A-Fa-f]{6}$"}
-										placeholder="#3B82F6"
-										maxlength="7"
-										class="flex-1 rounded-md border border-text/20 bg-text/5 px-3 py-2 text-sm font-mono uppercase outline-none transition-colors focus:border-text/50"
-									/>
-								</div>
-							</div>
-							<div class="flex flex-col gap-1.5 md:col-span-2">
-								<label for="edit-tag-description-{tag.id}" class="text-xs font-semibold text-text/70"
-									>Description</label
-								>
-								<textarea
-									id="edit-tag-description-{tag.id}"
-									bind:value={editTag.description}
-									placeholder="Optional description for this tag"
-									maxlength="200"
-									rows="2"
-									class="rounded-md border border-text/20 bg-text/5 px-3 py-2 text-sm outline-none transition-colors focus:border-text/50"
-								></textarea>
-							</div>
-						</div>
+						{@render tagForm(editTag, true, tag.id)}
 						<div class="flex items-center gap-2">
 							<button
 								onclick={() => updateTag(tag.id)}
@@ -273,7 +355,15 @@
 				{:else}
 					<!-- Tag Display -->
 					<div
-						class="flex items-center gap-3 rounded-md border border-text/20 bg-text/5 p-3 transition hover:border-text/30"
+						role="button"
+						tabindex="0"
+						draggable="true"
+						ondragstart={() => handleDragStart(tag.id)}
+						ondragover={(e) => handleDragOver(e, tag.id)}
+						ondragleave={handleDragLeave}
+						ondrop={(e) => handleDrop(e, tag.id)}
+						ondragend={handleDragEnd}
+						class="flex items-center gap-3 rounded-md border border-text/20 bg-text/5 p-3 transition hover:border-text/30 cursor-move {draggedTagId === tag.id ? 'opacity-50' : ''} {dragOverTagId === tag.id ? 'border-primary border-2' : ''}"
 					>
 						<div
 							class="h-8 w-8 shrink-0 rounded-md border border-text/20"

@@ -2,12 +2,7 @@
 	import { onMount } from 'svelte';
 	import DOMPurify from 'dompurify';
 	import MarkdownRenderer from '$lib/components/MarkdownRenderer.svelte';
-	import BoldIcon from '~icons/material-symbols/format-bold';
-	import ItalicIcon from '~icons/material-symbols/format-italic';
-	import UnderlineIcon from '~icons/material-symbols/format-underlined';
-	import StrikethroughIcon from '~icons/material-symbols/strikethrough-s';
-	import ListBulletIcon from '~icons/material-symbols/format-list-bulleted';
-	import ListNumberIcon from '~icons/material-symbols/format-list-numbered';
+	import HelpIcon from '~icons/material-symbols/help-outline';
 
 	interface Props {
 		value: string;
@@ -33,6 +28,7 @@
 
 	let textareaRef: HTMLTextAreaElement | null = $state(null);
 	let mode = $state<'write' | 'preview'>('write');
+	let showHelpTooltip = $state(false);
 
 	// Size classes
 	let sizeClasses = $derived({
@@ -59,102 +55,6 @@
 		onkeydown?.(e);
 	};
 
-	// Insert markdown syntax around selection or at cursor
-	const insertMarkdown = (prefix: string, suffix: string = prefix) => {
-		if (!textareaRef) return;
-
-		const start = textareaRef.selectionStart;
-		const end = textareaRef.selectionEnd;
-		const selectedText = value.substring(start, end);
-		const before = value.substring(0, start);
-		const after = value.substring(end);
-
-		if (selectedText) {
-			// Wrap selection
-			value = before + prefix + selectedText + suffix + after;
-			// Restore selection around the wrapped text
-			setTimeout(() => {
-				textareaRef?.setSelectionRange(start + prefix.length, end + prefix.length);
-				textareaRef?.focus();
-			}, 0);
-		} else {
-			// Insert at cursor
-			value = before + prefix + suffix + after;
-			// Place cursor between prefix and suffix
-			setTimeout(() => {
-				textareaRef?.setSelectionRange(start + prefix.length, start + prefix.length);
-				textareaRef?.focus();
-			}, 0);
-		}
-		onchange?.(value);
-	};
-
-	const insertList = (ordered: boolean) => {
-		if (!textareaRef) return;
-
-		const start = textareaRef.selectionStart;
-		const end = textareaRef.selectionEnd;
-		const selectedText = value.substring(start, end);
-		const before = value.substring(0, start);
-		const after = value.substring(end);
-
-		// Add newline if not at start of line
-		const needsNewline = before.length > 0 && !before.endsWith('\n');
-		const prefix = needsNewline ? '\n' : '';
-
-		if (selectedText) {
-			// Convert selected lines to list items
-			const lines = selectedText.split('\n');
-			const listItems = lines
-				.map((line, i) => (ordered ? `${i + 1}. ${line}` : `- ${line}`))
-				.join('\n');
-			value = before + prefix + listItems + after;
-		} else {
-			// Insert single list item
-			const listPrefix = ordered ? '1. ' : '- ';
-			value = before + prefix + listPrefix + after;
-			setTimeout(() => {
-				const cursorPos = start + prefix.length + listPrefix.length;
-				textareaRef?.setSelectionRange(cursorPos, cursorPos);
-				textareaRef?.focus();
-			}, 0);
-		}
-		onchange?.(value);
-	};
-
-	const formatButtons = [
-		{ icon: BoldIcon, action: () => insertMarkdown('**'), title: 'Bold (Ctrl+B)' },
-		{ icon: ItalicIcon, action: () => insertMarkdown('*'), title: 'Italic (Ctrl+I)' },
-		{
-			icon: UnderlineIcon,
-			action: () => insertMarkdown('<u>', '</u>'),
-			title: 'Underline (Ctrl+U)'
-		},
-		{ icon: StrikethroughIcon, action: () => insertMarkdown('~~'), title: 'Strikethrough' },
-		{ icon: ListBulletIcon, action: () => insertList(false), title: 'Bullet list' },
-		{ icon: ListNumberIcon, action: () => insertList(true), title: 'Numbered list' }
-	];
-
-	// Handle keyboard shortcuts
-	const handleShortcuts = (e: KeyboardEvent) => {
-		if (!e.ctrlKey && !e.metaKey) return;
-
-		switch (e.key.toLowerCase()) {
-			case 'b':
-				e.preventDefault();
-				insertMarkdown('**');
-				break;
-			case 'i':
-				e.preventDefault();
-				insertMarkdown('*');
-				break;
-			case 'u':
-				e.preventDefault();
-				insertMarkdown('<u>', '</u>');
-				break;
-		}
-	};
-
 	onMount(() => {
 		if (autofocus && textareaRef) {
 			textareaRef.focus();
@@ -165,6 +65,18 @@
 	$effect(() => {
 		if (autofocus && textareaRef) {
 			textareaRef.focus();
+		}
+	});
+
+	// Auto-resize textarea based on content
+	$effect(() => {
+		// Depend on value to trigger resize when content changes
+		void value;
+		if (textareaRef && mode === 'write') {
+			// Reset height to auto to get the correct scrollHeight
+			textareaRef.style.height = 'auto';
+			// Set height to scrollHeight (constrained by max-height in CSS)
+			textareaRef.style.height = `${textareaRef.scrollHeight}px`;
 		}
 	});
 </script>
@@ -196,25 +108,44 @@
 			</button>
 		</div>
 
-		<!-- Format Toolbar (only visible in write mode) -->
-		{#if mode === 'write'}
-			<div class="flex items-center gap-0.5">
-				{#each formatButtons as btn (btn)}
-					<button
-						type="button"
-						class="rounded {sizeClasses.buttonPadding} text-text/50 transition-colors hover:bg-text/10 hover:text-text/70 disabled:opacity-30"
-						onclick={(e) => {
-							e.stopPropagation();
-							btn.action();
-						}}
-						title={btn.title}
-						{disabled}
+		<!-- Help Icon -->
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<div
+			class="relative"
+			onmouseenter={() => (showHelpTooltip = true)}
+			onmouseleave={() => (showHelpTooltip = false)}
+		>
+			<button
+				type="button"
+				class="rounded {sizeClasses.buttonPadding} text-text/40 transition-colors hover:text-text/70"
+				onclick={(e) => e.stopPropagation()}
+				{disabled}
+			>
+				<HelpIcon class={sizeClasses.iconSize} />
+			</button>
+
+			{#if showHelpTooltip}
+				<!-- svelte-ignore a11y_no_static_element_interactions -->
+				<div
+					class="absolute right-0 top-1/2 z-50 w-64 -translate-y-1/2 rounded border border-text/20 bg-background p-2 text-xs shadow-lg"
+					onmouseenter={() => (showHelpTooltip = true)}
+					onmouseleave={() => (showHelpTooltip = false)}
+					onmousedown={(e) => e.preventDefault()}
+				>
+					<p class="text-text/80 mb-1">
+						This editor supports <span class="font-medium text-text">Markdown formatting</span>.
+					</p>
+					<a
+						href="https://www.markdownguide.org/cheat-sheet/"
+						target="_blank"
+						rel="noopener noreferrer"
+						class="text-primary hover:text-primary/80 underline"
 					>
-						<btn.icon class={sizeClasses.iconSize} />
-					</button>
-				{/each}
-			</div>
-		{/if}
+						View Markdown cheat sheet →
+					</a>
+				</div>
+			{/if}
+		</div>
 	</div>
 
 	<!-- Content Area -->
@@ -222,16 +153,13 @@
 		<!-- Textarea -->
 		<textarea
 			bind:this={textareaRef}
-			class="w-full resize-none bg-transparent {sizeClasses.padding} {sizeClasses.text} text-text placeholder:text-text/40 focus:outline-none"
+			class="w-full resize-none overflow-y-auto bg-transparent {sizeClasses.padding} {sizeClasses.text} text-text placeholder:text-text/40 focus:outline-none"
+			style="min-height: {rows * 1.5}em; max-height: 18em;"
 			{placeholder}
-			{rows}
 			{disabled}
 			{value}
 			oninput={handleInput}
-			onkeydown={(e) => {
-				handleShortcuts(e);
-				handleKeydown(e);
-			}}
+			onkeydown={handleKeydown}
 			onclick={(e) => e.stopPropagation()}
 			{onblur}
 		></textarea>

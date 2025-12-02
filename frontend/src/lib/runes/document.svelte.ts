@@ -418,6 +418,75 @@ const createDocumentStore = () => {
 		}
 	};
 
+	// Store timeouts for debounced hover state updates
+	const hoverTimeouts = new SvelteMap<number, { highlight?: number; comment?: number }>();
+
+	/**
+	 * Set highlight hover state with debouncing on the "false" transition.
+	 * - When setting to true: immediately set and clear any pending debounced false assignment
+	 * - When setting to false: debounce the assignment by 300ms
+	 */
+	const setHighlightHoveredDebounced = (commentId: number, hovered: boolean): void => {
+		const state = commentStates.get(commentId);
+		if (!state) return;
+
+		const timeouts = hoverTimeouts.get(commentId) || {};
+
+		if (hovered) {
+			// Clear any pending "unhover" timeout
+			if (timeouts.highlight) {
+				clearTimeout(timeouts.highlight);
+				hoverTimeouts.set(commentId, { ...timeouts, highlight: undefined });
+			}
+			// Immediately set to true
+			state.isHighlightHovered = true;
+		} else {
+			// Delay setting to false by 300ms
+			const timeoutId = setTimeout(() => {
+				state.isHighlightHovered = false;
+				const currentTimeouts = hoverTimeouts.get(commentId);
+				if (currentTimeouts) {
+					hoverTimeouts.set(commentId, { ...currentTimeouts, highlight: undefined });
+				}
+			}, 300) as unknown as number;
+
+			hoverTimeouts.set(commentId, { ...timeouts, highlight: timeoutId });
+		}
+	};
+
+	/**
+	 * Set comment hover state with debouncing on the "false" transition.
+	 * - When setting to true: immediately set and clear any pending debounced false assignment
+	 * - When setting to false: debounce the assignment by 100ms
+	 */
+	const setCommentHoveredDebounced = (commentId: number, hovered: boolean): void => {
+		const state = commentStates.get(commentId);
+		if (!state) return;
+
+		const timeouts = hoverTimeouts.get(commentId) || {};
+
+		if (hovered) {
+			// Clear any pending "unhover" timeout
+			if (timeouts.comment) {
+				clearTimeout(timeouts.comment);
+				hoverTimeouts.set(commentId, { ...timeouts, comment: undefined });
+			}
+			// Immediately set to true
+			state.isCommentHovered = true;
+		} else {
+			// Delay setting to false by 100ms
+			const timeoutId = setTimeout(() => {
+				state.isCommentHovered = false;
+				const currentTimeouts = hoverTimeouts.get(commentId);
+				if (currentTimeouts) {
+					hoverTimeouts.set(commentId, { ...currentTimeouts, comment: undefined });
+				}
+			}, 100) as unknown as number;
+
+			hoverTimeouts.set(commentId, { ...timeouts, comment: timeoutId });
+		}
+	};
+
 	const handleWebSocketEvent = (
 		event:
 			| CommentEvent
@@ -512,7 +581,9 @@ const createDocumentStore = () => {
 		},
 		handleWebSocketEvent,
 		setTopLevelComments,
-		clearHighlightReferences
+		clearHighlightReferences,
+		setHighlightHoveredDebounced,
+		setCommentHoveredDebounced
 	};
 };
 

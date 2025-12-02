@@ -103,6 +103,24 @@
 	// Forward wheel events from comments sidebar to PDF container
 	const handleCommentsWheel = (e: WheelEvent) => {
 		if (!container) return;
+
+		// Check if the event target is a scrollable element (like textarea)
+		const target = e.target as HTMLElement;
+		const isScrollable =
+			target.tagName === 'TEXTAREA' ||
+			(target.scrollHeight > target.clientHeight && target.classList.contains('overflow-y-auto'));
+
+		// If scrolling inside a scrollable element, allow natural scrolling
+		if (isScrollable) {
+			const atTop = target.scrollTop === 0;
+			const atBottom = target.scrollTop + target.clientHeight >= target.scrollHeight;
+
+			// Only prevent default if trying to scroll beyond the bounds
+			if ((e.deltaY < 0 && !atTop) || (e.deltaY > 0 && !atBottom)) {
+				return; // Let the element handle its own scrolling
+			}
+		}
+
 		e.preventDefault();
 		if (e.ctrlKey) {
 			// Ctrl+wheel zooms the PDF

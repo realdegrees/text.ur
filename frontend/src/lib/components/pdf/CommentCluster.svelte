@@ -107,12 +107,10 @@
 		data-comment-badge={activeComment?.id}
 		data-badge-active="true"
 		onmouseleave={() => {
-			const state = commentStates.get(activeComment.id);
-			if (state) state.isCommentHovered = false;
+			documentStore.setCommentHoveredDebounced(activeComment.id, false);
 		}}
 		onmouseenter={() => {
-			const state = commentStates.get(activeComment.id);
-			if (state) state.isCommentHovered = true;
+			documentStore.setCommentHoveredDebounced(activeComment.id, true);
 		}}
 	>
 		<!-- Cluster header: tabs for multiple comments or single author header -->
@@ -187,7 +185,7 @@
 		class="relative z-10 inline-block"
 		data-comment-badge={activeComment?.id}
 		onmouseenter={() => {
-			if (activeCommentState) activeCommentState.isCommentHovered = true;
+			documentStore.setCommentHoveredDebounced(activeComment.id, true);
 		}}
 	>
 		<div

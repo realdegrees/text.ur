@@ -14,6 +14,7 @@
 	import CheckIcon from '~icons/material-symbols/check';
 	import CloseIcon from '~icons/material-symbols/close';
 	import ExpandIcon from '~icons/material-symbols/expand-more';
+	import TagIcon from '~icons/mdi/tag-search-outline';
 	import { formatDateTime } from '$lib/util/dateFormat';
 
 	interface Props {
@@ -56,6 +57,9 @@
 	let isSubmitting = $state(false);
 	let isLoadingReplies = $state(false);
 	let editingTags = $state<TagRead[]>([]);
+	let isQuoteExpanded = $state(false);
+	let quoteRef: HTMLParagraphElement | null = $state(null);
+	let hasQuoteOverflow = $state(false);
 
 	let hasUnloadedReplies = $derived(
 		comment?.num_replies > 0 &&
@@ -74,11 +78,12 @@
 	let hasChanges = $derived.by(() => {
 		if (!commentState) return false;
 		const contentChanged = commentState.editInputContent?.trim() !== (comment.content || '');
-		const originalTagIds = new Set(comment.tags.map(t => t.id));
-		const editingTagIds = new Set(editingTags.map(t => t.id));
-		const tagsChanged = originalTagIds.size !== editingTagIds.size || 
-			([...originalTagIds].some(id => !editingTagIds.has(id)));
-		
+		const originalTagIds = new Set(comment.tags.map((t) => t.id));
+		const editingTagIds = new Set(editingTags.map((t) => t.id));
+		const tagsChanged =
+			originalTagIds.size !== editingTagIds.size ||
+			[...originalTagIds].some((id) => !editingTagIds.has(id));
+
 		return contentChanged || tagsChanged;
 	});
 
@@ -109,8 +114,8 @@
 			await documentStore.comments.update(comment);
 
 			// Apply tag changes
-			const originalTagIds = new Set(comment.tags.map(t => t.id));
-			const editingTagIds = new Set(editingTags.map(t => t.id));
+			const originalTagIds = new Set(comment.tags.map((t) => t.id));
+			const editingTagIds = new Set(editingTags.map((t) => t.id));
 
 			// Add new tags
 			for (const tag of editingTags) {
@@ -135,6 +140,7 @@
 	const handleCancelEdit = () => {
 		if (!commentState) return;
 		commentState.isEditing = false;
+		commentState.editInputContent = comment.content ?? '';
 		editingTags = [...comment.tags];
 	};
 
@@ -159,10 +165,6 @@
 	};
 
 	const handleKeydown = (e: KeyboardEvent) => {
-		if (e.key === 'Enter' && !e.shiftKey) {
-			e.preventDefault();
-			handleReply();
-		}
 		if (e.key === 'Escape' && commentState) {
 			commentState.isReplying = false;
 			commentState.replyInputContent = '';
@@ -170,26 +172,30 @@
 	};
 
 	const handleEditKeydown = (e: KeyboardEvent) => {
-		if (e.key === 'Enter' && !e.shiftKey) {
-			e.preventDefault();
-			handleEdit();
-		}
 		if (e.key === 'Escape' && commentState) {
 			handleCancelEdit();
 		}
 	};
 
 	const handleAddTag = (tag: TagRead) => {
-		if (!editingTags.find(t => t.id === tag.id)) {
+		if (!editingTags.find((t) => t.id === tag.id)) {
 			editingTags = [...editingTags, tag];
 		}
 	};
 
 	const handleRemoveTag = (tag: TagRead) => {
-		editingTags = editingTags.filter(t => t.id !== tag.id);
+		editingTags = editingTags.filter((t) => t.id !== tag.id);
 	};
 
 	const availableTags = $derived(documentStore.loadedDocument?.tags ?? []);
+
+	// Check if quote text is truncated and has overflow
+	$effect(() => {
+		if (quoteRef && !isQuoteExpanded) {
+			// Check if content is being clamped
+			hasQuoteOverflow = quoteRef.scrollHeight > quoteRef.clientHeight;
+		}
+	});
 
 	// $effect(() => {
 	// 	if (commentState?.replyInputContent !== replyContent)
@@ -202,9 +208,9 @@
 </script>
 
 {#snippet editDeleteButtons()}
-		{#if commentState && !commentState.isEditing && isAuthor}
+	{#if commentState && !commentState.isEditing && isAuthor}
 		<button
-			class="rounded text-text/40 hover:bg-text/10 hover:text-text/70 {isTopLevel
+			class="text-text/40 hover:bg-text/10 hover:text-text/70 rounded {isTopLevel
 				? 'p-1'
 				: 'p-0.5'} transition-colors"
 			onclick={(e) => {
@@ -266,14 +272,14 @@
 	<!-- Content area -->
 	<div class={isTopLevel ? 'p-3' : ''}>
 		<!-- Nested header (username + date inline) -->
-		<div class="flex items-center justify-between">
+		<div class="flex items-center justify-between mb-1">
 			<div class="flex items-center gap-2">
 				{#if !isTopLevel}
-					<span class="text-xs font-medium text-text/70"
+					<span class="text-text/70 text-xs font-medium"
 						>{comment.user?.username ?? 'Anonymous'}</span
 					>
 				{/if}
-				<span class="text-xs text-text/40">{formatDateTime(comment.created_at)}</span>
+				<span class="text-text/40 text-xs">{formatDateTime(comment.created_at)}</span>
 				<CommentVisibility
 					{comment}
 					visibility={comment.visibility}
@@ -287,15 +293,6 @@
 				</div>
 			{/if}
 		</div>
-
-		<!-- Annotation quote (top-level only) -->
-		{#if comment.annotation}
-			<div class="mb-3 border-l-2 border-primary/50 bg-primary/5 py-1.5 pr-2 pl-2.5">
-				<p class="line-clamp-2 text-xs text-text/60 italic">
-					"{comment.annotation.text}"
-				</p>
-			</div>
-		{/if}
 
 		<!-- Tags section for top-level author comments -->
 		{#if isTopLevel}
@@ -312,60 +309,101 @@
 				</div>
 			{:else if comment.tags && comment.tags.length > 0}
 				<!-- Tag dots when not editing -->
-				<div class="mb-2 flex gap-1.5">
+				<div class="group/tags mb-2 flex w-fit flex-wrap items-center gap-1.5">
+					<TagIcon class="w-4 h-4"/>
 					{#each comment.tags as tag (tag.id)}
 						<div
-							class="h-2 w-2 rounded-full transition-transform hover:scale-150"
-							style="background-color: {tag.color}"
-							title={tag.label}
-						></div>
+							class="relative flex overflow-hidden rounded-full transition-all duration-300 ease-in-out {commentState?.isHighlightHovered
+								? 'h-5 w-auto px-2 py-1'
+								: 'h-2 w-2 group-hover/tags:h-5 group-hover/tags:w-auto group-hover/tags:px-2 group-hover/tags:py-1'} items-center justify-center"
+						>
+							<div
+								class="absolute inset-0"
+								style="background-color: {tag.color};"
+							></div>
+							<p
+								class="relative z-10 cursor-default whitespace-nowrap text-[12px] font-medium text-text transition-opacity duration-300 {commentState?.isHighlightHovered
+									? 'opacity-100'
+									: 'opacity-0 group-hover/tags:opacity-100'}"
+								style="text-shadow: 0 0px 4px rgba(0, 0, 0, 0.9);"
+							>
+								{tag.label}
+							</p>
+						</div>
 					{/each}
 				</div>
+			{:else}
+				<p class="text-text/40 mb-2 text-[11px] italic">No tags</p>
 			{/if}
 		{/if}
 
+		<!-- Annotation quote (top-level only) -->
+		{#if comment.annotation}
+			<!-- svelte-ignore a11y_click_events_have_key_events -->
+			<!-- svelte-ignore a11y_no_static_element_interactions -->
+			<div
+				class="border-primary/50 bg-primary/5 mb-3 border-l-2 py-1.5 pl-2.5 pr-2 {hasQuoteOverflow
+					? 'cursor-pointer transition-colors hover:bg-primary/10'
+					: ''}"
+				onclick={() => {
+					if (hasQuoteOverflow) {
+						isQuoteExpanded = !isQuoteExpanded;
+					}
+				}}
+			>
+				<p
+					bind:this={quoteRef}
+					class="text-text/60 text-xs italic {isQuoteExpanded ? '' : 'line-clamp-2'}"
+				>
+					"{comment.annotation.text}"
+				</p>
+			</div>
+		{/if}
+
+		
+
 		<!-- Content / Edit mode -->
-			{#if commentState && commentState.isEditing}
-				<div class={sizes.mb}>
-					<MarkdownTextEditor
-						bind:value={commentState.editInputContent}
-						placeholder="Edit your comment..."
-						rows={3}
+		{#if commentState && commentState.isEditing}
+			<div class={sizes.mb}>
+				<MarkdownTextEditor
+					bind:value={commentState.editInputContent}
+					placeholder="Edit your comment..."
+					rows={3}
+					disabled={isSubmitting}
+					autofocus={true}
+					onkeydown={handleEditKeydown}
+				/>
+				<div class="{sizes.mt} flex justify-end {sizes.gap}">
+					<button
+						class="flex items-center gap-1 rounded {sizes.buttonPx} text-text/50 hover:bg-text/10 hover:text-text/70 text-xs transition-colors"
+						onclick={(e) => {
+							e.stopPropagation();
+							handleCancelEdit();
+						}}
 						disabled={isSubmitting}
-						autofocus={true}
-						onkeydown={handleEditKeydown}
-					/>
-					<div class="{sizes.mt} flex justify-end {sizes.gap}">
-						<button
-							class="flex items-center gap-1 rounded {sizes.buttonPx} text-xs text-text/50 transition-colors hover:bg-text/10 hover:text-text/70"
-							onclick={(e) => {
-								e.stopPropagation();
-								handleCancelEdit();
-							}}
-							disabled={isSubmitting}
-						>
-							<CloseIcon class={sizes.icon} /> Cancel
-						</button>
-						<button
-							class="flex items-center gap-1 rounded bg-primary/20 {sizes.buttonPx} text-xs font-medium text-primary transition-colors hover:bg-primary/30 disabled:opacity-50"
-							onclick={(e) => {
-								e.stopPropagation();
-								handleEdit();
-							}}
-							disabled={!hasChanges || isSubmitting}
-						>
-							<CheckIcon class={sizes.icon} />
-							{isSubmitting ? 'Saving...' : 'Save'}
-						</button>
-					</div>
+					>
+						<CloseIcon class={sizes.icon} /> Cancel
+					</button>
+					<button
+						class="bg-primary/20 flex items-center gap-1 rounded {sizes.buttonPx} text-primary hover:bg-primary/30 text-xs font-medium transition-colors disabled:opacity-50"
+						onclick={(e) => {
+							e.stopPropagation();
+							handleEdit();
+						}}
+						disabled={!hasChanges || isSubmitting}
+					>
+						<CheckIcon class={sizes.icon} />
+						{isSubmitting ? 'Saving...' : 'Save'}
+					</button>
 				</div>
-			{:else if comment.content}
-				<div class={isTopLevel ? 'mb-3' : 'mt-0.5'}>
-					<MarkdownRenderer content={comment.content} class="{sizes.text} {sizes.textMuted}" />
-				</div>
-			{:else if isTopLevel}
-				<p class="mb-3 text-sm text-text/40 italic">No comment text</p>
-			{/if}
+			</div>
+		{:else if comment.content}
+			<div class={isTopLevel ? 'mb-3' : 'mt-0.5'}>
+				<MarkdownRenderer content={comment.content} class="{sizes.text} {sizes.textMuted}" />
+			</div>
+		{:else if isTopLevel}
+			<p class="text-text/40 mb-3 text-sm italic">No comment text</p>
+		{/if}
 
 		<!-- Reply input -->
 		{#if commentState?.isReplying}
@@ -385,7 +423,7 @@
 				/>
 				<div class="{sizes.mt} flex justify-end {sizes.gap}">
 					<button
-						class="rounded {sizes.buttonPx} text-xs text-text/50 transition-colors hover:bg-text/10 hover:text-text/70"
+						class="rounded {sizes.buttonPx} text-text/50 hover:bg-text/10 hover:text-text/70 text-xs transition-colors"
 						onclick={(e) => {
 							e.stopPropagation();
 							commentState.isReplying = false;
@@ -393,7 +431,7 @@
 						}}>Cancel</button
 					>
 					<button
-						class="rounded bg-primary/20 {sizes.buttonPx} text-xs font-medium text-primary transition-colors hover:bg-primary/30 disabled:opacity-50"
+						class="bg-primary/20 rounded {sizes.buttonPx} text-primary hover:bg-primary/30 text-xs font-medium transition-colors disabled:opacity-50"
 						onclick={(e) => {
 							e.stopPropagation();
 							handleReply();
@@ -420,12 +458,12 @@
 
 		{#if commentState && comment.num_replies > 0}
 			<!-- Replies -->
-			<div class={isTopLevel ? 'border-t border-text/10 pt-2' : 'mt-2'}>
+			<div class={isTopLevel ? 'border-text/10 border-t pt-2' : 'mt-2'}>
 				<button
 					class="{isTopLevel
 						? 'mb-2 w-full'
 						: 'mb-1.5'} flex items-center gap-0.5 text-xs {isTopLevel
-						? 'font-medium text-text/50 hover:text-text/70'
+						? 'text-text/50 hover:text-text/70 font-medium'
 						: 'text-text/40 hover:text-text/60'} transition-colors"
 					disabled={isLoadingReplies}
 					onclick={(e) => {
@@ -457,7 +495,7 @@
 					</div>
 					{#if hasUnloadedReplies}
 						<button
-							class="mt-1.5 flex items-center {sizes.gap} text-xs text-text/60 transition-colors hover:text-text/70"
+							class="mt-1.5 flex items-center {sizes.gap} text-text/60 hover:text-text/70 text-xs transition-colors"
 							onclick={(e) => {
 								e.stopPropagation();
 								handleLoadReplies();
