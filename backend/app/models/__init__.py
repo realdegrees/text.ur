@@ -45,6 +45,7 @@ from models.sharelink import (
 )
 from models.sort import Sort
 from models.tables import Comment, Document, Group, Membership, User
+from models.tag import TagCreate, TagRead, TagUpdate
 from models.user import UserCreate, UserPrivate, UserRead, UserUpdate
 
 # ! Models that use TYPE_CHECKING for string type hints need to be imported and rebuilt here to avoid runtime errors
@@ -54,6 +55,10 @@ AppError.model_rebuild()
 MousePositionEvent.model_rebuild()
 MousePositionInput.model_rebuild()
 ViewModeChangedEvent.model_rebuild()
+
+TagCreate.model_rebuild()
+TagRead.model_rebuild()
+TagUpdate.model_rebuild()
 
 Event.model_rebuild()
 CommentEvent.model_rebuild()

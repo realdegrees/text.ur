@@ -36,6 +36,9 @@ class Permission(str, Enum):
     REMOVE_REACTIONS = "remove_reactions"
     ADD_REACTIONS = "add_reactions"
 
+    # Tags
+    MANAGE_TAGS = "manage_tags"
+
 class ViewMode(str, Enum):
     """Document view mode settings.
 

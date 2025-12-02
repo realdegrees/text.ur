@@ -6,8 +6,7 @@ from models.base import BaseModel
 from models.enums import ViewMode, Visibility
 
 if TYPE_CHECKING:
-    from models.group import GroupRead
-    from models.user import UserRead
+    from models.tag import TagRead
 
 
 class DocumentCreate(SQLModel):
@@ -22,6 +21,7 @@ class DocumentRead(BaseModel):
     group_id: str
     visibility: Visibility
     view_mode: ViewMode
+    tags: list["TagRead"]
 
 class DocumentTransfer(SQLModel):
     group_id: str

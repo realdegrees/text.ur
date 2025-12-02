@@ -7,13 +7,15 @@ from api.dependencies.events import Events
 from api.dependencies.paginated.resources import PaginatedResource
 from api.dependencies.resource import Resource
 from api.routers.reactions import router as ReactionRouter
-from fastapi import Body, Header, Response
+from core import config
+from fastapi import Body, Header, HTTPException, Response
 from models.comment import CommentCreate, CommentRead, CommentUpdate
-from models.enums import Permission, Visibility
+from models.enums import Permission
 from models.event import Event
 from models.filter import CommentFilter
 from models.pagination import Paginated
-from models.tables import Comment, User
+from models.tables import Comment, CommentTag, Tag, User
+from sqlmodel import func, select
 from util.api_router import APIRouter
 from util.queries import Guard
 from util.response import ExcludableFieldsJSONResponse
@@ -158,6 +160,118 @@ async def delete_comment(
     )
 
     return Response(status_code=204)
+
+
+@router.post("/{comment_id}/tags/{tag_id}")
+async def add_tag_to_comment(
+    tag_id: int,
+    db: Database,
+    events: Events,
+    comment: Comment = Resource(Comment, param_alias="comment_id"),
+    user: User = Authenticate([Guard.comment_access(None, only_owner=True)]),
+    x_connection_id: str | None = Header(None, alias="X-Connection-ID"),
+) -> Response:
+    """Add a tag to a comment.
+
+    Only the comment owner can add tags to their own comment.
+    """
+    # Verify tag exists and belongs to the same document as the comment
+    tag = db.exec(select(Tag).where(Tag.id == tag_id)).first()
+    if not tag:
+        raise HTTPException(status_code=404, detail="Tag not found")
+    if tag.document_id != comment.document_id:
+        raise HTTPException(status_code=400, detail="Tag does not belong to the same document as the comment")
+
+    # Check if tag is already added to comment
+    existing = db.exec(
+        select(CommentTag).where(
+            CommentTag.comment_id == comment.id,
+            CommentTag.tag_id == tag_id
+        )
+    ).first()
+    if existing:
+        # Tag already added, just return the comment
+        db.refresh(comment)
+        return Response(status_code=204)
+
+    # Check if comment has reached max tag limit
+    tag_count = db.exec(
+        select(func.count(CommentTag.tag_id)).where(CommentTag.comment_id == comment.id)
+    ).one()
+    if tag_count >= config.MAX_TAGS_PER_COMMENT:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Comment has reached the maximum number of tags ({config.MAX_TAGS_PER_COMMENT})"
+        )
+
+    # Add tag to comment
+    comment_tag = CommentTag(comment_id=comment.id, tag_id=tag_id)
+    db.add(comment_tag)
+    db.commit()
+    db.refresh(comment)
+
+    # Broadcast update event
+    event = Event(
+        event_id=uuid4(),
+        published_at=datetime.now(),
+        payload=CommentRead.model_validate(comment),
+        resource_id=comment.id,
+        resource="comment",
+        type="update",
+        originating_connection_id=x_connection_id
+    )
+    await events.publish(
+        event.model_dump(mode="json"),
+        channel=f"documents:{comment.document_id}:comments"
+    )
+
+    return Response(status_code=204)
+
+
+@router.delete("/{comment_id}/tags/{tag_id}")
+async def remove_tag_from_comment(
+    tag_id: int,
+    db: Database,
+    events: Events,
+    comment: Comment = Resource(Comment, param_alias="comment_id"),
+    user: User = Authenticate([Guard.comment_access(None, only_owner=True)]),
+    x_connection_id: str | None = Header(None, alias="X-Connection-ID"),
+) -> Comment:
+    """Remove a tag from a comment.
+
+    Only the comment owner can remove tags from their own comment.
+    """
+    # Find and delete the comment-tag association
+    comment_tag = db.exec(
+        select(CommentTag).where(
+            CommentTag.comment_id == comment.id,
+            CommentTag.tag_id == tag_id
+        )
+    ).first()
+    if not comment_tag:
+        raise HTTPException(status_code=404, detail="Tag not associated with this comment")
+
+    db.delete(comment_tag)
+    db.commit()
+    db.refresh(comment)
+
+    # Broadcast update event
+    event = Event(
+        event_id=uuid4(),
+        published_at=datetime.now(),
+        payload=CommentRead.model_validate(comment),
+        resource_id=comment.id,
+        resource="comment",
+        type="update",
+        originating_connection_id=x_connection_id
+    )
+    await events.publish(
+        event.model_dump(mode="json"),
+        channel=f"documents:{comment.document_id}:comments"
+    )
+
+    return comment
+
 
 tags = router.tags
 router.tags = []
