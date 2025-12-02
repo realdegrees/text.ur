@@ -78,13 +78,19 @@
 	let hasChanges = $derived.by(() => {
 		if (!commentState) return false;
 		const contentChanged = commentState.editInputContent?.trim() !== (comment.content || '');
+
+		// Check if tags have been added/removed
 		const originalTagIds = new Set(comment.tags.map((t) => t.id));
 		const editingTagIds = new Set(editingTags.map((t) => t.id));
-		const tagsChanged =
+		const tagsAddedOrRemoved =
 			originalTagIds.size !== editingTagIds.size ||
 			[...originalTagIds].some((id) => !editingTagIds.has(id));
 
-		return contentChanged || tagsChanged;
+		// Check if tag order has changed
+		const orderChanged = comment.tags.length === editingTags.length &&
+			comment.tags.some((tag, idx) => tag.id !== editingTags[idx]?.id);
+
+		return contentChanged || tagsAddedOrRemoved || orderChanged;
 	});
 
 	// Handlers
@@ -113,21 +119,22 @@
 			comment.content = commentState.editInputContent.trim();
 			await documentStore.comments.update(comment);
 
-			// Apply tag changes
-			const originalTagIds = new Set(comment.tags.map((t) => t.id));
-			const editingTagIds = new Set(editingTags.map((t) => t.id));
+			// Check if tags or their order have changed
+			const originalTagIds = comment.tags.map((t) => t.id);
+			const editingTagIds = editingTags.map((t) => t.id);
+			const tagsChanged =
+				originalTagIds.length !== editingTagIds.length ||
+				originalTagIds.some((id, idx) => id !== editingTagIds[idx]);
 
-			// Add new tags
-			for (const tag of editingTags) {
-				if (!originalTagIds.has(tag.id)) {
-					await documentStore.comments.addTag(comment.id, tag.id);
-				}
-			}
-
-			// Remove deleted tags
-			for (const tag of comment.tags) {
-				if (!editingTagIds.has(tag.id)) {
+			if (tagsChanged) {
+				// Remove all existing tags
+				for (const tag of comment.tags) {
 					await documentStore.comments.removeTag(comment.id, tag.id);
+				}
+
+				// Add tags in the new order
+				for (const tag of editingTags) {
+					await documentStore.comments.addTag(comment.id, tag.id);
 				}
 			}
 

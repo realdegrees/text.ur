@@ -20,8 +20,6 @@
 	let isAddingTag = $state(false);
 	let editingTagId = $state<number | null>(null);
 	let activeColorPicker = $state<'new' | 'edit' | null>(null);
-	let draggedTagId = $state<number | null>(null);
-	let dragOverTagId = $state<number | null>(null);
 
 	// New tag form state
 	let newTag = $state({
@@ -98,67 +96,6 @@
 
 		notification('success', 'Tag deleted successfully');
 		await invalidateAll();
-	}
-
-	async function reorderTags(newOrder: number[]) {
-		const result = await api.update(`/documents/${document.id}/tags/reorder`, {
-			tag_ids: newOrder
-		});
-
-		if (!result.success) {
-			notification(result.error);
-			return;
-		}
-
-		await invalidateAll();
-	}
-
-	function handleDragStart(tagId: number) {
-		draggedTagId = tagId;
-	}
-
-	function handleDragOver(e: DragEvent, tagId: number) {
-		e.preventDefault();
-		if (draggedTagId !== tagId) {
-			dragOverTagId = tagId;
-		}
-	}
-
-	function handleDragLeave() {
-		dragOverTagId = null;
-	}
-
-	async function handleDrop(e: DragEvent, targetTagId: number) {
-		e.preventDefault();
-		if (draggedTagId === null || draggedTagId === targetTagId) {
-			draggedTagId = null;
-			dragOverTagId = null;
-			return;
-		}
-
-		const tagsCopy = [...tags];
-		const draggedIndex = tagsCopy.findIndex((t) => t.id === draggedTagId);
-		const targetIndex = tagsCopy.findIndex((t) => t.id === targetTagId);
-
-		if (draggedIndex === -1 || targetIndex === -1) {
-			draggedTagId = null;
-			dragOverTagId = null;
-			return;
-		}
-
-		const [draggedTag] = tagsCopy.splice(draggedIndex, 1);
-		tagsCopy.splice(targetIndex, 0, draggedTag);
-
-		const newOrder = tagsCopy.map((t) => t.id);
-		await reorderTags(newOrder);
-
-		draggedTagId = null;
-		dragOverTagId = null;
-	}
-
-	function handleDragEnd() {
-		draggedTagId = null;
-		dragOverTagId = null;
 	}
 
 	function startEditingTag(tag: TagRead) {
@@ -253,7 +190,7 @@
 				</button>
 				{#if activeColorPicker === (isEdit ? 'edit' : 'new')}
 					<div 
-						class="absolute left-0 top-full z-10 mt-2 flex flex-col gap-2 rounded-md border border-text/20 bg-bg p-3 shadow-lg"
+						class="absolute left-0 top-full z-10 mt-2 flex flex-col gap-2 bg-inset rounded-md border border-text/20 bg-bg p-3 shadow-lg"
 					>
 						<input
 							id={isEdit ? `edit-tag-color-${tagId}` : 'new-tag-color'}
@@ -355,15 +292,7 @@
 				{:else}
 					<!-- Tag Display -->
 					<div
-						role="button"
-						tabindex="0"
-						draggable="true"
-						ondragstart={() => handleDragStart(tag.id)}
-						ondragover={(e) => handleDragOver(e, tag.id)}
-						ondragleave={handleDragLeave}
-						ondrop={(e) => handleDrop(e, tag.id)}
-						ondragend={handleDragEnd}
-						class="flex items-center gap-3 rounded-md border border-text/20 bg-text/5 p-3 transition hover:border-text/30 cursor-move {draggedTagId === tag.id ? 'opacity-50' : ''} {dragOverTagId === tag.id ? 'border-primary border-2' : ''}"
+						class="flex items-center gap-3 rounded-md border border-text/20 bg-text/5 p-3 transition hover:border-text/30"
 					>
 						<div
 							class="h-8 w-8 shrink-0 rounded-md border border-text/20"

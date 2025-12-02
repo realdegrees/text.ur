@@ -28,18 +28,81 @@
 		availableTags.filter((tag) => !selectedTags.some((selected) => selected.id === tag.id)
 		)
 	);
+
+	// Drag and drop state
+	let draggedTagId = $state<number | null>(null);
+	let dragOverTagId = $state<number | null>(null);
+
+	function handleDragStart(tagId: number) {
+		draggedTagId = tagId;
+	}
+
+	function handleDragOver(e: DragEvent, tagId: number) {
+		e.preventDefault();
+		if (draggedTagId !== tagId) {
+			dragOverTagId = tagId;
+		}
+	}
+
+	function handleDragLeave() {
+		dragOverTagId = null;
+	}
+
+	function handleDrop(e: DragEvent, targetTagId: number) {
+		e.preventDefault();
+		if (draggedTagId === null || draggedTagId === targetTagId) {
+			draggedTagId = null;
+			dragOverTagId = null;
+			return;
+		}
+
+		const draggedIndex = selectedTags.findIndex((t) => t.id === draggedTagId);
+		const targetIndex = selectedTags.findIndex((t) => t.id === targetTagId);
+
+		if (draggedIndex === -1 || targetIndex === -1) {
+			draggedTagId = null;
+			dragOverTagId = null;
+			return;
+		}
+
+		// Reorder the tags
+		const tagsCopy = [...selectedTags];
+		const [draggedTag] = tagsCopy.splice(draggedIndex, 1);
+		tagsCopy.splice(targetIndex, 0, draggedTag);
+		selectedTags = tagsCopy;
+
+		draggedTagId = null;
+		dragOverTagId = null;
+	}
+
+	function handleDragEnd() {
+		draggedTagId = null;
+		dragOverTagId = null;
+	}
 </script>
 
 <div class="flex w-full flex-wrap items-center gap-1.5">
 	{#each selectedTags as tag (tag.id)}
-		<Badge
-			item={tag}
-			label={tag.label}
-			{showRemove}
-			onRemove={() => onRemove?.(tag)}
-			{disabled}
-			customColor={tag.color}
-		/>
+		<div
+			role="button"
+			tabindex="0"
+			draggable="true"
+			ondragstart={() => handleDragStart(tag.id)}
+			ondragover={(e) => handleDragOver(e, tag.id)}
+			ondragleave={handleDragLeave}
+			ondrop={(e) => handleDrop(e, tag.id)}
+			ondragend={handleDragEnd}
+			class="cursor-move transition-opacity {draggedTagId === tag.id ? 'opacity-50' : ''} {dragOverTagId === tag.id ? 'ring-2 ring-primary rounded' : ''}"
+		>
+			<Badge
+				item={tag}
+				label={tag.label}
+				{showRemove}
+				onRemove={() => onRemove?.(tag)}
+				{disabled}
+				customColor={tag.color}
+			/>
+		</div>
 	{/each}
 
 	{#if availableToAdd.length > 0}
