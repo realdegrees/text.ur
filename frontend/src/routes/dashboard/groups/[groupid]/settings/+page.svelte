@@ -150,8 +150,8 @@
 			/>
 		</div>
 
-		<!-- Default Permissions (Owner only) -->
-		{#if isOwner}
+		<!-- Default Permissions -->
+		{#if sessionStore.validatePermissions(['administrator'])}
 			<div class="flex flex-col gap-2">
 				<div class="text-sm font-semibold text-text/70">Default Permissions</div>
 				<p class="text-xs text-text/50">
