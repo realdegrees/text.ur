@@ -80,6 +80,8 @@ class AppErrorCode(str, Enum):
     # Group Membership Errors
     MEMBERSHIP_NOT_FOUND = "membership_not_found"  # use when membership invite is not found or has been revoked or user is not a member of the group
     OWNER_CANNOT_LEAVE_GROUP = "owner_cannot_leave_group"  # use when the owner tries to leave the group instead of deleting it
+    CANNOT_REMOVE_PERMISSION_REASON_DEFAULT_GROUP = "cannot_remove_permission_reason_default_group"  # use when trying to remove a permission that is included in the group's default permission reason
+    CANNOT_REMOVE_PERMISSION_REASON_SHARELINK = "cannot_remove_permission_reason_sharelink"  # use when trying to remove a permission that is included in the related sharelink's permission reason
     
     # Registration Errors
     USERNAME_TAKEN = "username_taken"  # use when the username is already registered

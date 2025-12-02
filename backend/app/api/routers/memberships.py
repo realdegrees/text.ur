@@ -149,6 +149,12 @@ async def update_member_permissions(
     if Permission.MANAGE_PERMISSIONS in removed_permissions and not (is_administrator or is_owner):
         raise HTTPException(
             status_code=403, detail="Only administrators can grant or revoke the MANAGE_PERMISSIONS permission")
+        
+    if any(p in removed_permissions for p in group.default_permissions):
+        raise AppError(status_code=403, detail="Cannot remove permissions that are included in the group's default permissions", error_code=AppErrorCode.CANNOT_REMOVE_PERMISSION_REASON_DEFAULT_GROUP)
+
+    if membership.share_link and any(p in removed_permissions for p in membership.share_link.permissions):
+        raise AppError(status_code=403, detail="Cannot remove permissions that are included in the related sharelink's permissions", error_code=AppErrorCode.CANNOT_REMOVE_PERMISSION_REASON_SHARELINK)
 
     db.merge(membership)
     # Apply updates to the membership fields
