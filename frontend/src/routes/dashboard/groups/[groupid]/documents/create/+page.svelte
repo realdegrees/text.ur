@@ -9,7 +9,9 @@
 	import Loading from '~icons/svg-spinners/90-ring-with-bg';
 	import DeleteIcon from '~icons/material-symbols/delete-outline';
 	import DragDropIcon from '~icons/material-symbols/upload-file';
+	import InfoIcon from '~icons/material-symbols/info-outline';
 	import { notification } from '$lib/stores/notificationStore.js';
+	import { sessionStore } from '$lib/runes/session.svelte.js';
 
 	const MAX_FILE_SIZE_MB: number = 50;
 	const MAX_FILE_SIZE_BYTES: number = MAX_FILE_SIZE_MB * 1024 * 1024;
@@ -138,7 +140,7 @@
 		}
 
 		notification('success', 'Document uploaded successfully');
-		goto(`/dashboard/groups/${groupId}/documents`);
+		goto(`/dashboard/groups/${groupId}/documents`, { invalidateAll: true });
 	}
 </script>
 
@@ -256,6 +258,26 @@
 				{/each}
 			</div>
 		</div>
+
+		<!-- Tag Management Info -->
+		{#if sessionStore.validatePermissions(['manage_tags'])}
+			<div class="rounded-lg border border-primary/30 bg-primary/5 p-4">
+				<div class="flex items-start gap-3">
+					<InfoIcon class="h-5 w-5 shrink-0 text-primary" />
+					<div class="flex flex-col gap-1">
+						<p class="font-semibold text-primary">Document Tags</p>
+						<p class="text-sm text-text/80">
+							After uploading your document, you can create and manage custom tags to categorize
+							comments. Tags help organize feedback and make it easier to filter and find specific
+							types of annotations.
+						</p>
+						<p class="text-xs text-text/60">
+							You can add tags anytime from the document settings page.
+						</p>
+					</div>
+				</div>
+			</div>
+		{/if}
 
 		<!-- Submit Button -->
 		<div class="flex flex-row justify-end gap-2">
