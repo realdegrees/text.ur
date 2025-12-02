@@ -346,15 +346,15 @@ const createDocumentStore = () => {
 		 */
 		// Comment subsets
 		all: new SvelteMap(_comments),
-		pinned: new SvelteMap(commentStates.entries().filter(([, state]) => state.isPinned)),
+		pinned: new SvelteMap(Array.from(commentStates.entries()).filter(([, state]) => state.isPinned)),
 		topLevelComments: filteredTopLevelComments,
-		editing: new SvelteMap(commentStates.entries().filter(([, state]) => state.isEditing)),
-		replying: new SvelteMap(commentStates.entries().filter(([, state]) => state.isReplying)),
+		editing: new SvelteMap(Array.from(commentStates.entries()).filter(([, state]) => state.isEditing)),
+		replying: new SvelteMap(Array.from(commentStates.entries()).filter(([, state]) => state.isReplying)),
 		highlightHovered: new SvelteMap(
-			commentStates.entries().filter(([, state]) => state.isHighlightHovered)
+			Array.from(commentStates.entries()).filter(([, state]) => state.isHighlightHovered)
 		),
 		commentHovered: new SvelteMap(
-			commentStates.entries().filter(([, state]) => state.isCommentHovered)
+			Array.from(commentStates.entries()).filter(([, state]) => state.isCommentHovered)
 		)
 	});
 
