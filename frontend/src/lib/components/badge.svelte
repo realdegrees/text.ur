@@ -8,13 +8,23 @@
 		showRemove?: boolean;
 		onRemove?: (item: T) => void;
 		disabled?: boolean;
+		customColor?: string;
 	}
 
-	let { item, label, showRemove = true, onRemove, disabled = false }: BadgeProps<T> = $props();
+	let {
+		item,
+		label,
+		showRemove = true,
+		onRemove,
+		disabled = false,
+		customColor
+	}: BadgeProps<T> = $props();
 </script>
 
 <div
-	class="flex h-5.5 flex-row items-center rounded bg-background text-xs text-text shadow-inner shadow-black/30"
+	class="flex h-5.5 flex-row items-center rounded text-xs text-text shadow-inner shadow-black/30"
+	class:bg-background={!customColor}
+	style={customColor ? `background-color: ${customColor}` : ''}
 	in:scale
 	out:scale
 >

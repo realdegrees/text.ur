@@ -1,11 +1,13 @@
 <script lang="ts">
 	import { documentStore, type TypedComment } from '$lib/runes/document.svelte.js';
 	import { sessionStore } from '$lib/runes/session.svelte.js';
+	import type { TagRead } from '$api/types';
 	import CommentCard from './CommentCard.svelte';
 	import CommentVisibility from './CommentVisibility.svelte';
 	import ConfirmButton from '$lib/components/ConfirmButton.svelte';
 	import MarkdownTextEditor from './MarkdownTextEditor.svelte';
 	import MarkdownRenderer from '$lib/components/MarkdownRenderer.svelte';
+	import CommentTagSelector from './CommentTagSelector.svelte';
 	import ReplyIcon from '~icons/material-symbols/reply';
 	import EditIcon from '~icons/material-symbols/edit-outline';
 	import DeleteIcon from '~icons/material-symbols/delete-outline';
@@ -53,6 +55,7 @@
 	// State
 	let isSubmitting = $state(false);
 	let isLoadingReplies = $state(false);
+	let editingTags = $state<TagRead[]>([]);
 
 	let hasUnloadedReplies = $derived(
 		comment?.num_replies > 0 &&
@@ -66,6 +69,18 @@
 	let canReply = $derived(
 		sessionStore.routeMembership ? sessionStore.validatePermissions(['add_comments']) : false
 	);
+
+	// Check if content or tags have changed
+	let hasChanges = $derived.by(() => {
+		if (!commentState) return false;
+		const contentChanged = commentState.editInputContent?.trim() !== (comment.content || '');
+		const originalTagIds = new Set(comment.tags.map(t => t.id));
+		const editingTagIds = new Set(editingTags.map(t => t.id));
+		const tagsChanged = originalTagIds.size !== editingTagIds.size || 
+			([...originalTagIds].some(id => !editingTagIds.has(id)));
+		
+		return contentChanged || tagsChanged;
+	});
 
 	// Handlers
 
@@ -87,15 +102,40 @@
 	};
 
 	const handleEdit = async () => {
-		if (!commentState?.editInputContent?.trim() || isSubmitting) return;
+		if (!commentState) return;
 		isSubmitting = true;
 		try {
 			comment.content = commentState.editInputContent.trim();
 			await documentStore.comments.update(comment);
+
+			// Apply tag changes
+			const originalTagIds = new Set(comment.tags.map(t => t.id));
+			const editingTagIds = new Set(editingTags.map(t => t.id));
+
+			// Add new tags
+			for (const tag of editingTags) {
+				if (!originalTagIds.has(tag.id)) {
+					await documentStore.comments.addTag(comment.id, tag.id);
+				}
+			}
+
+			// Remove deleted tags
+			for (const tag of comment.tags) {
+				if (!editingTagIds.has(tag.id)) {
+					await documentStore.comments.removeTag(comment.id, tag.id);
+				}
+			}
+
 			commentState.isEditing = false;
 		} finally {
 			isSubmitting = false;
 		}
+	};
+
+	const handleCancelEdit = () => {
+		if (!commentState) return;
+		commentState.isEditing = false;
+		editingTags = [...comment.tags];
 	};
 
 	const handleDeleteConfirm = async () => {
@@ -135,9 +175,21 @@
 			handleEdit();
 		}
 		if (e.key === 'Escape' && commentState) {
-			commentState.isEditing = false;
+			handleCancelEdit();
 		}
 	};
+
+	const handleAddTag = (tag: TagRead) => {
+		if (!editingTags.find(t => t.id === tag.id)) {
+			editingTags = [...editingTags, tag];
+		}
+	};
+
+	const handleRemoveTag = (tag: TagRead) => {
+		editingTags = editingTags.filter(t => t.id !== tag.id);
+	};
+
+	const availableTags = $derived(documentStore.loadedDocument?.tags ?? []);
 
 	// $effect(() => {
 	// 	if (commentState?.replyInputContent !== replyContent)
@@ -150,13 +202,14 @@
 </script>
 
 {#snippet editDeleteButtons()}
-	{#if commentState && !commentState.isEditing && isAuthor}
+		{#if commentState && !commentState.isEditing && isAuthor}
 		<button
 			class="rounded text-text/40 hover:bg-text/10 hover:text-text/70 {isTopLevel
 				? 'p-1'
 				: 'p-0.5'} transition-colors"
 			onclick={(e) => {
 				e.stopPropagation();
+				editingTags = [...comment.tags];
 				commentState.isEditing = true;
 			}}
 			title="Edit"
@@ -244,53 +297,75 @@
 			</div>
 		{/if}
 
-		<!-- Content / Edit mode -->
-		{#if commentState && commentState.isEditing}
-			<div class={sizes.mb}>
-				<MarkdownTextEditor
-					bind:value={commentState.editInputContent}
-					placeholder="Edit your comment..."
-					rows={3}
-					disabled={isSubmitting}
-					autofocus={true}
-					onkeydown={handleEditKeydown}
-					onblur={() => {
-						if (commentState.editInputContent.trim().length === 0) {
-							commentState.isEditing = false;
-						}
-					}}
-				/>
-				<div class="{sizes.mt} flex justify-end {sizes.gap}">
-					<button
-						class="flex items-center gap-1 rounded {sizes.buttonPx} text-xs text-text/50 transition-colors hover:bg-text/10 hover:text-text/70"
-						onclick={(e) => {
-							e.stopPropagation();
-							commentState.isEditing = false;
-						}}
+		<!-- Tags section for top-level author comments -->
+		{#if isTopLevel}
+			{#if commentState && commentState.isEditing}
+				<!-- Full tag selector when editing -->
+				<div class="mb-2">
+					<CommentTagSelector
+						bind:selectedTags={editingTags}
+						{availableTags}
+						onAdd={handleAddTag}
+						onRemove={handleRemoveTag}
 						disabled={isSubmitting}
-					>
-						<CloseIcon class={sizes.icon} /> Cancel
-					</button>
-					<button
-						class="flex items-center gap-1 rounded bg-primary/20 {sizes.buttonPx} text-xs font-medium text-primary transition-colors hover:bg-primary/30 disabled:opacity-50"
-						onclick={(e) => {
-							e.stopPropagation();
-							handleEdit();
-						}}
-						disabled={!commentState.editInputContent.trim() || isSubmitting}
-					>
-						<CheckIcon class={sizes.icon} />
-						{isSubmitting ? 'Saving...' : 'Save'}
-					</button>
+					/>
 				</div>
-			</div>
-		{:else if comment.content}
-			<div class={isTopLevel ? 'mb-3' : 'mt-0.5'}>
-				<MarkdownRenderer content={comment.content} class="{sizes.text} {sizes.textMuted}" />
-			</div>
-		{:else if isTopLevel}
-			<p class="mb-3 text-sm text-text/40 italic">No comment text</p>
+			{:else if comment.tags && comment.tags.length > 0}
+				<!-- Tag dots when not editing -->
+				<div class="mb-2 flex gap-1.5">
+					{#each comment.tags as tag (tag.id)}
+						<div
+							class="h-2 w-2 rounded-full transition-transform hover:scale-150"
+							style="background-color: {tag.color}"
+							title={tag.label}
+						></div>
+					{/each}
+				</div>
+			{/if}
 		{/if}
+
+		<!-- Content / Edit mode -->
+			{#if commentState && commentState.isEditing}
+				<div class={sizes.mb}>
+					<MarkdownTextEditor
+						bind:value={commentState.editInputContent}
+						placeholder="Edit your comment..."
+						rows={3}
+						disabled={isSubmitting}
+						autofocus={true}
+						onkeydown={handleEditKeydown}
+					/>
+					<div class="{sizes.mt} flex justify-end {sizes.gap}">
+						<button
+							class="flex items-center gap-1 rounded {sizes.buttonPx} text-xs text-text/50 transition-colors hover:bg-text/10 hover:text-text/70"
+							onclick={(e) => {
+								e.stopPropagation();
+								handleCancelEdit();
+							}}
+							disabled={isSubmitting}
+						>
+							<CloseIcon class={sizes.icon} /> Cancel
+						</button>
+						<button
+							class="flex items-center gap-1 rounded bg-primary/20 {sizes.buttonPx} text-xs font-medium text-primary transition-colors hover:bg-primary/30 disabled:opacity-50"
+							onclick={(e) => {
+								e.stopPropagation();
+								handleEdit();
+							}}
+							disabled={!hasChanges || isSubmitting}
+						>
+							<CheckIcon class={sizes.icon} />
+							{isSubmitting ? 'Saving...' : 'Save'}
+						</button>
+					</div>
+				</div>
+			{:else if comment.content}
+				<div class={isTopLevel ? 'mb-3' : 'mt-0.5'}>
+					<MarkdownRenderer content={comment.content} class="{sizes.text} {sizes.textMuted}" />
+				</div>
+			{:else if isTopLevel}
+				<p class="mb-3 text-sm text-text/40 italic">No comment text</p>
+			{/if}
 
 		<!-- Reply input -->
 		{#if commentState?.isReplying}

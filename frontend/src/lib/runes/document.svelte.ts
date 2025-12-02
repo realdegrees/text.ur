@@ -78,6 +78,10 @@ const createDocumentStore = () => {
 				if (state) {
 					state.isHighlightHovered = false;
 					state.isCommentHovered = false;
+					// ! We must reset replies here because replies are deleted when setting to restricted so they need to 
+					// ! be loaded back in and therefore they cant be expanded by default but we are still preserving most states like edit content etc
+					state.repliesExpanded = false;
+					state.replies = [];
 				}
 			}
 			_comments.delete(commentId);
@@ -87,8 +91,6 @@ const createDocumentStore = () => {
 		const commentKeys = new Set(comments.map(({ id }) => id));
 		[...topLevelComments].forEach(({ id }) => {
 			if (!commentKeys.has(id)) {
-				console.log(`Top Level comment ${id} not found in new set, removing.`);
-
 				removeComment(id);
 			}
 		});
@@ -286,6 +288,35 @@ const createDocumentStore = () => {
 			}
 
 			commentsLocal.delete(commentId, true);
+		},
+		addTag: async (commentId: number, tagId: number) => {
+			const result = await api.post(`/comments/${commentId}/tags/${tagId}`, {});
+			if (!result.success) {
+				notification(result.error);
+				return;
+			}
+
+			// Optimistically update the comment with the new tag
+			const comment = _comments.get(commentId);
+			const tag = loadedDocument?.tags.find((t) => t.id === tagId);
+			if (comment && tag && !comment.tags.some((t) => t.id === tagId)) {
+				comment.tags = [...comment.tags, tag];
+				_comments.set(commentId, comment);
+			}
+		},
+		removeTag: async (commentId: number, tagId: number) => {
+			const result = await api.delete(`/comments/${commentId}/tags/${tagId}`);
+			if (!result.success) {
+				notification(result.error);
+				return;
+			}
+
+			// Optimistically update the comment by removing the tag
+			const comment = _comments.get(commentId);
+			if (comment) {
+				comment.tags = comment.tags.filter((t) => t.id !== tagId);
+				_comments.set(commentId, comment);
+			}
 		},
 		loadMoreReplies: async (commentId: number) => {
 			const limit = 20;
