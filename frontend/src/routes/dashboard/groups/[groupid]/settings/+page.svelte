@@ -29,16 +29,18 @@
 	let deleteConfirmText: string = $state('');
 	let editableGroupName: string = $derived(group.name);
 
+	let hasChanges = $derived.by(() => {
+		return (
+			editableGroupName !== group.name ||
+			JSON.stringify(defaultPermissions) !== JSON.stringify(group.default_permissions)
+		);
+	});
+
 	async function handleSave(): Promise<void> {
 		const updateData: GroupUpdate = {
 			name: editableGroupName !== group.name ? editableGroupName : undefined,
-			default_permissions: isOwner && defaultPermissions.length > 0 ? defaultPermissions : undefined
+			default_permissions: defaultPermissions.length > 0 ? defaultPermissions : undefined
 		};
-
-		if (!updateData.name && !updateData.default_permissions) {
-			notification('info', 'No changes to save');
-			return;
-		}
 
 		const result = await api.update(`/groups/${group.id}`, updateData);
 
@@ -168,7 +170,8 @@
 			<button
 				type="button"
 				onclick={handleSave}
-				class="flex flex-row items-center gap-2 rounded-md bg-primary px-6 py-2 text-text transition-all hover:bg-primary/80"
+				class="flex flex-row items-center gap-2 rounded-md bg-primary px-6 py-2 text-text transition-all hover:bg-primary/80 disabled:cursor-not-allowed disabled:opacity-50"
+				disabled={!hasChanges}
 			>
 				<SaveIcon class="h-5 w-5" />
 				<span>Save Changes</span>

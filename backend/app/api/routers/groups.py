@@ -86,10 +86,6 @@ async def update_group(
     group_update: GroupUpdate = Body(...),
 ) -> Group:
     """Update a group."""
-    is_owner = session_user.id == group.owner.id
-    if not is_owner and group_update.default_permissions is not None:
-        raise HTTPException(
-            status_code=403, detail="Only the owner can update default permissions")
     db.merge(group)
     group.sqlmodel_update(group_update.model_dump(exclude_unset=True))
 
