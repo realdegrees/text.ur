@@ -27,6 +27,8 @@
 	import KickIcon from '~icons/ic/sharp-person-remove';
 	import LeaveIcon from '~icons/mdi/exit-run';
 	import { formatDateTime } from '$lib/util/dateFormat';
+	import ExpandablePermissionBadge from '$lib/components/expandablePermissionBadge.svelte';
+	import { SvelteSet } from 'svelte/reactivity';
 
 	let { data } = $props();
 	let memberships = $derived(data.memberships);
@@ -37,6 +39,22 @@
 	let selectedUser = $state<UserRead | undefined>(undefined);
 
 	const availablePermissions = permissionSchema.options.map((p) => p.value);
+
+	// Calculate permissions that should be excluded from bulk actions
+	const bulkExcludedPermissions = $derived(() => {
+		const excluded = new SvelteSet<Permission>(group.default_permissions);
+		// Add sharelink permissions from all selected memberships
+		selected.forEach((m) => {
+			if (m.share_link) {
+				m.share_link.permissions.forEach((p) => excluded.add(p));
+			}
+		});
+		return Array.from(excluded);
+	});
+
+	const availableForBulkAdd = $derived(
+		availablePermissions.filter((p) => !bulkExcludedPermissions().includes(p))
+	);
 
 	function handleSelectionChange(memberships: Omit<MembershipRead, 'group'>[]) {
 		selected = memberships;
@@ -184,7 +202,7 @@
 				{/if}
 				{#if sessionStore.validatePermissions(['manage_permissions'])}
 					<Dropdown
-						items={availablePermissions}
+						items={availableForBulkAdd}
 						onSelect={(perm) =>
 							selected.forEach(async (membership) => addPermissionToMembership(membership, perm))}
 						position="bottom-left"
@@ -206,7 +224,7 @@
 					</Dropdown>
 
 					<Dropdown
-						items={availablePermissions}
+						items={availableForBulkAdd}
 						onSelect={(perm) =>
 							selected.forEach(async (membership) =>
 								removePermissionFromMembership(membership, perm)
@@ -233,7 +251,6 @@
 		</div>
 	{/key}
 
-	{#key memberships}
 		<InfiniteTable
 			columns={[
 				{
@@ -283,7 +300,6 @@
 			onSelectionChange={handleSelectionChange}
 			rowBgClass="bg-inset/90"
 		/>
-	{/key}
 </div>
 
 {#snippet permissionItem(perm: Permission)}
@@ -342,17 +358,41 @@
 {/snippet}
 
 {#snippet permissionsSnippet(membership: Omit<MembershipRead, 'group'>)}
-	{#key membership.permissions}
+	{@const defaultPermissions = group.default_permissions}
+	{@const sharelinkPermissions = membership.share_link?.permissions || []}
+	{@const groupedPermissions = [...defaultPermissions, ...sharelinkPermissions]}
+	{@const customPermissions = membership.permissions.filter((p) => !groupedPermissions.includes(p))}
+
 		<PermissionSelector
-			selectedPermissions={membership.permissions}
+			selectedPermissions={customPermissions}
+			excludedPermissions={groupedPermissions}
 			onAdd={(perm) => addPermissionToMembership(membership, perm)}
 			onRemove={(perm) => removePermissionFromMembership(membership, perm)}
 			showRemove={sessionStore.validatePermissions(['manage_permissions'])}
 			allowSelection={sessionStore.validatePermissions({
 				or: ['manage_permissions', 'remove_members']
 			})}
-		/>
-	{/key}
+		>
+			{#snippet prepend()}
+				<!-- Default Permissions Badge -->
+				{#if defaultPermissions.length > 0}
+					<ExpandablePermissionBadge
+						permissions={defaultPermissions}
+						label="Default"
+						variant="default"
+					/>
+				{/if}
+
+				<!-- Sharelink Permissions Badge -->
+				{#if sharelinkPermissions.length > 0}
+					<ExpandablePermissionBadge
+						permissions={sharelinkPermissions}
+						label="Sharelink"
+						variant="sharelink"
+					/>
+				{/if}
+			{/snippet}
+		</PermissionSelector>
 {/snippet}
 
 {#snippet actionsSnippet(membership: Omit<MembershipRead, 'group'>)}
@@ -384,7 +424,7 @@
 			>
 				{#snippet button()}
 					<div
-						class="h-full w-fit rounded bg-green-500/10 p-1 text-text shadow-black/20 transition hover:cursor-pointer hover:bg-green-500/30 hover:shadow-inner"
+						class="h-full w-fit rounded bg-green-400/50 p-1 text-text shadow-black/20 transition hover:cursor-pointer hover:bg-green-500/90 hover:shadow-inner"
 						aria-label="Promote guest {membership.user.username} to a permanent member"
 					>
 						<PromoteIcon class="h-5 w-5" />
@@ -421,7 +461,7 @@
 			>
 				{#snippet button()}
 					<div
-						class="h-full w-fit rounded bg-red-500/10 p-1 text-text shadow-black/20 transition hover:cursor-pointer hover:bg-red-500/30 hover:shadow-inner"
+						class="h-full w-fit rounded bg-red-400/60 p-1 text-text shadow-black/20 transition hover:cursor-pointer hover:bg-red-500/70 hover:shadow-inner"
 						aria-label={showLeaveButton
 							? `Leave the group`
 							: `Kick {membership.user.username} from the group`}

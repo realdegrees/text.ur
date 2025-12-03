@@ -7,7 +7,7 @@
 	import ConfirmButton from '$lib/components/ConfirmButton.svelte';
 	import Badge from '$lib/components/badge.svelte';
 	import LL from '$i18n/i18n-svelte.js';
-	import type { ShareLinkRead, Permission } from '$api/types';
+	import type { ShareLinkRead } from '$api/types';
 	import { formatDateTime } from '$lib/util/dateFormat';
 
 	let {
@@ -118,7 +118,7 @@
 		{#each link.permissions as perm (perm)}
 			<Badge
 				item={perm}
-				label={$LL.permissions[perm as Permission]?.() || perm}
+				label={($LL.permissions as Record<string, () => string>)[perm]?.() || perm}
 				showRemove={false}
 			/>
 		{/each}

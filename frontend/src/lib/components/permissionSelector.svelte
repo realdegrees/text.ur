@@ -8,32 +8,43 @@
 
 	let {
 		selectedPermissions = $bindable([]),
+		excludedPermissions = [],
 		onAdd,
 		onRemove,
 		disabled = false,
 		showRemove = true,
-		allowSelection = true
+		allowSelection = true,
+		prepend
 	} = $props<{
 		selectedPermissions: Permission[];
+		excludedPermissions?: Permission[];
 		onAdd?: (permission: Permission) => void;
 		onRemove?: (permission: Permission) => void;
 		disabled?: boolean;
 		showRemove?: boolean;
 		allowSelection?: boolean;
+		prepend?: import('svelte').Snippet;
 	}>();
 
 	const availablePermissions = permissionSchema.options.map((p) => p.value);
 
 	const availableToAdd = $derived(
-		availablePermissions.filter((p) => !selectedPermissions.includes(p))
+		availablePermissions.filter(
+			(p) => !selectedPermissions.includes(p) && !excludedPermissions.includes(p)
+		)
 	);
 </script>
 
 <div class="flex w-full flex-wrap items-center gap-1.5">
+	<!-- Prepended content (e.g., grouped badges) -->
+	{#if prepend}
+		{@render prepend()}
+	{/if}
+
 	{#each selectedPermissions as perm (perm)}
 		<Badge
 			item={perm}
-			label={$LL.permissions[perm as Permission]?.() || perm}
+			label={($LL.permissions as Record<string, () => string>)[perm]?.() || perm}
 			{showRemove}
 			onRemove={() => onRemove?.(perm)}
 			{disabled}
@@ -57,7 +68,9 @@
 				/>
 			{/snippet}
 			{#snippet itemSnippet(perm)}
-				<p class="p-1 text-left text-text">{$LL.permissions[perm]?.() || perm}</p>
+				<p class="p-1 text-left text-text">
+					{($LL.permissions as Record<string, () => string>)[perm]?.() || perm}
+				</p>
 			{/snippet}
 		</Dropdown>
 	{/if}

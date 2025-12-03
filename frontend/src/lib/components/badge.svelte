@@ -17,7 +17,7 @@
 		showRemove = true,
 		onRemove,
 		disabled = false,
-		customColor
+		customColor,
 	}: BadgeProps<T> = $props();
 </script>
 
@@ -25,8 +25,8 @@
 	class="flex h-5.5 flex-row items-center rounded text-xs text-text shadow-inner shadow-black/30"
 	class:bg-background={!customColor}
 	style={customColor ? `background-color: ${customColor}` : ''}
-	in:scale
-	out:scale
+	in:scale={{ duration: 250 }}
+	out:scale={{ duration: 250 }}
 >
 	<p class="p-1.5 whitespace-nowrap">{label}</p>
 	{#if showRemove}
