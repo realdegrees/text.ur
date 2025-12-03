@@ -99,8 +99,7 @@ BACKEND_BASEURL = os.getenv("PUBLIC_BACKEND_BASEURL", "http://localhost:8000")
 # Should be True in production (requires HTTPS)
 COOKIE_SECURE = os.getenv("COOKIE_SECURE", "True").lower() == "true"
 COOKIE_SAMESITE = os.getenv(
-    "COOKIE_SAMESITE", "strict"
-    # 'none' with different frontend/backend origins; 'strict' with same origin (reverse proxy)
+    "COOKIE_SAMESITE", "lax"
 )
 
 # TAGS
