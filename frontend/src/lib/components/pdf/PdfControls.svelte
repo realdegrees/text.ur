@@ -15,6 +15,9 @@
 	import PersonIcon from '~icons/material-symbols/person';
 	import ClearFilterIcon from '~icons/mdi/filter-remove-outline';
 	import { scale } from 'svelte/transition';
+	import TagIcon from '~icons/mdi/tag-outline';
+	import ActiveUsersIcon from '~icons/heroicons-outline/status-online';
+	import OfflineIcon from '~icons/oui/offline';
 
 	interface Props {
 		minScale: number;
@@ -43,9 +46,11 @@
 	let isExpanded = $state(true);
 
 	const buttonClass =
-		'rounded p-2 text-text/70 transition-colors hover:bg-text/10 hover:text-text disabled:opacity-30 disabled:hover:bg-transparent';
+		'rounded text-text/70 transition-colors hover:bg-text/10 hover:text-text disabled:opacity-30 disabled:hover:bg-transparent';
 	const activeButtonClass =
 		'rounded p-2 text-primary bg-primary/10 transition-colors hover:bg-primary/20';
+
+	const iconSizeClass = 'h-5 w-5';
 
 	const activeUserFilters = $derived.by(() => {
 		return documentWebSocket.activeUsers.map(({ user_id, username }) => {
@@ -114,7 +119,7 @@
 
 <div
 	class="no-scrollbar flex shrink-0 flex-col overflow-x-hidden overflow-y-auto border-r border-text/10 bg-inset transition-all duration-200 {isExpanded
-		? 'w-40'
+		? 'w-48'
 		: 'w-12'}"
 >
 	<!-- Expand/Collapse Button -->
@@ -124,10 +129,10 @@
 		title={isExpanded ? 'Collapse' : 'Expand'}
 	>
 		{#if isExpanded}
-			<CollapseIcon class="h-4 w-4" />
+			<CollapseIcon class={iconSizeClass} />
 			<span class="text-xs">Collapse</span>
 		{:else}
-			<ExpandIcon class="h-4 w-4" />
+			<ExpandIcon class={iconSizeClass} />
 		{/if}
 	</button>
 
@@ -141,7 +146,7 @@
 				title="Zoom In"
 			>
 				<span class="flex items-center gap-2">
-					<ZoomInIcon class="h-5 w-5" />
+					<ZoomInIcon class={iconSizeClass} />
 					{#if isExpanded}<span class="text-xs">Zoom In</span>{/if}
 				</span>
 			</button>
@@ -152,7 +157,7 @@
 				title="Zoom Out"
 			>
 				<span class="flex items-center gap-2">
-					<ZoomOutIcon class="h-5 w-5" />
+					<ZoomOutIcon class={iconSizeClass} />
 					{#if isExpanded}<span class="text-xs">Zoom Out</span>{/if}
 				</span>
 			</button>
@@ -166,7 +171,7 @@
 			title="Fit Height"
 		>
 			<span class="flex items-center gap-2">
-				<FitPageIcon class="h-5 w-5" />
+				<FitPageIcon class={iconSizeClass} />
 				{#if isExpanded}<span class="text-xs">Fit Height</span>{/if}
 			</span>
 		</button>
@@ -182,7 +187,7 @@
 					disabled={pageNumber <= 1}
 					title="Previous Page"
 				>
-					<ChevronUpIcon class="h-5 w-5" />
+					<ChevronUpIcon class={iconSizeClass} />
 				</button>
 				<span class="text-xs text-text/70 {isExpanded ? 'mx-2' : ''}">{pageNumber}/{numPages}</span>
 				<button
@@ -191,7 +196,7 @@
 					disabled={pageNumber >= numPages}
 					title="Next Page"
 				>
-					<ChevronDownIcon class="h-5 w-5" />
+					<ChevronDownIcon class={iconSizeClass} />
 				</button>
 			</div>
 
@@ -212,7 +217,7 @@
 			title={documentStore.showCursors ? 'Hide other cursors' : 'Show other cursors'}
 		>
 			<span class="flex items-center gap-2">
-				<CursorIcon class="h-5 w-5" />
+				<CursorIcon class={iconSizeClass} />
 				{#if isExpanded}<span class="text-xs"
 						>{documentStore.showCursors ? 'Cursors On' : 'Cursors Off'}</span
 					>{/if}
@@ -223,12 +228,12 @@
 
 		{#snippet userFilterItem(filter: FilterState<'author'>, compact: boolean)}
 			{@const isSessionUser = filter.id === sessionStore.currentUser?.id}
-			<div class="flex items-center gap-2">
+			<div class="flex min-w-0 items-center gap-2" title={filter.data.username}>
 				{#if isSessionUser}
-					<PersonIcon class="h-7 w-7 shrink-0 rounded-full text-text/70" />
+					<PersonIcon class="text-text/70 {iconSizeClass} shrink-0 rounded-full" />
 				{:else}
 					<div
-						class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-medium text-text {getUserColor(
+						class="flex text-text {iconSizeClass} shrink-0 items-center justify-center rounded-full text-[11px] font-medium {getUserColor(
 							filter.id
 						)}"
 					>
@@ -236,15 +241,17 @@
 					</div>
 				{/if}
 				{#if !compact}
-					<span class="truncate text-xs text-text/70"
+					<span class="min-w-0 truncate text-xs text-text/70"
 						>{filter.data.username} {isSessionUser ? '(You)' : ''}</span
 					>
 				{/if}
 			</div>
 		{/snippet}
 
-		<div class="flex w-full items-center justify-between gap-2 p-1">
-			<p class="text-text/80">Filters</p>
+		<div class="flex w-full items-center {isExpanded ? 'justify-between' : 'justify-center'} gap-2">
+			{#if isExpanded}
+				<p class="font-medium text-text/80">Filters</p>
+			{/if}
 			{#if anyFilterActive}
 				<button
 					onclick={() => {
@@ -255,39 +262,65 @@
 					in:scale
 					out:scale
 				>
-					<ClearFilterIcon class="h-5 w-5 text-text/50 hover:text-text/70" />
+					<ClearFilterIcon class="text-text/50 hover:text-text/70 {iconSizeClass}" />
 				</button>
 			{/if}
 		</div>
 
 		<!-- Active Users -->
 		<FilterList
-			label="Active Users"
 			placeholderLabel="No other users viewing"
 			compact={!isExpanded}
 			filters={activeUserFilters}
 			item={userFilterItem}
-		/>
+		>
+			{#snippet header(compact)}
+				<div class="flex items-center gap-2" title={isExpanded ? '' : 'Active Users'}>
+					<ActiveUsersIcon class={iconSizeClass} />
+					{#if !compact}
+						<span>Active Users</span>
+					{/if}
+				</div>
+			{/snippet}
+		</FilterList>
 
 		<!--Document Authors-->
-		<FilterList
-			label="Offline Users"
-			compact={!isExpanded}
-			filters={documentAuthorFilters}
-			item={userFilterItem}
-		/>
+		<FilterList compact={!isExpanded} filters={documentAuthorFilters} item={userFilterItem}>
+			{#snippet header(compact)}
+				<div class="flex items-center gap-2" title={isExpanded ? '' : 'Offline Users'}>
+					<OfflineIcon class={iconSizeClass} />
+					{#if !compact}
+						<span>Offline Users</span>
+					{/if}
+				</div>
+			{/snippet}
+		</FilterList>
 
 		<!-- Tag Filters -->
-		<FilterList label="Tags" compact={!isExpanded} filters={tagFilters}>
+		<FilterList compact={!isExpanded} filters={tagFilters}>
+			{#snippet header(compact)}
+				<div class="flex items-center gap-2" title={isExpanded ? '' : 'Tags'}>
+					<TagIcon class={iconSizeClass} />
+					{#if !compact}
+						<span>Tags</span>
+					{/if}
+				</div>
+			{/snippet}
 			{#snippet item(filter, compact)}
-				<div class="flex items-center gap-2">
-					<span
-						class="h-4 w-4 truncate rounded-full text-xs text-text/70"
+				<div class="flex min-w-0 items-center gap-2" title={filter.data.label}>
+					<p
+						class="text-text/70 {iconSizeClass} shrink-0 rounded-md text-xs"
 						style="background-color: {filter.data.color}"
-					></span>
-					<p class="text-md truncate whitespace-nowrap">
-						{compact ? filter.data.label.slice(0, 2).toUpperCase() : filter.data.label}
+					>
+						{#if compact}
+							{filter.data.label.slice(0, 2).toUpperCase()}
+						{/if}
 					</p>
+					{#if !compact}
+						<p class="text-md min-w-0 truncate whitespace-nowrap">
+							{filter.data.label}
+						</p>
+					{/if}
 				</div>
 			{/snippet}
 		</FilterList>

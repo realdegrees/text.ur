@@ -10,9 +10,10 @@
 
 	interface Props {
 		isExpanded?: boolean;
+		iconSizeClass?: string;
 	}
 
-	let { isExpanded = false }: Props = $props();
+	let { isExpanded = false, iconSizeClass = 'h-5 w-5' }: Props = $props();
 
 	// Only admins and owners can change view mode
 	let canChangeViewMode = $derived(
@@ -91,7 +92,7 @@
 			title={label}
 		>
 			<span class="flex items-center gap-2">
-				<Icon class="h-4 w-4" />
+				<Icon class={iconSizeClass} />
 				{#if isExpanded}<span class="text-xs">{shortLabel}</span>{/if}
 			</span>
 		</button>
