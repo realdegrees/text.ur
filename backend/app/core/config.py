@@ -78,7 +78,10 @@ JWT_SECRET = os.getenv("JWT_SECRET")
 
 # EMAIL
 EMAIL_PRESIGN_SECRET = os.getenv("EMAIL_PRESIGN_SECRET")
-EMAIL_PRESIGN_EXPIRY_DAYS = float(os.getenv("EMAIL_PRESIGN_EXPIRY_DAYS", 30))
+REGISTER_LINK_EXPIRY_DAYS = float(os.getenv("REGISTER_LINK_EXPIRY_DAYS", 7))
+PASSWORD_RESET_LINK_EXPIRY_MINUTES = float(
+    os.getenv("RESET_PASSWORD_LINK_EXPIRY_MINUTES", 30)
+)
 SMTP_USER = os.getenv("SMTP_USER")
 SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
 SMTP_SERVER = os.getenv("SMTP_SERVER")
@@ -96,8 +99,7 @@ BACKEND_BASEURL = os.getenv("PUBLIC_BACKEND_BASEURL", "http://localhost:8000")
 # Should be True in production (requires HTTPS)
 COOKIE_SECURE = os.getenv("COOKIE_SECURE", "True").lower() == "true"
 COOKIE_SAMESITE = os.getenv(
-    "COOKIE_SAMESITE", "strict"
-    # 'none' with different frontend/backend origins; 'strict' with same origin (reverse proxy)
+    "COOKIE_SAMESITE", "lax"
 )
 
 # TAGS

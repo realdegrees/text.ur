@@ -112,8 +112,13 @@
 	// Sync value to contenteditable div when value changes from outside
 	$effect(() => {
 		if (searchElement && searchElement.textContent !== value) {
-			// eslint-disable-next-line svelte/no-dom-manipulating
-			searchElement.textContent = value;
+			if (value === '') {
+				// eslint-disable-next-line svelte/no-dom-manipulating
+				searchElement.innerHTML = '';
+			} else {
+				// eslint-disable-next-line svelte/no-dom-manipulating
+				searchElement.textContent = value;
+			}
 		}
 	});
 
@@ -253,6 +258,11 @@
 			oninput={() => {
 				// Read the value from the contenteditable element (textContent strips html)
 				value = searchElement?.textContent || '';
+				// Clear innerHTML when empty to prevent phantom line breaks
+				if (value === '' && searchElement) {
+					// eslint-disable-next-line svelte/no-dom-manipulating
+					searchElement.innerHTML = '';
+				}
 				onInput();
 			}}
 			onkeydown={(e) => {

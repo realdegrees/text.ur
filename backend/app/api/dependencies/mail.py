@@ -69,13 +69,23 @@ class EmailManager:
             return f"{BACKEND_BASEURL}/api{router.url_path_for(confirm_route, token=token)}"
         
     def send_email(self, target_email: str, subject: str, template: str, template_vars: dict[str, Any]) -> None:
-        """Send an email with a templated HTML body."""
-        # Render email body
+        """Send an email with templated HTML and plain text bodies."""
+        # Render HTML email body
         try:
             html_body = JINJA_ENV.get_template(template).render(**template_vars)
         except TemplateNotFound as e:
             mail_logger.error("Email template '%s' not found. Ensure templates directory exists and contains the template.", template)
             raise HTTPException(status_code=500, detail=f"Email template '{template}' not found") from e
+
+        # Render plain text email body
+        # Try to load .txt version, fall back to stripping HTML if not found
+        text_template_name = template.replace('.jinja', '.txt').replace('.html', '.txt')
+        try:
+            plain_text_body = JINJA_ENV.get_template(text_template_name).render(**template_vars)
+        except TemplateNotFound:
+            mail_logger.warning("Plain text template '%s' not found, falling back to HTML stripping", text_template_name)
+            soup: BeautifulSoup = BeautifulSoup(html_body, "html.parser")
+            plain_text_body = soup.get_text()
 
         # Build email
         msg: MIMEMultipart = MIMEMultipart("alternative")
@@ -83,11 +93,6 @@ class EmailManager:
         msg["To"] = target_email
         msg["Subject"] = subject
 
-        # Generate plain text version by stripping HTML tags
-
-        soup: BeautifulSoup = BeautifulSoup(html_body, "html.parser")
-        plain_text_body: str = soup.get_text()
-        
         mail_logger.info(f"\n[To: {target_email}]\n[Subject: {subject}]\n[Template: {template}]\n[Vars: {template_vars}]")
 
         msg.attach(MIMEText(plain_text_body, "plain"))

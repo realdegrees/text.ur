@@ -1,4 +1,4 @@
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Annotated
 
 import core.config as cfg
@@ -110,13 +110,20 @@ async def reset_password(request: Request, db: Database, mail: Mail, email: str 
         raise HTTPException(status_code=404, detail="User not found")
     reset_link: str = mail.generate_verification_link(
         email, router, salt="password-reset", confirm_route="verify")
+    expiry_time = datetime.now(UTC) + timedelta(days=cfg.REGISTER_LINK_EXPIRY_DAYS)
     try:
-        template = cfg.JINJA_ENV.get_template("reset_password.jinja")
-        html_body: str = template.render(
-            reset_link=f"{request.base_url}reset?url={reset_link}",
-            expiry_minutes=cfg.EMAIL_PRESIGN_EXPIRY_DAYS // 60
+        mail.send_email(
+            target_email=email,
+            subject="Reset Your Password - text.ur",
+            template="reset_password.jinja",
+            template_vars={
+                "reset_link": reset_link,
+                "expiry_time": expiry_time.strftime("%B %d, %Y at %H:%M UTC"),
+                "email": email,
+                "username": user.username,
+                "current_year": datetime.now(UTC).year
+            }
         )
-        mail.send_email(email, html_body, subject="Password Reset")
     except Exception as e:
         raise HTTPException(
             status_code=500, detail="Failed to send reset email") from e
@@ -127,7 +134,7 @@ async def reset_verify(token: str, db: Database, password: str = Body(..., embed
     """Confirm password reset using the presigned URL and update the user's password."""
     try:
         email: str = URLSafeTimedSerializer(cfg.EMAIL_PRESIGN_SECRET).loads(
-            token, max_age=int(cfg.EMAIL_PRESIGN_EXPIRY_DAYS), salt="password-reset")
+            token, max_age=int(cfg.REGISTER_LINK_EXPIRY_DAYS * 24 * 60 * 60), salt="password-reset")
     except (BadSignature, SignatureExpired) as e:
         raise HTTPException(
             status_code=403, detail="Invalid or expired token") from e

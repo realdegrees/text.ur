@@ -124,6 +124,7 @@
 						notification('success', 'User invited successfully!');
 						username = '';
 						selectedUser = undefined;
+						invalidateAll();
 					} else {
 						notification(result.error);
 					}
@@ -173,7 +174,10 @@
 				{#if sessionStore.validatePermissions(['remove_members'])}
 					<button
 						class="rounded bg-inset px-1 py-1.5 font-semibold shadow-inner shadow-black/30 transition hover:cursor-pointer hover:bg-red-500/30"
-						onclick={() => selected.forEach(async ({ user: { id } }) => kickMember(id))}
+						onclick={async () => {
+							await Promise.all(selected.map(({ user: { id } }) => kickMember(id)));
+							await invalidateAll();
+						}}
 					>
 						Kick
 					</button>
@@ -229,55 +233,57 @@
 		</div>
 	{/key}
 
-	<InfiniteTable
-		columns={[
-			{
-				label: $LL.user(),
-				width: '2fr',
-				snippet: usernameSnippet
-			},
-			{
-				label: $LL.status(),
-				width: '1fr',
-				snippet: badgeSnippet
-			},
-			{
-				label: $LL.permissions.label(),
-				width: '5fr',
-				snippet: permissionsSnippet
-			},
-			{
-				label: $LL.memberships.actions(),
-				width: '2fr',
-				snippet: actionsSnippet
-			}
-		]}
-		data={memberships}
-		loadMore={async (offset, limit) => {
-			const result = await api.get<Paginated<MembershipRead>, 'group'>(
-				`/memberships?offset=${offset}&limit=${limit}`,
+	{#key memberships}
+		<InfiniteTable
+			columns={[
 				{
-					sort: [{ field: 'accepted', direction: 'asc' }],
-					filters: [
-						{
-							field: 'group_id',
-							operator: '==',
-							value: group?.id
-						}
-					]
+					label: $LL.user(),
+					width: '2fr',
+					snippet: usernameSnippet
+				},
+				{
+					label: $LL.status(),
+					width: '1fr',
+					snippet: badgeSnippet
+				},
+				{
+					label: $LL.permissions.label(),
+					width: '5fr',
+					snippet: permissionsSnippet
+				},
+				{
+					label: $LL.memberships.actions(),
+					width: '2fr',
+					snippet: actionsSnippet
 				}
-			);
-			if (!result.success) {
-				notification(result.error);
-				return undefined;
-			}
-			return result.data;
-		}}
-		step={20}
-		selectable
-		onSelectionChange={handleSelectionChange}
-		rowBgClass="bg-inset/90"
-	/>
+			]}
+			data={memberships}
+			loadMore={async (offset, limit) => {
+				const result = await api.get<Paginated<MembershipRead>, 'group'>(
+					`/memberships?offset=${offset}&limit=${limit}`,
+					{
+						sort: [{ field: 'accepted', direction: 'asc' }],
+						filters: [
+							{
+								field: 'group_id',
+								operator: '==',
+								value: group?.id
+							}
+						]
+					}
+				);
+				if (!result.success) {
+					notification(result.error);
+					return undefined;
+				}
+				return result.data;
+			}}
+			step={20}
+			selectable
+			onSelectionChange={handleSelectionChange}
+			rowBgClass="bg-inset/90"
+		/>
+	{/key}
 </div>
 
 {#snippet permissionItem(perm: Permission)}
@@ -369,7 +375,7 @@
 
 					if (result.success) {
 						notification('success', 'Member promoted successfully.');
-						window.location.reload();
+						invalidateAll();
 					} else {
 						notification(result.error);
 					}
@@ -402,14 +408,13 @@
 						? await leaveGroup()
 						: await kickMember(membership.user.id);
 					if (success) {
-						data.memberships = {
-							...data.memberships,
-							data: data.memberships.data.filter((m) => m.user.id !== membership.user.id)
-						};
-						if (showLeaveButton) {
-							notification('success', 'You have left the group.');
-							invalidateAll();
-						}
+						notification(
+							'success',
+							showLeaveButton
+								? 'You have left the group.'
+								: `Removed ${membership.user.username} from the group.`
+						);
+						invalidateAll();
 					}
 				}}
 				slideoutDirection="left"
