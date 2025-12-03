@@ -1,12 +1,24 @@
 import { api } from '$api/client';
-import type { CommentCreate, CommentEvent, CommentRead, DocumentRead, ViewMode } from '$api/types';
+import {
+	type UserRead,
+	type CommentCreate,
+	type CommentEvent,
+	type CommentRead,
+	type DocumentRead,
+	type ViewMode
+} from '$api/types';
 import type { Paginated } from '$api/pagination';
 import { notification } from '$lib/stores/notificationStore';
 import { annotationSchema, type Annotation } from '$types/pdf';
 import { SvelteMap } from 'svelte/reactivity';
 import { invalidateAll } from '$app/navigation';
 
-export type AuthorFilterState = 'include' | 'exclude';
+export interface FilterState<T = 'author' | 'tag'> {
+	type: T;
+	value?: 'include' | 'exclude';
+	id: number;
+	data: T extends 'author' ? { username: string } : { label: string; color: string };
+}
 export type TypedComment = Omit<CommentRead, 'annotation'> & { annotation: Annotation | null };
 
 export interface CommentState {
@@ -30,7 +42,7 @@ export interface CommentState {
 const createDocumentStore = () => {
 	const _comments = new SvelteMap<number, TypedComment>();
 	const commentStates: SvelteMap<number, CommentState> = new SvelteMap<number, CommentState>();
-	const authorFilterStates = new SvelteMap<number, AuthorFilterState>();
+	let filterStates = $state<FilterState[]>([]);
 	let showCursors: boolean = $state<boolean>(true);
 	let loadedDocument: DocumentRead | undefined = $state<DocumentRead | undefined>(undefined);
 	let documentScale: number = $state<number>(1);
@@ -78,7 +90,7 @@ const createDocumentStore = () => {
 				if (state) {
 					state.isHighlightHovered = false;
 					state.isCommentHovered = false;
-					// ! We must reset replies here because replies are deleted when setting to restricted so they need to 
+					// ! We must reset replies here because replies are deleted when setting to restricted so they need to
 					// ! be loaded back in and therefore they cant be expanded by default but we are still preserving most states like edit content etc
 					state.repliesExpanded = false;
 					state.replies = [];
@@ -107,19 +119,52 @@ const createDocumentStore = () => {
 		const allComments = [...topLevelComments.values()];
 		let filteredArray = allComments;
 
-		// Filter by author filter states (include/exclude/none)
-		const included = new Set<number>(
-			[...authorFilterStates.entries()].filter(([, v]) => v === 'include').map(([k]) => k)
+		// Build arrays of include/exclude filter states.
+		const includedFilters: FilterState[] = filterStates.filter(
+			(state) => state.value === 'include'
 		);
-		const excluded = new Set<number>(
-			[...authorFilterStates.entries()].filter(([, v]) => v === 'exclude').map(([k]) => k)
+		const excludedFilters: FilterState[] = filterStates.filter(
+			(state) => state.value === 'exclude'
 		);
 
-		// If there are include filters, show only those authors. Otherwise, if exclude filters exist, hide those authors.
-		if (included.size > 0) {
-			filteredArray = filteredArray.filter((c) => !!c.user?.id && included.has(c.user.id));
-		} else if (excluded.size > 0) {
-			filteredArray = filteredArray.filter((c) => !(c.user?.id && excluded.has(c.user.id)));
+		const includedAuthorIds: number[] = includedFilters
+			.filter((f) => f.type === 'author')
+			.map((f) => f.id);
+		const includedTagIds: number[] = includedFilters
+			.filter((f) => f.type === 'tag')
+			.map((f) => f.id);
+
+		const excludedAuthorIds: number[] = excludedFilters
+			.filter((f) => f.type === 'author')
+			.map((f) => f.id);
+		const excludedTagIds: number[] = excludedFilters
+			.filter((f) => f.type === 'tag')
+			.map((f) => f.id);
+
+		// Apply include filters: if any include filters exist, narrow to comments matching included authors/tags.
+		if (includedFilters.length > 0) {
+			if (includedAuthorIds.length > 0) {
+				filteredArray = filteredArray.filter(
+					(comment) => !!comment.user?.id && includedAuthorIds.includes(comment.user.id)
+				);
+			}
+			if (includedTagIds.length > 0) {
+				filteredArray = filteredArray.filter(
+					(comment) => !!comment.tags && comment.tags.some((t) => includedTagIds.includes(t.id))
+				);
+			}
+		} else if (excludedFilters.length > 0) {
+			// Apply exclude filters when no include filters present.
+			if (excludedAuthorIds.length > 0) {
+				filteredArray = filteredArray.filter(
+					(comment) => !(comment.user?.id && excludedAuthorIds.includes(comment.user.id))
+				);
+			}
+			if (excludedTagIds.length > 0) {
+				filteredArray = filteredArray.filter(
+					(comment) => !(comment.tags && comment.tags.some((t) => excludedTagIds.includes(t.id)))
+				);
+			}
 		}
 
 		// if a comment is excluded from view then it needs to have its hover state reset, everything else can be preserved for when it shows again
@@ -132,6 +177,16 @@ const createDocumentStore = () => {
 		}
 
 		return filteredArray;
+	});
+
+	const topLevelAuthors = $derived.by(() => {
+		const authors: UserRead[] = [];
+		for (const comment of topLevelComments.values()) {
+			if (comment.user && !authors.find((a) => a.id === comment.user!.id)) {
+				authors.push(comment.user);
+			}
+		}
+		return authors;
 	});
 
 	// Methods to update local comment data without API calls (on events)
@@ -372,15 +427,19 @@ const createDocumentStore = () => {
 		getComment: (commentId: number): TypedComment | undefined => {
 			return _comments.get(commentId);
 		},
-		/**
-		 * Reset interaction flags for all existing comment states.
-		 */
+		topLevelAuthors: topLevelAuthors,
 		// Comment subsets
 		all: new SvelteMap(_comments),
-		pinned: new SvelteMap(Array.from(commentStates.entries()).filter(([, state]) => state.isPinned)),
+		pinned: new SvelteMap(
+			Array.from(commentStates.entries()).filter(([, state]) => state.isPinned)
+		),
 		topLevelComments: filteredTopLevelComments,
-		editing: new SvelteMap(Array.from(commentStates.entries()).filter(([, state]) => state.isEditing)),
-		replying: new SvelteMap(Array.from(commentStates.entries()).filter(([, state]) => state.isReplying)),
+		editing: new SvelteMap(
+			Array.from(commentStates.entries()).filter(([, state]) => state.isEditing)
+		),
+		replying: new SvelteMap(
+			Array.from(commentStates.entries()).filter(([, state]) => state.isReplying)
+		),
 		highlightHovered: new SvelteMap(
 			Array.from(commentStates.entries()).filter(([, state]) => state.isHighlightHovered)
 		),
@@ -389,26 +448,69 @@ const createDocumentStore = () => {
 		)
 	});
 
+	/**
+	 * Simple getter for filters with overloaded return types.
+	 */
+	function getFilters(type: FilterState['type']): FilterState[];
+	function getFilters(type: FilterState['type'], id: number): FilterState | undefined;
+	function getFilters(
+		type: FilterState['type'],
+		id?: number
+	): FilterState | FilterState[] | undefined {
+		// Return a single filter when id is provided
+		if (id !== undefined) {
+			return filterStates.find((state) => state.type === type && state.id === id);
+		}
+		// Return all filters of the requested type when id is not provided
+		return filterStates.filter((state) => state.type === type);
+	}
+
+	function clearFilter(type?: FilterState['type']): void;
+	function clearFilter(type: FilterState['type'], id: number): void;
+	function clearFilter(type?: FilterState['type'], id?: number): void {
+		if (id !== undefined) {
+			// Remove specific filter
+			filterStates = filterStates.filter((state) => !(state.type === type && state.id === id));
+		} else if (type !== undefined) {
+			// Remove all filters of the given type
+			filterStates = filterStates.filter((state) => state.type !== type);
+		} else {
+			// Remove all filters
+			filterStates = [];
+		}
+	}
+
 	const filters = $derived({
-		toggleAuthorFilter: (userId: number): void => {
-			let state = authorFilterStates.get(userId);
-			if (!state) {
-				state = 'include';
-			} else if (state === 'include') {
-				state = 'exclude';
+		toggle: (filter: Omit<FilterState, 'value'>): void => {
+			const currentIndex = filterStates.findIndex((s) => s.id === filter.id && s.type === filter.type);
+			const current = filterStates[currentIndex];
+			let value: FilterState['value'] | undefined = current?.value;
+			if (!value) {
+				value = 'include';
+			} else if (value === 'include') {
+				value = 'exclude';
 			} else {
-				state = undefined;
+				value = undefined;
 			}
 
-			if (state) authorFilterStates.set(userId, state);
-			else authorFilterStates.delete(userId);
+			if (value === undefined) {
+				// Remove filter
+				filterStates.splice(
+					filterStates.findIndex((s) => s.id === filter.id && s.type === filter.type),
+					1
+				);
+			} else if (current) {
+				// Add or update filter
+				filterStates.splice(currentIndex, 1, { ...filter, value });
+			} else {
+				filterStates.push({ ...filter, value });
+			}
 		},
-		/** Clear all author filters (reset to none) */
-		clearAuthorFilter: (): void => {
-			authorFilterStates.clear();
-		},
-
-		authorFilters: authorFilterStates
+		clear: clearFilter,
+		get: getFilters,
+		get all() {
+			return filterStates;
+		}
 	});
 
 	const clearHighlightReferences = (): void => {
