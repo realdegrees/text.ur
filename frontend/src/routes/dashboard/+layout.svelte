@@ -60,7 +60,7 @@
 	</div>
 
 	<!-- right column (subpage content, scrollable) -->
-	<div class="h-full flex-1 overflow-y-auto p-4">
+	<div class="h-full flex-1 overflow-y-auto">
 		{@render children?.()}
 	</div>
 </div>

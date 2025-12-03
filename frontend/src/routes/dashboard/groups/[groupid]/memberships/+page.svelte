@@ -132,7 +132,7 @@
 	}
 </script>
 
-<div class="h-screen p-4">
+<div class="p-4">
 	<div class="mb-4 flex w-full flex-row items-center justify-between gap-2">
 		{#if sessionStore.validatePermissions(['add_members'])}
 			<!--INVITE-->
