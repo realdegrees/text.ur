@@ -11,6 +11,15 @@
 
 	let { viewerContainer }: { viewerContainer: HTMLElement } = $props();
 
+	const hexToRgba = (hex: string, alpha: number = 0.3): string => {
+		const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+		if (!result) return `rgba(255, 255, 0, ${alpha})`;
+		const r = parseInt(result[1], 16);
+		const g = parseInt(result[2], 16);
+		const b = parseInt(result[3], 16);
+		return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+	};
+
 	// Build a map of highlights per page
 	let highlightsByPage = $derived.by(() => {
 		const map = new SvelteMap<
@@ -21,6 +30,7 @@
 				annotation: Annotation;
 				state: CommentState;
 				key: string;
+				color: string;
 			}>
 		>();
 
@@ -30,6 +40,12 @@
 		}
 
 		for (const comment of documentStore.comments.topLevelComments) {
+			if (!comment.annotation?.boundingBoxes) continue;
+
+			// Use first tag's color if available, otherwise fall back to annotation color
+			const highlightColor =
+				comment.tags && comment.tags.length > 0 ? comment.tags[0].color : comment.annotation.color;
+
 			for (let idx = 0; idx < comment.annotation.boundingBoxes.length; idx++) {
 				const box = comment.annotation.boundingBoxes[idx];
 				const pageNum = box.pageNumber;
@@ -42,7 +58,8 @@
 							box,
 							state,
 							annotation: comment.annotation,
-							key: `${comment.id}-${idx}`
+							key: `${comment.id}-${idx}`,
+							color: hexToRgba(highlightColor)
 						}
 					]);
 				}
@@ -85,7 +102,7 @@
 
 			if (textLayerRect.width === 0 || textLayerRect.height === 0) continue;
 			for (const highlight of highlights) {
-				const { box, annotation, key, comment, state } = highlight;
+				const { box, key, comment, state, color } = highlight;
 
 				const left = box.x * textLayerRect.width;
 				const top = box.y * textLayerRect.height;
@@ -104,7 +121,7 @@
 					existingEl.style.top = `${top}px`;
 					existingEl.style.width = `${width}px`;
 					existingEl.style.height = `${height}px`;
-					existingEl.style.backgroundColor = annotation.color;
+					existingEl.style.backgroundColor = color;
 					existingEl.style.pointerEvents = 'auto';
 					existingEl.style.opacity = isVisible ? '1' : '0.4';
 					existingEl.dataset.commentId = String(comment.id);
@@ -123,7 +140,7 @@
 					top: ${top}px;
 					width: ${width}px;
 					height: ${height}px;
-					background-color: ${annotation.color};
+					background-color: ${color};
 					mix-blend-mode: multiply;
 					pointer-events: auto;
 					cursor: pointer;
@@ -135,8 +152,8 @@
 
 				// Create named listener functions for cleanup
 				const listeners = {
-					mouseenter: () => (state.isHighlightHovered = true),
-					mouseleave: () => (state.isHighlightHovered = false),
+					mouseenter: () => documentStore.setHighlightHoveredDebounced(comment.id, true),
+					mouseleave: () => documentStore.setHighlightHoveredDebounced(comment.id, false),
 					click: () => {
 						state.isPinned = !state.isPinned;
 					}

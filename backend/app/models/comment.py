@@ -8,6 +8,7 @@ from models.enums import Visibility
 
 if TYPE_CHECKING:
     from models.reaction import ReactionRead
+    from models.tag import TagRead
     from models.user import UserRead
 
 # TODO maybe move these into config
@@ -53,6 +54,7 @@ class CommentRead(BaseModel):
     content: str | None
     num_replies: int
     reactions: list["ReactionRead"]
+    tags: list["TagRead"]
 
 class CommentUpdate(SQLModel):
     visibility: Visibility | None = None

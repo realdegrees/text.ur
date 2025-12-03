@@ -23,6 +23,8 @@ export type AppErrorCode =
   | "sharelink_expired"
   | "membership_not_found"
   | "owner_cannot_leave_group"
+  | "cannot_remove_permission_reason_default_group"
+  | "cannot_remove_permission_reason_sharelink"
   | "username_taken"
   | "email_taken"
   | "sharelink_anonymous_disabled";
@@ -56,7 +58,8 @@ export type Permission =
   | "view_restricted_documents"
   | "delete_documents"
   | "remove_reactions"
-  | "add_reactions";
+  | "add_reactions"
+  | "manage_tags";
 
 /**
  * Base class for all custom exceptions in the application.
@@ -116,6 +119,7 @@ export interface CommentRead {
   content: string | null;
   num_replies: number;
   reactions: ReactionRead[];
+  tags: TagRead[];
 }
 export interface UserRead {
   created_at?: string;
@@ -130,6 +134,18 @@ export interface ReactionRead {
   type: ReactionType;
   user: UserRead;
   comment_id: number;
+}
+/**
+ * Model for reading tag data.
+ */
+export interface TagRead {
+  created_at?: string;
+  updated_at?: string;
+  id: number;
+  document_id: string;
+  label: string;
+  description: string | null;
+  color: string;
 }
 export interface CommentFilter {
   visibility: Visibility;
@@ -181,6 +197,7 @@ export interface DocumentRead {
   group_id: string;
   visibility: Visibility;
   view_mode: ViewMode;
+  tags: TagRead[];
 }
 export interface DocumentTransfer {
   group_id: string;
@@ -362,6 +379,22 @@ export interface ShareLinkUpdate {
 export interface Sort {
   field: string;
   direction: "asc" | "desc";
+}
+/**
+ * Model for creating a new tag.
+ */
+export interface TagCreate {
+  label: string;
+  description?: string | null;
+  color: string;
+}
+/**
+ * Model for updating an existing tag.
+ */
+export interface TagUpdate {
+  label?: string | null;
+  description?: string | null;
+  color?: string | null;
 }
 /**
  * A token object that contains the access and refresh tokens.

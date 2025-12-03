@@ -172,6 +172,8 @@ class Document(BaseModel, table=True):
 
     comments: list["Comment"] = Relationship(
         back_populates="document", sa_relationship_kwargs={"lazy": "noload", "cascade": "all, delete-orphan", "passive_deletes": True})
+    tags: list["Tag"] = Relationship(
+        back_populates="document", sa_relationship_kwargs={"lazy": "selectin", "cascade": "all, delete-orphan", "passive_deletes": True})
 
 
 class Comment(BaseModel, table=True):
@@ -205,6 +207,19 @@ class Comment(BaseModel, table=True):
         back_populates="comment",
         sa_relationship_kwargs={
             "lazy": "noload", "cascade": "all, delete-orphan", "passive_deletes": True}
+    )
+    comment_tags: list["CommentTag"] = Relationship(
+        back_populates="comment",
+        sa_relationship_kwargs={
+            "lazy": "selectin", "cascade": "all, delete-orphan", "passive_deletes": True}
+    )
+    tags: list["Tag"] = Relationship(
+        back_populates=None,
+        sa_relationship_kwargs={
+            "secondary": "commenttag",
+            "viewonly": True,
+            "lazy": "selectin"
+        }
     )
 
     num_replies: ClassVar[int]
@@ -240,6 +255,43 @@ class Reaction(BaseModel, table=True):
 
     user: "User" = Relationship(back_populates="reactions")
     comment: "Comment" = Relationship(back_populates="reactions")
+
+
+class Tag(BaseModel, table=True):
+    """Tag entity for categorizing comments within a document."""
+
+    id: int = Field(default=None, primary_key=True)
+    document_id: str = Field(foreign_key="document.id", ondelete="CASCADE")
+    label: str = Field(max_length=50)
+    description: str | None = Field(nullable=True, default=None, max_length=200)
+    color: str = Field(max_length=7)  # Hex color format: #RRGGBB
+
+    document: "Document" = Relationship(back_populates="tags")
+    comment_tags: list["CommentTag"] = Relationship(
+        back_populates="tag",
+        sa_relationship_kwargs={
+            "lazy": "noload", "cascade": "all, delete-orphan", "passive_deletes": True}
+    )
+    comments: list["Comment"] = Relationship(
+        back_populates=None,
+        sa_relationship_kwargs={
+            "secondary": "commenttag",
+            "viewonly": True,
+            "lazy": "noload"
+        }
+    )
+
+
+class CommentTag(BaseModel, table=True):
+    """Association table for comment-tag relationships."""
+
+    comment_id: int = Field(foreign_key="comment.id",
+                            ondelete="CASCADE", primary_key=True)
+    tag_id: int = Field(foreign_key="tag.id",
+                        ondelete="CASCADE", primary_key=True)
+
+    comment: "Comment" = Relationship(back_populates="comment_tags")
+    tag: "Tag" = Relationship(back_populates="comment_tags")
 
 
 class ShareLink(BaseModel, table=True):

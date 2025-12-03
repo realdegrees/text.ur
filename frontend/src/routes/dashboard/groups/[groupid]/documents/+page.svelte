@@ -3,6 +3,7 @@
 	import type { DocumentRead } from '$api/types';
 	import DocumentIcon from '~icons/material-symbols/description-outline';
 	import AddIcon from '~icons/material-symbols/add-2-rounded';
+	import EditIcon from '~icons/material-symbols/edit-outline';
 	import { api } from '$api/client';
 	import type { Paginated } from '$api/pagination';
 	import { sessionStore } from '$lib/runes/session.svelte.js';
@@ -54,7 +55,8 @@
 					width: '1fr',
 					snippet: dateSnippet
 				},
-				...(sessionStore.validatePermissions(['delete_documents'])
+				...(sessionStore.validatePermissions(['delete_documents']) ||
+				sessionStore.validatePermissions(['upload_documents'])
 					? [
 							{
 								label: 'Actions',
@@ -103,10 +105,7 @@
 
 {#snippet visibilitySnippet(document: DocumentRead)}
 	<div class="flex w-full items-center justify-start">
-		<DocumentVisibility
-			{document}
-			canEdit={sessionStore.validatePermissions(['upload_documents'])}
-		/>
+		<DocumentVisibility {document} canEdit={false} />
 	</div>
 {/snippet}
 
@@ -120,7 +119,16 @@
 {/snippet}
 
 {#snippet actionsSnippet(document: DocumentRead)}
-	<div class="flex w-full flex-row items-center justify-end">
+	<div class="flex w-full flex-row items-center justify-end gap-2">
+		{#if sessionStore.validatePermissions(['upload_documents'])}
+			<button
+				onclick={() => goto(`/dashboard/groups/${group.id}/documents/${document.id}/settings`)}
+				class="transition hover:text-primary"
+				aria-label="Edit document settings"
+			>
+				<EditIcon class="h-5 w-5" />
+			</button>
+		{/if}
 		{#if sessionStore.validatePermissions(['delete_documents'])}
 			<ConfirmButton
 				onConfirm={async () => {

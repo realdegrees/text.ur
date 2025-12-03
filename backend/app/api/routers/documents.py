@@ -404,3 +404,23 @@ async def delete_document(
 
     return Response(status_code=204)
 
+
+@router.delete("/{document_id}/clear")
+async def clear_document_comments(
+    db: Database,
+    user: User = Authenticate(guards=[Guard.document_access(require_permissions={Permission.ADMINISTRATOR})]),
+    document: Document = Resource(Document, param_alias="document_id"),
+) -> Response:
+    """Clear all comments from a document. Only group owners and administrators can perform this action."""
+    # Delete all comments for this document (cascade will handle replies)
+    comments = db.exec(
+        select(Comment).where(Comment.document_id == document.id)
+    ).all()
+
+    for comment in comments:
+        db.delete(comment)
+
+    db.commit()
+
+    return Response(status_code=204)
+

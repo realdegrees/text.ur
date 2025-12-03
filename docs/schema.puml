@@ -14,31 +14,35 @@ class User {
     - username : string [UNIQUE, INDEXED]
     - first_name : string [NULLABLE]
     - last_name : string [NULLABLE]
-    - password : string
-    - email : string [UNIQUE, INDEXED]
-    - verified : bool [DEFAULT: false]
-    - secret : string [DEFAULT: gen_random_uuid]
+    - password : string [NULLABLE]
+    - email : string [NULLABLE, UNIQUE, INDEXED]
+    - verified : bool
+    - is_guest : bool
+    - secret : string
     - created_at : datetime
     - updated_at : datetime
     ____
         **Relationships**
-        # documents: list[Document]
         # memberships: list[Membership]
-        # annotations: list[Annotation]
+        # comments: list[Comment]
         # groups: list[Group]
+        # reactions: list[Reaction]
+        # share_links: list[ShareLink]
 }
 
 class Group {
-    - id : int [PK]
+    - id : string [PK, INDEXED]
     - name : string [UNIQUE, INDEXED]
-    - secret : string [DEFAULT: gen_random_uuid]
+    - secret : string
+    - default_permissions : list[Permission]
     - created_at : datetime
     - updated_at : datetime
     ____
         **Relationships**
-        # owner: User
+        # owner: User [nullable]
         # documents: list[Document]
         # memberships: list[Membership]
+        # share_links: list[ShareLink]
     ____
         **Column Properties**
         # member_count: int
@@ -60,41 +64,45 @@ enum Permission {
 }
 
 enum ViewMode {
-    private
-    anonymous
+    restricted
     public
 }
 
 class Membership {
     - user_id : int [PK, FK]
-    - group_id : int [PK, FK]
-    - permissions: set[Permission]
+    - group_id : string [PK, FK]
+    - permissions : list[Permission]
+    - is_owner : bool
+    - sharelink_id : int [FK, NULLABLE]
+    - accepted : bool
     - created_at : datetime
     - updated_at : datetime
     ____
         **Relationships**
         # user: User
         # group: Group
+        # share_link: ShareLink [nullable]
+    ____
+        **Column Properties**
+        # is_expired: bool
 }
 
 class Document {
-    - id : int [PK]
-    - s3_key : string
+    - id : string [PK, INDEXED]
+    - group_id : string [FK, NULLABLE]
+    - name : string
+    - s3_key : string [UNIQUE, INDEXED]
     - size_bytes : int
+    - visibility : Visibility
     - view_mode : ViewMode
-    - user_id : int [FK, NULLABLE]
-    - group_id : int [FK, NULLABLE]
     - secret : uuid
     - created_at : datetime
     - updated_at : datetime
     ____
         **Relationships**
-        # user: User [nullable]
-        # group: Group [nullable]
-        # annotations: list[Annotation]
-    ____
-        **Constraints**
-        # owner_xor: user_id XOR group_id
+        # group: Group
+        # comments: list[Comment]
+        # tags: list[Tag]
 }
 
 enum Visibility {
@@ -103,59 +111,114 @@ enum Visibility {
     public
 }
 
-class Annotation {
-    - id : int [PK]
-    - document_id : int [FK]
-    - comment_id : int [FK]
-    - user_id : int [FK, NULLABLE]
-    - anon_id : uuid
-    - anon_alias : string [NULLABLE]
-    - meta_data : jsonb
-    - created_at : datetime
-    - updated_at : datetime
-    ____
-        **Relationships**
-        # document: Document
-        # user: User [nullable]
-        # comment: Comment
-}
-
 class Comment {
     - id : int [PK]
-    - visibility : Visibility
-    - document_id : int [FK]
-    - annotation_id : int [FK, NULLABLE]
-    - user_id : int [FK, NULLABLE]
-    - anon_id : uuid
-    - endorsements : int
-    - anon_alias : string [NULLABLE]
+    - document_id : string [FK]
+    - user_id : int [FK]
     - parent_id : int [FK, NULLABLE]
+    - visibility : Visibility
     - content : string [NULLABLE]
+    - annotation : jsonb
     - created_at : datetime
     - updated_at : datetime
     ____
         **Relationships**
         # document: Document
-        # annotation: Annotation [nullable]
         # user: User [nullable]
         # parent: Comment [nullable]
         # replies: list[Comment]
+        # reactions: list[Reaction]
+        # tags: list[Tag]
+    ____
+        **Column Properties**
+        # num_replies: int
+}
+
+class Tag {
+    - id : int [PK]
+    - document_id : string [FK]
+    - label : string
+    - description : string [NULLABLE]
+    - color : string
+    - created_at : datetime
+    - updated_at : datetime
+    ____
+        **Relationships**
+        # group: Group
+        # comments: list[Comment]
+}
+
+class CommentTag {
+    - comment_id : int [PK, FK]
+    - tag_id : int [PK, FK]
+    - created_at : datetime
+    - updated_at : datetime
+    ____
+        **Relationships**
+        # comment: Comment
+        # tag: Tag
+}
+
+enum ReactionType {
+    upvote
+    downvote
+}
+
+class Reaction {
+    - user_id : int [PK, FK]
+    - comment_id : int [PK, FK]
+    - type : ReactionType
+    - created_at : datetime
+    - updated_at : datetime
+    ____
+        **Relationships**
+        # user: User
+        # comment: Comment
+}
+
+class ShareLink {
+    - id : int [PK]
+    - group_id : string [FK]
+    - author_id : int [FK, NULLABLE]
+    - permissions : list[Permission]
+    - allow_anonymous_access : bool [DEFAULT: false]
+    - token : string [UNIQUE, INDEXED]
+    - expires_at : datetime [NULLABLE]
+    - label : string [NULLABLE]
+    - created_at : datetime
+    - updated_at : datetime
+    ____
+        **Relationships**
+        # group: Group
+        # author: User [nullable]
+        # memberships: list[Membership]
+    ____
+        **Column Properties**
+        # is_expired: bool
+        # num_memberships: int
 }
 
 ' ========== RELATIONSHIPS ==========
 
-User -d-> Document
 User -r-> Membership
 
 Group -u-> Membership
-Group -l-> Document
+Group -d-> Document
+Group -r-> ShareLink
+Document -r-> Tag
 
+Document -d-> Comment
 
+Comment -d-> Reaction
+Comment -r-> CommentTag
+Membership -r-> ShareLink
+
+Tag -d-> CommentTag
+
+' Layout hints
+Reaction -l[hidden]-> ReactionType
 Membership -[hidden]r-> Permission
-
 Comment -[hidden]l-> Visibility
 Document -[hidden]l-> ViewMode
-Annotation <-l- Comment
-Document -d-> Comment
 
 @enduml

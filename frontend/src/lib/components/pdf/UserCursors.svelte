@@ -15,12 +15,12 @@
 
 	// Apply author filters to cursors (same logic as AnnotationLayer)
 	let filteredCursorsMap = $derived.by(() => {
-		const states = documentStore.filters.authorFilters;
+		const states = documentStore.filters.get('author');
 		const included = new Set<number>(
-			[...states.entries()].filter(([, v]) => v === 'include').map(([k]) => k)
+			states.filter((state) => state.value === 'include').map((state) => state.id)
 		);
 		const excluded = new Set<number>(
-			[...states.entries()].filter(([, v]) => v === 'exclude').map(([k]) => k)
+			states.filter((state) => state.value === 'exclude').map((state) => state.id)
 		);
 
 		// No filters applied

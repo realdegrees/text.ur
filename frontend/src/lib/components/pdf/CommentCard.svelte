@@ -1,17 +1,20 @@
 <script lang="ts">
 	import { documentStore, type TypedComment } from '$lib/runes/document.svelte.js';
 	import { sessionStore } from '$lib/runes/session.svelte.js';
+	import type { TagRead } from '$api/types';
 	import CommentCard from './CommentCard.svelte';
 	import CommentVisibility from './CommentVisibility.svelte';
 	import ConfirmButton from '$lib/components/ConfirmButton.svelte';
 	import MarkdownTextEditor from './MarkdownTextEditor.svelte';
 	import MarkdownRenderer from '$lib/components/MarkdownRenderer.svelte';
+	import CommentTagSelector from './CommentTagSelector.svelte';
 	import ReplyIcon from '~icons/material-symbols/reply';
 	import EditIcon from '~icons/material-symbols/edit-outline';
 	import DeleteIcon from '~icons/material-symbols/delete-outline';
 	import CheckIcon from '~icons/material-symbols/check';
 	import CloseIcon from '~icons/material-symbols/close';
 	import ExpandIcon from '~icons/material-symbols/expand-more';
+	import TagIcon from '~icons/mdi/tag-search-outline';
 	import { formatDateTime } from '$lib/util/dateFormat';
 
 	interface Props {
@@ -53,6 +56,10 @@
 	// State
 	let isSubmitting = $state(false);
 	let isLoadingReplies = $state(false);
+	let editingTags = $state<TagRead[]>([]);
+	let isQuoteExpanded = $state(false);
+	let quoteRef: HTMLParagraphElement | null = $state(null);
+	let hasQuoteOverflow = $state(false);
 
 	let hasUnloadedReplies = $derived(
 		comment?.num_replies > 0 &&
@@ -66,6 +73,26 @@
 	let canReply = $derived(
 		sessionStore.routeMembership ? sessionStore.validatePermissions(['add_comments']) : false
 	);
+
+	// Check if content or tags have changed
+	let hasChanges = $derived.by(() => {
+		if (!commentState) return false;
+		const contentChanged = commentState.editInputContent?.trim() !== (comment.content || '');
+
+		// Check if tags have been added/removed
+		const originalTagIds = new Set(comment.tags.map((t) => t.id));
+		const editingTagIds = new Set(editingTags.map((t) => t.id));
+		const tagsAddedOrRemoved =
+			originalTagIds.size !== editingTagIds.size ||
+			[...originalTagIds].some((id) => !editingTagIds.has(id));
+
+		// Check if tag order has changed
+		const orderChanged =
+			comment.tags.length === editingTags.length &&
+			comment.tags.some((tag, idx) => tag.id !== editingTags[idx]?.id);
+
+		return contentChanged || tagsAddedOrRemoved || orderChanged;
+	});
 
 	// Handlers
 
@@ -87,15 +114,42 @@
 	};
 
 	const handleEdit = async () => {
-		if (!commentState?.editInputContent?.trim() || isSubmitting) return;
+		if (!commentState) return;
 		isSubmitting = true;
 		try {
 			comment.content = commentState.editInputContent.trim();
 			await documentStore.comments.update(comment);
+
+			// Check if tags or their order have changed
+			const originalTagIds = comment.tags.map((t) => t.id);
+			const editingTagIds = editingTags.map((t) => t.id);
+			const tagsChanged =
+				originalTagIds.length !== editingTagIds.length ||
+				originalTagIds.some((id, idx) => id !== editingTagIds[idx]);
+
+			if (tagsChanged) {
+				// Remove all existing tags
+				for (const tag of comment.tags) {
+					await documentStore.comments.removeTag(comment.id, tag.id);
+				}
+
+				// Add tags in the new order
+				for (const tag of editingTags) {
+					await documentStore.comments.addTag(comment.id, tag.id);
+				}
+			}
+
 			commentState.isEditing = false;
 		} finally {
 			isSubmitting = false;
 		}
+	};
+
+	const handleCancelEdit = () => {
+		if (!commentState) return;
+		commentState.isEditing = false;
+		commentState.editInputContent = comment.content ?? '';
+		editingTags = [...comment.tags];
 	};
 
 	const handleDeleteConfirm = async () => {
@@ -119,10 +173,6 @@
 	};
 
 	const handleKeydown = (e: KeyboardEvent) => {
-		if (e.key === 'Enter' && !e.shiftKey) {
-			e.preventDefault();
-			handleReply();
-		}
 		if (e.key === 'Escape' && commentState) {
 			commentState.isReplying = false;
 			commentState.replyInputContent = '';
@@ -130,14 +180,30 @@
 	};
 
 	const handleEditKeydown = (e: KeyboardEvent) => {
-		if (e.key === 'Enter' && !e.shiftKey) {
-			e.preventDefault();
-			handleEdit();
-		}
 		if (e.key === 'Escape' && commentState) {
-			commentState.isEditing = false;
+			handleCancelEdit();
 		}
 	};
+
+	const handleAddTag = (tag: TagRead) => {
+		if (!editingTags.find((t) => t.id === tag.id)) {
+			editingTags = [...editingTags, tag];
+		}
+	};
+
+	const handleRemoveTag = (tag: TagRead) => {
+		editingTags = editingTags.filter((t) => t.id !== tag.id);
+	};
+
+	const availableTags = $derived(documentStore.loadedDocument?.tags ?? []);
+
+	// Check if quote text is truncated and has overflow
+	$effect(() => {
+		if (quoteRef && !isQuoteExpanded) {
+			// Check if content is being clamped
+			hasQuoteOverflow = quoteRef.scrollHeight > quoteRef.clientHeight;
+		}
+	});
 
 	// $effect(() => {
 	// 	if (commentState?.replyInputContent !== replyContent)
@@ -157,6 +223,7 @@
 				: 'p-0.5'} transition-colors"
 			onclick={(e) => {
 				e.stopPropagation();
+				editingTags = [...comment.tags];
 				commentState.isEditing = true;
 			}}
 			title="Edit"
@@ -213,7 +280,7 @@
 	<!-- Content area -->
 	<div class={isTopLevel ? 'p-3' : ''}>
 		<!-- Nested header (username + date inline) -->
-		<div class="flex items-center justify-between">
+		<div class="mb-1 flex items-center justify-between">
 			<div class="flex items-center gap-2">
 				{#if !isTopLevel}
 					<span class="text-xs font-medium text-text/70"
@@ -235,10 +302,64 @@
 			{/if}
 		</div>
 
+		<!-- Tags section for top-level author comments -->
+		{#if isTopLevel}
+			{#if commentState && commentState.isEditing}
+				<!-- Full tag selector when editing -->
+				<div class="mb-2">
+					<CommentTagSelector
+						bind:selectedTags={editingTags}
+						{availableTags}
+						onAdd={handleAddTag}
+						onRemove={handleRemoveTag}
+						disabled={isSubmitting}
+					/>
+				</div>
+			{:else if comment.tags && comment.tags.length > 0}
+				<!-- Tag dots when not editing -->
+				<div class="group/tags mb-2 flex w-fit flex-wrap items-center gap-1.5">
+					<TagIcon class="h-4 w-4" />
+					{#each comment.tags as tag (tag.id)}
+						<div
+							class="relative flex overflow-hidden rounded-full transition-all duration-300 ease-in-out {commentState?.isHighlightHovered
+								? 'h-5 w-auto px-2 py-1'
+								: 'h-2 w-2 group-hover/tags:h-5 group-hover/tags:w-auto group-hover/tags:px-2 group-hover/tags:py-1'} items-center justify-center"
+						>
+							<div class="absolute inset-0" style="background-color: {tag.color};"></div>
+							<p
+								class="relative z-10 cursor-default text-[12px] font-medium whitespace-nowrap text-text transition-opacity duration-300 {commentState?.isHighlightHovered
+									? 'opacity-100'
+									: 'opacity-0 group-hover/tags:opacity-100'}"
+								style="text-shadow: 0 0px 4px rgba(0, 0, 0, 0.9);"
+							>
+								{tag.label}
+							</p>
+						</div>
+					{/each}
+				</div>
+			{:else}
+				<p class="mb-2 text-[11px] text-text/40 italic">No tags</p>
+			{/if}
+		{/if}
+
 		<!-- Annotation quote (top-level only) -->
 		{#if comment.annotation}
-			<div class="mb-3 border-l-2 border-primary/50 bg-primary/5 py-1.5 pr-2 pl-2.5">
-				<p class="line-clamp-2 text-xs text-text/60 italic">
+			<!-- svelte-ignore a11y_click_events_have_key_events -->
+			<!-- svelte-ignore a11y_no_static_element_interactions -->
+			<div
+				class="mb-3 border-l-2 border-primary/50 bg-primary/5 py-1.5 pr-2 pl-2.5 {hasQuoteOverflow
+					? 'cursor-pointer transition-colors hover:bg-primary/10'
+					: ''}"
+				onclick={() => {
+					if (hasQuoteOverflow) {
+						isQuoteExpanded = !isQuoteExpanded;
+					}
+				}}
+			>
+				<p
+					bind:this={quoteRef}
+					class="text-xs text-text/60 italic {isQuoteExpanded ? '' : 'line-clamp-2'}"
+				>
 					"{comment.annotation.text}"
 				</p>
 			</div>
@@ -254,18 +375,13 @@
 					disabled={isSubmitting}
 					autofocus={true}
 					onkeydown={handleEditKeydown}
-					onblur={() => {
-						if (commentState.editInputContent.trim().length === 0) {
-							commentState.isEditing = false;
-						}
-					}}
 				/>
 				<div class="{sizes.mt} flex justify-end {sizes.gap}">
 					<button
 						class="flex items-center gap-1 rounded {sizes.buttonPx} text-xs text-text/50 transition-colors hover:bg-text/10 hover:text-text/70"
 						onclick={(e) => {
 							e.stopPropagation();
-							commentState.isEditing = false;
+							handleCancelEdit();
 						}}
 						disabled={isSubmitting}
 					>
@@ -277,7 +393,7 @@
 							e.stopPropagation();
 							handleEdit();
 						}}
-						disabled={!commentState.editInputContent.trim() || isSubmitting}
+						disabled={!hasChanges || isSubmitting}
 					>
 						<CheckIcon class={sizes.icon} />
 						{isSubmitting ? 'Saving...' : 'Save'}

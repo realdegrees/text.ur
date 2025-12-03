@@ -4,7 +4,8 @@ import type { DocumentRead } from '$api/types';
 import { notification } from '$lib/stores/notificationStore';
 import type { LayoutLoad } from './$types';
 
-export const load: LayoutLoad = async ({ fetch, params, parent }) => {
+export const load: LayoutLoad = async ({ depends, fetch, params, parent }) => {
+	depends('app:documents');
 	const data = await parent();
 
 	// Fetch documents for this group

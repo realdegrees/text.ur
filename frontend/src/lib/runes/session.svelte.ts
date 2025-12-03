@@ -28,6 +28,7 @@ const createSessionStore = () => {
 		if (Array.isArray(requiredPermissions)) {
 			// Default behavior: all permissions must be present (AND logic)
 			if (
+				!requiredPermissions.length ||
 				!requiredPermissions.every((permission) =>
 					currentMembership?.permissions.includes(permission)
 				)
@@ -41,7 +42,10 @@ const createSessionStore = () => {
 			const { and, or } = requiredPermissions;
 
 			// Check AND conditions
-			if (and && !and.every((permission) => currentMembership?.permissions.includes(permission))) {
+			if (
+				!and?.length ||
+				!and.every((permission) => currentMembership?.permissions.includes(permission))
+			) {
 				if (redirectUrl) {
 					redirect(303, redirectUrl);
 				}
@@ -49,7 +53,10 @@ const createSessionStore = () => {
 			}
 
 			// Check OR conditions
-			if (or && !or.some((permission) => currentMembership?.permissions.includes(permission))) {
+			if (
+				!or?.length ||
+				!or.some((permission) => currentMembership?.permissions.includes(permission))
+			) {
 				if (redirectUrl) {
 					redirect(303, redirectUrl);
 				}

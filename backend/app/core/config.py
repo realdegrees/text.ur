@@ -99,3 +99,7 @@ COOKIE_SAMESITE = os.getenv(
     "COOKIE_SAMESITE", "strict"
     # 'none' with different frontend/backend origins; 'strict' with same origin (reverse proxy)
 )
+
+# TAGS
+MAX_TAGS_PER_DOCUMENT = int(os.getenv("MAX_TAGS_PER_DOCUMENT", 50))
+MAX_TAGS_PER_COMMENT = int(os.getenv("MAX_TAGS_PER_COMMENT", 15))

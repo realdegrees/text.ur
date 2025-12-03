@@ -94,7 +94,21 @@ async def update_group(
     group.sqlmodel_update(group_update.model_dump(exclude_unset=True))
 
     db.commit()
-    db.refresh(group)
+    
+    # if default permissions were changed, update all existing memberships to include at least those permissions
+    if group_update.default_permissions is not None:
+        memberships_missing_permissions = db.exec(
+            select(Membership).where(
+                Membership.group_id == group.id,
+                ~Membership.permissions.contains(group_update.default_permissions)
+            )
+        ).all()
+        for membership in memberships_missing_permissions:
+            membership.permissions = list(
+                set(membership.permissions).union(set(group_update.default_permissions))
+            )
+            db.add(membership)
+        db.commit()
 
     return group
 
