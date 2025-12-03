@@ -179,8 +179,8 @@
 			<div class="mt-8 flex flex-col gap-4 rounded-md border border-red-500/30 bg-red-500/5 p-4">
 				<h2 class="text-lg font-semibold text-red-500">Danger Zone</h2>
 				<p class="text-sm text-text/70">
-					Permanently delete all comments and annotations from this document. This action cannot
-					be undone.
+					Permanently delete all comments and annotations from this document. This action cannot be
+					undone.
 				</p>
 
 				<ConfirmButton disabled={isClearing} onConfirm={clearDocument}>

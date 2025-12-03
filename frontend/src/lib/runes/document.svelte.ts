@@ -482,7 +482,9 @@ const createDocumentStore = () => {
 
 	const filters = $derived({
 		toggle: (filter: Omit<FilterState, 'value'>): void => {
-			const currentIndex = filterStates.findIndex((s) => s.id === filter.id && s.type === filter.type);
+			const currentIndex = filterStates.findIndex(
+				(s) => s.id === filter.id && s.type === filter.type
+			);
 			const current = filterStates[currentIndex];
 			let value: FilterState['value'] | undefined = current?.value;
 			if (!value) {

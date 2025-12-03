@@ -113,13 +113,13 @@
 </script>
 
 <div
-	class="no-scrollbar border-text/10 bg-inset flex shrink-0 flex-col overflow-y-auto overflow-x-hidden border-r transition-all duration-200 {isExpanded
+	class="no-scrollbar flex shrink-0 flex-col overflow-x-hidden overflow-y-auto border-r border-text/10 bg-inset transition-all duration-200 {isExpanded
 		? 'w-40'
 		: 'w-12'}"
 >
 	<!-- Expand/Collapse Button -->
 	<button
-		class="border-text/10 text-text/50 hover:bg-text/5 hover:text-text/70 flex items-center justify-center gap-2 border-b p-2 transition-colors"
+		class="flex items-center justify-center gap-2 border-b border-text/10 p-2 text-text/50 transition-colors hover:bg-text/5 hover:text-text/70"
 		onclick={() => (isExpanded = !isExpanded)}
 		title={isExpanded ? 'Collapse' : 'Expand'}
 	>
@@ -158,7 +158,7 @@
 			</button>
 		</div>
 
-		<div class="bg-text/20 my-1 h-px w-full"></div>
+		<div class="my-1 h-px w-full bg-text/20"></div>
 
 		<button
 			class="{buttonClass} {isExpanded ? 'w-full justify-start' : ''}"
@@ -171,7 +171,7 @@
 			</span>
 		</button>
 
-		<div class="bg-text/20 my-1 h-px w-full"></div>
+		<div class="my-1 h-px w-full bg-text/20"></div>
 
 		{#if numPages > 1}
 			<!-- Page Navigation -->
@@ -184,7 +184,7 @@
 				>
 					<ChevronUpIcon class="h-5 w-5" />
 				</button>
-				<span class="text-text/70 text-xs {isExpanded ? 'mx-2' : ''}">{pageNumber}/{numPages}</span>
+				<span class="text-xs text-text/70 {isExpanded ? 'mx-2' : ''}">{pageNumber}/{numPages}</span>
 				<button
 					class="{buttonClass} {isExpanded ? '' : ''}"
 					onclick={onNextPage}
@@ -195,13 +195,13 @@
 				</button>
 			</div>
 
-			<div class="bg-text/20 my-1 h-px w-full"></div>
+			<div class="my-1 h-px w-full bg-text/20"></div>
 		{/if}
 
 		<!-- View Mode Selector (admin/owner only) -->
 		<ViewModeSelector {isExpanded} />
 
-		<div class="bg-text/20 my-1 h-px w-full"></div>
+		<div class="my-1 h-px w-full bg-text/20"></div>
 
 		<!-- Other Cursors Toggle -->
 		<button
@@ -219,16 +219,16 @@
 			</span>
 		</button>
 
-		<div class="bg-text/20 my-1 h-px w-full"></div>
+		<div class="my-1 h-px w-full bg-text/20"></div>
 
 		{#snippet userFilterItem(filter: FilterState<'author'>, compact: boolean)}
 			{@const isSessionUser = filter.id === sessionStore.currentUser?.id}
 			<div class="flex items-center gap-2">
 				{#if isSessionUser}
-					<PersonIcon class="text-text/70 h-7 w-7 shrink-0 rounded-full" />
+					<PersonIcon class="h-7 w-7 shrink-0 rounded-full text-text/70" />
 				{:else}
 					<div
-						class="text-text flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-medium {getUserColor(
+						class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-medium text-text {getUserColor(
 							filter.id
 						)}"
 					>
@@ -236,14 +236,14 @@
 					</div>
 				{/if}
 				{#if !compact}
-					<span class="text-text/70 truncate text-xs"
+					<span class="truncate text-xs text-text/70"
 						>{filter.data.username} {isSessionUser ? '(You)' : ''}</span
 					>
 				{/if}
 			</div>
 		{/snippet}
 
-		<div class="flex items-center justify-between w-full gap-2 p-1">
+		<div class="flex w-full items-center justify-between gap-2 p-1">
 			<p class="text-text/80">Filters</p>
 			{#if anyFilterActive}
 				<button
@@ -255,7 +255,7 @@
 					in:scale
 					out:scale
 				>
-					<ClearFilterIcon class="text-text/50 hover:text-text/70 h-5 w-5" />
+					<ClearFilterIcon class="h-5 w-5 text-text/50 hover:text-text/70" />
 				</button>
 			{/if}
 		</div>
@@ -282,10 +282,10 @@
 			{#snippet item(filter, compact)}
 				<div class="flex items-center gap-2">
 					<span
-						class="text-text/70 h-4 w-4 truncate rounded-full text-xs"
+						class="h-4 w-4 truncate rounded-full text-xs text-text/70"
 						style="background-color: {filter.data.color}"
 					></span>
-					<p class="text-md whitespace-nowrap truncate">
+					<p class="text-md truncate whitespace-nowrap">
 						{compact ? filter.data.label.slice(0, 2).toUpperCase() : filter.data.label}
 					</p>
 				</div>

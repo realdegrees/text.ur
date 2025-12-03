@@ -6,6 +6,7 @@ from models.base import BaseModel
 
 class TagCreate(SQLModel):
     """Model for creating a new tag."""
+
     label: str
     description: str | None = None
     color: str
@@ -20,13 +21,14 @@ class TagCreate(SQLModel):
             raise ValueError('Color must be in format #RRGGBB')
         try:
             int(v[1:], 16)
-        except ValueError:
-            raise ValueError('Color must be a valid hex code')
+        except ValueError as e:
+            raise ValueError('Color must be a valid hex code') from e
         return v.upper()
 
 
 class TagUpdate(SQLModel):
     """Model for updating an existing tag."""
+
     label: str | None = None
     description: str | None = None
     color: str | None = None
@@ -43,8 +45,8 @@ class TagUpdate(SQLModel):
             raise ValueError('Color must be in format #RRGGBB')
         try:
             int(v[1:], 16)
-        except ValueError:
-            raise ValueError('Color must be a valid hex code')
+        except ValueError as e:
+            raise ValueError('Color must be a valid hex code') from e
         return v.upper()
 
 

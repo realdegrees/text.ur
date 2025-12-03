@@ -56,17 +56,21 @@
 
 {#if filters.length > 0}
 	<div
-		class="flex flex-col mb-4 {compact &&
-			'items-center'} h-fit w-full gap-2 overflow-y-auto overflow-x-hidden"
+		class="mb-4 flex flex-col {compact &&
+			'items-center'} h-fit w-full gap-2 overflow-x-hidden overflow-y-auto"
 	>
 		<!--Header if expanded-->
 		{#if !compact}
 			<button
-				class="text-text/40 hover:text-text/60 flex cursor-pointer items-center justify-between px-1 text-[10px] transition-colors"
+				class="flex cursor-pointer items-center justify-between px-1 text-[10px] text-text/40 transition-colors hover:text-text/60"
 				onclick={() => (isExpanded = !isExpanded)}
 			>
 				<span>{label}</span>
-				<span class="inline-flex transition-transform duration-200 ease-in-out {isExpanded ? '' : 'rotate-180'}">
+				<span
+					class="inline-flex transition-transform duration-200 ease-in-out {isExpanded
+						? ''
+						: 'rotate-180'}"
+				>
 					<ChevronUp />
 				</span>
 			</button>
@@ -79,37 +83,37 @@
 					? 'justify-between'
 					: 'items-center'} gap-3 overflow-y-auto"
 			>
-					{#each filters as filter (label + filter.id)}
-						{@const hovered = hoveredId === filter.id}
-						<button
-							class="text-text/70 flex cursor-pointer items-center justify-between gap-2 rounded"
-							onclick={() => handleClick(filter)}
-							onmouseenter={() => (hoveredId = filter.id)}
-							onmouseleave={() => (hoveredId = null)}
-						>
-							<div class="flex flex-row items-center gap-2">
-								<div class="relative">
-									{@render item(filter as unknown as FilterState<FilterData>, compact)}
-									{#if compact}
-										<div
-											class="absolute -top-1 left-0.5 flex h-3 w-3 items-center justify-center rounded-full p-0.5"
-										>
-											{@render filterStateElement(
-												hovered,
-												filter as unknown as FilterState<FilterData>
-											)}
-										</div>
-									{/if}
-								</div>
+				{#each filters as filter (label + filter.id)}
+					{@const hovered = hoveredId === filter.id}
+					<button
+						class="flex cursor-pointer items-center justify-between gap-2 rounded text-text/70"
+						onclick={() => handleClick(filter)}
+						onmouseenter={() => (hoveredId = filter.id)}
+						onmouseleave={() => (hoveredId = null)}
+					>
+						<div class="flex flex-row items-center gap-2">
+							<div class="relative">
+								{@render item(filter as unknown as FilterState<FilterData>, compact)}
+								{#if compact}
+									<div
+										class="absolute -top-1 left-0.5 flex h-3 w-3 items-center justify-center rounded-full p-0.5"
+									>
+										{@render filterStateElement(
+											hovered,
+											filter as unknown as FilterState<FilterData>
+										)}
+									</div>
+								{/if}
 							</div>
-							{#if !compact}
-								{@render filterStateElement(hovered, filter as unknown as FilterState<FilterData>)}
-							{/if}
-						</button>
-					{/each}
+						</div>
+						{#if !compact}
+							{@render filterStateElement(hovered, filter as unknown as FilterState<FilterData>)}
+						{/if}
+					</button>
+				{/each}
 			</div>
 		{/if}
 	</div>
 {:else if !compact && placeholderLabel}
-	<span class="text-text/40 px-1 text-[10px]">{placeholderLabel}</span>
+	<span class="px-1 text-[10px] text-text/40">{placeholderLabel}</span>
 {/if}

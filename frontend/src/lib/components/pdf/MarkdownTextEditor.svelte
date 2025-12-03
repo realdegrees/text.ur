@@ -127,19 +127,19 @@
 			{#if showHelpTooltip}
 				<!-- svelte-ignore a11y_no_static_element_interactions -->
 				<div
-					class="absolute right-0 top-1/2 z-50 w-64 -translate-y-1/2 rounded border border-text/20 bg-background p-2 text-xs shadow-lg"
+					class="absolute top-1/2 right-0 z-50 w-64 -translate-y-1/2 rounded border border-text/20 bg-background p-2 text-xs shadow-lg"
 					onmouseenter={() => (showHelpTooltip = true)}
 					onmouseleave={() => (showHelpTooltip = false)}
 					onmousedown={(e) => e.preventDefault()}
 				>
-					<p class="text-text/80 mb-1">
+					<p class="mb-1 text-text/80">
 						This editor supports <span class="font-medium text-text">Markdown formatting</span>.
 					</p>
 					<a
 						href="https://www.markdownguide.org/cheat-sheet/"
 						target="_blank"
 						rel="noopener noreferrer"
-						class="text-primary hover:text-primary/80 underline"
+						class="text-primary underline hover:text-primary/80"
 					>
 						View Markdown cheat sheet →
 					</a>

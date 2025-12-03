@@ -44,9 +44,7 @@
 
 			// Use first tag's color if available, otherwise fall back to annotation color
 			const highlightColor =
-				comment.tags && comment.tags.length > 0
-					? comment.tags[0].color
-					: comment.annotation.color;
+				comment.tags && comment.tags.length > 0 ? comment.tags[0].color : comment.annotation.color;
 
 			for (let idx = 0; idx < comment.annotation.boundingBoxes.length; idx++) {
 				const box = comment.annotation.boundingBoxes[idx];

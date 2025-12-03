@@ -27,7 +27,11 @@
 		>
 			<div
 				class="tab-indicator absolute bottom-0 h-1 bg-primary transition-all duration-300"
-				style="width: {isCompact ? 'auto' : `calc(100% / ${tabs.length})`}; transform: translateX(calc({isCompact ? '0px' : `100% * ${activeTab}`})); left: 0;"
+				style="width: {isCompact
+					? 'auto'
+					: `calc(100% / ${tabs.length})`}; transform: translateX(calc({isCompact
+					? '0px'
+					: `100% * ${activeTab}`})); left: 0;"
 			></div>
 			{#each tabs as tab, index (index)}
 				{#if tab}

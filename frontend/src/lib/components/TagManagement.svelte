@@ -161,26 +161,38 @@
 	}
 </script>
 
-{#snippet tagForm(formData: { label: string; description: string; color: string }, isEdit: boolean, tagId?: number)}
+{#snippet tagForm(
+	formData: { label: string; description: string; color: string },
+	isEdit: boolean,
+	tagId?: number
+)}
 	<div class="grid grid-cols-1 gap-3 md:grid-cols-2">
 		<div class="flex flex-col gap-1.5">
-			<label for={isEdit ? `edit-tag-label-${tagId}` : 'new-tag-label'} class="text-xs font-semibold text-text/70">Label *</label>
+			<label
+				for={isEdit ? `edit-tag-label-${tagId}` : 'new-tag-label'}
+				class="text-xs font-semibold text-text/70">Label *</label
+			>
 			<input
 				id={isEdit ? `edit-tag-label-${tagId}` : 'new-tag-label'}
 				type="text"
 				bind:value={formData.label}
 				placeholder={isEdit ? 'e.g., Bug, Question' : 'Tag label'}
 				maxlength="50"
-				class="rounded-md border border-text/20 bg-text/5 px-3 py-2 text-sm outline-none transition-colors focus:border-text/50"
+				class="rounded-md border border-text/20 bg-text/5 px-3 py-2 text-sm transition-colors outline-none focus:border-text/50"
 			/>
 		</div>
 		<div class="flex flex-col gap-1.5">
-			<label for={isEdit ? `edit-tag-color-${tagId}` : 'new-tag-color'} class="text-xs font-semibold text-text/70">Color *</label>
+			<label
+				for={isEdit ? `edit-tag-color-${tagId}` : 'new-tag-color'}
+				class="text-xs font-semibold text-text/70">Color *</label
+			>
 			<div class="relative" data-color-picker>
 				<button
 					type="button"
-					aria-label={isEdit ? "Choose color for tag " + tagId : "Choose color for new tag"}
-					onclick={() => (activeColorPicker = activeColorPicker === (isEdit ? 'edit' : 'new') ? null : (isEdit ? 'edit' : 'new'))}
+					aria-label={isEdit ? 'Choose color for tag ' + tagId : 'Choose color for new tag'}
+					onclick={() =>
+						(activeColorPicker =
+							activeColorPicker === (isEdit ? 'edit' : 'new') ? null : isEdit ? 'edit' : 'new')}
 					class="flex w-fit items-center gap-2 rounded-md border border-text/20 bg-text/5 px-3 py-2 transition hover:border-text/30"
 				>
 					<div
@@ -189,8 +201,8 @@
 					></div>
 				</button>
 				{#if activeColorPicker === (isEdit ? 'edit' : 'new')}
-					<div 
-						class="absolute left-0 top-full z-10 mt-2 flex flex-col gap-2 bg-inset rounded-md border border-text/20 bg-bg p-3 shadow-lg"
+					<div
+						class="bg-bg absolute top-full left-0 z-10 mt-2 flex flex-col gap-2 rounded-md border border-text/20 bg-inset p-3 shadow-lg"
 					>
 						<input
 							id={isEdit ? `edit-tag-color-${tagId}` : 'new-tag-color'}
@@ -202,7 +214,7 @@
 								const hue = (e.target as HTMLInputElement).value;
 								formData.color = hslToHex(parseInt(hue), 70, 55);
 							}}
-							class="w-48 h-2 rounded-lg appearance-none cursor-pointer"
+							class="h-2 w-48 cursor-pointer appearance-none rounded-lg"
 							style="background: linear-gradient(to right, #ff0000 0%, #ffff00 17%, #00ff00 33%, #00ffff 50%, #0000ff 67%, #ff00ff 83%, #ff0000 100%);"
 						/>
 					</div>
@@ -210,14 +222,17 @@
 			</div>
 		</div>
 		<div class="flex flex-col gap-1.5 md:col-span-2">
-			<label for={isEdit ? `edit-tag-description-${tagId}` : 'new-tag-description'} class="text-xs font-semibold text-text/70">Description</label>
+			<label
+				for={isEdit ? `edit-tag-description-${tagId}` : 'new-tag-description'}
+				class="text-xs font-semibold text-text/70">Description</label
+			>
 			<textarea
 				id={isEdit ? `edit-tag-description-${tagId}` : 'new-tag-description'}
 				bind:value={formData.description}
 				placeholder="Optional description for this tag"
 				maxlength="200"
 				rows="2"
-				class="rounded-md border border-text/20 bg-text/5 px-3 py-2 text-sm outline-none transition-colors focus:border-text/50"
+				class="rounded-md border border-text/20 bg-text/5 px-3 py-2 text-sm transition-colors outline-none focus:border-text/50"
 			></textarea>
 		</div>
 	</div>
@@ -320,7 +335,7 @@
 								{/snippet}
 								{#snippet slideout()}
 									<div
-										class="whitespace-nowrap rounded-md bg-red-500/10 px-3 py-2 text-red-600 dark:text-red-400"
+										class="rounded-md bg-red-500/10 px-3 py-2 whitespace-nowrap text-red-600 dark:text-red-400"
 									>
 										Delete?
 									</div>

@@ -4,7 +4,7 @@
 	import Badge from '$lib/components/badge.svelte';
 	import Dropdown from '$lib/components/dropdown.svelte';
 
-    interface Props {
+	interface Props {
 		selectedTags: TagRead[];
 		availableTags: TagRead[];
 		onAdd?: (tag: TagRead) => void;
@@ -25,8 +25,7 @@
 	}: Props = $props();
 
 	const availableToAdd = $derived(
-		availableTags.filter((tag) => !selectedTags.some((selected) => selected.id === tag.id)
-		)
+		availableTags.filter((tag) => !selectedTags.some((selected) => selected.id === tag.id))
 	);
 
 	// Drag and drop state
@@ -92,7 +91,9 @@
 			ondragleave={handleDragLeave}
 			ondrop={(e) => handleDrop(e, tag.id)}
 			ondragend={handleDragEnd}
-			class="cursor-move transition-opacity {draggedTagId === tag.id ? 'opacity-50' : ''} {dragOverTagId === tag.id ? 'ring-2 ring-primary rounded' : ''}"
+			class="cursor-move transition-opacity {draggedTagId === tag.id
+				? 'opacity-50'
+				: ''} {dragOverTagId === tag.id ? 'rounded ring-2 ring-primary' : ''}"
 		>
 			<Badge
 				item={tag}
