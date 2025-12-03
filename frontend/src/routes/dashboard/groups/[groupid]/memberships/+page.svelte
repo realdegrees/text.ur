@@ -173,7 +173,7 @@
 			{#if selected.length > 0}
 				{#if sessionStore.validatePermissions(['remove_members'])}
 					<button
-						class="bg-inset rounded px-1 py-1.5 font-semibold shadow-inner shadow-black/30 transition hover:cursor-pointer hover:bg-red-500/30"
+						class="rounded bg-inset px-1 py-1.5 font-semibold shadow-inner shadow-black/30 transition hover:cursor-pointer hover:bg-red-500/30"
 						onclick={async () => {
 							await Promise.all(selected.map(({ user: { id } }) => kickMember(id)));
 							await invalidateAll();
@@ -195,7 +195,7 @@
 					>
 						{#snippet icon()}
 							<div
-								class="bg-inset rounded px-1 py-1.5 font-semibold shadow-inner shadow-black/30 transition hover:cursor-pointer hover:bg-green-500/30"
+								class="rounded bg-inset px-1 py-1.5 font-semibold shadow-inner shadow-black/30 transition hover:cursor-pointer hover:bg-green-500/30"
 							>
 								Add Permission
 							</div>
@@ -219,7 +219,7 @@
 					>
 						{#snippet icon()}
 							<div
-								class="bg-inset rounded px-1 py-1.5 font-semibold shadow-inner shadow-black/30 transition hover:cursor-pointer hover:bg-orange-500/30"
+								class="rounded bg-inset px-1 py-1.5 font-semibold shadow-inner shadow-black/30 transition hover:cursor-pointer hover:bg-orange-500/30"
 							>
 								Remove Permission
 							</div>
@@ -287,16 +287,16 @@
 </div>
 
 {#snippet permissionItem(perm: Permission)}
-	<p class="text-text p-1 text-left">
+	<p class="p-1 text-left text-text">
 		{($LL.permissions as Record<string, () => string>)[perm]?.() || perm}
 	</p>
 {/snippet}
 
 {#snippet usernameSnippet(membership: Omit<MembershipRead, 'group'>)}
-	<div class="text-text flex flex-row items-center">
+	<div class="flex flex-row items-center text-text">
 		<p class="font-medium">{membership.user.username || 'Unknown User'}</p>
 		{#if membership.user.first_name || membership.user.last_name}
-			<p class="text-text/70 ml-1 whitespace-nowrap">
+			<p class="ml-1 whitespace-nowrap text-text/70">
 				({membership.user.first_name || ''}
 				{membership.user.last_name || ''})
 			</p>
@@ -308,7 +308,7 @@
 	<div class="flex flex-wrap gap-1">
 		{#if membership.share_link}
 			<span
-				class="flex w-fit flex-row rounded-full bg-purple-100 px-2 py-1 text-xs font-semibold uppercase text-purple-800"
+				class="flex w-fit flex-row rounded-full bg-purple-100 px-2 py-1 text-xs font-semibold text-purple-800 uppercase"
 				title={membership.share_link.expires_at
 					? `Expires at ${formatDateTime(membership.share_link.expires_at)}`
 					: ''}
@@ -384,7 +384,7 @@
 			>
 				{#snippet button()}
 					<div
-						class="text-text h-full w-fit rounded bg-green-500/10 p-1 shadow-black/20 transition hover:cursor-pointer hover:bg-green-500/30 hover:shadow-inner"
+						class="h-full w-fit rounded bg-green-500/10 p-1 text-text shadow-black/20 transition hover:cursor-pointer hover:bg-green-500/30 hover:shadow-inner"
 						aria-label="Promote guest {membership.user.username} to a permanent member"
 					>
 						<PromoteIcon class="h-5 w-5" />
@@ -393,7 +393,7 @@
 
 				{#snippet slideout()}
 					<p
-						class="flex items-center whitespace-nowrap bg-green-500/10 px-2 py-0.5 text-xs text-green-500"
+						class="flex items-center bg-green-500/10 px-2 py-0.5 text-xs whitespace-nowrap text-green-500"
 					>
 						Promote to a permanent member?
 					</p>
@@ -408,7 +408,12 @@
 						? await leaveGroup()
 						: await kickMember(membership.user.id);
 					if (success) {
-						notification('success', showLeaveButton ? 'You have left the group.' : `Removed ${membership.user.username} from the group.`);
+						notification(
+							'success',
+							showLeaveButton
+								? 'You have left the group.'
+								: `Removed ${membership.user.username} from the group.`
+						);
 						invalidateAll();
 					}
 				}}
@@ -416,7 +421,7 @@
 			>
 				{#snippet button()}
 					<div
-						class="text-text h-full w-fit rounded bg-red-500/10 p-1 shadow-black/20 transition hover:cursor-pointer hover:bg-red-500/30 hover:shadow-inner"
+						class="h-full w-fit rounded bg-red-500/10 p-1 text-text shadow-black/20 transition hover:cursor-pointer hover:bg-red-500/30 hover:shadow-inner"
 						aria-label={showLeaveButton
 							? `Leave the group`
 							: `Kick {membership.user.username} from the group`}
@@ -431,7 +436,7 @@
 
 				{#snippet slideout()}
 					<p
-						class="flex items-center whitespace-nowrap bg-red-500/10 px-2 py-0.5 text-xs text-red-500"
+						class="flex items-center bg-red-500/10 px-2 py-0.5 text-xs whitespace-nowrap text-red-500"
 					>
 						{showLeaveButton
 							? 'Leave the group?'
