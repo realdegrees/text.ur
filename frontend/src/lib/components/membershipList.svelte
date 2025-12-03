@@ -115,10 +115,10 @@
 			<h2 class="w-full text-left text-2xl">{$LL.myGroups()}</h2>
 			<a
 				href="/dashboard/groups/create"
-				class="bg-inset flex flex-row items-center gap-1 rounded-md px-3 py-1 text-sm shadow-inner shadow-black/30 transition-all hover:bg-green-500/20"
+				class="flex flex-row items-center gap-1 rounded-md bg-inset px-3 py-1 text-sm shadow-inner shadow-black/30 transition-all hover:bg-green-500/20"
 				title="Create new group"
 			>
-				<AddIcon class="text-text h-4 w-4" />
+				<AddIcon class="h-4 w-4 text-text" />
 				<p class="text-text">New</p>
 			</a>
 		</div>
@@ -128,23 +128,28 @@
 		{#snippet itemSnippet(membership: Omit<MembershipRead, 'user'>)}
 			{#if compact}
 				<div
-					class="bg-primary/20 hover:bg-primary group m-1 flex w-full cursor-pointer items-center justify-center rounded-md py-2.5 shadow-inner shadow-black/30 transition-all"
+					class="group m-1 flex w-full cursor-pointer items-center justify-center rounded-md bg-primary/20 py-2.5 shadow-inner shadow-black/30 transition-all hover:bg-primary"
 					class:bg-primary={membership.group.id === page.params.groupid}
 					class:shadow-inner-sym-[5px]={membership.group.id === page.params.groupid}
 					title={membership.group.name}
 				>
-					<span class="text-text text-sm font-bold">{getInitials(membership.group.name)}</span>
+					<span class="text-sm font-bold text-text">{getInitials(membership.group.name)}</span>
 				</div>
 			{:else}
 				<div
-					class="bg-inset hover:bg-primary group m-1 flex w-full cursor-pointer flex-col gap-2 rounded-md px-3 py-2.5 shadow-inner shadow-black/30 transition-all"
+					class="group m-1 flex w-full cursor-pointer flex-col gap-2 rounded-md bg-inset px-3 py-2.5 shadow-inner shadow-black/30 transition-all hover:bg-primary"
 					class:bg-primary={membership.group.id === page.params.groupid}
 					class:shadow-inner-sym-[5px]={membership.group.id === page.params.groupid}
 				>
 					<h3 class="truncate text-left text-base font-semibold">{membership.group.name}</h3>
-					<div class="text-text/70 flex items-center gap-3 text-xs">
+					<div class="flex items-center gap-3 text-xs text-text/70">
 						<!-- Member count -->
-						<div class="flex items-center gap-1" title="{membership.group.member_count} member{membership.group.member_count === 1 ? '' : 's'}">
+						<div
+							class="flex items-center gap-1"
+							title="{membership.group.member_count} member{membership.group.member_count === 1
+								? ''
+								: 's'}"
+						>
 							<PeopleIcon class="h-4 w-4" />
 							<span>{membership.group.member_count}</span>
 						</div>
@@ -158,8 +163,13 @@
 						</div>
 						<!-- Owner indicator -->
 
-						<div class="ml-auto flex items-center" title={membership.is_owner ? 'You own this group' : ''}>
-							<CrownIcon class="h-4 w-4 {membership.is_owner ? 'text-yellow-500 hover:scale-110' : ''}" />
+						<div
+							class="ml-auto flex items-center"
+							title={membership.is_owner ? 'You own this group' : ''}
+						>
+							<CrownIcon
+								class="h-4 w-4 {membership.is_owner ? 'text-yellow-500 hover:scale-110' : ''}"
+							/>
 							{#if !membership.is_owner}
 								<p>{membership.group.owner?.username}</p>
 							{/if}
@@ -177,7 +187,7 @@
 	<InfiniteScrollList {data} {loadMore} step={50}>
 		{#snippet itemSnippet(invitation: Omit<MembershipRead, 'user'>)}
 			<div
-				class="bg-inset flex w-full flex-row items-center justify-between gap-2 rounded-md px-3 py-2.5 shadow-inner shadow-black/30"
+				class="flex w-full flex-row items-center justify-between gap-2 rounded-md bg-inset px-3 py-2.5 shadow-inner shadow-black/30"
 			>
 				<div class="flex min-w-0 flex-1 flex-col gap-1">
 					<h4 class="truncate text-sm font-semibold">{invitation.group.name}</h4>

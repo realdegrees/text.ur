@@ -8,7 +8,6 @@
 	let isExpanded = $derived(!page.params.groupid);
 	let isHovering = $state(false);
 
-
 	// Sidebar should be expanded if: isExpanded is true OR user is hovering
 	const shouldShowExpanded = $derived(isExpanded || isHovering);
 
@@ -27,7 +26,7 @@
 	<div
 		role="navigation"
 		aria-label="Groups sidebar"
-		class="no-scrollbar border-text/10 bg-inset flex h-full shrink-0 flex-col gap-2 overflow-y-auto overflow-x-hidden border-r p-2 pb-0 transition-all duration-200"
+		class="no-scrollbar flex h-full shrink-0 flex-col gap-2 overflow-x-hidden overflow-y-auto border-r border-text/10 bg-inset p-2 pb-0 transition-all duration-200"
 		class:w-12={!shouldShowExpanded}
 		class:w-[200px]={shouldShowExpanded}
 		class:sm:w-[200px]={shouldShowExpanded}
