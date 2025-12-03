@@ -4,6 +4,7 @@ import { notification } from '$lib/stores/notificationStore';
 import { redirect } from '@sveltejs/kit';
 import type { PageLoad } from './$types';
 import type { Paginated } from '$api/pagination';
+import type { BreadcrumbItem } from '$types/breadcrumb';
 
 export const load: PageLoad = async ({ params, parent, fetch }) => {
 	const { routeMembership: membership } = await parent();
@@ -64,6 +65,19 @@ export const load: PageLoad = async ({ params, parent, fetch }) => {
 		document: documentResult.data,
 		group: membership.group,
 		rootComments: rootComments,
-		documentFile: documentFileResult.data
+		documentFile: documentFileResult.data,
+		breadcrumbs: [
+			{
+				label: membership.group.name,
+				href: `/dashboard/groups/${membership.group.id}`
+			},
+			{
+				label: 'Documents',
+				href: `/dashboard/groups/${membership.group.id}/documents`
+			},
+			{
+				label: documentResult.data.name
+			}
+		] satisfies BreadcrumbItem[]
 	};
 };

@@ -242,6 +242,7 @@ export interface GroupRead {
   id: string;
   name: string;
   member_count: number;
+  document_count: number;
   owner: UserRead | null;
   default_permissions: Permission[];
 }

@@ -132,9 +132,8 @@
 	}
 </script>
 
-<div class="h-screen p-4">
+<div class="p-4">
 	<div class="mb-4 flex w-full flex-row items-center justify-between gap-2">
-		<h1 class="text-2xl font-bold">Member Management</h1>
 		{#if sessionStore.validatePermissions(['add_members'])}
 			<!--INVITE-->
 			<div class="flex flex-row items-end gap-2">
@@ -282,7 +281,9 @@
 </div>
 
 {#snippet permissionItem(perm: Permission)}
-	<p class="p-1 text-left text-text">{$LL.permissions[perm]?.() || perm}</p>
+	<p class="p-1 text-left text-text">
+		{($LL.permissions as Record<string, () => string>)[perm]?.() || perm}
+	</p>
 {/snippet}
 
 {#snippet usernameSnippet(membership: Omit<MembershipRead, 'group'>)}

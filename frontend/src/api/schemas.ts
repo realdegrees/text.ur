@@ -153,6 +153,7 @@ export const groupReadSchema = z.object({
     id: z.string(),
     name: z.string(),
     member_count: z.number(),
+    document_count: z.number(),
     owner: userReadSchema.nullable(),
     default_permissions: z.array(permissionSchema)
 });

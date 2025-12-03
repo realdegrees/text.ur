@@ -2,6 +2,7 @@ import { api } from '$api/client';
 import type { Paginated } from '$api/pagination';
 import type { MembershipRead } from '$api/types';
 import { notification } from '$lib/stores/notificationStore';
+import type { BreadcrumbItem } from '$types/breadcrumb';
 import type { LayoutLoad } from './$types';
 
 // TODO this can probably be a serverlayout in order to prerender the initial list of groups so it gets loaded instantly
@@ -56,6 +57,7 @@ export const load: LayoutLoad = async ({ fetch, parent }) => {
 	return {
 		...(await parent()),
 		memberships: memberships,
-		invites: invites
+		invites: invites,
+		breadcrumbs: [{ label: 'Dashboard' }] satisfies BreadcrumbItem[]
 	};
 };

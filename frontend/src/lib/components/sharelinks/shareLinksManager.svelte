@@ -143,10 +143,6 @@
 <div class="flex flex-col gap-4">
 	<!-- Header -->
 	<div class="flex items-center justify-between">
-		<div>
-			<h2 class="text-lg font-semibold">Share Links</h2>
-			<p class="text-sm text-text/70">Create shareable links with specific permissions</p>
-		</div>
 		{#if !showCreateForm}
 			<button
 				type="button"
