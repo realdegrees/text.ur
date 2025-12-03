@@ -110,9 +110,9 @@
 
 {#snippet dateSnippet(document: DocumentRead)}
 	<div class="flex flex-col gap-0.5">
-		<p class="text-sm">{formatDateTime(document.created_at)}</p>
+		<p class="text-sm text-text/90">{formatDateTime(document.created_at)}</p>
 		{#if document.updated_at && document.updated_at !== document.created_at}
-			<p class="text-xs text-text/70">Updated: {formatDateTime(document.updated_at)}</p>
+			<p class="text-xs text-text/60">Updated: {formatDateTime(document.updated_at)}</p>
 		{/if}
 	</div>
 {/snippet}
@@ -122,7 +122,7 @@
 		{#if sessionStore.validatePermissions(['upload_documents'])}
 			<button
 				onclick={() => goto(`/dashboard/groups/${group.id}/documents/${document.id}/settings`)}
-				class="transition hover:text-primary"
+				class="cursor-pointer text-text/80 transition hover:text-primary"
 				aria-label="Edit document settings"
 			>
 				<EditIcon class="h-5 w-5" />
@@ -141,12 +141,10 @@
 				}}
 			>
 				{#snippet button()}
-					<DeleteIcon class="h-5 w-5 text-red-600 hover:text-red-800" />
+					<DeleteIcon class="h-5 w-5 cursor-pointer text-text/80 hover:text-red-400/80" />
 				{/snippet}
 				{#snippet slideout()}
-					<div class="bg-red-500/10 px-3 py-2 whitespace-nowrap text-red-600 dark:text-red-400">
-						Delete?
-					</div>
+					<div class="px-1 py-2 whitespace-nowrap text-red-600 dark:text-red-400">Delete?</div>
 				{/snippet}
 			</ConfirmButton>
 		{/if}

@@ -17,7 +17,7 @@
 		showRemove = true,
 		onRemove,
 		disabled = false,
-		customColor,
+		customColor
 	}: BadgeProps<T> = $props();
 </script>
 

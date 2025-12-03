@@ -251,55 +251,55 @@
 		</div>
 	{/key}
 
-		<InfiniteTable
-			columns={[
+	<InfiniteTable
+		columns={[
+			{
+				label: $LL.user(),
+				width: '2fr',
+				snippet: usernameSnippet
+			},
+			{
+				label: $LL.status(),
+				width: '1fr',
+				snippet: badgeSnippet
+			},
+			{
+				label: $LL.permissions.label(),
+				width: '5fr',
+				snippet: permissionsSnippet
+			},
+			{
+				label: $LL.memberships.actions(),
+				width: '2fr',
+				snippet: actionsSnippet
+			}
+		]}
+		data={memberships}
+		loadMore={async (offset, limit) => {
+			const result = await api.get<Paginated<MembershipRead>, 'group'>(
+				`/memberships?offset=${offset}&limit=${limit}`,
 				{
-					label: $LL.user(),
-					width: '2fr',
-					snippet: usernameSnippet
-				},
-				{
-					label: $LL.status(),
-					width: '1fr',
-					snippet: badgeSnippet
-				},
-				{
-					label: $LL.permissions.label(),
-					width: '5fr',
-					snippet: permissionsSnippet
-				},
-				{
-					label: $LL.memberships.actions(),
-					width: '2fr',
-					snippet: actionsSnippet
+					sort: [{ field: 'accepted', direction: 'asc' }],
+					filters: [
+						{
+							field: 'group_id',
+							operator: '==',
+							value: group?.id
+						}
+					]
 				}
-			]}
-			data={memberships}
-			loadMore={async (offset, limit) => {
-				const result = await api.get<Paginated<MembershipRead>, 'group'>(
-					`/memberships?offset=${offset}&limit=${limit}`,
-					{
-						sort: [{ field: 'accepted', direction: 'asc' }],
-						filters: [
-							{
-								field: 'group_id',
-								operator: '==',
-								value: group?.id
-							}
-						]
-					}
-				);
-				if (!result.success) {
-					notification(result.error);
-					return undefined;
-				}
-				return result.data;
-			}}
-			step={20}
-			selectable
-			onSelectionChange={handleSelectionChange}
-			rowBgClass="bg-inset/90"
-		/>
+			);
+			if (!result.success) {
+				notification(result.error);
+				return undefined;
+			}
+			return result.data;
+		}}
+		step={20}
+		selectable
+		onSelectionChange={handleSelectionChange}
+		rowBgClass="bg-inset/90"
+	/>
 </div>
 
 {#snippet permissionItem(perm: Permission)}
@@ -363,36 +363,36 @@
 	{@const groupedPermissions = [...defaultPermissions, ...sharelinkPermissions]}
 	{@const customPermissions = membership.permissions.filter((p) => !groupedPermissions.includes(p))}
 
-		<PermissionSelector
-			selectedPermissions={customPermissions}
-			excludedPermissions={groupedPermissions}
-			onAdd={(perm) => addPermissionToMembership(membership, perm)}
-			onRemove={(perm) => removePermissionFromMembership(membership, perm)}
-			showRemove={sessionStore.validatePermissions(['manage_permissions'])}
-			allowSelection={sessionStore.validatePermissions({
-				or: ['manage_permissions', 'remove_members']
-			})}
-		>
-			{#snippet prepend()}
-				<!-- Default Permissions Badge -->
-				{#if defaultPermissions.length > 0}
-					<ExpandablePermissionBadge
-						permissions={defaultPermissions}
-						label="Default"
-						variant="default"
-					/>
-				{/if}
+	<PermissionSelector
+		selectedPermissions={customPermissions}
+		excludedPermissions={groupedPermissions}
+		onAdd={(perm) => addPermissionToMembership(membership, perm)}
+		onRemove={(perm) => removePermissionFromMembership(membership, perm)}
+		showRemove={sessionStore.validatePermissions(['manage_permissions'])}
+		allowSelection={sessionStore.validatePermissions({
+			or: ['manage_permissions', 'remove_members']
+		})}
+	>
+		{#snippet prepend()}
+			<!-- Default Permissions Badge -->
+			{#if defaultPermissions.length > 0}
+				<ExpandablePermissionBadge
+					permissions={defaultPermissions}
+					label="Default"
+					variant="default"
+				/>
+			{/if}
 
-				<!-- Sharelink Permissions Badge -->
-				{#if sharelinkPermissions.length > 0}
-					<ExpandablePermissionBadge
-						permissions={sharelinkPermissions}
-						label="Sharelink"
-						variant="sharelink"
-					/>
-				{/if}
-			{/snippet}
-		</PermissionSelector>
+			<!-- Sharelink Permissions Badge -->
+			{#if sharelinkPermissions.length > 0}
+				<ExpandablePermissionBadge
+					permissions={sharelinkPermissions}
+					label="Sharelink"
+					variant="sharelink"
+				/>
+			{/if}
+		{/snippet}
+	</PermissionSelector>
 {/snippet}
 
 {#snippet actionsSnippet(membership: Omit<MembershipRead, 'group'>)}

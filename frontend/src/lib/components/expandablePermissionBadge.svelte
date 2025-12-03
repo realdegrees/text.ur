@@ -25,7 +25,7 @@
 		<div class="group-hover/expand-perm:hidden">
 			<Badge
 				item={label}
-				label={label}
+				{label}
 				showRemove={false}
 				disabled={true}
 				customColor={variant === 'sharelink' ? badgeColors.sharelink : badgeColors.default}

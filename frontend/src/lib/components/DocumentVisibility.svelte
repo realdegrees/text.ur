@@ -73,15 +73,12 @@
 
 <div class="visibility-selector relative">
 	<button
-		class="flex w-fit flex-row items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold uppercase transition-colors disabled:opacity-50 {canEdit
+		class="flex w-fit flex-row items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold text-black/90 uppercase transition-colors {canEdit
 			? 'hover:cursor-pointer'
 			: ''}"
-		class:bg-blue-100={document.visibility === 'public'}
-		class:text-blue-800={document.visibility === 'public'}
-		class:bg-yellow-100={document.visibility === 'restricted'}
-		class:text-yellow-800={document.visibility === 'restricted'}
-		class:bg-gray-100={document.visibility === 'private'}
-		class:text-gray-800={document.visibility === 'private'}
+		class:bg-green-300={document.visibility === 'public'}
+		class:bg-blue-300={document.visibility === 'restricted'}
+		class:bg-yellow-300={document.visibility === 'private'}
 		onclick={(e) => {
 			e.stopPropagation();
 			isOpen = !isOpen;
