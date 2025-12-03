@@ -23,6 +23,8 @@ export type AppErrorCode =
   | "sharelink_expired"
   | "membership_not_found"
   | "owner_cannot_leave_group"
+  | "cannot_remove_permission_reason_default_group"
+  | "cannot_remove_permission_reason_sharelink"
   | "username_taken"
   | "email_taken"
   | "sharelink_anonymous_disabled";
