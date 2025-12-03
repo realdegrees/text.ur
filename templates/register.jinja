@@ -1,18 +1,24 @@
 {% extends "base.jinja" %}
 {% block title %}Verify Your Email{% endblock %}
 {% block header %}
-    <h1 style="margin: 0; font-size: 24px;">Welcome to "Annotation Software"</h1>
+    <h1 style="margin: 0; font-size: 24px;">Welcome to text.ur</h1>
 {% endblock %}
 {% block content %}
-    <p style="font-size: 16px; line-height: 1.5;">
-        Thank you for registering! One more step remains to confirm your new account.
-        If you did not create an account, please ignore this email.
+    <p style="font-size: 16px; line-height: 1.5; margin-bottom: 10px;">
+        {% if username %}Hi {{ username }},{% else %}Hi there,{% endif %}
     </p>
-    <a href="{{ verification_link }}" 
-       style="display: inline-block; margin: 30px 0; padding: 15px 30px; font-size: 16px; color: #ffffff; background-color: #2a9d8f; text-decoration: none; border-radius: 4px;">
-       Verify Email
+    <p style="font-size: 16px; line-height: 1.5;">
+        Thanks for signing up for text.ur! To get started with collaborative document annotation,
+        please verify your email address by clicking the button below.
+    </p>
+    <a href="{{ verification_link }}"
+       style="display: inline-block; margin: 30px 0; padding: 15px 30px; font-size: 16px; color: #ffffff; background-color: #916d5e; text-decoration: none; border-radius: 4px;">
+       Verify Email Address
     </a>
-    <div style="margin-top: -25px; font-size: 13px; color: #9e9e9eff;">
-        Expires in {{ expiry_minutes }} minutes
+    <div style="margin-top: -15px; margin-bottom: 20px; font-size: 13px; color: #9e9e9eff;">
+        ⏱️ This verification link expires on {{ expiry_time }}
     </div>
+    <p style="font-size: 14px; line-height: 1.5; color: #666;">
+        🔒 If you didn't create an account on text.ur, you can safely ignore this email.
+    </p>
 {% endblock %}

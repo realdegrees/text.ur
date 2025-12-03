@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime, timedelta
 
 import core.config as cfg
 from api.dependencies.authentication import Authenticate
@@ -71,13 +71,17 @@ def _upgrade_guest_account(
         verification_link = mail.generate_verification_link(
             user.email, router, salt="email-verification", confirm_route="verify"
         )
+        expiry_time = datetime.now(UTC) + timedelta(days=cfg.REGISTER_LINK_EXPIRY_DAYS)
         mail.send_email(
             user.email,
             subject="Email Verification - Upgrade Your Account",
             template="register.jinja",
             template_vars={
                 "verification_link": verification_link,
-                "expiry_minutes": cfg.EMAIL_PRESIGN_EXPIRY_DAYS // 60
+                "expiry_time": expiry_time.strftime("%B %d, %Y at %H:%M UTC"),
+                "username": user.username,
+                "email": user.email,
+                "current_year": datetime.now().year
             }
         )
     except Exception as e:
@@ -134,13 +138,17 @@ def _register_regular_user(
         verification_link = mail.generate_verification_link(
             user.email, router, salt="email-verification", confirm_route="verify"
         )
+        expiry_time = datetime.now(UTC) + timedelta(days=cfg.REGISTER_LINK_EXPIRY_DAYS)
         mail.send_email(
             user.email,
-            subject="Email Verification",
+            subject="Verify Your Email - text.ur",
             template="register.jinja",
             template_vars={
                 "verification_link": verification_link,
-                "expiry_minutes": cfg.EMAIL_PRESIGN_EXPIRY_DAYS // 60
+                "expiry_time": expiry_time.strftime("%B %d, %Y at %H:%M UTC"),
+                "username": user.username,
+                "email": user.email,
+                "current_year": datetime.now().year
             }
         )
     except Exception as e:
@@ -278,7 +286,7 @@ async def verify(token: str, db: Database) -> RedirectResponse:
     """Verify the user's email address."""
     try:
         email = URLSafeTimedSerializer(cfg.EMAIL_PRESIGN_SECRET).loads(
-            token, max_age=int(cfg.EMAIL_PRESIGN_EXPIRY_DAYS), salt="email-verification"
+            token, max_age=int(cfg.REGISTER_LINK_EXPIRY_DAYS * 24 * 60 * 60), salt="email-verification"
         )
     except (BadSignature, SignatureExpired) as e:
         raise HTTPException(
@@ -288,6 +296,8 @@ async def verify(token: str, db: Database) -> RedirectResponse:
     user: User | None = db.exec(query).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+    if user.verified:
+        raise HTTPException(status_code=400, detail="User is already verified")
 
     user.verified = True
 
