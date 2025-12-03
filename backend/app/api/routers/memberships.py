@@ -4,8 +4,8 @@ from api.dependencies.paginated.resources import (
     PaginatedResource,
 )
 from api.dependencies.resource import Resource
+from core.app_exception import AppException
 from fastapi import Body, HTTPException, Response
-from models.app_error import AppError
 from models.enums import AppErrorCode, Permission
 from models.filter import MembershipFilter
 from models.group import (
@@ -151,10 +151,10 @@ async def update_member_permissions(
             status_code=403, detail="Only administrators can grant or revoke the MANAGE_PERMISSIONS permission")
         
     if any(p in removed_permissions for p in group.default_permissions):
-        raise AppError(status_code=403, detail="Cannot remove permissions that are included in the group's default permissions", error_code=AppErrorCode.CANNOT_REMOVE_PERMISSION_REASON_DEFAULT_GROUP)
+        raise AppException(status_code=403, detail="Cannot remove permissions that are included in the group's default permissions", error_code=AppErrorCode.CANNOT_REMOVE_PERMISSION_REASON_DEFAULT_GROUP)
 
     if membership.share_link and any(p in removed_permissions for p in membership.share_link.permissions):
-        raise AppError(status_code=403, detail="Cannot remove permissions that are included in the related sharelink's permissions", error_code=AppErrorCode.CANNOT_REMOVE_PERMISSION_REASON_SHARELINK)
+        raise AppException(status_code=403, detail="Cannot remove permissions that are included in the related sharelink's permissions", error_code=AppErrorCode.CANNOT_REMOVE_PERMISSION_REASON_SHARELINK)
 
     db.merge(membership)
     # Apply updates to the membership fields
@@ -183,7 +183,7 @@ async def accept_membership(
     
     # If membership doesn't exist, the invite was revoked
     if not membership:
-        raise AppError(status_code=404, detail="Membership invite not found or has been revoked", error_code=AppErrorCode.MEMBERSHIP_NOT_FOUND)
+        raise AppException(status_code=404, detail="Membership invite not found or has been revoked", error_code=AppErrorCode.MEMBERSHIP_NOT_FOUND)
 
     db.merge(membership)
     membership.accepted = True
@@ -208,10 +208,10 @@ async def reject_membership(
     ).first()
 
     if not membership:
-        raise AppError(status_code=404, detail="Membership invite not found or has been revoked", error_code=AppErrorCode.MEMBERSHIP_NOT_FOUND)
+        raise AppException(status_code=404, detail="Membership invite not found or has been revoked", error_code=AppErrorCode.MEMBERSHIP_NOT_FOUND)
     
     if membership.is_owner:
-        raise AppError(status_code=403, detail="The owner cannot leave the group. Delete the group instead.", error_code=AppErrorCode.OWNER_CANNOT_LEAVE_GROUP)
+        raise AppException(status_code=403, detail="The owner cannot leave the group. Delete the group instead.", error_code=AppErrorCode.OWNER_CANNOT_LEAVE_GROUP)
 
     db.delete(membership)
     db.commit()
