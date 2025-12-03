@@ -3,6 +3,7 @@ import type { Paginated } from '$api/pagination';
 import type { ShareLinkRead } from '$api/types';
 import { redirect } from '@sveltejs/kit';
 import type { PageLoad } from './$types';
+import type { BreadcrumbItem } from '$types/breadcrumb';
 
 export const load: PageLoad = async ({ parent, params, fetch }) => {
 	const { membership, sessionUser } = await parent();
@@ -26,5 +27,17 @@ export const load: PageLoad = async ({ parent, params, fetch }) => {
 		throw new Error(`Failed to load share links: ${shareLinkResult.error.detail}`);
 	}
 
-	return { membership, sessionUser, shareLinks: shareLinkResult.data };
+	return {
+		membership,
+		sessionUser,
+		shareLinks: shareLinkResult.data,
+		breadcrumbs: [
+			{ label: 'Dashboard', href: '/dashboard' },
+			{
+				label: membership.group.name,
+				href: `/dashboard/groups/${membership.group.id}`
+			},
+			{ label: 'Sharing' }
+		] satisfies BreadcrumbItem[]
+	};
 };

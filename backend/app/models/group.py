@@ -23,6 +23,7 @@ class GroupRead(BaseModel):
     id: str
     name: str
     member_count: int
+    document_count: int
     owner: "UserRead | None"
     default_permissions: list[Permission]
 

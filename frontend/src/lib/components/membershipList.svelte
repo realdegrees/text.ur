@@ -9,15 +9,28 @@
 	import CloseIcon from '~icons/material-symbols/close-rounded';
 	import { page } from '$app/state';
 	import AddIcon from '~icons/material-symbols/add-circle-outline';
+	import PeopleIcon from '~icons/material-symbols/group-outline';
+	import DocumentIcon from '~icons/material-symbols/description-outline';
+	import CrownIcon from '~icons/mdi/crown';
 
 	interface Props {
 		data: Paginated<MembershipRead, 'user'>;
 		sessionUser: UserRead;
 		accepted: boolean;
+		compact?: boolean;
 		onSelect?: (membership: Omit<MembershipRead, 'user'>) => void;
 	}
 
-	let { data, sessionUser, accepted, onSelect }: Props = $props();
+	let { data, sessionUser, accepted, compact = false, onSelect }: Props = $props();
+
+	// Get initials from group name
+	function getInitials(name: string): string {
+		const words = name.trim().split(/\s+/);
+		if (words.length >= 2) {
+			return (words[0][0] + words[1][0]).toUpperCase();
+		}
+		return name.slice(0, 2).toUpperCase();
+	}
 
 	/**
 	 * Load more memberships with pagination.
@@ -97,33 +110,66 @@
 </script>
 
 {#if accepted}
-	<div class="flex flex-row items-center justify-between">
-		<h2 class="w-full text-left text-2xl">{$LL.myGroups()}</h2>
-		<a
-			href="/dashboard/groups/create"
-			class="flex flex-row items-center gap-1 rounded-md bg-inset px-3 py-1 text-sm shadow-inner shadow-black/30 transition-all hover:bg-green-500/20"
-			title="Create new group"
-		>
-			<AddIcon class="h-4 w-4 text-text" />
-			<p class="text-text">New</p>
-		</a>
-	</div>
-	<hr class="border-text/50" />
+	{#if !compact}
+		<div class="flex flex-row items-center justify-between">
+			<h2 class="w-full text-left text-2xl">{$LL.myGroups()}</h2>
+			<a
+				href="/dashboard/groups/create"
+				class="bg-inset flex flex-row items-center gap-1 rounded-md px-3 py-1 text-sm shadow-inner shadow-black/30 transition-all hover:bg-green-500/20"
+				title="Create new group"
+			>
+				<AddIcon class="text-text h-4 w-4" />
+				<p class="text-text">New</p>
+			</a>
+		</div>
+		<hr class="border-text/50" />
+	{/if}
 	<InfiniteScrollList {data} {loadMore} step={2} onSelect={handleSelect}>
 		{#snippet itemSnippet(membership: Omit<MembershipRead, 'user'>)}
-			<div
-				class="group m-1 flex w-full cursor-pointer flex-col gap-1 rounded-md bg-inset px-3 py-2.5 shadow-inner shadow-black/30 transition-all hover:bg-primary"
-				class:bg-primary={membership.group.id === page.params.groupid}
-				class:shadow-inner-sym-[5px]={membership.group.id === page.params.groupid}
-			>
-				<h3 class="truncate text-left text-sm font-semibold">{membership.group.name}</h3>
-				<p class="truncate text-left text-xs opacity-70">
-					{membership.group.owner?.username}
-				</p>
-			</div>
+			{#if compact}
+				<div
+					class="bg-primary/20 hover:bg-primary group m-1 flex w-full cursor-pointer items-center justify-center rounded-md py-2.5 shadow-inner shadow-black/30 transition-all"
+					class:bg-primary={membership.group.id === page.params.groupid}
+					class:shadow-inner-sym-[5px]={membership.group.id === page.params.groupid}
+					title={membership.group.name}
+				>
+					<span class="text-text text-sm font-bold">{getInitials(membership.group.name)}</span>
+				</div>
+			{:else}
+				<div
+					class="bg-inset hover:bg-primary group m-1 flex w-full cursor-pointer flex-col gap-2 rounded-md px-3 py-2.5 shadow-inner shadow-black/30 transition-all"
+					class:bg-primary={membership.group.id === page.params.groupid}
+					class:shadow-inner-sym-[5px]={membership.group.id === page.params.groupid}
+				>
+					<h3 class="truncate text-left text-base font-semibold">{membership.group.name}</h3>
+					<div class="text-text/70 flex items-center gap-3 text-xs">
+						<!-- Member count -->
+						<div class="flex items-center gap-1" title="{membership.group.member_count} member{membership.group.member_count === 1 ? '' : 's'}">
+							<PeopleIcon class="h-4 w-4" />
+							<span>{membership.group.member_count}</span>
+						</div>
+						<!-- Document count -->
+						<div
+							class="flex items-center gap-1"
+							title="{membership.group.document_count} documents"
+						>
+							<DocumentIcon class="h-4 w-4" />
+							<span>{membership.group.document_count}</span>
+						</div>
+						<!-- Owner indicator -->
+
+						<div class="ml-auto flex items-center" title={membership.is_owner ? 'You own this group' : ''}>
+							<CrownIcon class="h-4 w-4 {membership.is_owner ? 'text-yellow-500 hover:scale-110' : ''}" />
+							{#if !membership.is_owner}
+								<p>{membership.group.owner?.username}</p>
+							{/if}
+						</div>
+					</div>
+				</div>
+			{/if}
 		{/snippet}
 	</InfiniteScrollList>
-{:else if data.total > 0}
+{:else if data.total > 0 && !compact}
 	<div class="flex flex-row items-center justify-between">
 		<h2 class="w-full text-left text-xl">{$LL.invitations()}</h2>
 	</div>
@@ -131,7 +177,7 @@
 	<InfiniteScrollList {data} {loadMore} step={50}>
 		{#snippet itemSnippet(invitation: Omit<MembershipRead, 'user'>)}
 			<div
-				class="flex w-full flex-row items-center justify-between gap-2 rounded-md bg-inset px-3 py-2.5 shadow-inner shadow-black/30"
+				class="bg-inset flex w-full flex-row items-center justify-between gap-2 rounded-md px-3 py-2.5 shadow-inner shadow-black/30"
 			>
 				<div class="flex min-w-0 flex-1 flex-col gap-1">
 					<h4 class="truncate text-sm font-semibold">{invitation.group.name}</h4>

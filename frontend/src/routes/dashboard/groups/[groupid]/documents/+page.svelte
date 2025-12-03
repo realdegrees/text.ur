@@ -25,7 +25,6 @@
 
 <div class="h-screen p-4">
 	<div class="mb-4 flex w-full flex-row items-center justify-between gap-2">
-		<h1 class="text-2xl font-bold">Documents</h1>
 		{#if sessionStore.validatePermissions(['upload_documents'])}
 			<a
 				href="/dashboard/groups/{group.id}/documents/create"

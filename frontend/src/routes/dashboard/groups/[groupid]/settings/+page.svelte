@@ -123,8 +123,6 @@
 </script>
 
 <div class="flex h-full w-full flex-col gap-6 p-6">
-	<h1 class="text-2xl font-bold">Group Settings</h1>
-
 	<!-- Settings Form -->
 	<div class="flex flex-col gap-6">
 		<!-- Group Name -->

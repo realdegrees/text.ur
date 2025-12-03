@@ -15,6 +15,7 @@
 	import LogoutIcon from '~icons/mdi/exit-run';
 	import { page } from '$app/state';
 	import LL from '$i18n/i18n-svelte';
+	import Breadcrumb from '$lib/components/Breadcrumb.svelte';
 
 	let { user }: { user?: UserPrivate } = $props();
 
@@ -57,18 +58,19 @@
 <div class="h-16.5 w-full"></div>
 <header class="fixed top-0 right-0 left-0 z-9000 h-15.5 w-full bg-background">
 	<div
-		class="center-content dark:shadow-inner-sym-10 mt-1 grid h-full grid-cols-3
-	items-center bg-inset shadow-inner-sym-[10px] shadow-black"
+		class="center-content dark:shadow-inner-sym-10 mt-1 flex h-full
+	items-center justify-between bg-inset shadow-inner-sym-[10px] shadow-black"
 	>
-		<a
-			href="/"
-			class="col-span-1 col-start-1 flex flex-row justify-self-start transition-all hover:pl-0.5"
-		>
-			<img class="w-auto p-2" src={logoSrc} alt="Logo" />
-			<p class="ml-1 self-center text-3xl"></p>
-		</a>
+		<div class="flex items-center gap-4">
+			<a href="/" class="flex flex-row transition-all hover:scale-105">
+				<img class="w-auto p-2" src={logoSrc} alt="Logo" />
+				<p class="ml-1 self-center text-3xl"></p>
+			</a>
 
-		<div class="col-span-1 col-start-3 mr-3 flex flex-row-reverse items-center justify-self-end">
+			<Breadcrumb />
+		</div>
+
+		<div class="mr-3 flex flex-row-reverse items-center">
 			{#if user?.id}
 				<div class="relative z-9500">
 					<button

@@ -102,6 +102,34 @@ class Membership(BaseModel, table=True):
         )
 
 
+class Document(BaseModel, table=True):
+    """Document entity representing uploaded files."""
+
+    id: str = Field(default_factory=lambda: generate(
+        size=10), primary_key=True, index=True)
+    name: str = Field()
+    s3_key: str = Field(index=True, unique=True)
+    size_bytes: int = Field(default=0)
+    visibility: Visibility = Field(default=Visibility.PRIVATE, sa_column=Column(
+        String, server_default=Visibility.PRIVATE.value))
+    view_mode: ViewMode = Field(
+        default=ViewMode.PUBLIC,
+        sa_column=Column(String, server_default=ViewMode.PUBLIC.value)
+    )
+    secret: UUID = Field(default_factory=func.gen_random_uuid,
+                         sa_column=Column(PGUUID(as_uuid=True)))
+
+    group_id: str = Field(
+        foreign_key="group.id", nullable=True, ondelete="CASCADE")
+
+    group: "Group" = Relationship(back_populates="documents")
+
+    comments: list["Comment"] = Relationship(
+        back_populates="document", sa_relationship_kwargs={"lazy": "noload", "cascade": "all, delete-orphan", "passive_deletes": True})
+    tags: list["Tag"] = Relationship(
+        back_populates="document", sa_relationship_kwargs={"lazy": "selectin", "cascade": "all, delete-orphan", "passive_deletes": True})
+
+
 class Group(BaseModel, table=True):
     """Group entity for shared document management."""
 
@@ -123,6 +151,18 @@ class Group(BaseModel, table=True):
             select(func.count(Membership.user_id))
             .where(Membership.group_id == self.id)
             .correlate_except(Membership)
+            .scalar_subquery()
+        )
+        
+    document_count: ClassVar[int]
+    
+    @declared_attr
+    def document_count(self) -> int:
+        """Count of documents in the group."""
+        return column_property(
+            select(func.count(Document.id))
+            .where(Document.group_id == self.id)
+            .correlate_except(Document)
             .scalar_subquery()
         )
 
@@ -147,33 +187,6 @@ class Group(BaseModel, table=True):
         """Rotate the group secret to invalidate existing tokens."""
         self.secret = str(uuid4())
 
-
-class Document(BaseModel, table=True):
-    """Document entity representing uploaded files."""
-
-    id: str = Field(default_factory=lambda: generate(
-        size=10), primary_key=True, index=True)
-    name: str = Field()
-    s3_key: str = Field(index=True, unique=True)
-    size_bytes: int = Field(default=0)
-    visibility: Visibility = Field(default=Visibility.PRIVATE, sa_column=Column(
-        String, server_default=Visibility.PRIVATE.value))
-    view_mode: ViewMode = Field(
-        default=ViewMode.PUBLIC,
-        sa_column=Column(String, server_default=ViewMode.PUBLIC.value)
-    )
-    secret: UUID = Field(default_factory=func.gen_random_uuid,
-                         sa_column=Column(PGUUID(as_uuid=True)))
-
-    group_id: str = Field(
-        foreign_key="group.id", nullable=True, ondelete="CASCADE")
-
-    group: Group = Relationship(back_populates="documents")
-
-    comments: list["Comment"] = Relationship(
-        back_populates="document", sa_relationship_kwargs={"lazy": "noload", "cascade": "all, delete-orphan", "passive_deletes": True})
-    tags: list["Tag"] = Relationship(
-        back_populates="document", sa_relationship_kwargs={"lazy": "selectin", "cascade": "all, delete-orphan", "passive_deletes": True})
 
 
 class Comment(BaseModel, table=True):
