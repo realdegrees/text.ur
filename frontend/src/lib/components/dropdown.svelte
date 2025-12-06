@@ -101,13 +101,6 @@
 		menuStyle = Object.entries(styles)
 			.map(([k, v]) => `${k}: ${v};`)
 			.join(' ');
-
-		// Detailed debug logs
-		console.log('Dropdown position:', position);
-		console.log('Trigger rect:', rect);
-		console.log('Menu rect:', menuRect);
-		console.log('Computed styles:', styles);
-		console.log('Final menuStyle:', menuStyle);
 	}
 
 	$effect(() => {

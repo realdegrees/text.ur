@@ -77,7 +77,6 @@ const createDocumentStore = () => {
 
 		// Recursively remove replies as well
 		const removeComment = (commentId: number) => {
-			console.log(`Removing stale comment ${commentId}`);
 			const commentState = commentStates.get(commentId);
 			if (commentState?.replies?.length) {
 				commentState.replies.forEach((replyId) => {
@@ -253,33 +252,44 @@ const createDocumentStore = () => {
 		},
 		delete: (commentId: number, deleteState = false) => {
 			/** Delete a comment and its replies from the local store. */
-			// Delete all replies and their states from the local map
 			const commentState = commentStates.get(commentId);
 			const commentToDelete: TypedComment | undefined = _comments.get(commentId);
+
 			/**
-			 * Recursively delete replies for a given comment id.
+			 * Recursively reset state for replies and delete comments.
 			 */
-			const deleteRepliesRecursively = (rootId: number): void => {
-				// Get the state for the current comment id
+			const resetRepliesRecursively = (rootId: number): void => {
 				const stateForRoot: CommentState | undefined = commentStates.get(rootId);
-				// Copy reply ids to avoid mutation during iteration
 				const replyIds: number[] = [...(stateForRoot?.replies ?? [])];
 
-				// Recursively delete each reply and its nested replies
 				for (const replyId of replyIds) {
-					deleteRepliesRecursively(replyId);
+					resetRepliesRecursively(replyId);
 					_comments.delete(replyId);
-					commentStates.delete(replyId);
+
+					const replyState = commentStates.get(replyId);
+					if (replyState) {
+						replyState.replies = [];
+						replyState.repliesExpanded = false;
+						replyState.isHighlightHovered = false;
+						replyState.isCommentHovered = false;
+					}
 				}
 			};
 
-			// Start recursive deletion from immediate replies of the comment to delete
+			// Reset state for immediate replies of the comment to delete
 			if (commentState?.replies?.length) {
 				const immediateReplyIds: number[] = [...commentState.replies];
 				for (const replyId of immediateReplyIds) {
-					deleteRepliesRecursively(replyId);
+					resetRepliesRecursively(replyId);
 					_comments.delete(replyId);
-					commentStates.delete(replyId);
+
+					const replyState = commentStates.get(replyId);
+					if (replyState) {
+						replyState.replies = [];
+						replyState.repliesExpanded = false;
+						replyState.isHighlightHovered = false;
+						replyState.isCommentHovered = false;
+					}
 				}
 			}
 
@@ -292,14 +302,22 @@ const createDocumentStore = () => {
 				parentCommentState.replies = parentCommentState.replies.filter((id) => id !== commentId);
 			}
 
-			// Decrement num_replies in parent comment state
-			if (parentComment) parentComment.num_replies--;
+			// Decrement num_replies in parent comment
+			if (parentComment) {
+				_comments.set(parentComment.id, {
+					...parentComment,
+					num_replies: parentComment.num_replies - 1
+				});
+			}
 
-			// Remove own comment and reset hover state, preserve rest of the state
+			// Reset state for the deleted comment
 			if (commentState) {
+				commentState.replies = [];
+				commentState.repliesExpanded = false;
 				commentState.isHighlightHovered = false;
 				commentState.isCommentHovered = false;
 			}
+
 			_comments.delete(commentId);
 			if (deleteState) {
 				commentStates.delete(commentId);
