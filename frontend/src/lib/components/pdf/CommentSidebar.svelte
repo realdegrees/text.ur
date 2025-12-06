@@ -2,7 +2,7 @@
 	import { documentStore, type TypedComment } from '$lib/runes/document.svelte.js';
 	import CommentCluster from './CommentCluster.svelte';
 	import { onMount } from 'svelte';
-	import { CLUSTER_THRESHOLD_PX, BADGE_HEIGHT_PX } from './constants';
+	import { BADGE_HEIGHT_PX } from './constants';
 	import type { Annotation } from '$types/pdf';
 	import { SvelteMap } from 'svelte/reactivity';
 
@@ -17,7 +17,7 @@
 
 	// Calculate the Y position of each comment relative to the sidebar's scroll position
 	// Returns the CENTER Y position of the first highlight box
-	const getCommentYPosition = (comment: TypedComment): number | null => {
+	const getCommentPosition = (comment: TypedComment): { x: number; y: number } | null => {
 		if (!viewerContainer || !comment.annotation) return null;
 
 		const firstBox = comment.annotation.boundingBoxes[0];
@@ -51,17 +51,16 @@
 		const yRelativeToContainer = annotationCenterInViewport - containerRect.top;
 
 		// Offset by half badge height to center the badge
-		return yRelativeToContainer - BADGE_HEIGHT_PX / 2;
+		return {
+			x: firstBox.x * textLayerRect.width,
+			y: yRelativeToContainer - BADGE_HEIGHT_PX / 2
+		};
 	};
 
 	// Group comments by Y position proximity (clustering)
-	interface CommentClusterData {
-		comments: TypedComment[];
-		yPosition: number;
-	}
-
-	// Update tick triggered by text layer resizes
-	let clustersUpdateTick = $state(0);
+	type CommentClusterData = (TypedComment & {
+		highlightPosition: { x: number; y: number };
+	})[];
 
 	// Track actual rendered heights of clusters (key is comment IDs joined)
 	let clusterHeights = new SvelteMap<string, number>();
@@ -71,86 +70,116 @@
 		return comments.some((c) => {
 			const state = documentStore.comments.getState(c.id);
 			return (
-				state?.isCommentHovered || state?.isHighlightHovered || state?.isPinned || state?.isEditing
+				state?.isCommentHovered ||
+				state?.isHighlightHovered ||
+				state?.isPinned ||
+				state?.isEditing ||
+				state?.isReplying
 			);
 		});
 	};
 
-	let baseClusters = $derived.by((): CommentClusterData[] => {
-		// Depend on the update tick (triggered by ResizeObserver)
-		void clustersUpdateTick;
-		void scrollTop;
+	// Force update trigger for PDF page rendering
+	let renderTrigger = $state(0);
 
-		const positioned = documentStore.comments.topLevelComments
+	let baseClusters = $derived.by((): CommentClusterData[] => {
+		// Depend on multiple signals to trigger recalculation
+		void scrollTop; // When user scrolls
+		void documentStore.documentScale; // When PDF is scaled
+		void documentStore.numPages; // When PDF is loaded
+		void renderTrigger; // When pages are rendered into DOM
+
+		const commentPositionMap = documentStore.comments.topLevelComments
 			.map((comment) => ({
 				comment,
-				y: getCommentYPosition(comment)
+				highlightPosition: getCommentPosition(comment)
 			}))
 			.filter(
-				(item): item is { comment: TypedComment & { annotation: Annotation }; y: number } =>
-					!!item.y
+				(
+					item
+				): item is {
+					comment: TypedComment & { annotation: Annotation };
+					highlightPosition: { x: number; y: number };
+				} => !!item.highlightPosition
 			)
-			.sort((a, b) => a.y - b.y);
+			.sort((a, b) => {
+				return a.highlightPosition.y - b.highlightPosition.y;
+			});
 
-		if (positioned.length === 0) return [];
+		if (commentPositionMap.length === 0) return [];
 
 		const result: CommentClusterData[] = [];
-		let currentCluster: CommentClusterData = {
-			comments: [positioned[0].comment],
-			yPosition: positioned[0].y
-		};
+		let currentCluster: CommentClusterData = [
+			{
+				...commentPositionMap[0].comment,
+				highlightPosition: commentPositionMap[0].highlightPosition
+			}
+		];
 
-		for (let i = 1; i < positioned.length; i++) {
-			const item = positioned[i];
-			const lastClusterY = currentCluster.yPosition;
-
-			if (item.y - lastClusterY <= CLUSTER_THRESHOLD_PX) {
+		for (let i = 1; i < commentPositionMap.length; i++) {
+			const item = commentPositionMap[i];
+			const lastClusterY = currentCluster[0].highlightPosition.y;
+			if (item.highlightPosition.y - lastClusterY <= BADGE_HEIGHT_PX) {
 				// Merge into current cluster
-				currentCluster.comments.push(item.comment);
+				currentCluster.push({
+					...item.comment,
+					highlightPosition: item.highlightPosition
+				});
+				currentCluster = currentCluster.sort((a, b) => {
+					return a.id - b.id;
+				});
 			} else {
 				// Start a new cluster
 				result.push(currentCluster);
-				currentCluster = {
-					comments: [item.comment],
-					yPosition: item.y
-				};
+				currentCluster = [
+					{
+						...item.comment,
+						highlightPosition: item.highlightPosition
+					}
+				];
 			}
 		}
 
 		// Don't forget the last cluster
 		result.push(currentCluster);
-
 		return result;
 	});
 
 	// Adjust cluster positions to prevent overlaps with expanded cards
-	let clusters = $derived.by((): CommentClusterData[] => {
+	let repositionedClusters = $derived.by((): CommentClusterData[] => {
 		const GAP_PX = 8; // Gap between clusters
 
-		// Work on a shallow clone of baseClusters to avoid mutating the original
-		// (Svelte needs new object references to ensure the template updates)
-		const adjusted = baseClusters.map((c) => ({ ...c, comments: c.comments.slice() }));
+		// Depend on clusterHeights to recalculate when heights change
+		void clusterHeights;
+
+		// Deep clone baseClusters to avoid mutating the original
+		// Each cluster needs its own copy of highlightPosition
+		const adjusted = baseClusters.map((cluster) =>
+			cluster.map((comment) => ({
+				...comment,
+				highlightPosition: { ...comment.highlightPosition }
+			}))
+		);
 
 		// Iteratively adjust positions from top to bottom using the clones
 		for (let i = 0; i < adjusted.length; i++) {
 			const current = adjusted[i];
-			const currentKey = current.comments.map((c) => c.id).join('-');
 
 			// Get the actual rendered height, or use badge height as fallback
-			const currentIsExpanded = isClusterExpanded(current.comments);
+			const currentIsExpanded = isClusterExpanded(current);
 			const currentHeight = currentIsExpanded
-				? clusterHeights.get(currentKey) || BADGE_HEIGHT_PX
+				? clusterHeights.get(current[0].id.toString()) || BADGE_HEIGHT_PX
 				: BADGE_HEIGHT_PX;
 
-			const currentBottom = current.yPosition + currentHeight;
+			const currentBottom = current[0].highlightPosition.y + currentHeight;
 
 			// Check all clusters below and push them down if they overlap
 			for (let j = i + 1; j < adjusted.length; j++) {
 				const below = adjusted[j];
 
 				// If current cluster's bottom overlaps with the cluster below, push it down
-				if (currentBottom + GAP_PX > below.yPosition) {
-					below.yPosition = currentBottom + GAP_PX;
+				if (currentBottom + GAP_PX > below[0].highlightPosition.y) {
+					below[0].highlightPosition.y = currentBottom + GAP_PX;
 				}
 			}
 		}
@@ -164,23 +193,36 @@
 
 		documentStore.commentSidebarRef = containerElement;
 
-		// Use ResizeObserver to detect when PDF.js finishes scaling text layers
-		// Wait 2 RAF to match AnnotationLayer timing
-		const resizeObserver = new ResizeObserver(() => {
-			clustersUpdateTick++;
+		// Watch for text layers being added and resized to trigger recalculation
+		const textLayerObserver = new ResizeObserver(() => {
+			renderTrigger++;
 		});
 
-		// Observe all existing text layers
-		const textLayers = viewerContainer.querySelectorAll('.textLayer');
-		textLayers.forEach((layer) => resizeObserver.observe(layer as HTMLElement));
+		const mutationObserver = new MutationObserver((mutations) => {
+			// Check if any text layers were added
+			let hasNewTextLayers = false;
+			for (const mutation of mutations) {
+				for (const node of mutation.addedNodes) {
+					if (node instanceof HTMLElement) {
+						if (node.classList.contains('textLayer')) {
+							hasNewTextLayers = true;
+							break;
+						}
+					}
+				}
+				if (hasNewTextLayers) break;
+			}
 
-		// MutationObserver to detect new pages/text layers being added
-		const mutationObserver = new MutationObserver(() => {
-			const newTextLayers = viewerContainer.querySelectorAll('.textLayer');
-			newTextLayers.forEach((layer) => {
-				// ResizeObserver is safe to call multiple times on same element
-				resizeObserver.observe(layer as HTMLElement);
+			if (!hasNewTextLayers) return;
+
+			// Observe new text layers with ResizeObserver
+			const textLayers = viewerContainer.querySelectorAll('.textLayer');
+			textLayers.forEach((layer) => {
+				textLayerObserver.observe(layer as HTMLElement);
 			});
+
+			// Trigger a recalculation when new text layers are detected
+			renderTrigger++;
 		});
 
 		mutationObserver.observe(viewerContainer, {
@@ -188,33 +230,30 @@
 			subtree: true
 		});
 
-		// Initial calculation
-		clustersUpdateTick++;
-
 		return () => {
-			resizeObserver.disconnect();
+			textLayerObserver.disconnect();
 			mutationObserver.disconnect();
 		};
 	});
 </script>
 
 <div class="relative h-full" bind:this={containerElement}>
-	{#each clusters as cluster (cluster.comments.map((c) => c.id).join('-'))}
-		{@const clusterKey = cluster.comments.map((c) => c.id).join('-')}
-		<div class="absolute right-3 left-3" style="top: {cluster.yPosition}px;">
-			<CommentCluster
-				comments={cluster.comments}
-				yPosition={cluster.yPosition}
-				{scrollTop}
-				onHeightChange={(height: number) => {
-					clusterHeights.set(clusterKey, height);
-					clusterHeights = clusterHeights; // trigger reactivity
-				}}
-			/>
-		</div>
-	{/each}
+	{#key repositionedClusters.length}
+		{#each repositionedClusters as cluster, idx (idx)}
+			<div class="absolute right-3 left-3" style="top: {cluster[0].highlightPosition.y}px;">
+				<CommentCluster
+					comments={cluster}
+					yPosition={cluster[0].highlightPosition.y}
+					{scrollTop}
+					onHeightChange={(height: number) => {
+						clusterHeights.set(cluster[0].id.toString(), height);
+					}}
+				/>
+			</div>
+		{/each}
+	{/key}
 
-	{#if !clusters.length}
+	{#if !repositionedClusters.length}
 		<div class="flex h-full items-center justify-center p-4">
 			<p class="text-center text-sm text-text/40">Select text in the PDF to add a comment</p>
 		</div>

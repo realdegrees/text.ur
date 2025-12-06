@@ -153,7 +153,9 @@ const createDocumentStore = () => {
 					(comment) => !!comment.tags && comment.tags.some((t) => includedTagIds.includes(t.id))
 				);
 			}
-		} else if (excludedFilters.length > 0) {
+		}
+
+		if (excludedFilters.length > 0) {
 			// Apply exclude filters when no include filters present.
 			if (excludedAuthorIds.length > 0) {
 				filteredArray = filteredArray.filter(
@@ -552,7 +554,7 @@ const createDocumentStore = () => {
 				if (currentTimeouts) {
 					hoverTimeouts.set(commentId, { ...currentTimeouts, highlight: undefined });
 				}
-			}, 300) as unknown as number;
+			}, 50) as unknown as number;
 
 			hoverTimeouts.set(commentId, { ...timeouts, highlight: timeoutId });
 		}
@@ -585,7 +587,7 @@ const createDocumentStore = () => {
 				if (currentTimeouts) {
 					hoverTimeouts.set(commentId, { ...currentTimeouts, comment: undefined });
 				}
-			}, 100) as unknown as number;
+			}, 50) as unknown as number;
 
 			hoverTimeouts.set(commentId, { ...timeouts, comment: timeoutId });
 		}

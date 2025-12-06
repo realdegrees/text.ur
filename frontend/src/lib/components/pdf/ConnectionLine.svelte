@@ -8,6 +8,7 @@
 		scrollTop?: number;
 	}
 
+	// TODO: use position data from cluster instead of recalculating
 	let { commentState, opacity = 1, yPosition, scrollTop }: Props = $props();
 
 	interface LineCoordinates {
@@ -36,15 +37,12 @@
 		const clusterLeft = sidebarRect.left + LEFT_PADDING;
 		const clusterTop = sidebarRect.top + yPosition;
 
-		console.log(`num els: ${highlightEls.length}`);
-
 		// Get the rightmost edge from all highlights for horizontal positioning
 		let maxRight = -Infinity;
 		let minTop = +Infinity;
 		let heightTotal = 0;
 		highlightEls.forEach((el) => {
 			const rect = el.getBoundingClientRect();
-			console.log(el.dataset);
 			heightTotal += rect.height;
 			maxRight = Math.max(maxRight, rect.right);
 			minTop = Math.min(minTop, rect.top);
