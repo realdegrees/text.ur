@@ -2,7 +2,6 @@ from datetime import UTC, datetime, timedelta
 from typing import Any, Literal, overload
 
 import bcrypt
-from sqlmodel import select
 from api.dependencies.database import Database
 from core.app_exception import AppException
 from core.config import (
@@ -17,6 +16,7 @@ from jwt.exceptions import InvalidTokenError
 from models.auth import GlobalJWTPayload, Token, TokenType, UserJWTPayload
 from models.enums import AppErrorCode
 from models.tables import User
+from sqlmodel import select
 
 if not JWT_SECRET:
     raise RuntimeError(

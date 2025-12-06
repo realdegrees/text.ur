@@ -445,7 +445,7 @@ class Guard:
         return EndpointGuard(clause, predicate, exclude_fields=exclude_fields)
 
     @staticmethod
-    def sharelink_access(
+    def sharelink_access( # noqa: C901
         *,
         exclude_fields: list[ColumnElement] | None = None,
     ) -> EndpointGuard[ShareLink]:

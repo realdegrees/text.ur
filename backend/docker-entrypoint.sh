@@ -15,11 +15,6 @@ fi
 
 echo "Waiting for Postgres..."
 export PGPASSWORD="$POSTGRES_PASSWORD"
-# Keep DATABASE_URL in SQLAlchemy form for Alembic/SQLAlchemy usage. psql doesn't
-# understand the SQLAlchemy-specific "+psycopg2" suffix, so create an explicit
-# option string for psql calls below.
-export DATABASE_URL="postgresql+psycopg2://$POSTGRES_USER:$POSTGRES_PASSWORD@$POSTGRES_HOST:$POSTGRES_PORT/$POSTGRES_DB"
-echo "DATABASE_URL is set to: $DATABASE_URL"
 
 
 PSQL_OPTS="-h $POSTGRES_HOST -p $POSTGRES_PORT -U $POSTGRES_USER -d $POSTGRES_DB"

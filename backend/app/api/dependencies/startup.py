@@ -1,17 +1,91 @@
 import asyncio
 
-from api.dependencies.database import (
-    get_database_manager,
-)
+import psycopg2
+import redis
+from api.dependencies.database import get_database_manager
 from api.dependencies.events import get_event_manager
 from api.dependencies.mail import get_mail_manager
 from api.dependencies.s3 import get_s3_manager
+from core import config as cfg
 from core.logger import get_logger
 
 app_logger = get_logger("app")
 
 
- 
+def verify_all_dependencies_sync() -> None:
+    """Verify critical dependencies using synchronous operations.
+    
+    This function is designed to run in the Gunicorn master process before
+    forking workers. It performs lightweight checks to ensure critical services
+    are reachable without creating async event loops that would conflict with
+    worker event loops.
+    """
+    # Database - use psycopg2 for synchronous connection test
+    try:
+        app_logger.debug("Checking database connection (sync)")
+        # Parse DATABASE_URL to get connection params
+        # Format: postgresql+asyncpg://user:pass@host:port/db
+        db_url = cfg.DATABASE_URL.replace("postgresql+asyncpg://", "")
+        if "@" in db_url:
+            auth, rest = db_url.split("@", 1)
+            user, password = auth.split(":", 1) if ":" in auth else (auth, "")
+            host_db = rest
+            if "/" in host_db:
+                host_port, db_name = host_db.split("/", 1)
+                host, port = host_port.split(":", 1) if ":" in host_port else (host_port, "5432")
+            else:
+                host, port = host_db.split(":", 1) if ":" in host_db else (host_db, "5432")
+                db_name = "postgres"
+                
+            conn = psycopg2.connect(
+                host=host,
+                port=port,
+                user=user,
+                password=password,
+                database=db_name,
+                connect_timeout=5,
+            )
+            conn.close()
+            app_logger.info("Database connection verified (sync)")
+    except Exception as e:
+        app_logger.error("Database verification failed (sync): %s", e)
+        raise RuntimeError(f"Failed to connect to database: {e}") from e
+
+    # Redis - use sync redis client
+    try:
+        app_logger.debug("Checking Redis connection (sync)")
+        r = redis.Redis(
+            host=cfg.REDIS_HOST,
+            port=cfg.REDIS_PORT,
+            password=cfg.REDIS_PASSWORD,
+            decode_responses=True,
+            socket_connect_timeout=5,
+        )
+        r.ping()
+        app_logger.info("Redis connection verified (sync)")
+    except Exception as e:
+        app_logger.error("Redis verification failed (sync): %s", e)
+        raise RuntimeError(f"Failed to connect to Redis: {e}") from e
+
+    # S3 - just validate configuration by instantiating
+    try:
+        app_logger.debug("Validating S3 configuration")
+        get_s3_manager()
+        app_logger.info("S3 configuration validated")
+    except Exception as e:
+        app_logger.error("S3 configuration validation failed: %s", e)
+        raise RuntimeError(f"S3 configuration invalid: {e}") from e
+
+    # Mail - just validate configuration by instantiating
+    try:
+        app_logger.debug("Validating Mail configuration")
+        get_mail_manager()
+        app_logger.info("Mail configuration validated")
+    except Exception as e:
+        app_logger.error("Mail configuration validation failed: %s", e)
+        raise RuntimeError(f"Mail configuration invalid: {e}") from e
+
+    app_logger.info("All dependencies verified successfully (sync)")
 
 
 async def verify_all_dependencies_async() -> dict:
