@@ -20,15 +20,18 @@ import pytest_asyncio
 from _pytest.fixtures import SubRequest
 from alembic import command as alembic_command
 from alembic.config import Config
-from api.dependencies.database import Database, SessionFactory
+from api.dependencies.database import SessionFactory, session
 from api.dependencies.events import EventManager
 from api.dependencies.s3 import S3Manager
 from core.auth import parse_jwt
+from core.config import DATABASE_URL, DB_CONNECTION_TIMEOUT
 from core.logger import get_logger
 from factories import models as factory_models
 from httpx import AsyncClient
 from main import app
 from models.tables import User
+from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
+from sqlalchemy.orm import sessionmaker
 from sqlmodel.ext.asyncio.session import AsyncSession as SQLModelAsyncSession
 
 from database import init
@@ -96,25 +99,65 @@ async def client(request: SubRequest) -> AsyncGenerator[AsyncClient, None]:
 
 @pytest_asyncio.fixture(scope="function")
 async def db(request: SubRequest) -> AsyncGenerator[SQLModelAsyncSession, None]:
-    """Database fixture for pytest."""
-    async with SessionFactory() as _session:
-        # Override the Database dependency to use this test session
+    """Database fixture for pytest.
+    
+    Creates a new async engine and session for each test to avoid
+    event loop conflicts when using pytest-asyncio.
+    """
+    # Create a test-specific engine for this test's event loop
+    test_engine: AsyncEngine = create_async_engine(
+        DATABASE_URL,
+        echo=False,
+        pool_pre_ping=True,
+        pool_recycle=300,
+        connect_args={"timeout": DB_CONNECTION_TIMEOUT},
+    )
+    
+    # Create session factory with the test engine
+    test_session_factory = sessionmaker(
+        bind=test_engine,
+        class_=SQLModelAsyncSession,
+        expire_on_commit=False,
+    )
+    
+    async with test_session_factory() as _session:
+        # Override the session dependency to use this test session
         async def get_test_db() -> AsyncGenerator[SQLModelAsyncSession, None]:
             yield _session
 
-        app.dependency_overrides[Database] = get_test_db
+        app.dependency_overrides[session] = get_test_db
 
         try:
             yield _session
         finally:
             # Rollback any uncommitted changes
             await _session.rollback()
-            app.dependency_overrides.pop(Database, None)
+            app.dependency_overrides.pop(session, None)
+    
+    # Clean up the test engine
+    await test_engine.dispose()
 
 @pytest_asyncio.fixture(autouse=True)
 async def set_factory_session_auto(db: SQLModelAsyncSession) -> AsyncGenerator[None, None]:
-    """Automatically set session on all factories."""
-    # For now, skip factory session setup for async
-    # Factory Boy doesn't support async sessions well
-    # Tests will need to handle DB operations directly
+    """Automatically set session on all factories.
+    
+    We use run_sync to run the factory creation in a greenlet context,
+    which allows the sync session to work with the async database.
+    """    
+    # Get all factory classes from the factories.models module
+    factory_classes = [
+        getattr(factory_models, attr)
+        for attr in dir(factory_models)
+        if attr.endswith("Factory") and hasattr(getattr(factory_models, attr), "_meta")
+    ]
+    
+    # Set the sync session from the async session on all factories
+    # Use the sync_session which works within greenlets
+    for factory_cls in factory_classes:
+        factory_cls._meta.sqlalchemy_session = db.sync_session
+    
     yield
+    
+    # Clean up
+    for factory_cls in factory_classes:
+        factory_cls._meta.sqlalchemy_session = None

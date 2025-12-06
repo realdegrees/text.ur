@@ -4,7 +4,8 @@ import pytest
 from factories import models as f
 from models.enums import Permission, Visibility
 from models.tables import Group
-from sqlmodel import Session
+from sqlmodel import select
+from sqlmodel.ext.asyncio.session import AsyncSession as SQLModelAsyncSession
 from util.queries import Guard
 
 
@@ -58,23 +59,23 @@ from util.queries import Guard
         ({Permission.ADD_COMMENTS}, False, True, False, False, True, Visibility.RESTRICTED, True),
     ],
 )
-def test_document_access_predicate_and_sql(db: Session, require_permissions: set[Permission] | None, is_owner: bool, is_admin: bool, has_view_restricted: bool, has_required_perm: bool, accepted: bool, visibility: Visibility, expected: bool) -> None:
+async def test_document_access_predicate_and_sql(db: SQLModelAsyncSession, require_permissions: set[Permission] | None, is_owner: bool, is_admin: bool, has_view_restricted: bool, has_required_perm: bool, accepted: bool, visibility: Visibility, expected: bool) -> None:
     """Test `Guard.document_access` predicate and SQL clause with a parameter matrix.
 
     This mirrors the structure of `test_comment_access.py` using factories and
     verifying both the Python predicate and the SQLAlchemy clause.
     """
-    # Create users
-    owner = f.UserFactory()
-    viewer = f.UserFactory()
+    # Create users (use run_sync to execute factory in greenlet context)
+    owner = await db.run_sync(lambda session: f.UserFactory())
+    viewer = await db.run_sync(lambda session: f.UserFactory())
 
     # Create group and document
-    group = f.GroupFactory()
-    document = f.DocumentFactory(group=group, visibility=visibility)
+    group = await db.run_sync(lambda session: f.GroupFactory())
+    document = await db.run_sync(lambda session: f.DocumentFactory(group=group, visibility=visibility))
 
     # Create ownership/membership for owner and viewer
     # Owner membership: ensure the owner has a membership and is_owner flag
-    f.MembershipFactory(user=owner, group=group, is_owner=True, accepted=True)
+    await db.run_sync(lambda session: f.MembershipFactory(user=owner, group=group, is_owner=True, accepted=True))
 
     # Build viewer permissions
     perms = []
@@ -92,14 +93,13 @@ def test_document_access_predicate_and_sql(db: Session, require_permissions: set
             perms.append(Permission.ADD_DOCUMENTS)
 
     # Create viewer membership (respect the paramized is_owner flag)
-    f.MembershipFactory(user=viewer, group=group, permissions=perms, accepted=accepted, is_owner=is_owner)
+    await db.run_sync(lambda session: f.MembershipFactory(user=viewer, group=group, permissions=perms, accepted=accepted, is_owner=is_owner))
 
     # Assign group memberships/relationships for predicate
     from models.tables import Membership
-    from sqlmodel import select
 
-    db.flush()
-    memberships = db.exec(select(Membership).where(Membership.group_id == group.id)).all()
+    await db.flush()
+    memberships = (await db.exec(select(Membership).where(Membership.group_id == group.id))).all()
     group.memberships = list(memberships)
     document.group = group
 
@@ -111,5 +111,5 @@ def test_document_access_predicate_and_sql(db: Session, require_permissions: set
 
     # SQL test (clause executed against db)
     clause = guard.clause(viewer, {"document_id": document.id}, multi=False)
-    sql_result = db.exec(__import__("sqlmodel").select(clause)).one()
+    sql_result = (await db.exec(select(clause))).one()
     assert sql_result is expected
