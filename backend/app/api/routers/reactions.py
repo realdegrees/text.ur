@@ -19,33 +19,34 @@ router = APIRouter(
 
 @router.post("/", response_model=ReactionRead)
 async def add_reaction(
-    db: Database, 
-    user: User = Authenticate(guards=[Guard.comment_access({Permission.ADD_REACTIONS})]), 
-    reaction_create: ReactionCreate = Body(...), 
+    db: Database,
+    user: User = Authenticate(guards=[Guard.comment_access({Permission.ADD_REACTIONS})]),
+    reaction_create: ReactionCreate = Body(...),
     comment: Comment = Resource(Comment, param_alias="comment_id")
 ) -> ReactionRead:
     """Create a new reaction."""
     reaction = Reaction(**reaction_create.model_dump(), user_id=user.id, comment_id=comment.id)
     db.add(reaction)
-    db.commit()
+    await db.commit()
     return reaction
 
 @router.delete("/{reaction_id}")
 async def remove_reaction(
     db: Database,
-    user: User = Authenticate(guards=[Guard.comment_access({Permission.REMOVE_REACTIONS})]), 
+    user: User = Authenticate(guards=[Guard.comment_access({Permission.REMOVE_REACTIONS})]),
     comment: Comment = Resource(Comment, param_alias="comment_id")
 ) -> dict[str, bool]:
     """Delete a reaction."""
-    reaction = db.exec(
+    result = await db.exec(
         select(Reaction).where(
             Reaction.user_id == user.id,
             Reaction.comment_id == comment.id
         )
-    ).first()
+    )
+    reaction = result.first()
     if reaction is None:
         return Response(status_code=404, content="Reaction not found")
-    
-    db.delete(reaction)
-    db.commit()
+
+    await db.delete(reaction)
+    await db.commit()
     return Response(status_code=204)

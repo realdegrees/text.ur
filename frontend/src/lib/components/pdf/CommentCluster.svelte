@@ -225,8 +225,9 @@
 					? 'ring-primary/70'
 					: ''} flex cursor-pointer flex-row items-center justify-start rounded p-1 transition-all"
 			>
+				<p class="mr-0.5 pb-1 text-xs font-medium text-primary">{comments.length}</p>
 				<CommentIcon class="mr-2 h-4 w-4 text-primary" />
-				<p>{previewAuthor?.username ?? 'Unknown'}</p>
+				<p class="font-medium text-text">{previewAuthor?.username ?? 'Unknown'}</p>
 				{#if authorsInCluster.length > 1}
 					<span
 						class="ml-2 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary"

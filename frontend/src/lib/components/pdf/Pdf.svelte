@@ -230,7 +230,7 @@
 <style>
 	/* Override PDF.js CSS variables to reduce spacing */
 	:global(.pdf-viewer-container) {
-		--page-margin: 0px 0px;
+		--page-margin: 0px 0 6px 0;
 		--page-padding: 0px 0;
 		--page-border: none;
 		--pdfViewer-padding-bottom: 0;

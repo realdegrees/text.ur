@@ -26,6 +26,7 @@ from core.config import (
     POSTGRES_PASSWORD,
     POSTGRES_PORT,
     POSTGRES_USER,
+    SYNC_DATABASE_URL,
 )
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 from psycopg2.extensions import connection as PgConnection
@@ -139,7 +140,7 @@ def run_alembic_commands(upgrade_to_version: str = "head") -> None:
     alembic_cfg = Config(alembic_ini)
     alembic_cfg.set_main_option(
             "sqlalchemy.url",
-            f"postgresql+psycopg2://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}",
+            SYNC_DATABASE_URL,
         )
 
     # Ensure alembic can find env.py and the migrations package by using an

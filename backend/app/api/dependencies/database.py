@@ -13,14 +13,19 @@ from core.config import (
 from core.logger import get_logger
 from fastapi import Depends, HTTPException
 from sqlalchemy import event, text
-from sqlalchemy.engine import Engine
 from sqlalchemy.exc import (
     DBAPIError,
     OperationalError,
     TimeoutError,  # noqa: A004
 )
+from sqlalchemy.ext.asyncio import (
+    AsyncEngine,
+    AsyncSession,
+    create_async_engine,
+)
 from sqlalchemy.orm import UOWTransaction, sessionmaker
-from sqlmodel import Session, create_engine
+from sqlmodel import Session
+from sqlmodel.ext.asyncio.session import AsyncSession as SQLModelAsyncSession
 
 db_logger = get_logger("database")
 
@@ -29,40 +34,42 @@ if cfg.DEBUG:
 
     logging.getLogger("sqlalchemy.engine").setLevel(logging.INFO)
 
-def _attach_statement_timeout(engine: Engine) -> None:
-    """Attach a statement timeout listener to a SQLAlchemy engine.
+def _attach_statement_timeout(engine: AsyncEngine) -> None:
+    """Attach a statement timeout listener to a SQLAlchemy async engine.
 
     This is registered after the engine is created to avoid module import
     side-effects.
     """
-    @event.listens_for(engine, "connect")
+    @event.listens_for(engine.sync_engine, "connect")
     def _set_statement_timeout(dbapi_conn, connection_record) -> None:  # noqa: ANN001
         cursor = dbapi_conn.cursor()
         cursor.execute(f"SET statement_timeout = {DB_STATEMENT_TIMEOUT}")
         cursor.close()
-        
+
 class DatabaseManager:
-    """Manager for SQLAlchemy Engine and Session factory."""
+    """Manager for SQLAlchemy AsyncEngine and AsyncSession factory."""
 
     def __init__(self) -> None:  # noqa: D107
-        self.engine: Engine = create_engine(
+        self.engine: AsyncEngine = create_async_engine(
             DATABASE_URL,
             echo=False,
             pool_pre_ping=True,
             pool_recycle=300,
-            connect_args={"connect_timeout": DB_CONNECTION_TIMEOUT},
+            connect_args={"timeout": DB_CONNECTION_TIMEOUT},
         )
         _attach_statement_timeout(self.engine)
-        self.session_factory: sessionmaker = sessionmaker(bind=self.engine, class_=Session)
-        # Verify connectivity eagerly
-        self.verify_connection()
+        self.session_factory = sessionmaker(
+            bind=self.engine,
+            class_=SQLModelAsyncSession,
+            expire_on_commit=False,
+        )
 
-    def verify_connection(self) -> None:
+    async def verify_connection(self) -> None:
         """Run a lightweight query to validate DB connectivity."""
         try:
             db_logger.debug("Checking connection to %s", DATABASE_URL)
-            with self.engine.connect() as conn:
-                conn.execute(text("SELECT 1"))
+            async with self.engine.begin() as conn:
+                await conn.execute(text("SELECT 1"))
             db_logger.info("Connection verified successfully")
         except Exception as e:
             raise RuntimeError(f"Failed to connect to database: {e}") from e
@@ -74,20 +81,20 @@ def get_database_manager() -> DatabaseManager:
     """Return a cached DatabaseManager instance to avoid import-time side effects."""
     return DatabaseManager()
 
-def SessionFactory() -> Session:
-    """Compatibility wrapper returning a Session instance when called.
+def SessionFactory() -> SQLModelAsyncSession:
+    """Compatibility wrapper returning an AsyncSession instance when called.
 
     Tests and other modules call `SessionFactory()` to get a new session.
     """
     return get_database_manager().session_factory()
 
-async def session() -> AsyncGenerator[Session, None]:
-    """Use as a dependency to provide a database session to the route"""
-    session = SessionFactory()
+async def session() -> AsyncGenerator[SQLModelAsyncSession, None]:
+    """Use as a dependency to provide an async database session to the route"""
+    async_session = SessionFactory()
 
     # Runs after session flush and retains the state of the objects
     # https://docs.sqlalchemy.org/en/20/orm/events.html#sqlalchemy.orm.SessionEvents.after_flush
-    @event.listens_for(session, "after_flush")
+    @event.listens_for(async_session.sync_session, "after_flush")
     def after_flush(session: Session, _flushcontext: UOWTransaction) -> None:
         added = session.new
         deleted = session.deleted
@@ -101,12 +108,12 @@ async def session() -> AsyncGenerator[Session, None]:
             db_logger.info("UPDATE %s", obj.__class__.__name__)
 
     try:
-        yield session
+        yield async_session
     except Exception as e:
-        session.rollback()
+        await async_session.rollback()
         _handle_db_exception(e)
     finally:
-        session.close()
+        await async_session.close()
 
 
 def _handle_db_exception(e: Exception) -> None:
@@ -148,4 +155,4 @@ def _handle_db_exception(e: Exception) -> None:
 
 
 # Actual Dependency to use in endpoints
-Database = Annotated[Session, Depends(session)]
+Database = Annotated[SQLModelAsyncSession, Depends(session)]

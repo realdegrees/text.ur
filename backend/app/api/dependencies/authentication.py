@@ -46,7 +46,7 @@ def Authenticate( # noqa: C901
                 raise AppException(status_code=401, detail="Unauthorized: No access token provided", error_code=AppErrorCode.NOT_AUTHENTICATED)
             return None
 
-        user = parse_jwt(token, db, for_type=token_type, strict=strict)
+        user = await parse_jwt(token, db, for_type=token_type, strict=strict)
         
         if not user and not strict:
             return None
@@ -75,11 +75,13 @@ def Authenticate( # noqa: C901
             for guard in guards:
                 query = query.where(guard.clause(user, merged_params))
 
-            user = db.exec(query).first()
+            result = await db.exec(query)
+            user = result.first()
             if not user:
                 raise AppException(status_code=403, detail="Forbidden: Insufficient permissions", error_code=AppErrorCode.NOT_AUTHORIZED)
         else:
-            user = db.get(User, user.id)
+            q = await db.exec(select(User).where(User.id == int(user.id)))
+            user = q.first()
 
         context.state.user = user
         set_current_user(f"{user.username} (id:{user.id})")

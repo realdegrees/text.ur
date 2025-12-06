@@ -47,25 +47,26 @@ async def create_group(
     db: Database, user: BasicAuthentication, group_create: GroupCreate = Body(...)
 ) -> Group:
     """Create a new group."""
-    existing_group = db.exec(
+    result = await db.exec(
         select(Group).where(Group.name == group_create.name)
-    ).first()
+    )
+    existing_group = result.first()
     if existing_group:
         raise HTTPException(
             status_code=400, detail="Group with this name already exists"
         )
-        
+
     group = Group(**group_create.model_dump())
     db.add(group)
-    db.commit()
-    db.refresh(group)
+    await db.commit()
+    await db.refresh(group)
 
     groupMembership = Membership(
         user_id=user.id, group_id=group.id, permissions=[Permission.ADMINISTRATOR], is_owner=True, accepted=True
     )
     db.add(groupMembership)
-    db.commit()
-    db.refresh(groupMembership)
+    await db.commit()
+    await db.refresh(groupMembership)
 
     return group
 
@@ -86,26 +87,28 @@ async def update_group(
     group_update: GroupUpdate = Body(...),
 ) -> Group:
     """Update a group."""
-    db.merge(group)
+    await db.merge(group)
     group.sqlmodel_update(group_update.model_dump(exclude_unset=True))
 
-    db.commit()
-    
+    await db.commit()
+
     # if default permissions were changed, update all existing memberships to include at least those permissions
     if group_update.default_permissions is not None:
-        memberships_missing_permissions = db.exec(
+        result = await db.exec(
             select(Membership).where(
                 Membership.group_id == group.id,
                 ~Membership.permissions.contains(group_update.default_permissions)
             )
-        ).all()
+        )
+        memberships_missing_permissions = result.all()
         for membership in memberships_missing_permissions:
             membership.permissions = list(
                 set(membership.permissions).union(set(group_update.default_permissions))
             )
             db.add(membership)
-        db.commit()
+        await db.commit()
 
+    await db.refresh(group)
     return group
 
 @router.post("/{group_id}/transfer")
@@ -117,42 +120,45 @@ async def transfer_ownership(
 ) -> None:
     """Transfer group ownership."""
     # Check if transfer user exists
-    transfer_user = db.exec(
+    result = await db.exec(
         select(User).where(User.id == transfer.user_id)
-    ).first()
-    
+    )
+    transfer_user = result.first()
+
     if not transfer_user:
         raise HTTPException(
             status_code=404, detail="Target user not found")
-        
-    
+
+
     # Check if the new owner is a member of the group
-    transfer_membership = db.exec(
+    result = await db.exec(
         select(Membership).where(
             Membership.user_id == transfer.user_id,
             Membership.group_id == group.id,
             Membership.accepted == True, # noqa: E712
         )
-    ).first()
+    )
+    transfer_membership = result.first()
 
     if not transfer_membership:
         raise HTTPException(
             status_code=404, detail="Target user is not a member of the group")
 
-    current_owner_membership = db.exec(
+    result = await db.exec(
         select(Membership).where(
             Membership.user_id == session_user.id,
             Membership.group_id == group.id
         )
-    ).first()
-    
+    )
+    current_owner_membership = result.first()
+
     current_owner_membership.is_owner = False
     current_owner_membership.permissions = list(Permission.ADMINISTRATOR)
     transfer_membership.is_owner = True
 
     db.add(current_owner_membership)
     db.add(transfer_membership)
-    db.commit()
+    await db.commit()
 
 @router.delete("/{group_id}")
 async def delete_group(
@@ -161,8 +167,8 @@ async def delete_group(
     group: Group = Resource(Group, param_alias="group_id"),
 ) -> dict[str, bool]:
     """Delete a group."""
-    db.delete(group)
-    db.commit()
+    await db.delete(group)
+    await db.commit()
     return Response(status_code=204)
 
 # endregion

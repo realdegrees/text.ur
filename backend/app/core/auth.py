@@ -16,6 +16,7 @@ from jwt.exceptions import InvalidTokenError
 from models.auth import GlobalJWTPayload, Token, TokenType, UserJWTPayload
 from models.enums import AppErrorCode
 from models.tables import User
+from sqlmodel import select
 
 if not JWT_SECRET:
     raise RuntimeError(
@@ -43,12 +44,12 @@ def validate_password(user: User, password: str) -> bool:
 
 
 @overload
-def parse_jwt(token: str, db: Database, *, for_type: TokenType | None = None, strict: Literal[True] = True) -> User: ...
+async def parse_jwt(token: str, db: Database, *, for_type: TokenType | None = None, strict: Literal[True] = True) -> User: ...
 
 @overload
-def parse_jwt(token: str, db: Database, *, for_type: TokenType | None = None, strict: Literal[False] = False) -> User | None: ...
+async def parse_jwt(token: str, db: Database, *, for_type: TokenType | None = None, strict: Literal[False] = False) -> User | None: ...
 
-def parse_jwt(token: str, db: Database, *, for_type: TokenType | None = None, strict: bool = True) -> User | None:
+async def parse_jwt(token: str, db: Database, *, for_type: TokenType | None = None, strict: bool = True) -> User | None:
     """Validate a nested JWT and return the user if valid."""
     try:
         outer_payload: dict[str, Any] = decode(token, JWT_SECRET, algorithms=[ALGORITHM])  # Automatically checks expiry
@@ -56,14 +57,16 @@ def parse_jwt(token: str, db: Database, *, for_type: TokenType | None = None, st
         inner_token: str | None = outer_payload.get("inner")
         token_type: str | None = outer_payload.get("type")
 
-        def do_validate() -> tuple[User | None, str | None]:
+        async def do_validate() -> tuple[User | None, str | None]:
             if for_type and token_type != for_type:
                 return None, f"Expected type {for_type} but got {token_type}"
 
             if not user_id or not inner_token:
                 return None, "Malformed token"
 
-            user: User | None = db.get(User, user_id)
+            q = await db.exec(select(User).where(User.id == int(user_id)))
+            user = q.first()
+            
             if not user:
                 return None, "User not found"
 
@@ -75,7 +78,7 @@ def parse_jwt(token: str, db: Database, *, for_type: TokenType | None = None, st
 
             return user, None
 
-        user, error = do_validate()
+        user, error = await do_validate()
         if user:
             return user
         else:

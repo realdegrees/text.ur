@@ -7,7 +7,7 @@ from sqlalchemy import Boolean, Column, String
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.ext.hybrid import hybrid_property
-from sqlalchemy.orm import column_property, declared_attr
+from sqlalchemy.orm import aliased, column_property, declared_attr
 from sqlalchemy.sql.elements import ColumnElement
 from sqlmodel import Field, Relationship, func, select
 
@@ -76,10 +76,10 @@ class Membership(BaseModel, table=True):
     sharelink_id: int | None = Field(
         foreign_key="sharelink.id", nullable=True, default=None, ondelete="SET NULL")
     accepted: bool = Field(default=False)
-    user: User = Relationship(back_populates="memberships")
-    group: "Group" = Relationship(back_populates="memberships")
+    user: User = Relationship(back_populates="memberships", sa_relationship_kwargs={"lazy": "selectin"})
+    group: "Group" = Relationship(back_populates="memberships", sa_relationship_kwargs={"lazy": "selectin"})
     share_link: Optional["ShareLink"] = Relationship(
-        back_populates="memberships")
+        back_populates="memberships", sa_relationship_kwargs={"lazy": "selectin"})
 
     is_expired: ClassVar[bool]
 
@@ -122,7 +122,7 @@ class Document(BaseModel, table=True):
     group_id: str = Field(
         foreign_key="group.id", nullable=True, ondelete="CASCADE")
 
-    group: "Group" = Relationship(back_populates="documents")
+    group: "Group" = Relationship(back_populates="documents", sa_relationship_kwargs={"lazy": "selectin"})
 
     comments: list["Comment"] = Relationship(
         back_populates="document", sa_relationship_kwargs={"lazy": "noload", "cascade": "all, delete-orphan", "passive_deletes": True})
@@ -166,15 +166,22 @@ class Group(BaseModel, table=True):
             .scalar_subquery()
         )
 
-    owner: Optional["User"] = Relationship(
+    _owners: list["User"] = Relationship(
         sa_relationship_kwargs={
+            "lazy": "selectin",
             "secondary": "membership",
             "primaryjoin": "Group.id == Membership.group_id",
             "secondaryjoin": "and_(Membership.user_id == User.id, Membership.is_owner == True)",
-            "uselist": False,
+            "uselist": True,
             "viewonly": True,
+            "order_by": "Membership.created_at",
         }
     )
+    
+    @property
+    def owner(self) -> Optional["User"]:
+        """Return the first owner of the group (by creation date)."""
+        return self._owners[0] if self._owners else None
 
     documents: list["Document"] = Relationship(
         back_populates="group", sa_relationship_kwargs={"lazy": "noload", "cascade": "all, delete-orphan", "passive_deletes": True})
@@ -202,24 +209,24 @@ class Comment(BaseModel, table=True):
     content: str | None = Field(nullable=True, default=None)
     annotation: dict = Field(default_factory=dict, sa_column=Column(JSONB))
 
-    document: Document = Relationship(back_populates="comments")
-    user: User | None = Relationship(back_populates="comments")
+    document: Document = Relationship(back_populates="comments", sa_relationship_kwargs={"lazy": "selectin"})
+    user: User | None = Relationship(back_populates="comments", sa_relationship_kwargs={"lazy": "selectin"})
     parent: Optional["Comment"] = Relationship(
         back_populates="replies",
         sa_relationship_kwargs={
             "remote_side": "Comment.id",
-            "lazy": "noload"
+            "lazy": "selectin"
         }
     )
     replies: list["Comment"] = Relationship(
         back_populates="parent",
         sa_relationship_kwargs={
-            "lazy": "selectin", "cascade": "all, delete-orphan", "passive_deletes": True}
+            "lazy": "noload", "cascade": "all, delete-orphan", "passive_deletes": True}
     )
     reactions: list["Reaction"] = Relationship(
         back_populates="comment",
         sa_relationship_kwargs={
-            "lazy": "noload", "cascade": "all, delete-orphan", "passive_deletes": True}
+            "lazy": "selectin", "cascade": "all, delete-orphan", "passive_deletes": True}
     )
     comment_tags: list["CommentTag"] = Relationship(
         back_populates="comment",
@@ -237,24 +244,8 @@ class Comment(BaseModel, table=True):
 
     num_replies: ClassVar[int]
 
-    @hybrid_property
-    def num_replies(self) -> int:
-        """Return the number of replies to this comment (Python-side)."""
-        # Use the relationship to provide a Python-side count when replies
-        # are loaded; this avoids referencing the mapped class during mapping.
-        return len(self.replies or [])
 
-    @num_replies.expression
-    def num_replies(cls) -> select:
-        """Return SQL expression returning number of replies to this comment."""
-        # Now that the class is mapped, reference Comment to build a
-        # DB-level expression used in queries.
-        return (
-            select(func.count(Comment.id))
-            .where(Comment.parent_id == cls.id)
-            .correlate_except(Comment)
-            .scalar_subquery()
-        )
+
 
 
 class Reaction(BaseModel, table=True):
@@ -266,8 +257,8 @@ class Reaction(BaseModel, table=True):
                             ondelete="CASCADE", primary_key=True)
     type: ReactionType = Field(sa_column=Column(String))
 
-    user: "User" = Relationship(back_populates="reactions")
-    comment: "Comment" = Relationship(back_populates="reactions")
+    user: "User" = Relationship(back_populates="reactions", sa_relationship_kwargs={"lazy": "selectin"})
+    comment: "Comment" = Relationship(back_populates="reactions", sa_relationship_kwargs={"lazy": "selectin"})
 
 
 class Tag(BaseModel, table=True):
@@ -279,7 +270,7 @@ class Tag(BaseModel, table=True):
     description: str | None = Field(nullable=True, default=None, max_length=200)
     color: str = Field(max_length=7)  # Hex color format: #RRGGBB
 
-    document: "Document" = Relationship(back_populates="tags")
+    document: "Document" = Relationship(back_populates="tags", sa_relationship_kwargs={"lazy": "selectin"})
     comment_tags: list["CommentTag"] = Relationship(
         back_populates="tag",
         sa_relationship_kwargs={
@@ -330,8 +321,8 @@ class ShareLink(BaseModel, table=True):
     # e.g. "Link for review team"
     label: str | None = Field(default=None, nullable=True)
 
-    group: "Group" = Relationship(back_populates="share_links")
-    author: Optional["User"] = Relationship(back_populates="share_links")
+    group: "Group" = Relationship(back_populates="share_links", sa_relationship_kwargs={"lazy": "selectin"})
+    author: Optional["User"] = Relationship(back_populates="share_links", sa_relationship_kwargs={"lazy": "selectin"})
 
     is_expired: ClassVar[bool]
 
@@ -380,3 +371,14 @@ class ShareLink(BaseModel, table=True):
     def rotate_token(self) -> None:
         """Invalidate this share link by rotating its token."""
         self.token = str(uuid4())[:8]
+
+
+# Define num_replies column property after class creation to allow aliasing
+# We need to use an alias for the inner query to distinguish it from the outer row
+_CommentAlias = aliased(Comment)
+Comment.num_replies = column_property(
+    select(func.count(_CommentAlias.id))
+    .where(_CommentAlias.parent_id == Comment.id)
+    .correlate_except(_CommentAlias)
+    .scalar_subquery()
+)

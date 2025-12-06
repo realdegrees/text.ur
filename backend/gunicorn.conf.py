@@ -7,7 +7,7 @@ import time
 # Add app directory to Python path so we can import core.logger
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "app"))
 
-from api.dependencies.startup import verify_all_dependencies
+from api.dependencies.startup import verify_all_dependencies_sync
 from core.logger import setup_queue_listener, stop_queue_listener
 
 # Get gunicorn logger
@@ -53,11 +53,9 @@ def on_starting(server) -> None:  # noqa: ANN001
     server.log.info("Starting workers with sequential startup coordination")
     # Run lightweight dependency checks in the master process to avoid forking
     # many workers that will all fail when dependencies are down. These checks
-    # are intentionally minimal and only verify that critical services are
-    # reachable before forking worker processes.
+    # use synchronous operations to avoid event loop conflicts with async workers.
     try:
-        # Master-level pre-fork run: perform verification of critical dependencies
-        verify_all_dependencies()
+        verify_all_dependencies_sync()
     except Exception as e:
         server.log.critical("External dependency verification failed in master; aborting startup: %s", e, exc_info=True)
         sys.exit(1)

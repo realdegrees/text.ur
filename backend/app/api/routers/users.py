@@ -54,17 +54,17 @@ async def update_user(
     user: User = Authenticate([Guard.is_account_owner()]),
     user_update: UserUpdate = Body(...),
 ) -> User:
-    """Update a user."""    
+    """Update a user."""
     # Apply updates to the user fields
-    db.merge(user)
+    await db.merge(user)
     if user_update.new_password:
         # Re-validate the old password
         if not validate_password(user_update.old_password, user.password):
             raise HTTPException(status_code=403, detail="Forbidden: Invalid old password")
         user.password = hash_password(user_update.new_password)
     user.sqlmodel_update(user_update.model_dump(exclude_unset=True, exclude={"old_password", "new_password"}))
-    db.commit()
-    db.refresh(user)
+    await db.commit()
+    await db.refresh(user)
 
     return user
 
@@ -75,9 +75,9 @@ async def delete_user(
     _: User = Authenticate([Guard.is_account_owner()]),
     user: User = Resource(User, param_alias="user_id"),
 ) -> Response:
-    """Delete a user."""            
-    db.delete(user)
-    db.commit()
+    """Delete a user."""
+    await db.delete(user)
+    await db.commit()
     return Response(status_code=204)
 
 # endregion
