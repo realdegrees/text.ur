@@ -191,7 +191,6 @@
 					{scrollTop}
 					onHeightChange={(height: number) => {
 						clusterHeights.set(cluster[0].id.toString(), height);
-						clusterHeights = clusterHeights; // trigger reactivity
 					}}
 				/>
 			</div>
