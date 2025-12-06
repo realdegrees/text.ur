@@ -18,6 +18,7 @@
 
 	let { comments, yPosition, scrollTop, onHeightChange }: Props = $props();
 
+	// List of all unique authors in this cluster
 	let authorsInCluster = $derived.by(() => {
 		const authorSet = new SvelteMap<number, UserRead>();
 		for (const comment of comments) {
@@ -26,6 +27,20 @@
 			}
 		}
 		return Array.from(authorSet.values());
+	});
+
+	// TODO as soon as up/downvotes are implemented, show the author with the highest upvoted comment in the preview instead and remove selection by replies entirely (because reply count doesnt really matter since we cant get nested replies as replies are loaded lazy)
+	// Select the author to show in the preview, first by highest amount of replies on comment, then by order in cluster (default order is by id which is chronological)
+	let previewAuthor = $derived.by(() => {
+		let highestReplyCount = -1;
+		let highestReplyComment: TypedComment | null = null;
+		for (const comment of comments) {
+			if (comment.num_replies > 0 && comment.num_replies > highestReplyCount) {
+				highestReplyCount = comment.num_replies;
+				highestReplyComment = comment;
+			}
+		}
+		return highlightHoveredComment?.user ?? highestReplyComment?.user ?? comments[0]?.user ?? null;
 	});
 
 	let commentStates = $derived.by(
@@ -195,7 +210,6 @@
 			{/if}
 		</div>
 	{:else}
-		{@const badgePreviewUser = highlightHoveredComment?.user ?? authorsInCluster[0]}
 		<!-- Compact badge - only hover on badge itself triggers expansion -->
 		<div
 			role="combobox"
@@ -212,7 +226,7 @@
 					: ''} flex cursor-pointer flex-row items-center justify-start rounded p-1 transition-all"
 			>
 				<CommentIcon class="text-primary mr-2 h-4 w-4" />
-				<p>{badgePreviewUser?.username ?? 'Unknown'}</p>
+				<p>{previewAuthor?.username ?? 'Unknown'}</p>
 				{#if authorsInCluster.length > 1}
 					<span
 						class="bg-primary/10 text-primary ml-2 rounded-full px-2 py-0.5 text-xs font-medium"
