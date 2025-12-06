@@ -166,16 +166,22 @@ class Group(BaseModel, table=True):
             .scalar_subquery()
         )
 
-    owner: Optional["User"] = Relationship(
+    _owners: list["User"] = Relationship(
         sa_relationship_kwargs={
             "lazy": "selectin",
             "secondary": "membership",
             "primaryjoin": "Group.id == Membership.group_id",
             "secondaryjoin": "and_(Membership.user_id == User.id, Membership.is_owner == True)",
-            "uselist": False,
+            "uselist": True,
             "viewonly": True,
+            "order_by": "Membership.created_at",
         }
     )
+    
+    @property
+    def owner(self) -> Optional["User"]:
+        """Return the first owner of the group (by creation date)."""
+        return self._owners[0] if self._owners else None
 
     documents: list["Document"] = Relationship(
         back_populates="group", sa_relationship_kwargs={"lazy": "noload", "cascade": "all, delete-orphan", "passive_deletes": True})
