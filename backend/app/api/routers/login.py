@@ -33,7 +33,8 @@ async def login(
 ) -> Token:
     """Return a JWT if the user is authenticated successfully."""
     query = select(User).where(or_(User.username == form_data.username, User.email == form_data.username))
-    user = db.exec(query).first()
+    result = await db.exec(query)
+    user = result.first()
     if user is None or not validate_password(user, form_data.password):
         raise HTTPException(
             status_code=401,
@@ -79,15 +80,16 @@ async def refresh(response: Response, request: Request, db: Database, user: User
     )
 
     # Find all memberships for the user where a share_link is present and delete the membership if the share_link is expired or if
-    invalid_memberships = db.exec(
+    result = await db.exec(
             select(Membership).where(
                 Membership.user_id == user.id,
                 Membership.is_expired == True,  # noqa: E712
             )
-        ).all()
+        )
+    invalid_memberships = result.all()
     for membership in invalid_memberships:
-        db.delete(membership)
-    db.commit()
+        await db.delete(membership)
+    await db.commit()
 
     response.set_cookie(
         key="access_token",
@@ -97,7 +99,7 @@ async def refresh(response: Response, request: Request, db: Database, user: User
         samesite=cfg.COOKIE_SAMESITE,
         max_age=int(cfg.JWT_ACCESS_EXPIRATION_MINUTES * 60)
     )
-    
+
     return token
 
 
@@ -105,7 +107,8 @@ async def refresh(response: Response, request: Request, db: Database, user: User
 async def reset_password(request: Request, db: Database, mail: Mail, email: str = Body(..., embed=True)) -> None:
     """Send a password reset email with a presigned URL."""
     query = select(User).where(User.email == email)
-    user: User | None = db.exec(query).first()
+    result = await db.exec(query)
+    user: User | None = result.first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     reset_link: str = mail.generate_verification_link(
@@ -139,9 +142,10 @@ async def reset_verify(token: str, db: Database, password: str = Body(..., embed
         raise HTTPException(
             status_code=403, detail="Invalid or expired token") from e
     query = select(User).where(User.email == email)
-    user: User | None = db.exec(query).first()
+    result = await db.exec(query)
+    user: User | None = result.first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     user.password = hash_password(password)
-    db.commit()
+    await db.commit()
     return RedirectResponse(url="/login")

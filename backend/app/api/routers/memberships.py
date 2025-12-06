@@ -50,12 +50,13 @@ async def get_membership(
     member: User = Resource(User, param_alias="user_id")
 ) -> MembershipRead:
     """Get a specific group membership."""
-    membership: Membership | None = db.exec(
+    result = await db.exec(
         select(Membership).where(
             Membership.group_id == group.id,
             Membership.user_id == member.id,
         )
-    ).first()
+    )
+    membership: Membership | None = result.first()
 
     if not membership:
         raise HTTPException(
@@ -72,11 +73,12 @@ async def invite_member(
 ) -> Response:
     """Create a new membership."""
     # Check if user exists and is not already a member
-    user, membership = db.exec(
+    result = await db.exec(
         select(User, Membership)
         .outerjoin(Membership, (Membership.user_id == User.id) & (Membership.group_id == group.id))
         .where(User.id == membership_create.user_id)
-    ).first() or (None, None)
+    )
+    user, membership = result.first() or (None, None)
 
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -84,7 +86,7 @@ async def invite_member(
     if membership:
         raise HTTPException(
             status_code=400, detail="User is already a member of this group")
-        
+
     # TODO: Send an email notification to the user about the invite (just link to the frontend dashboard group page and accept on load if the query param accept is present)
 
     # Create new membership
@@ -92,8 +94,8 @@ async def invite_member(
         user_id=membership_create.user_id, group_id=group.id, permissions=group.default_permissions, is_owner=False, accepted=False
     )
     db.add(membership_create)
-    db.commit()
-    db.refresh(membership_create)
+    await db.commit()
+    await db.refresh(membership_create)
     return Response(status_code=201)
 
 
@@ -108,18 +110,20 @@ async def update_member_permissions(
     member: User = Resource(User, param_alias="user_id")
 ) -> Response:
     """Change group membership."""
-    membership: Membership | None = db.exec(
+    result = await db.exec(
         select(Membership).where(
             Membership.group_id == group.id,
             Membership.user_id == member.id,
         )
-    ).first()
-    session_user_membership: Membership = db.exec(
+    )
+    membership: Membership | None = result.first()
+    result = await db.exec(
         select(Membership).where(
             Membership.group_id == group.id,
             Membership.user_id == session_user.id,
         )
-    ).first()
+    )
+    session_user_membership: Membership = result.first()
 
     if not membership:
         raise HTTPException(
@@ -149,19 +153,19 @@ async def update_member_permissions(
     if Permission.MANAGE_PERMISSIONS in removed_permissions and not (is_administrator or is_owner):
         raise HTTPException(
             status_code=403, detail="Only administrators can grant or revoke the MANAGE_PERMISSIONS permission")
-        
+
     if any(p in removed_permissions for p in group.default_permissions):
         raise AppException(status_code=403, detail="Cannot remove permissions that are included in the group's default permissions", error_code=AppErrorCode.CANNOT_REMOVE_PERMISSION_REASON_DEFAULT_GROUP)
 
     if membership.share_link and any(p in removed_permissions for p in membership.share_link.permissions):
         raise AppException(status_code=403, detail="Cannot remove permissions that are included in the related sharelink's permissions", error_code=AppErrorCode.CANNOT_REMOVE_PERMISSION_REASON_SHARELINK)
 
-    db.merge(membership)
+    await db.merge(membership)
     # Apply updates to the membership fields
     membership.sqlmodel_update(
         membership_update.model_dump(exclude_unset=True)
     )
-    db.commit()
+    await db.commit()
     return Response(status_code=204)
 
 
@@ -174,20 +178,21 @@ async def accept_membership(
     group: Group = Resource(Group, param_alias="group_id"),
 ) -> Response:
     """Accept group membership."""
-    membership: Membership | None = db.exec(
+    result = await db.exec(
         select(Membership).where(
             Membership.group_id == group.id,
             Membership.user_id == session_user.id,
         )
-    ).first()
-    
+    )
+    membership: Membership | None = result.first()
+
     # If membership doesn't exist, the invite was revoked
     if not membership:
         raise AppException(status_code=404, detail="Membership invite not found or has been revoked", error_code=AppErrorCode.MEMBERSHIP_NOT_FOUND)
 
-    db.merge(membership)
+    await db.merge(membership)
     membership.accepted = True
-    db.commit()
+    await db.commit()
     return Response(status_code=204)
 
 
@@ -200,21 +205,22 @@ async def reject_membership(
     group: Group = Resource(Group, param_alias="group_id"),
 ) -> Response:
     """Reject group membership. Can be used to leave a group."""
-    membership: Membership | None = db.exec(
+    result = await db.exec(
         select(Membership).where(
             Membership.group_id == group.id,
             Membership.user_id == session_user.id,
         )
-    ).first()
+    )
+    membership: Membership | None = result.first()
 
     if not membership:
         raise AppException(status_code=404, detail="Membership invite not found or has been revoked", error_code=AppErrorCode.MEMBERSHIP_NOT_FOUND)
-    
+
     if membership.is_owner:
         raise AppException(status_code=403, detail="The owner cannot leave the group. Delete the group instead.", error_code=AppErrorCode.OWNER_CANNOT_LEAVE_GROUP)
 
-    db.delete(membership)
-    db.commit()
+    await db.delete(membership)
+    await db.commit()
     return Response(status_code=204)
 
 
@@ -228,18 +234,20 @@ async def remove_member(
     member: User = Resource(User, param_alias="user_id")
 ) -> Response:
     """Remove a user from a group."""
-    membership: Membership | None = db.exec(
+    result = await db.exec(
         select(Membership).where(
             Membership.group_id == group.id,
             Membership.user_id == member.id,
         )
-    ).first()
-    session_user_membership: Membership = db.exec(
+    )
+    membership: Membership | None = result.first()
+    result = await db.exec(
         select(Membership).where(
             Membership.group_id == group.id,
             Membership.user_id == session_user.id,
         )
-    ).first()
+    )
+    session_user_membership: Membership = result.first()
 
     if not membership:
         raise HTTPException(
@@ -250,12 +258,12 @@ async def remove_member(
         raise HTTPException(
             status_code=403, detail="The owner and administrators cannot be removed from the group")
 
-    db.delete(membership)
-    db.commit()
+    await db.delete(membership)
+    await db.commit()
     return Response(status_code=204)
 
 @groupmembership_router.post("/promote/{user_id}")
-def promote_guest_to_member(
+async def promote_guest_to_member(
     db: Database,
     session_user: User = Authenticate(
         [Guard.group_access({Permission.ADD_MEMBERS})],
@@ -264,18 +272,19 @@ def promote_guest_to_member(
     member: User = Resource(User, param_alias="user_id")
 ) -> Response:
     """Upgrade a guest membership to a regular membership."""
-    membership: Membership | None = db.exec(
+    result = await db.exec(
         select(Membership).where(
             Membership.group_id == group.id,
             Membership.user_id == member.id,
         )
-    ).first()
-    db.add(member)
+    )
+    membership: Membership | None = result.first()
+    db.add(membership)
 
     if not membership:
         raise HTTPException(
             status_code=404, detail="Target user is not a member of this group")
 
-    membership.share_link = None
-    db.commit()
+    membership.sharelink_id = None
+    await db.commit()
     return Response(status_code=204)

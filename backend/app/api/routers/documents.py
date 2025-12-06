@@ -44,7 +44,8 @@ from models.event import Event
 from models.filter import DocumentFilter
 from models.pagination import Paginated
 from models.tables import Comment, Document, Group, Membership, User
-from sqlmodel import Session, select
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel import select
 from starlette.responses import StreamingResponse
 from util.api_router import APIRouter
 from util.queries import Guard
@@ -78,7 +79,8 @@ def can_user_see_comment(
     # Compose a minimal document object with a group containing only the recipient's
     # membership (if any). Guard.comment_access predicate expects comment.document.group.memberships
     # to be an iterable of Membership-like objects.
-    group_obj = SimpleNamespace(memberships=[membership])
+    memberships = [membership] if membership is not None else []
+    group_obj = SimpleNamespace(memberships=memberships)
     document_obj = SimpleNamespace(view_mode=document.view_mode if document is not None else None, group=group_obj)
     comment_obj = SimpleNamespace(user_id=comment_user_id, visibility=comment_visibility, document=document_obj)
 
@@ -87,7 +89,7 @@ def can_user_see_comment(
     return guard.predicate(comment_obj, user)
 
 
-def _setup_document_comment_connection(websocket: WebSocket, related_resource: Document, user: User, session: Session) -> None:
+async def _setup_document_comment_connection(websocket: WebSocket, related_resource: Document, user: User, session: AsyncSession) -> None:
     """Set up connection state for document comment channel.
 
     Attaches document and membership to websocket.state for use in other hooks.
@@ -95,13 +97,14 @@ def _setup_document_comment_connection(websocket: WebSocket, related_resource: D
     # Fetch and store user's membership for this document's group (for permission checks)
     membership: Membership | None = None
     if related_resource.group_id:
-        membership = session.exec(
+        result = await session.exec(
             select(Membership).where(
                 Membership.user_id == user.id,
                 Membership.group_id == related_resource.group_id,
                 Membership.accepted == True,  # noqa: E712
             )
-        ).first()
+        )
+        membership = result.first()
     websocket.state.membership = membership
 
 
@@ -162,7 +165,7 @@ def _comment_visibility_transform(event_data: dict, websocket: WebSocket) -> dic
 
 
 
-def _handle_mouse_position(event: Event, websocket: WebSocket, session: Session) -> Event:
+async def _handle_mouse_position(event: Event, websocket: WebSocket, session: AsyncSession) -> Event:
     """Handle incoming mouse_position event - enriches with user info.
 
     event.payload is already a validated MousePositionInput instance from the events router.
@@ -243,10 +246,11 @@ async def create_document(
     """Create a new document entry and return presigned S3 upload URL."""
     document_create = DocumentCreate.model_validate_json(data)
     # Check if user is authorized if they are uploading to a group
-    membership = db.exec(select(Membership).where(
+    result = await db.exec(select(Membership).where(
         Membership.user_id == session_user.id,
         Membership.group_id == document_create.group_id
-    )).first()
+    ))
+    membership = result.first()
     if not membership:
         raise AppException(status_code=403, error_code=AppErrorCode.NOT_IN_GROUP, detail="User is not a member of the group.")
     if Permission.ADD_DOCUMENTS not in membership.permissions and membership.is_owner is False and Permission.ADMINISTRATOR not in membership.permissions:
@@ -259,8 +263,8 @@ async def create_document(
     document = Document(s3_key=s3_key, size_bytes=file.size, **document_create.model_dump(exclude_unset=True))
 
     db.add(document)
-    db.commit()
-    db.refresh(document)
+    await db.commit()
+    await db.refresh(document)
 
     s3.upload(s3_key, file.file, content_type=file.content_type)
     return document
@@ -316,20 +320,21 @@ async def transfer_document(
     # Handle group_id transfer
     if document.group_id == document_update.group_id:
         raise HTTPException(status_code=403, detail="Document is already owned by this group.")
-    target_membership = db.exec(
+    result = await db.exec(
         select(Membership).where(
             Membership.user_id == session_user.id,
             Membership.group_id == document_update.group_id
         )
-    ).first()
+    )
+    target_membership = result.first()
     if not target_membership:
         raise HTTPException(status_code=403, detail="Must be a member of the target group.")
     if Permission.ADD_DOCUMENTS not in target_membership.permissions and target_membership.is_owner is False and Permission.ADMINISTRATOR not in target_membership.permissions:
         raise HTTPException(status_code=403, detail="Insufficient permissions in target group.")
 
-    db.merge(document)
+    await db.merge(document)
     document.sqlmodel_update(document_update.model_dump(exclude_unset=True))
-    db.commit()
+    await db.commit()
     return document
 
 @router.put("/{document_id}", response_model=DocumentRead)
@@ -344,8 +349,8 @@ async def update_document(
     # Store old view_mode to detect changes
     old_view_mode = document.view_mode
     # Merge returns the persistent instance attached to the session
-    document = db.merge(document)
-    
+    document = await db.merge(document)
+
     if document_update.visibility is not None:
         document.visibility = document_update.visibility
         # Check if the user can still see the document after the update and raise if not
@@ -361,11 +366,11 @@ async def update_document(
 
         if not guard.predicate(document, user):
             raise HTTPException(status_code=403, detail="You do not have access to this document after the update.")
-        
-    
+
+
     document.sqlmodel_update(document_update.model_dump(exclude_unset=True))
-    db.commit()
-    db.refresh(document)
+    await db.commit()
+    await db.refresh(document)
 
     # If view_mode changed, publish a view_mode_changed event to update WebSocket clients
     if document.view_mode != old_view_mode:
@@ -399,8 +404,8 @@ async def delete_document(
     s3.delete(document.s3_key)
 
     # Delete from database (cascade delete handles related records)
-    db.delete(document)
-    db.commit()
+    await db.delete(document)
+    await db.commit()
 
     return Response(status_code=204)
 
@@ -413,14 +418,15 @@ async def clear_document_comments(
 ) -> Response:
     """Clear all comments from a document. Only group owners and administrators can perform this action."""
     # Delete all comments for this document (cascade will handle replies)
-    comments = db.exec(
+    result = await db.exec(
         select(Comment).where(Comment.document_id == document.id)
-    ).all()
+    )
+    comments = result.all()
 
     for comment in comments:
-        db.delete(comment)
+        await db.delete(comment)
 
-    db.commit()
+    await db.commit()
 
     return Response(status_code=204)
 

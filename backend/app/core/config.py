@@ -50,7 +50,11 @@ host = PGBOUNCER_HOST or POSTGRES_HOST if not IS_TEST_ENV else POSTGRES_HOST
 port = PGBOUNCER_PORT or POSTGRES_PORT if not IS_TEST_ENV else POSTGRES_PORT
 db = POSTGRES_DB if not IS_TEST_ENV else "test"
 
-DATABASE_URL: str = f"postgresql+psycopg2://{user}:{password}@{host}:{port}/{db}"
+# Async database URL for application (using asyncpg)
+DATABASE_URL: str = f"postgresql+asyncpg://{user}:{password}@{host}:{port}/{db}"
+
+# Sync database URL for migrations and scripts (using psycopg2)
+SYNC_DATABASE_URL: str = f"postgresql+psycopg2://{user}:{password}@{host}:{port}/{db}"
 
 # REDIS
 REDIS_PASSWORD: str = os.getenv("REDIS_PASSWORD")

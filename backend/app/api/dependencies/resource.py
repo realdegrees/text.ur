@@ -9,7 +9,7 @@ from core.logger import get_logger
 from fastapi import Depends, HTTPException, Path
 from models.base import BaseModel
 from models.tables import User
-from sqlalchemy import ColumnElement
+from sqlalchemy import ColumnElement, Integer, String
 from sqlmodel import select
 
 ResourceModel = TypeVar("ResourceModel", bound=BaseModel)
@@ -56,13 +56,24 @@ def Resource(
     if key_column is None:
         key_column = resource.id
 
-    def resource_dependency(
+    async def resource_dependency(
         db: Database,
         resource_id: int | str = Path(alias=param_alias, description=f"{resource.__name__} identifier"),  # type: ignore[valid-type]
     ) -> ResourceModel | None:
-        """Load a single resource instance."""        
-        query = select(resource).where(key_column == resource_id)
-        res = db.exec(query).first()
+        """Load a single resource instance."""
+        typed_resource_id = resource_id
+        if hasattr(key_column, "type"):
+            if isinstance(key_column.type, Integer):
+                try:
+                    typed_resource_id = int(resource_id)
+                except (ValueError, TypeError):
+                    pass
+            elif isinstance(key_column.type, String):
+                typed_resource_id = str(resource_id)
+
+        query = select(resource).where(key_column == typed_resource_id)
+        result = await db.exec(query)
+        res = result.first()
         if res is None and raise_on_not_found:
             raise HTTPException(status_code=404, detail=f"{resource.__name__} not found")
         return cast(ResourceModel, res) if res else None

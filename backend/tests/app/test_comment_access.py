@@ -5,8 +5,8 @@ from typing import Any
 import pytest
 from factories import models as f
 from models.enums import Permission, ViewMode, Visibility
-from models.tables import Group
-from sqlmodel import Session
+from models.tables import Group, Membership
+from sqlmodel import Session, select
 from util.queries import Guard
 
 
@@ -46,7 +46,7 @@ from util.queries import Guard
         (True, ViewMode.RESTRICTED, Visibility.PRIVATE, True, True),
     ],
 )
-def test_comment_access_predicate_and_sql(db: Session, user_has_perm: bool, view_mode: ViewMode, comment_visibility: Visibility, is_author: bool, expected: bool) -> None:
+async def test_comment_access_predicate_and_sql(db: Session, user_has_perm: bool, view_mode: ViewMode, comment_visibility: Visibility, is_author: bool, expected: bool) -> None:
     """Test the comment_access predicate and SQL clause against the truth table.
 
     We create a group + document + comment, add memberships for an author and
@@ -78,12 +78,10 @@ def test_comment_access_predicate_and_sql(db: Session, user_has_perm: bool, view
 
     # Ensure relationships are properly loaded for the predicate test
     # Manually load memberships from database and assign to group
-    from models.tables import Membership
-    from sqlmodel import select
     db.flush()
 
     # Query memberships directly
-    memberships = db.exec(select(Membership).where(Membership.group_id == group.id)).all()
+    memberships = await db.exec(select(Membership).where(Membership.group_id == group.id)).all()
     group.memberships = list(memberships)
     document.group = group
 
@@ -96,5 +94,5 @@ def test_comment_access_predicate_and_sql(db: Session, user_has_perm: bool, view
     # Check SQL clause - the clause is designed to be executed against the DB
     clause = guard.clause(viewer, {"comment_id": comment.id}, multi=False)
     # Clause is a boolean-select; selecting it should produce the equivalent truth value
-    sql_result = db.exec(__import__("sqlmodel").select(clause)).one()
+    sql_result = await (await db.exec(select(clause))).one()
     assert sql_result is expected

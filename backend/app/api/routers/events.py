@@ -9,7 +9,7 @@ from uuid import uuid4
 from api.dependencies.authentication import (
     WebsocketAuthentication,
 )
-from api.dependencies.database import Database
+from api.dependencies.database import SessionFactory
 from api.dependencies.events import (
     HEARTBEAT_INTERVAL,
     ConnectedUser,
@@ -23,7 +23,8 @@ from models.event import Event
 from models.tables import User
 from pydantic import ValidationError
 from pydantic import create_model as internal_model
-from sqlmodel import Session, SQLModel
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel import SQLModel, select
 from util.api_router import APIRouter
 
 logger = get_logger("app")
@@ -76,7 +77,7 @@ class EventModelConfig[T: SQLModel, R: SQLModel](dict):
     # Receives event with pre-validated payload (event.payload is an instance of `model`).
     # Should return the event to publish (potentially modified). Can access websocket.state for custom state.
     # Signature: (event, websocket, session) -> event
-    handle_incoming: Callable[[Event, WebSocket, Session], Event] | None = None
+    handle_incoming: Callable[[Event, WebSocket, AsyncSession], Event] | None = None
 
 @dataclass
 class EventRouterConfig(dict):
@@ -91,7 +92,7 @@ class EventRouterConfig(dict):
     # Optional callback to set up connection-specific state when a client connects.
     # Can attach any objects to websocket.state that will be accessible in all hooks.
     # Signature: (websocket, related_resource, user, session) -> None
-    setup_connection: Callable[[WebSocket, BaseModel, User, Session], None] | None = None
+    setup_connection: Callable[[WebSocket, BaseModel, User, AsyncSession], None] | None = None
     # Whether to track active users for this channel (default: True)
     track_active_users: bool = True
 
@@ -133,7 +134,7 @@ def get_events_router[RelatedResourceModel: BaseModel](  # noqa: C901
 
     # Create the WebSocket handler function
     async def client_endpoint(  # noqa: C901
-        websocket: WebSocket, db: Database, events: WebsocketEvents, resource_id: str, user: WebsocketAuthentication
+        websocket: WebSocket, events: WebsocketEvents, resource_id: str, user: WebsocketAuthentication
     ) -> None:
         """Connect a client to the event stream."""
         client_ip = get_websocket_client_ip(websocket)
@@ -142,7 +143,9 @@ def get_events_router[RelatedResourceModel: BaseModel](  # noqa: C901
         )
         logger.info(f"[WS] Cookies: {websocket.cookies}")
 
-        related_resource = db.get(related_resource_model, resource_id)
+        # Create on-demand session for initial resource verification
+        async with SessionFactory() as db:
+            related_resource = (await db.exec(select(related_resource_model).where(related_resource_model.id == resource_id))).first()
 
         if not related_resource:
             logger.warning(f"[WS] Resource not found: {resource_id}")
@@ -160,7 +163,9 @@ def get_events_router[RelatedResourceModel: BaseModel](  # noqa: C901
 
         # Run setup hook to attach any additional state to websocket
         if config.setup_connection:
-            config.setup_connection(websocket, related_resource, user, db)
+            # Create on-demand session for setup
+            async with SessionFactory() as db:
+                await config.setup_connection(websocket, related_resource, user, db)
 
         logger.info(
             f"[WS] Accepting connection for resource_id={resource_id}, connection_id={connection_id}, ip={client_ip}"
@@ -337,7 +342,9 @@ def get_events_router[RelatedResourceModel: BaseModel](  # noqa: C901
                 # Handle the event using the configured handler
                 if type_config.handle_incoming is not None:
                     try:
-                        event = type_config.handle_incoming(event, websocket, db)
+                        # Create on-demand session for event handling
+                        async with SessionFactory() as db:
+                            event = await type_config.handle_incoming(event, websocket, db)
                     except Exception as e:
                         logger.exception(f"[WS] Error handling incoming event: {e}")
                         # TODO: Inform client with structured error event (internal error)

@@ -109,6 +109,14 @@ class Guard:
             if not target_user_id and not multi:
                 raise HTTPException(
                     status_code=500, detail="Endpoint Guard misconfiguration: missing user_id parameter")
+            # Convert user_id to int if it's a string (from path params)
+            if target_user_id is not None and isinstance(target_user_id, str):
+                try:
+                    target_user_id = int(target_user_id)
+                except (ValueError, TypeError):
+                    raise HTTPException(
+                        status_code=400, detail="Invalid user_id: must be an integer"
+                    ) from None
 
             if multi and target_user_id is None:
                 # For multi-user queries (filtering Membership table directly)
@@ -153,6 +161,14 @@ class Guard:
             if not target_user_id:
                 raise HTTPException(
                     status_code=500, detail="Endpoint Guard misconfiguration: missing user_id parameter")
+            # Convert user_id to int if it's a string (from path params)
+            if isinstance(target_user_id, str):
+                try:
+                    target_user_id = int(target_user_id)
+                except (ValueError, TypeError):
+                    raise HTTPException(
+                        status_code=400, detail="Invalid user_id: must be an integer"
+                    ) from None
             return (User.id == user.id) & (User.id == target_user_id)
 
         def predicate(user: User, session_user: User) -> bool:
@@ -449,6 +465,14 @@ class Guard:
             if (not share_link_id or not token) and not multi:
                 raise HTTPException(
                     status_code=500, detail="Endpoint Guard misconfiguration: missing share_link_id parameter")
+            # Convert share_link_id to int if it's a string (from path params)
+            if share_link_id is not None and isinstance(share_link_id, str):
+                try:
+                    share_link_id = int(share_link_id)
+                except (ValueError, TypeError):
+                    raise HTTPException(
+                        status_code=400, detail="Invalid share_link_id: must be an integer"
+                    ) from None
 
             def build_permission_clause() -> ColumnElement[bool]:
                 """Build permission check clause."""
@@ -574,6 +598,14 @@ class Guard:
                 raise HTTPException(
                     status_code=500, detail="Endpoint Guard misconfiguration: missing comment_id parameter"
                 )
+            # Convert comment_id to int if it's a string (from path params)
+            if comment_id is not None and isinstance(comment_id, str):
+                try:
+                    comment_id = int(comment_id)
+                except (ValueError, TypeError):
+                    raise HTTPException(
+                        status_code=400, detail="Invalid comment_id: must be an integer"
+                    ) from None
 
             def build_visibility_clause(comment_id_filter: ColumnElement[bool] | None = None) -> ColumnElement[bool]:
                 """Build the visibility clause following the truth table exactly."""
@@ -791,6 +823,14 @@ class Guard:
             if not reaction_id and not multi:
                 raise HTTPException(
                     status_code=500, detail="Endpoint Guard misconfiguration: missing reaction_id parameter")
+            # Convert reaction_id to int if it's a string (from path params)
+            if reaction_id is not None and isinstance(reaction_id, str):
+                try:
+                    reaction_id = int(reaction_id)
+                except (ValueError, TypeError):
+                    raise HTTPException(
+                        status_code=400, detail="Invalid reaction_id: must be an integer"
+                    ) from None
 
             def build_clause(reaction_id_filter: ColumnElement[bool] | None = None) -> ColumnElement[bool]:
                 """Build the clause for reaction access."""

@@ -55,8 +55,8 @@ async def create_comment(
     comment.user_id = user.id
     comment.document_id = create.document_id
     db.add(comment)
-    db.commit()
-    db.refresh(comment)
+    await db.commit()
+    await db.refresh(comment)
 
     # Broadcast creation event
     event = Event(
@@ -99,10 +99,10 @@ async def update_comment(
     old_visibility = comment.visibility.value if comment.visibility else None
 
     # Apply updates to the comment fields
-    db.merge(comment)
+    await db.merge(comment)
     comment.sqlmodel_update(update.model_dump(exclude_unset=True))
-    db.commit()
-    db.refresh(comment)
+    await db.commit()
+    await db.refresh(comment)
 
     # Broadcast update event with old_visibility for visibility change detection
     event = Event(
@@ -141,8 +141,8 @@ async def delete_comment(
     # Serialize comment BEFORE deleting (relationships won't be accessible after deletion)
     comment_payload = CommentRead.model_validate(comment)
 
-    db.delete(comment)
-    db.commit()
+    await db.delete(comment)
+    await db.commit()
 
     # Broadcast delete event
     event = Event(
@@ -176,28 +176,31 @@ async def add_tag_to_comment(
     Only the comment owner can add tags to their own comment.
     """
     # Verify tag exists and belongs to the same document as the comment
-    tag = db.exec(select(Tag).where(Tag.id == tag_id)).first()
+    tag = await db.exec(select(Tag).where(Tag.id == tag_id))
+    tag = tag.first()
     if not tag:
         raise HTTPException(status_code=404, detail="Tag not found")
     if tag.document_id != comment.document_id:
         raise HTTPException(status_code=400, detail="Tag does not belong to the same document as the comment")
 
     # Check if tag is already added to comment
-    existing = db.exec(
+    existing_result = await db.exec(
         select(CommentTag).where(
             CommentTag.comment_id == comment.id,
             CommentTag.tag_id == tag_id
         )
-    ).first()
+    )
+    existing = existing_result.first()
     if existing:
         # Tag already added, just return the comment
-        db.refresh(comment)
+        await db.refresh(comment)
         return Response(status_code=204)
 
     # Check if comment has reached max tag limit
-    tag_count = db.exec(
+    tag_count_result = await db.exec(
         select(func.count(CommentTag.tag_id)).where(CommentTag.comment_id == comment.id)
-    ).one()
+    )
+    tag_count = tag_count_result.first()
     if tag_count >= config.MAX_TAGS_PER_COMMENT:
         raise HTTPException(
             status_code=400,
@@ -207,8 +210,8 @@ async def add_tag_to_comment(
     # Add tag to comment
     comment_tag = CommentTag(comment_id=comment.id, tag_id=tag_id)
     db.add(comment_tag)
-    db.commit()
-    db.refresh(comment)
+    await db.commit()
+    await db.refresh(comment)
 
     # Broadcast update event
     event = Event(
@@ -242,18 +245,19 @@ async def remove_tag_from_comment(
     Only the comment owner can remove tags from their own comment.
     """
     # Find and delete the comment-tag association
-    comment_tag = db.exec(
+    result = await db.exec(
         select(CommentTag).where(
             CommentTag.comment_id == comment.id,
             CommentTag.tag_id == tag_id
         )
-    ).first()
+    )
+    comment_tag = result.first()
     if not comment_tag:
         raise HTTPException(status_code=404, detail="Tag not associated with this comment")
 
-    db.delete(comment_tag)
-    db.commit()
-    db.refresh(comment)
+    await db.delete(comment_tag)
+    await db.commit()
+    await db.refresh(comment)
 
     # Broadcast update event
     event = Event(

@@ -28,9 +28,10 @@ async def create_tag(
     Requires MANAGE_TAGS permission in the document's group.
     """
     # Check if document has reached max tag limit
-    tag_count = db.exec(
+    result = await db.exec(
         select(func.count(Tag.id)).where(Tag.document_id == document.id)
-    ).one()
+    )
+    tag_count = result.one()
     if tag_count >= config.MAX_TAGS_PER_DOCUMENT:
         raise HTTPException(
             status_code=400,
@@ -39,8 +40,8 @@ async def create_tag(
 
     tag = Tag(**tag_create.model_dump(), document_id=document.id)
     db.add(tag)
-    db.commit()
-    db.refresh(tag)
+    await db.commit()
+    await db.refresh(tag)
     return tag
 
 
@@ -54,9 +55,10 @@ async def list_tags(
 
     Any user with access to the document can view tags.
     """
-    tags = db.exec(
+    result = await db.exec(
         select(Tag).where(Tag.document_id == document.id)
-    ).all()
+    )
+    tags = result.all()
     return tags
 
 
@@ -95,10 +97,10 @@ async def update_tag(
         from fastapi import HTTPException
         raise HTTPException(status_code=404, detail="Tag not found in this document")
 
-    tag = db.merge(tag)
+    tag = await db.merge(tag)
     tag.sqlmodel_update(tag_update.model_dump(exclude_unset=True))
-    db.commit()
-    db.refresh(tag)
+    await db.commit()
+    await db.refresh(tag)
     return tag
 
 
@@ -119,7 +121,7 @@ async def delete_tag(
         from fastapi import HTTPException
         raise HTTPException(status_code=404, detail="Tag not found in this document")
 
-    db.delete(tag)
-    db.commit()
+    await db.delete(tag)
+    await db.commit()
     from fastapi import Response
     return Response(status_code=204)

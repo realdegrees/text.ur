@@ -32,6 +32,7 @@ async def verify_all_dependencies_async() -> dict:
     try:
         # Instantiate DatabaseManager (ensures engine creation and verification)
         db_manager = get_database_manager()
+        await db_manager.verify_connection()
         result["database_manager"] = db_manager
     except Exception:
         app_logger.error("Database verification failed")

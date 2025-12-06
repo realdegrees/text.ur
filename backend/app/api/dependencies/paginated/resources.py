@@ -199,7 +199,8 @@ def PaginatedResource(  # noqa: C901
         sorted_query = base_query.order_by(*order_expressions, *resolved_key_columns)
 
         # Count total results after filtering and sorting
-        total_count = db.scalar(select(func.count()).select_from(sorted_query.subquery()))
+        count_result = await db.exec(select(func.count()).select_from(sorted_query.subquery()))
+        total_count = count_result.first()
 
         # Apply pagination after sorting
         paginated_subq = sorted_query.offset(pagination.offset).limit(pagination.limit).subquery("paginated_subq")
@@ -221,7 +222,8 @@ def PaginatedResource(  # noqa: C901
 
         # Final selection with ordering
         selection = select(base_model).join(paginated_subq, join_condition).order_by(*subq_order_cols)
-        rows = db.exec(selection).all()
+        result = await db.exec(selection)
+        rows = result.all()
 
         # Return paginated result
         paginated_payload = PaginatedBase(

@@ -26,7 +26,7 @@ router = APIRouter(
 )
 
 
-def _upgrade_guest_account(
+async def _upgrade_guest_account(
     db: Database,
     mail: Mail,
     user: User,
@@ -41,9 +41,10 @@ def _upgrade_guest_account(
         )
 
     # Check if email is already taken
-    existing_user = db.exec(
+    result = await db.exec(
         select(User).where(User.email == user_create.email)
-    ).first()
+    )
+    existing_user = result.first()
 
     if existing_user and existing_user.id != user.id:
         raise AppException(
@@ -63,8 +64,8 @@ def _upgrade_guest_account(
     if user_create.last_name is not None:
         user.last_name = user_create.last_name
 
-    db.commit()
-    db.refresh(user)
+    await db.commit()
+    await db.refresh(user)
 
     # Send verification email
     try:
@@ -86,27 +87,28 @@ def _upgrade_guest_account(
         )
     except Exception as e:
         # Rollback the changes if email fails
-        db.rollback()
+        await db.rollback()
         raise e
 
 
-def _register_regular_user(
+async def _register_regular_user(
     db: Database,
     mail: Mail,
     user_create: UserCreate
 ) -> None:
     """Handle regular user registration with email verification."""
-    existing_user = db.exec(
+    result = await db.exec(
         select(User).where(
             (User.email == user_create.email) | (
                 User.username == user_create.username)
         )
-    ).first()
+    )
+    existing_user = result.first()
 
     if existing_user:
         if not existing_user.verified and not existing_user.is_guest:
-            db.delete(existing_user)
-            db.commit()
+            await db.delete(existing_user)
+            await db.commit()
         elif existing_user.username == user_create.username:
             raise AppException(
                 status_code=400,
@@ -126,8 +128,8 @@ def _register_regular_user(
     # Attempt to create user
     try:
         db.add(user)
-        db.commit()
-        db.refresh(user)
+        await db.commit()
+        await db.refresh(user)
     except IntegrityError as e:
         raise HTTPException(
             status_code=400, detail="Username or email already exists"
@@ -152,12 +154,12 @@ def _register_regular_user(
             }
         )
     except Exception as e:
-        db.delete(user)
-        db.commit()
+        await db.delete(user)
+        await db.commit()
         raise e
 
 
-def _register_anonymous_user(
+async def _register_anonymous_user(
     request: Request,
     db: Database,
     response: Response,
@@ -166,9 +168,10 @@ def _register_anonymous_user(
 ) -> Token:
     """Handle anonymous user registration with sharelink token."""
     # Find the sharelink by token
-    share_link: ShareLink | None = db.exec(
+    result = await db.exec(
         select(ShareLink).where(ShareLink.token == sharelink_token)
-    ).first()
+    )
+    share_link: ShareLink | None = result.first()
 
     if not share_link:
         raise AppException(status_code=401, detail="Invalid sharelink token",
@@ -185,9 +188,10 @@ def _register_anonymous_user(
                            error_code=AppErrorCode.SHARELINK_ANONYMOUS_DISABLED)
 
     # Check if username already exists
-    existing_user = db.exec(
+    result = await db.exec(
         select(User).where(User.username == user_create.username)
-    ).first()
+    )
+    existing_user = result.first()
     if existing_user:
         raise AppException(status_code=400, detail="Username already registered",
                            error_code=AppErrorCode.USERNAME_TAKEN)
@@ -201,9 +205,9 @@ def _register_anonymous_user(
         is_guest=True,  # Mark as guest user
     )
     db.add(user)
-    db.flush()  # Get user.id without committing
+    await db.flush()  # Get user.id without committing
 
-    db.commit()
+    await db.commit()
 
     # Generate tokens
     token = Token(
@@ -255,7 +259,7 @@ async def register(
     """
     # Check if this is a guest account upgrade
     if authenticated_user and authenticated_user.is_guest and user_create.email and user_create.password:
-        _upgrade_guest_account(db, mail, authenticated_user, user_create)
+        await _upgrade_guest_account(db, mail, authenticated_user, user_create)
         return None
 
     # Validate that at least one of email or token is provided
@@ -269,7 +273,7 @@ async def register(
     is_anonymous = not user_create.email and user_create.token
 
     if is_anonymous:
-        return _register_anonymous_user(request, db, response, user_create, user_create.token)
+        return await _register_anonymous_user(request, db, response, user_create, user_create.token)
     else:
         # Regular registration requires password
         if not user_create.password:
@@ -277,7 +281,7 @@ async def register(
                 status_code=400,
                 detail="Password is required for regular registration"
             )
-        _register_regular_user(db, mail, user_create)
+        await _register_regular_user(db, mail, user_create)
         return None
 
 
@@ -293,7 +297,8 @@ async def verify(token: str, db: Database) -> RedirectResponse:
             status_code=403, detail="Invalid or expired token") from e
 
     query = select(User).filter(User.email == email)
-    user: User | None = db.exec(query).first()
+    result = await db.exec(query)
+    user: User | None = result.first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     if user.verified:
@@ -305,7 +310,7 @@ async def verify(token: str, db: Database) -> RedirectResponse:
     if user.is_guest:
         user.is_guest = False
 
-    db.commit()
+    await db.commit()
 
     # Generate tokens
     auth_token = Token(

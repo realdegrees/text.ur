@@ -66,8 +66,8 @@ async def create_share_link(
     share_link.group_id = group.id
     share_link.author_id = user.id
     db.add(share_link)
-    db.commit()
-    db.refresh(share_link)
+    await db.commit()
+    await db.refresh(share_link)
     return share_link
 
 
@@ -81,19 +81,20 @@ async def update_share_link(
 ) -> ShareLinkRead:
     """Update a share link."""
     permissions_changed = share_link_update.permissions is not None and set(share_link_update.permissions) != set(share_link.permissions)
-    db.merge(share_link)
+    await db.merge(share_link)
     share_link.sqlmodel_update(share_link_update.model_dump(
         exclude_unset=True, exclude={"rotate_token"}))
-    
+
     share_link.author = user # Update author to the user making the change
-    
-    memberships: list[Membership] = db.exec(
+
+    result = await db.exec(
             select(Membership).join(ShareLink, Membership.share_link).where(
                 ShareLink.token == share_link.token,
                 Membership.group_id == group.id,
             )
-        ).all()
-    
+        )
+    memberships: list[Membership] = result.all()
+
     if permissions_changed:
         # Compute minimum permissions: group defaults plus the sharelink's new permissions.
         new_sharelink_permissions: set[Permission] = set(share_link.permissions)
@@ -102,26 +103,28 @@ async def update_share_link(
 
         # Ensure each membership has at least the required permissions without removing existing ones.
         for membership in memberships:
-            db.merge(membership)
+            await db.merge(membership)
             membership.permissions = updated_permissions
-    
+
     # Handle token rotation and membership deletions
     if share_link_update.rotate_token:
         share_link.rotate_token()
         # Delete all memberships that were using this token
         # Query memberships associated with the sharelink relationship that match the token and group.
-        memberships: list[Membership] = db.exec(
+        result = await db.exec(
             select(Membership).join(ShareLink, Membership.share_link).where(
                 ShareLink.token == share_link.token,
                 Membership.group_id == group.id,
             )
-        ).all()
+        )
+        memberships: list[Membership] = result.all()
         for membership in memberships:
-            db.delete(membership)
-            
+            await db.delete(membership)
+
     # Handle permission updates:
-            
-    db.commit()
+
+    await db.commit()
+    await db.refresh(share_link)
     return share_link
 
 
@@ -133,8 +136,8 @@ async def delete_share_link(
     _group: Group = Resource(Group, param_alias="group_id"),
 ) -> Response:
     """Delete a share link."""
-    db.delete(share_link)
-    db.commit()
+    await db.delete(share_link)
+    await db.commit()
     return Response(status_code=204)
 
 
@@ -150,9 +153,10 @@ async def use_sharelink_token(
     use the /login/anonymous endpoint directly.
     """
     # Find the sharelink by token
-    share_link: ShareLink | None = db.exec(
+    result = await db.exec(
         select(ShareLink).where(ShareLink.token == token)
-    ).first()
+    )
+    share_link: ShareLink | None = result.first()
 
     if not share_link:
         raise HTTPException(status_code=404, detail="Share link not found")
@@ -162,12 +166,13 @@ async def use_sharelink_token(
         raise HTTPException(status_code=403, detail="Share link has expired")
 
     # Check if membership already exists
-    existing_membership: Membership | None = db.exec(
+    result = await db.exec(
         select(Membership).where(
             Membership.user_id == user.id,
             Membership.group_id == share_link.group_id
         )
-    ).first()
+    )
+    existing_membership: Membership | None = result.first()
 
     if existing_membership:
         # User is already a member
@@ -184,5 +189,5 @@ async def use_sharelink_token(
         share_link=share_link
     )
     db.add(membership)
-    db.commit()
+    await db.commit()
     return Response(status_code=204)

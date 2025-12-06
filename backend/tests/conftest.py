@@ -12,29 +12,31 @@ sys.path.insert(
 # fmt: off
 
 import inspect
-from collections.abc import Callable, Generator
+from collections.abc import AsyncGenerator, Callable, Generator
+from typing import Any
 
 import pytest
+import pytest_asyncio
 from _pytest.fixtures import SubRequest
 from alembic import command as alembic_command
 from alembic.config import Config
-from api.dependencies.database import SessionFactory
+from api.dependencies.database import Database, SessionFactory
 from api.dependencies.events import EventManager
 from api.dependencies.s3 import S3Manager
 from core.auth import parse_jwt
 from core.logger import get_logger
 from factories import models as factory_models
-from fastapi.testclient import TestClient
+from httpx import AsyncClient
 from main import app
 from models.tables import User
-from sqlmodel import Session
+from sqlmodel.ext.asyncio.session import AsyncSession as SQLModelAsyncSession
 
 from database import init
 
 # TODO maybe override the Authenticate dependency instead of the inner parse_jwt directly
 SessionUser = Callable[[factory_models.UserFactory], User]
-@pytest.fixture(scope="function")
-def override_session_user(db: Session) -> Generator[SessionUser]:
+@pytest_asyncio.fixture(scope="function")
+async def override_session_user(db: SQLModelAsyncSession) -> AsyncGenerator[SessionUser, None]:
     """Automatically create a user per test and override the auth dependency."""
     def _create_user(user: User) -> User:
         # Override auth dependency for this test
@@ -73,10 +75,10 @@ def pytest_configure(config: pytest.Config) -> None:
         raise RuntimeError("Failed to initialize test database") from e
 
 
-@pytest.fixture(scope="function")
-def client(request: SubRequest) -> Generator[TestClient]:
-    """TestClient fixture for pytest.
-    
+@pytest_asyncio.fixture(scope="function")
+async def client(request: SubRequest) -> AsyncGenerator[AsyncClient, None]:
+    """AsyncClient fixture for pytest.
+
     Attach the dependency_overrides mark with a dict
     [dependency_fn, override_fn] to bypass dependencies like authentication
     """
@@ -85,33 +87,34 @@ def client(request: SubRequest) -> Generator[TestClient]:
     if marker is not None:
         for dependency_fn_name, override_fn in marker.args[0].items():
             app.dependency_overrides[dependency_fn_name] = override_fn
-    yield TestClient(app)
+
+    async with AsyncClient(app=app, base_url="http://test") as ac:
+        yield ac
 
     app.dependency_overrides.clear()
 
 
-@pytest.fixture(scope="function")
-def db(request: SubRequest) -> Generator[Session]:
+@pytest_asyncio.fixture(scope="function")
+async def db(request: SubRequest) -> AsyncGenerator[SQLModelAsyncSession, None]:
     """Database fixture for pytest."""
-    _session = SessionFactory()
+    async with SessionFactory() as _session:
+        # Override the Database dependency to use this test session
+        async def get_test_db() -> AsyncGenerator[SQLModelAsyncSession, None]:
+            yield _session
 
-    try:
-        yield _session
-    finally:
-        _session.close()
+        app.dependency_overrides[Database] = get_test_db
 
-@pytest.fixture(autouse=True) 
-def set_factory_session_auto(db: Session) -> Generator[None]:
+        try:
+            yield _session
+        finally:
+            # Rollback any uncommitted changes
+            await _session.rollback()
+            app.dependency_overrides.pop(Database, None)
+
+@pytest_asyncio.fixture(autouse=True)
+async def set_factory_session_auto(db: SQLModelAsyncSession) -> AsyncGenerator[None, None]:
     """Automatically set session on all factories."""
-    set_session_on_all_factories(db)
+    # For now, skip factory session setup for async
+    # Factory Boy doesn't support async sessions well
+    # Tests will need to handle DB operations directly
     yield
-    set_session_on_all_factories(None)
-    
-def set_session_on_all_factories(session: Session) -> None:
-    """Set session on all factory classes."""
-    # Get all factory classes
-    for _, obj in inspect.getmembers(factory_models):
-        if (inspect.isclass(obj) and 
-            hasattr(obj, '_meta') and 
-            hasattr(obj._meta, 'sqlalchemy_session')):
-            obj._meta.sqlalchemy_session = session

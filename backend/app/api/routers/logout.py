@@ -23,6 +23,6 @@ async def logout_all_devices(response: Response, user: BasicAuthentication, db: 
     # Use the logout method  to clear cookies on the response
     await logout(response)
     # Rotate the user secret to invalidate all existing tokens
-    db.merge(user)
+    await db.merge(user)
     user.rotate_secret()
-    db.commit()
+    await db.commit()
