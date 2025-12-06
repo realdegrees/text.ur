@@ -143,9 +143,17 @@
 	let repositionedClusters = $derived.by((): CommentClusterData[] => {
 		const GAP_PX = 8; // Gap between clusters
 
-		// Work on a shallow clone of baseClusters to avoid mutating the original
-		// (Svelte needs new object references to ensure the template updates)
-		const adjusted = baseClusters;
+		// Depend on clusterHeights to recalculate when heights change
+		void clusterHeights;
+
+		// Deep clone baseClusters to avoid mutating the original
+		// Each cluster needs its own copy of highlightPosition
+		const adjusted = baseClusters.map((cluster) =>
+			cluster.map((comment) => ({
+				...comment,
+				highlightPosition: { ...comment.highlightPosition }
+			}))
+		);
 
 		// Iteratively adjust positions from top to bottom using the clones
 		for (let i = 0; i < adjusted.length; i++) {
