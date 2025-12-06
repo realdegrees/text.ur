@@ -125,9 +125,9 @@
 		<!-- Expanded card - hover anywhere on card keeps it open -->
 		<div
 			bind:this={clusterRef}
-			class="bg-background ring-primary/30 relative z-50 overflow-hidden rounded-lg shadow-lg shadow-black/20 ring-0 transition-all {firstPinnedComment
-				? 'ring-3'
-				: ''}"
+			class="bg-background ring-3 relative z-50 overflow-hidden rounded shadow-lg shadow-black/20 transition-all {firstPinnedComment
+				? 'ring-primary/70'
+				: 'ring-primary/30'}"
 		>
 			<!-- Cluster header: tabs for multiple comments or single author header -->
 			<div class="border-text/30 w-full border-b p-1.5 pb-0">
@@ -208,7 +208,7 @@
 		>
 			<div
 				class="ring-3 ring-primary/0 {highlightHoveredComment
-					? 'ring-primary/50'
+					? 'ring-primary/70'
 					: ''} flex cursor-pointer flex-row items-center justify-start rounded p-1 transition-all"
 			>
 				<CommentIcon class="text-primary mr-2 h-4 w-4" />
