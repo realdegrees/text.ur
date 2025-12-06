@@ -72,6 +72,10 @@ export const commentFilterSchema = z.object({
     id: z.number()
 });
 
+export const commentTagsUpdateSchema = z.object({
+    tag_ids: z.array(z.number())
+});
+
 export const commentUpdateSchema = z.object({
     visibility: visibilitySchema.optional().nullable(),
     content: z.string().optional().nullable(),

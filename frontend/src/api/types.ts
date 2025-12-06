@@ -157,6 +157,15 @@ export interface CommentFilter {
   };
   id: number;
 }
+/**
+ * Model for bulk updating comment tags with explicit ordering.
+ */
+export interface CommentTagsUpdate {
+  /**
+   * Ordered list of tag IDs to associate with the comment
+   */
+  tag_ids: number[];
+}
 export interface CommentUpdate {
   visibility?: Visibility | null;
   content?: string | null;

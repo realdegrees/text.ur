@@ -238,7 +238,8 @@ class Comment(BaseModel, table=True):
         sa_relationship_kwargs={
             "secondary": "commenttag",
             "viewonly": True,
-            "lazy": "selectin"
+            "lazy": "selectin",
+            "order_by": "CommentTag.order"
         }
     )
 
@@ -293,6 +294,7 @@ class CommentTag(BaseModel, table=True):
                             ondelete="CASCADE", primary_key=True)
     tag_id: int = Field(foreign_key="tag.id",
                         ondelete="CASCADE", primary_key=True)
+    order: int = Field(default=0)
 
     comment: "Comment" = Relationship(back_populates="comment_tags")
     tag: "Tag" = Relationship(back_populates="comment_tags")

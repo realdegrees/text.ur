@@ -9,7 +9,12 @@ from api.dependencies.resource import Resource
 from api.routers.reactions import router as ReactionRouter
 from core import config
 from fastapi import Body, Header, HTTPException, Response
-from models.comment import CommentCreate, CommentRead, CommentUpdate
+from models.comment import (
+    CommentCreate,
+    CommentRead,
+    CommentTagsUpdate,
+    CommentUpdate,
+)
 from models.enums import Permission
 from models.event import Event
 from models.filter import CommentFilter
@@ -162,58 +167,74 @@ async def delete_comment(
     return Response(status_code=204)
 
 
-@router.post("/{comment_id}/tags/{tag_id}")
-async def add_tag_to_comment(
-    tag_id: int,
+@router.put("/{comment_id}/tags")
+async def update_comment_tags(
+    comment_id: int,
+    body: CommentTagsUpdate,
     db: Database,
     events: Events,
     comment: Comment = Resource(Comment, param_alias="comment_id"),
     user: User = Authenticate([Guard.comment_access(None, only_owner=True)]),
     x_connection_id: str | None = Header(None, alias="X-Connection-ID"),
 ) -> Response:
-    """Add a tag to a comment.
+    """Bulk update comment tags with explicit ordering.
 
-    Only the comment owner can add tags to their own comment.
+    Only the comment owner can update tags on their own comment.
+    Replaces all existing tags with the new ordered list.
     """
-    # Verify tag exists and belongs to the same document as the comment
-    tag = await db.exec(select(Tag).where(Tag.id == tag_id))
-    tag = tag.first()
-    if not tag:
-        raise HTTPException(status_code=404, detail="Tag not found")
-    if tag.document_id != comment.document_id:
-        raise HTTPException(status_code=400, detail="Tag does not belong to the same document as the comment")
+    tag_ids = body.tag_ids
 
-    # Check if tag is already added to comment
+    # Verify all tags exist and belong to the same document as the comment
+    if tag_ids:
+        tag_result = await db.exec(
+            select(Tag).where(Tag.id.in_(tag_ids))
+        )
+        tags = tag_result.all()
+
+        if len(tags) != len(tag_ids):
+            raise HTTPException(status_code=404, detail="One or more tags not found")
+
+        for tag in tags:
+            if tag.document_id != comment.document_id:
+                raise HTTPException(
+                    status_code=400,
+                    detail="All tags must belong to the same document as the comment"
+                )
+
+    # Get existing comment-tag associations
     existing_result = await db.exec(
-        select(CommentTag).where(
-            CommentTag.comment_id == comment.id,
-            CommentTag.tag_id == tag_id
-        )
+        select(CommentTag).where(CommentTag.comment_id == comment_id)
     )
-    existing = existing_result.first()
-    if existing:
-        # Tag already added, just return the comment
-        await db.refresh(comment)
-        return Response(status_code=204)
+    existing_tags = {ct.tag_id: ct for ct in existing_result.all()}
 
-    # Check if comment has reached max tag limit
-    tag_count_result = await db.exec(
-        select(func.count(CommentTag.tag_id)).where(CommentTag.comment_id == comment.id)
-    )
-    tag_count = tag_count_result.first()
-    if tag_count >= config.MAX_TAGS_PER_COMMENT:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Comment has reached the maximum number of tags ({config.MAX_TAGS_PER_COMMENT})"
-        )
+    # Calculate diff
+    new_tag_ids_set = set(tag_ids)
+    existing_tag_ids_set = set(existing_tags.keys())
 
-    # Add tag to comment
-    comment_tag = CommentTag(comment_id=comment.id, tag_id=tag_id)
-    db.add(comment_tag)
+    # Delete tags that are no longer in the list
+    to_delete = existing_tag_ids_set - new_tag_ids_set
+    for tag_id in to_delete:
+        await db.delete(existing_tags[tag_id])
+
+    # Update or insert tags with new order
+    for order, tag_id in enumerate(tag_ids):
+        if tag_id in existing_tags:
+            # Update existing tag's order
+            existing_tags[tag_id].order = order
+            db.add(existing_tags[tag_id])
+        else:
+            # Insert new tag
+            comment_tag = CommentTag(
+                comment_id=comment_id,
+                tag_id=tag_id,
+                order=order
+            )
+            db.add(comment_tag)
+
     await db.commit()
     await db.refresh(comment)
 
-    # Broadcast update event
+    # Broadcast single update event
     event = Event(
         event_id=uuid4(),
         published_at=datetime.now(),
@@ -229,52 +250,6 @@ async def add_tag_to_comment(
     )
 
     return Response(status_code=204)
-
-
-@router.delete("/{comment_id}/tags/{tag_id}")
-async def remove_tag_from_comment(
-    tag_id: int,
-    db: Database,
-    events: Events,
-    comment: Comment = Resource(Comment, param_alias="comment_id"),
-    user: User = Authenticate([Guard.comment_access(None, only_owner=True)]),
-    x_connection_id: str | None = Header(None, alias="X-Connection-ID"),
-) -> Comment:
-    """Remove a tag from a comment.
-
-    Only the comment owner can remove tags from their own comment.
-    """
-    # Find and delete the comment-tag association
-    result = await db.exec(
-        select(CommentTag).where(
-            CommentTag.comment_id == comment.id,
-            CommentTag.tag_id == tag_id
-        )
-    )
-    comment_tag = result.first()
-    if not comment_tag:
-        raise HTTPException(status_code=404, detail="Tag not associated with this comment")
-
-    await db.delete(comment_tag)
-    await db.commit()
-    await db.refresh(comment)
-
-    # Broadcast update event
-    event = Event(
-        event_id=uuid4(),
-        published_at=datetime.now(),
-        payload=CommentRead.model_validate(comment),
-        resource_id=comment.id,
-        resource="comment",
-        type="update",
-        originating_connection_id=x_connection_id
-    )
-    await events.publish(
-        event.model_dump(mode="json"),
-        channel=f"documents:{comment.document_id}:comments"
-    )
-
-    return comment
 
 
 tags = router.tags

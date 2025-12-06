@@ -66,6 +66,13 @@ class CommentUpdate(SQLModel):
     def clean_content(cls, v: str | None) -> str | None:
         """Sanitize content to remove problematic characters."""
         return sanitize_content(v)
+
+
+class CommentTagsUpdate(SQLModel):
+    """Model for bulk updating comment tags with explicit ordering."""
     
+    tag_ids: list[int] = Field(description="Ordered list of tag IDs to associate with the comment")
+
+
 class CommentDelete(SQLModel):
     id: int

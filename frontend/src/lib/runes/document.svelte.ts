@@ -5,7 +5,8 @@ import {
 	type CommentEvent,
 	type CommentRead,
 	type DocumentRead,
-	type ViewMode
+	type ViewMode,
+	type CommentTagsUpdate
 } from '$api/types';
 import type { Paginated } from '$api/pagination';
 import { notification } from '$lib/stores/notificationStore';
@@ -192,16 +193,16 @@ const createDocumentStore = () => {
 
 	// Methods to update local comment data without API calls (on events)
 	const commentsLocal = $derived({
-		update: (existing: TypedComment) => {
+		update: (data: TypedComment) => {
 			/** Update an existing comment in the local map. */
-			const existingComment: TypedComment | undefined = _comments.get(existing.id);
+			const existingComment: TypedComment | undefined = _comments.get(data.id);
 			if (!existingComment) return;
 			const updatedComment: TypedComment = {
 				...existingComment,
-				...existing,
-				visibility: existing.visibility ?? existingComment.visibility
+				...data,
+				visibility: data.visibility ?? existingComment.visibility
 			};
-			_comments.set(existing.id, updatedComment);
+			_comments.set(data.id, updatedComment);
 		},
 		create: (
 			data: TypedComment,
@@ -364,33 +365,28 @@ const createDocumentStore = () => {
 
 			commentsLocal.delete(commentId, true);
 		},
-		addTag: async (commentId: number, tagId: number) => {
-			const result = await api.post(`/comments/${commentId}/tags/${tagId}`, {});
+		updateTags: async (commentId: number, tagIds: number[]) => {
+			const result = await api.update(`/comments/${commentId}/tags`, {
+				tag_ids: tagIds
+			} satisfies CommentTagsUpdate);
 			if (!result.success) {
 				notification(result.error);
 				return;
 			}
 
-			// Optimistically update the comment with the new tag
+			// Optimistically update the comment's tags
 			const comment = _comments.get(commentId);
-			const tag = loadedDocument?.tags.find((t) => t.id === tagId);
-			if (comment && tag && !comment.tags.some((t) => t.id === tagId)) {
-				comment.tags = [...comment.tags, tag];
-				_comments.set(commentId, comment);
-			}
-		},
-		removeTag: async (commentId: number, tagId: number) => {
-			const result = await api.delete(`/comments/${commentId}/tags/${tagId}`);
-			if (!result.success) {
-				notification(result.error);
-				return;
-			}
+			const currentDocument = loadedDocument;
+			if (comment && currentDocument) {
+				const orderedTags = tagIds
+					.map((id) => currentDocument.tags.find((t) => t.id === id))
+					.filter((t): t is NonNullable<typeof t> => t !== undefined);
 
-			// Optimistically update the comment by removing the tag
-			const comment = _comments.get(commentId);
-			if (comment) {
-				comment.tags = comment.tags.filter((t) => t.id !== tagId);
-				_comments.set(commentId, comment);
+				const updatedComment: TypedComment = {
+					...comment,
+					tags: orderedTags
+				};
+				_comments.set(commentId, updatedComment);
 			}
 		},
 		loadMoreReplies: async (commentId: number) => {

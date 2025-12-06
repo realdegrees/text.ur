@@ -128,15 +128,8 @@
 				originalTagIds.some((id, idx) => id !== editingTagIds[idx]);
 
 			if (tagsChanged) {
-				// Remove all existing tags
-				for (const tag of comment.tags) {
-					await documentStore.comments.removeTag(comment.id, tag.id);
-				}
-
-				// Add tags in the new order
-				for (const tag of editingTags) {
-					await documentStore.comments.addTag(comment.id, tag.id);
-				}
+				// Update tags in a single operation
+				await documentStore.comments.updateTags(comment.id, editingTagIds);
 			}
 
 			commentState.isEditing = false;
