@@ -79,9 +79,15 @@
 		});
 	};
 
+	// Force update trigger for PDF page rendering
+	let renderTrigger = $state(0);
+
 	let baseClusters = $derived.by((): CommentClusterData[] => {
-		// Depend on the update tick (triggered by ResizeObserver)
-		void scrollTop;
+		// Depend on multiple signals to trigger recalculation
+		void scrollTop; // When user scrolls
+		void documentStore.documentScale; // When PDF is scaled
+		void documentStore.numPages; // When PDF is loaded
+		void renderTrigger; // When pages are rendered into DOM
 
 		const commentPositionMap = documentStore.comments.topLevelComments
 			.map((comment) => ({
@@ -186,6 +192,48 @@
 		if (!viewerContainer) return;
 
 		documentStore.commentSidebarRef = containerElement;
+
+		// Watch for text layers being added and resized to trigger recalculation
+		const textLayerObserver = new ResizeObserver(() => {
+			renderTrigger++;
+		});
+
+		const mutationObserver = new MutationObserver((mutations) => {
+			// Check if any text layers were added
+			let hasNewTextLayers = false;
+			for (const mutation of mutations) {
+				for (const node of mutation.addedNodes) {
+					if (node instanceof HTMLElement) {
+						if (node.classList.contains('textLayer')) {
+							hasNewTextLayers = true;
+							break;
+						}
+					}
+				}
+				if (hasNewTextLayers) break;
+			}
+
+			if (!hasNewTextLayers) return;
+
+			// Observe new text layers with ResizeObserver
+			const textLayers = viewerContainer.querySelectorAll('.textLayer');
+			textLayers.forEach((layer) => {
+				textLayerObserver.observe(layer as HTMLElement);
+			});
+
+			// Trigger a recalculation when new text layers are detected
+			renderTrigger++;
+		});
+
+		mutationObserver.observe(viewerContainer, {
+			childList: true,
+			subtree: true
+		});
+
+		return () => {
+			textLayerObserver.disconnect();
+			mutationObserver.disconnect();
+		};
 	});
 </script>
 
