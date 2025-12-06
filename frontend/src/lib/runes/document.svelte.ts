@@ -153,8 +153,8 @@ const createDocumentStore = () => {
 					(comment) => !!comment.tags && comment.tags.some((t) => includedTagIds.includes(t.id))
 				);
 			}
-		} 
-		
+		}
+
 		if (excludedFilters.length > 0) {
 			// Apply exclude filters when no include filters present.
 			if (excludedAuthorIds.length > 0) {

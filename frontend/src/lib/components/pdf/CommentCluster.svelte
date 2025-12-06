@@ -128,33 +128,33 @@
 		},
 		onLeave: () => {
 			for (const comment of comments) {
-			documentStore.setCommentHoveredDebounced(comment.id, false);
-		}
+				documentStore.setCommentHoveredDebounced(comment.id, false);
+			}
 		}
 	}}
 	data-comment-badge={activeComment?.id}
 	data-badge-active="true"
-	class="{showCard ? 'w-full' : 'w-fit'}"
+	class={showCard ? 'w-full' : 'w-fit'}
 >
 	{#if showCard}
 		<!-- Expanded card - hover anywhere on card keeps it open -->
 		<div
 			bind:this={clusterRef}
-			class="bg-background ring-3 relative z-50 overflow-hidden rounded shadow-lg shadow-black/20 transition-all {firstPinnedComment
+			class="relative z-50 overflow-hidden rounded bg-background shadow-lg ring-3 shadow-black/20 transition-all {firstPinnedComment
 				? 'ring-primary/70'
 				: 'ring-primary/30'}"
 		>
 			<!-- Cluster header: tabs for multiple comments or single author header -->
-			<div class="border-text/30 w-full border-b p-1.5 pb-0">
-				<div class="border-text/10 pb-0! flex items-center justify-between gap-1.5 border-b">
+			<div class="w-full border-b border-text/30 p-1.5 pb-0">
+				<div class="flex items-center justify-between gap-1.5 border-b border-text/10 pb-0!">
 					<div class="flex flex-wrap items-center gap-1.5">
 						{#each comments as c, idx (c.id)}
 							{@const state = commentStates.get(c.id)}
 							<button
-								class="flex cursor-pointer bg-inset flex-row items-center gap-1.5 rounded-t px-2 pt-1.5 pb-1 text-xs font-medium transition-colors
+								class="flex cursor-pointer flex-row items-center gap-1.5 rounded-t bg-inset px-2 pt-1.5 pb-1 text-xs font-medium transition-colors
 							{activeComment === c
 									? 'text-text shadow-inner shadow-text/40'
-									: 'text-text/50 hover:bg-text/5 hover:text-text/70 hover:animate-pulse'}"
+									: 'text-text/50 hover:animate-pulse hover:bg-text/5 hover:text-text/70'}"
 								onclick={(e) => {
 									e.stopPropagation();
 									if (activeComment === c && state) {
@@ -184,9 +184,9 @@
 							>
 								<p>{c.user?.username?.slice(0, 10) ?? `Comment ${idx + 1}`}</p>
 								{#if state?.isPinned}
-									<PinIcon class="text-text h-4 w-4 transition-colors hover:text-red-400" />
+									<PinIcon class="h-4 w-4 text-text transition-colors hover:text-red-400" />
 								{:else if c.id === activeComment.id}
-									<PinOffIcon class="hover:text-text h-4 w-4" />
+									<PinOffIcon class="h-4 w-4 hover:text-text" />
 								{/if}
 							</button>
 						{/each}
@@ -225,11 +225,11 @@
 					? 'ring-primary/70'
 					: ''} flex cursor-pointer flex-row items-center justify-start rounded p-1 transition-all"
 			>
-				<CommentIcon class="text-primary mr-2 h-4 w-4" />
+				<CommentIcon class="mr-2 h-4 w-4 text-primary" />
 				<p>{previewAuthor?.username ?? 'Unknown'}</p>
 				{#if authorsInCluster.length > 1}
 					<span
-						class="bg-primary/10 text-primary ml-2 rounded-full px-2 py-0.5 text-xs font-medium"
+						class="ml-2 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary"
 					>
 						+ {authorsInCluster.length - 1}
 					</span>

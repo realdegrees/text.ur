@@ -1,35 +1,32 @@
-type Params = { onEnter?: () => void; onLeave?: () => void }
+type Params = { onEnter?: () => void; onLeave?: () => void };
 
-export function preciseHover(
-  node: HTMLElement,
-  params: Params
-) {
-  let hovered = false;
+export function preciseHover(node: HTMLElement, params: Params) {
+	let hovered = false;
 
-  function onMove(e: PointerEvent) {
-    const el = document.elementFromPoint(e.clientX, e.clientY);
+	function onMove(e: PointerEvent) {
+		const el = document.elementFromPoint(e.clientX, e.clientY);
 
-    const isTopMost = el === node || node.contains(el);
+		const isTopMost = el === node || node.contains(el);
 
-    if (isTopMost && !hovered) {
-      hovered = true;
-      params.onEnter?.();
-    }
+		if (isTopMost && !hovered) {
+			hovered = true;
+			params.onEnter?.();
+		}
 
-    if (!isTopMost && hovered) {
-      hovered = false;
-      params.onLeave?.();
-    }
-  }
+		if (!isTopMost && hovered) {
+			hovered = false;
+			params.onLeave?.();
+		}
+	}
 
-  window.addEventListener("pointermove", onMove);
+	window.addEventListener('pointermove', onMove);
 
-  return {
-    destroy() {
-      window.removeEventListener("pointermove", onMove);
-    },
-    update(newParams: Params) {
-      params = newParams;
-    }
-  };
+	return {
+		destroy() {
+			window.removeEventListener('pointermove', onMove);
+		},
+		update(newParams: Params) {
+			params = newParams;
+		}
+	};
 }
