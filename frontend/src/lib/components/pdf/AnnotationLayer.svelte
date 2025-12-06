@@ -8,6 +8,7 @@
 	import { SvelteMap } from 'svelte/reactivity';
 	import { OPACITY_TRANSITION_MS } from './constants';
 	import { onMount } from 'svelte';
+	import { preciseHover } from '$lib/actions/preciseHover';
 
 	let { viewerContainer }: { viewerContainer: HTMLElement } = $props();
 
@@ -68,9 +69,10 @@
 		return map;
 	});
 
-	// Store event listener references for cleanup
+	// Store action destroy function for cleanup
 	type HighlightElement = HTMLDivElement & {
-		_listeners?: { mouseenter: () => void; mouseleave: () => void; click: () => void };
+		_actionDestroy?: () => void;
+		_clickListener?: () => void;
 	};
 
 	// Render highlights into the page elements
@@ -150,21 +152,21 @@
 					transition: opacity ${OPACITY_TRANSITION_MS}ms ease-in-out;
 				`;
 
-				// Create named listener functions for cleanup
-				const listeners = {
-					mouseenter: () => documentStore.setHighlightHoveredDebounced(comment.id, true),
-					mouseleave: () => documentStore.setHighlightHoveredDebounced(comment.id, false),
-					click: () => {
-						state.isPinned = !state.isPinned;
-					}
+				// Use preciseHover action for hover detection
+				const action = preciseHover(div, {
+					onEnter: () => documentStore.setHighlightHoveredDebounced(comment.id, true),
+					onLeave: () => documentStore.setHighlightHoveredDebounced(comment.id, false)
+				});
+
+				// Store action destroy function for cleanup
+				div._actionDestroy = action.destroy;
+
+				// Add click listener separately
+				const clickListener = () => {
+					state.isPinned = !state.isPinned;
 				};
-
-				// Store listeners on element for later cleanup
-				div._listeners = listeners;
-
-				div.addEventListener('mouseenter', listeners.mouseenter);
-				div.addEventListener('mouseleave', listeners.mouseleave);
-				div.addEventListener('click', listeners.click);
+				div._clickListener = clickListener;
+				div.addEventListener('click', clickListener);
 
 				textLayer.appendChild(div);
 			}
@@ -176,10 +178,13 @@
 				const elKey = el.dataset.key;
 				if (!elKey) return;
 				if (!pageKeys.has(elKey)) {
-					if (el._listeners) {
-						el.removeEventListener('mouseenter', el._listeners.mouseenter);
-						el.removeEventListener('mouseleave', el._listeners.mouseleave);
-						el.removeEventListener('click', el._listeners.click);
+					// Clean up preciseHover action
+					if (el._actionDestroy) {
+						el._actionDestroy();
+					}
+					// Clean up click listener
+					if (el._clickListener) {
+						el.removeEventListener('click', el._clickListener);
 					}
 					const commentState = documentStore.comments.getState(
 						parseInt(el.dataset.commentId ?? '-1')

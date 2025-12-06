@@ -554,7 +554,7 @@ const createDocumentStore = () => {
 				if (currentTimeouts) {
 					hoverTimeouts.set(commentId, { ...currentTimeouts, highlight: undefined });
 				}
-			}, 300) as unknown as number;
+			}, 50) as unknown as number;
 
 			hoverTimeouts.set(commentId, { ...timeouts, highlight: timeoutId });
 		}
@@ -587,7 +587,7 @@ const createDocumentStore = () => {
 				if (currentTimeouts) {
 					hoverTimeouts.set(commentId, { ...currentTimeouts, comment: undefined });
 				}
-			}, 100) as unknown as number;
+			}, 50) as unknown as number;
 
 			hoverTimeouts.set(commentId, { ...timeouts, comment: timeoutId });
 		}

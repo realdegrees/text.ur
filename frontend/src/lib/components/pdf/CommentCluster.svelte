@@ -119,6 +119,7 @@
 	}}
 	data-comment-badge={activeComment?.id}
 	data-badge-active="true"
+	class="{showCard ? 'w-full' : 'w-fit'}"
 >
 	{#if showCard}
 		<!-- Expanded card - hover anywhere on card keeps it open -->
@@ -135,9 +136,9 @@
 						{#each comments as c, idx (c.id)}
 							{@const state = commentStates.get(c.id)}
 							<button
-								class="flex cursor-pointer flex-row items-center gap-1.5 rounded-t px-2 py-1.5 text-xs font-medium transition-colors
+								class="flex cursor-pointer bg-inset flex-row items-center gap-1.5 rounded-t px-2 pt-1.5 pb-1 text-xs font-medium transition-colors
 							{activeComment === c
-									? 'bg-inset text-text'
+									? 'text-text shadow-inner shadow-text/40'
 									: 'text-text/50 hover:bg-text/5 hover:text-text/70 hover:animate-pulse'}"
 								onclick={(e) => {
 									e.stopPropagation();
@@ -202,13 +203,13 @@
 			aria-expanded="false"
 			tabindex={activeComment.id}
 			bind:this={clusterRef}
-			class="relative z-10 inline-block"
+			class="relative z-10 w-fit"
 			data-comment-badge={activeComment?.id}
 		>
 			<div
-				class="{highlightHoveredComment
-					? 'ring-3'
-					: ''} ring-primary/50 flex cursor-pointer flex-row items-center justify-start rounded p-1"
+				class="ring-3 ring-primary/0 {highlightHoveredComment
+					? 'ring-primary/50'
+					: ''} flex cursor-pointer flex-row items-center justify-start rounded p-1 transition-all"
 			>
 				<CommentIcon class="text-primary mr-2 h-4 w-4" />
 				<p>{badgePreviewUser?.username ?? 'Unknown'}</p>

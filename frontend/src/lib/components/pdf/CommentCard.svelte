@@ -278,7 +278,7 @@
 	<!-- Header is rendered by the wrapping CommentCluster component -->
 
 	<!-- Content area -->
-	<div class={isTopLevel ? 'p-3' : ''}>
+	<div class={isTopLevel ? 'p-1.5' : ''}>
 		<!-- Nested header (username + date inline) -->
 		<div class="mb-1 flex items-center justify-between">
 			<div class="flex items-center gap-2">
@@ -343,7 +343,7 @@
 		{/if}
 
 		<!-- Annotation quote (top-level only) -->
-		{#if comment.annotation}
+		{#if comment.annotation && comment.content?.length}
 			<!-- svelte-ignore a11y_click_events_have_key_events -->
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
 			<div
@@ -358,7 +358,7 @@
 			>
 				<p
 					bind:this={quoteRef}
-					class="text-xs text-text/60 italic {isQuoteExpanded ? '' : 'line-clamp-2'}"
+					class="text-xs text-text/60 italic {isQuoteExpanded ? '' : 'line-clamp-1'}"
 				>
 					"{comment.annotation.text}"
 				</p>
@@ -404,8 +404,6 @@
 			<div class={isTopLevel ? 'mb-3' : 'mt-0.5'}>
 				<MarkdownRenderer content={comment.content} class="{sizes.text} {sizes.textMuted}" />
 			</div>
-		{:else if isTopLevel}
-			<p class="mb-3 text-sm text-text/40 italic">No comment text</p>
 		{/if}
 
 		<!-- Reply input -->
