@@ -13,6 +13,7 @@ import { notification } from '$lib/stores/notificationStore';
 import { annotationSchema, type Annotation } from '$types/pdf';
 import { SvelteMap } from 'svelte/reactivity';
 import { invalidateAll } from '$app/navigation';
+import { browser } from '$app/environment';
 
 export interface FilterState<T = 'author' | 'tag'> {
 	type: T;
@@ -21,6 +22,8 @@ export interface FilterState<T = 'author' | 'tag'> {
 	data: T extends 'author' ? { username: string } : { label: string; color: string };
 }
 export type TypedComment = Omit<CommentRead, 'annotation'> & { annotation: Annotation | null };
+
+export const isHoverCapable = browser && window.matchMedia('(hover: hover)').matches;
 
 export interface CommentState {
 	id: number;
@@ -559,10 +562,13 @@ const createDocumentStore = () => {
 				hoverTimeouts.set(commentId, { ...timeouts, highlight: undefined });
 			}
 			// Immediately set to true
-			state.isHighlightHovered = true;
+			console.log(isHoverCapable);
+			
+			state.isHighlightHovered = isHoverCapable;
 		} else {
 			// Delay setting to false by 300ms
 			const timeoutId = setTimeout(() => {
+				
 				state.isHighlightHovered = false;
 				const currentTimeouts = hoverTimeouts.get(commentId);
 				if (currentTimeouts) {
@@ -592,7 +598,9 @@ const createDocumentStore = () => {
 				hoverTimeouts.set(commentId, { ...timeouts, comment: undefined });
 			}
 			// Immediately set to true
-			state.isCommentHovered = true;
+			console.log(isHoverCapable);
+			
+			state.isCommentHovered = isHoverCapable;
 		} else {
 			// Delay setting to false by 100ms
 			const timeoutId = setTimeout(() => {

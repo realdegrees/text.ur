@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { documentStore, type TypedComment } from '$lib/runes/document.svelte.js';
+	import { documentStore, isHoverCapable, type TypedComment } from '$lib/runes/document.svelte.js';
 	import { SvelteMap } from 'svelte/reactivity';
 	import CommentCard from './CommentCard.svelte';
 	import ConnectionLine from './ConnectionLine.svelte';
@@ -157,24 +157,22 @@
 									: 'text-text/50 hover:animate-pulse hover:bg-text/5 hover:text-text/70'}"
 								onclick={(e) => {
 									e.stopPropagation();
-									if (activeComment === c && state) {
+									if (activeComment === c && state) {								
 										state.isPinned = !state.isPinned;
 										return;
 									}
 									if (state) {
-										state.isCommentHovered = true;
-										// state.isPinned = activeCommentState?.isPinned;
+										state.isCommentHovered = isHoverCapable;
 									}
 									if (activeCommentState) {
-										// activeCommentState.isPinned = false;
 										activeCommentState.isCommentHovered = false;
 									}
 
 									selectedTabId = c.id;
 								}}
 								onmouseenter={() => {
-									hoveredTabId = c.id;
-									if (state) state.isCommentHovered = true;
+									hoveredTabId = isHoverCapable ? c.id : null;
+									if (state) state.isCommentHovered = isHoverCapable;
 								}}
 								onmouseleave={() => {
 									hoveredTabId = null;
@@ -211,10 +209,13 @@
 		</div>
 	{:else}
 		<!-- Compact badge - only hover on badge itself triggers expansion -->
-		<div
-			role="combobox"
-			aria-controls="false"
-			aria-expanded="false"
+		<button
+			onclick={(e) => {
+				e.stopPropagation();
+				if (activeCommentState) {
+					activeCommentState.isPinned	= true;
+				}
+			}}
 			tabindex={activeComment.id}
 			bind:this={clusterRef}
 			class="relative z-10 w-fit"
@@ -236,6 +237,6 @@
 					</span>
 				{/if}
 			</div>
-		</div>
+		</button>
 	{/if}
 </div>
