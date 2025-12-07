@@ -108,6 +108,7 @@ class Document(BaseModel, table=True):
     id: str = Field(default_factory=lambda: generate(
         size=10), primary_key=True, index=True)
     name: str = Field()
+    description: str | None = Field(nullable=True, default=None)
     s3_key: str = Field(index=True, unique=True)
     size_bytes: int = Field(default=0)
     visibility: Visibility = Field(default=Visibility.PRIVATE, sa_column=Column(

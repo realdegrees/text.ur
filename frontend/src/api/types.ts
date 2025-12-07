@@ -181,6 +181,7 @@ export interface Document {
   updated_at?: string;
   id?: string;
   name: string;
+  description?: string | null;
   s3_key: string;
   size_bytes?: number;
   visibility?: Visibility;
@@ -191,6 +192,7 @@ export interface Document {
 export interface DocumentCreate {
   visibility: Visibility;
   name: string;
+  description?: string | null;
   group_id: string;
 }
 export interface DocumentFilter {
@@ -205,6 +207,7 @@ export interface DocumentRead {
   name: string;
   group_id: string;
   visibility: Visibility;
+  description: string | null;
   view_mode: ViewMode;
   tags: TagRead[];
 }
