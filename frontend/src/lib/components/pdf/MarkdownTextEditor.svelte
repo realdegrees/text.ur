@@ -10,6 +10,7 @@
 		rows?: number;
 		disabled?: boolean;
 		autofocus?: boolean;
+		maxCommentLength?: number;
 		onchange?: (value: string) => void;
 		onkeydown?: (e: KeyboardEvent) => void;
 		onblur?: (e: FocusEvent) => void;
@@ -21,6 +22,7 @@
 		rows = 3,
 		disabled = false,
 		autofocus = false,
+		maxCommentLength = 2000,
 		onchange,
 		onkeydown,
 		onblur
@@ -38,8 +40,10 @@
 		buttonPadding: 'p-1'
 	});
 
-	// Sanitize input on change
-	const handleInput = (e: Event) => {
+	// Current number of characters in the editor
+	let charCount: number = $state(0);
+
+	const handleInput = (e: Event): void => {
 		const target = e.target as HTMLTextAreaElement;
 		// Allow markdown syntax but sanitize any HTML
 		const sanitized = DOMPurify.sanitize(target.value, {
@@ -48,9 +52,11 @@
 		});
 		value = sanitized;
 		onchange?.(sanitized);
+		// Update character count for the UI
+		charCount = sanitized.length;
 	};
 
-	const handleKeydown = (e: KeyboardEvent) => {
+	const handleKeydown = (e: KeyboardEvent): void => {
 		e.stopPropagation(); // Prevent parent handlers from capturing
 		onkeydown?.(e);
 	};
@@ -72,6 +78,7 @@
 	$effect(() => {
 		// Depend on value to trigger resize when content changes
 		void value;
+		charCount = value ? value.length : 0;
 		if (textareaRef && mode === 'write') {
 			// Reset height to auto to get the correct scrollHeight
 			textareaRef.style.height = 'auto';
@@ -81,7 +88,9 @@
 	});
 </script>
 
-<div class="flex flex-col rounded border border-text/20 bg-inset focus-within:border-primary">
+<div
+	class="relative flex flex-col rounded border border-text/20 bg-inset focus-within:border-primary"
+>
 	<!-- Mode Toggle + Toolbar -->
 	<div class="flex items-center justify-between gap-2 border-b border-text/10 px-2 py-1">
 		<!-- Mode Toggle -->
@@ -163,6 +172,13 @@
 			onclick={(e) => e.stopPropagation()}
 			{onblur}
 		></textarea>
+
+		<!-- Character counter -->
+		<div class="absolute right-2 bottom-1 text-[8px]" aria-live="polite" aria-atomic="true">
+			<span class={charCount > maxCommentLength ? 'text-red-600' : 'text-text/50'}>
+				{charCount} / {maxCommentLength}
+			</span>
+		</div>
 	{:else}
 		<!-- Preview -->
 		<div

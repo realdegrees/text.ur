@@ -1,5 +1,6 @@
 from typing import TYPE_CHECKING
 
+from core.config import MAX_DOCUMENT_NAME_LENGTH
 from sqlmodel import Field, SQLModel
 
 from models.base import BaseModel
@@ -11,7 +12,7 @@ if TYPE_CHECKING:
 
 class DocumentCreate(SQLModel):
     visibility: Visibility
-    name: str = Field(max_length=255)
+    name: str = Field(max_length=MAX_DOCUMENT_NAME_LENGTH)
     group_id: str
 
 class DocumentRead(BaseModel):
@@ -29,7 +30,7 @@ class DocumentTransfer(SQLModel):
 class DocumentUpdate(SQLModel):
     visibility: Visibility | None = None
     view_mode: ViewMode | None = None
-    name: str | None = Field(default=None, max_length=255)
+    name: str | None = Field(default=None, max_length=MAX_DOCUMENT_NAME_LENGTH)
 
 
 class ViewModeChangedEvent(SQLModel):

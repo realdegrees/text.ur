@@ -1,5 +1,6 @@
 from typing import TYPE_CHECKING
 
+from core.config import MAX_COMMENT_LENGTH
 from pydantic import field_validator
 from sqlmodel import Field, SQLModel
 
@@ -12,7 +13,6 @@ if TYPE_CHECKING:
     from models.user import UserRead
 
 # TODO maybe move these into config
-MAX_COMMENT_CONTENT_LENGTH = 500
 
 
 def sanitize_content(value: str | None) -> str | None:
@@ -35,7 +35,7 @@ class CommentCreate(SQLModel):
     visibility: Visibility
     document_id: str
     parent_id: int | None = None
-    content: str | None = Field(default=None, max_length=MAX_COMMENT_CONTENT_LENGTH)
+    content: str | None = Field(default=None, max_length=MAX_COMMENT_LENGTH)
     annotation: dict | None = None
 
     @field_validator('content', mode='before')
@@ -58,7 +58,7 @@ class CommentRead(BaseModel):
 
 class CommentUpdate(SQLModel):
     visibility: Visibility | None = None
-    content: str | None = Field(default=None, max_length=MAX_COMMENT_CONTENT_LENGTH)
+    content: str | None = Field(default=None, max_length=MAX_COMMENT_LENGTH)
     annotation: dict | None = None
 
     @field_validator('content', mode='before')

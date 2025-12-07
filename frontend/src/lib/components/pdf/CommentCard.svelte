@@ -16,6 +16,7 @@
 	import ExpandIcon from '~icons/material-symbols/expand-more';
 	import TagIcon from '~icons/mdi/tag-search-outline';
 	import { formatDateTime } from '$lib/util/dateFormat';
+	import { env } from '$env/dynamic/public';
 
 	interface Props {
 		comment: TypedComment;
@@ -366,6 +367,9 @@
 					placeholder="Edit your comment..."
 					rows={3}
 					disabled={isSubmitting}
+					maxCommentLength={env.PUBLIC_MAX_COMMENT_LENGTH
+						? parseInt(env.PUBLIC_MAX_COMMENT_LENGTH)
+						: 2000}
 					autofocus={true}
 					onkeydown={handleEditKeydown}
 				/>
@@ -408,6 +412,9 @@
 					rows={2}
 					disabled={isSubmitting}
 					autofocus={true}
+					maxCommentLength={env.PUBLIC_MAX_COMMENT_LENGTH
+						? parseInt(env.PUBLIC_MAX_COMMENT_LENGTH)
+						: 2000}
 					onkeydown={handleKeydown}
 					onblur={() => {
 						if (commentState.replyInputContent.trim().length === 0) {
