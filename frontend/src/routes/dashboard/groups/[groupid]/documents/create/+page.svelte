@@ -12,6 +12,7 @@
 	import InfoIcon from '~icons/material-symbols/info-outline';
 	import { notification } from '$lib/stores/notificationStore.js';
 	import { sessionStore } from '$lib/runes/session.svelte.js';
+	import MarkdownTextEditor from '$lib/components/pdf/MarkdownTextEditor.svelte';
 
 	const MAX_FILE_SIZE_MB: number = 50;
 	const MAX_FILE_SIZE_BYTES: number = MAX_FILE_SIZE_MB * 1024 * 1024;
@@ -26,6 +27,7 @@
 	let errorMessage: string = $state('');
 	let isDragging: boolean = $state(false);
 	let documentName: string = $state('');
+	let documentDescription: string = $state('');
 
 	const visibilityOptions = $derived(
 		visibilitySchema.options.map((option) => ({
@@ -119,7 +121,8 @@
 		const documentData: DocumentCreate = {
 			visibility: selectedVisibility,
 			group_id: groupId,
-			name: documentName
+			name: documentName,
+			description: documentDescription.trim() || null
 		};
 
 		formData.append('data', JSON.stringify(documentData));
@@ -227,6 +230,23 @@
 				class="rounded-lg border border-text/20 bg-inset p-3 text-sm shadow-inner focus:border-primary focus:ring-1 focus:ring-primary"
 				required
 			/>
+		</div>
+
+		<!-- Document Description Field -->
+		<div class="flex flex-col gap-2">
+			<label for="documentDescription" class="text-sm font-semibold text-text/70">
+				Document Description (Optional)
+			</label>
+			<MarkdownTextEditor
+				bind:value={documentDescription}
+				placeholder="Add a description for this document (supports Markdown formatting)"
+				rows={4}
+				maxCommentLength={5000}
+			/>
+			<p class="text-xs text-text/50">
+				Describe the purpose of this document, what feedback you're looking for, or any other
+				context.
+			</p>
 		</div>
 
 		<!-- Visibility Section -->
