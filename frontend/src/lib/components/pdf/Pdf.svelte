@@ -7,6 +7,7 @@
 	import CommentSidebar from './CommentSidebar.svelte';
 	import PdfControls from './PdfControls.svelte';
 	import UserCursors from './UserCursors.svelte';
+	import DocumentInfo from './DocumentInfo.svelte';
 	import { PDF_ZOOM_STEP, PDF_MIN_SCALE } from './constants';
 	import { documentStore } from '$lib/runes/document.svelte';
 
@@ -18,6 +19,7 @@
 
 	let container: HTMLDivElement | null = $state(null);
 	let pdfAreaWrapper: HTMLDivElement | null = $state(null);
+	let rootContainer: HTMLDivElement | null = $state(null);
 	let sidebarContainer: HTMLDivElement | null = $state(null);
 	let pdfSlick: PDFSlick | null = $state(null);
 	let unsubscribe: (() => void) | null = $state(null);
@@ -178,52 +180,69 @@
 	onDestroy(() => unsubscribe?.());
 </script>
 
-<div class="pdf-viewer-container flex h-full w-full bg-background">
-	<PdfControls
-		minScale={PDF_MIN_SCALE}
-		{maxScale}
-		{pageNumber}
-		numPages={documentStore.numPages}
-		onZoomIn={zoomIn}
-		onZoomOut={zoomOut}
-		onFitHeight={fitHeight}
-		onPrevPage={prevPage}
-		onNextPage={nextPage}
-	/>
+<div
+	class="pdf-viewer-container flex h-full w-full flex-col bg-background"
+	bind:this={rootContainer}
+>
+	<!-- Main PDF Viewer Area -->
+	<div class="flex flex-1 overflow-hidden">
+		<!-- Controls column - should take full container height -->
+		<PdfControls
+			minScale={PDF_MIN_SCALE}
+			{maxScale}
+			{pageNumber}
+			numPages={documentStore.numPages}
+			onZoomIn={zoomIn}
+			onZoomOut={zoomOut}
+			onFitHeight={fitHeight}
+			onPrevPage={prevPage}
+			onNextPage={nextPage}
+		/>
+		<!-- Right content column: Document Info above the PDF+Sidebar -->
+		<div class="flex flex-1 flex-col overflow-y-auto">
+			<!-- Document Info Section (above PDF and Sidebar only) -->
+			{#if documentStore.loadedDocument && documentStore.loadedDocument.description && documentStore.loadedDocument.description.trim().length > 0}
+				<DocumentInfo document={documentStore.loadedDocument} />
+			{/if}
 
-	<!-- PDF Viewer Area - shrinks to fit content when zoomed out -->
-	<div
-		class="relative h-full overflow-hidden bg-text/5 transition-[width] duration-150"
-		style="width: {pdfWidth > 0 ? `${pdfWidth}px` : '100%'}; max-width: 100%;"
-		bind:this={pdfAreaWrapper}
-	>
-		<div
-			id="viewerContainer"
-			class="pdfSlickContainer absolute inset-0 custom-scrollbar overflow-x-hidden overflow-y-scroll"
-			bind:this={container}
-			onscroll={handleScroll}
-			onwheel={handlePdfWheel}
-		>
-			<div id="viewer" class="pdfSlickViewer pdfViewer m-0! p-0!"></div>
+			<!-- PDF Viewer and Sidebar Row -->
+			<div class="flex flex-1 overflow-hidden">
+				<!-- PDF Viewer Area - shrinks to fit content when zoomed out -->
+				<div
+					class="relative h-full overflow-hidden bg-text/5 transition-[width] duration-150"
+					style="width: {pdfWidth > 0 ? `${pdfWidth}px` : '100%'}; max-width: 100%;"
+					bind:this={pdfAreaWrapper}
+				>
+					<div
+						id="viewerContainer"
+						class="pdfSlickContainer absolute inset-0 custom-scrollbar overflow-x-hidden overflow-y-scroll"
+						bind:this={container}
+						onscroll={handleScroll}
+						onwheel={handlePdfWheel}
+					>
+						<div id="viewer" class="pdfSlickViewer pdfViewer m-0! p-0!"></div>
+					</div>
+					<!-- Annotation highlights are rendered into the PDF pages -->
+					<AnnotationLayer viewerContainer={container} />
+
+					<!-- Text selection handler for creating new annotations -->
+					<TextSelectionHandler viewerContainer={container} />
+
+					<!-- Other users' cursors -->
+					<UserCursors viewerContainer={container} />
+				</div>
+
+				<!-- Right Sidebar - Comments (expands to fill remaining space) -->
+				<div
+					class="relative min-w-72 flex-1 overflow-hidden border-l border-text/10 bg-background"
+					onwheel={handleCommentsWheel}
+					role="complementary"
+					bind:this={sidebarContainer}
+				>
+					<CommentSidebar viewerContainer={container} {scrollTop} />
+				</div>
+			</div>
 		</div>
-		<!-- Annotation highlights are rendered into the PDF pages -->
-		<AnnotationLayer viewerContainer={container} />
-
-		<!-- Text selection handler for creating new annotations -->
-		<TextSelectionHandler viewerContainer={container} />
-
-		<!-- Other users' cursors -->
-		<UserCursors viewerContainer={container} />
-	</div>
-
-	<!-- Right Sidebar - Comments (expands to fill remaining space) -->
-	<div
-		class="relative min-w-72 flex-1 overflow-hidden border-l border-text/10 bg-inset"
-		onwheel={handleCommentsWheel}
-		role="complementary"
-		bind:this={sidebarContainer}
-	>
-		<CommentSidebar viewerContainer={container} {scrollTop} />
 	</div>
 </div>
 

@@ -5,19 +5,29 @@
 	import { sessionStore } from '$lib/runes/session.svelte.js';
 	import TagManagement from '$lib/components/TagManagement.svelte';
 	import ConfirmButton from '$lib/components/ConfirmButton.svelte';
+	import MarkdownTextEditor from '$lib/components/pdf/MarkdownTextEditor.svelte';
 	import BackIcon from '~icons/material-symbols/arrow-back';
 	import SaveIcon from '~icons/material-symbols/save-outline';
 	import DeleteIcon from '~icons/material-symbols/delete-outline';
 	import type { Visibility } from '$api/types';
+	import { env } from '$env/dynamic/public';
 
 	let { data } = $props();
 	let document = $derived(data.document);
 	let group = $derived(data.membership.group);
 
-	let documentName = $derived(document.name);
-	let documentVisibility = $derived<Visibility>(document.visibility);
+	let documentName = $state(document.name);
+	let documentDescription = $state(document.description ?? '');
+	let documentVisibility = $state<Visibility>(document.visibility);
 	let isSaving = $state(false);
 	let isClearing = $state(false);
+
+	// Update local state when document data changes
+	$effect(() => {
+		documentName = document.name;
+		documentDescription = document.description ?? '';
+		documentVisibility = document.visibility;
+	});
 
 	async function saveChanges() {
 		if (!documentName.trim()) {
@@ -29,6 +39,7 @@
 
 		const result = await api.update(`/documents/${document.id}`, {
 			name: documentName.trim(),
+			description: documentDescription.trim() || null,
 			visibility: documentVisibility
 		});
 
@@ -44,7 +55,13 @@
 	}
 
 	function hasChanges() {
-		return documentName.trim() !== document.name || documentVisibility !== document.visibility;
+		const descriptionChanged =
+			(documentDescription.trim() || null) !== (document.description || null);
+		return (
+			documentName.trim() !== document.name ||
+			documentVisibility !== document.visibility ||
+			descriptionChanged
+		);
 	}
 
 	async function clearDocument() {
@@ -90,6 +107,25 @@
 				maxlength="255"
 				class="rounded-md border border-text/20 bg-text/5 px-4 py-2 transition-colors focus:border-text/50 focus:outline-none"
 			/>
+		</div>
+
+		<!-- Document Description -->
+		<div class="flex flex-col gap-2">
+			<label for="document-description" class="text-sm font-semibold text-text/70">
+				Document Description (Optional)
+			</label>
+			<MarkdownTextEditor
+				bind:value={documentDescription}
+				placeholder="Add a description for this document (supports Markdown formatting)"
+				rows={4}
+				maxCommentLength={env.PUBLIC_DOCUMENT_DESCRIPTION_MAX_LENGTH
+					? parseInt(env.PUBLIC_DOCUMENT_DESCRIPTION_MAX_LENGTH)
+					: 5000}
+			/>
+			<p class="text-xs text-text/50">
+				Describe the purpose of this document, what feedback you're looking for, or any other
+				context.
+			</p>
 		</div>
 
 		<!-- Document Visibility -->
