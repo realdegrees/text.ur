@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { documentStore, isHoverCapable, type TypedComment } from '$lib/runes/document.svelte.js';
+	import { documentStore, type TypedComment } from '$lib/runes/document.svelte.js';
 	import { SvelteMap } from 'svelte/reactivity';
 	import CommentCard from './CommentCard.svelte';
 	import ConnectionLine from './ConnectionLine.svelte';
@@ -8,15 +8,18 @@
 	import PinOffIcon from '~icons/material-symbols/push-pin-outline';
 	import type { UserRead } from '$api/types';
 	import { preciseHover } from '$lib/actions/preciseHover';
+	import { longPress } from '$lib/actions/longPress';
+	import { hasHoverCapability } from '$lib/util/responsive.svelte';
 
 	interface Props {
 		comments: TypedComment[];
 		yPosition: number;
 		scrollTop?: number;
 		onHeightChange?: (height: number) => void;
+		forceExpanded?: boolean;
 	}
 
-	let { comments, yPosition, scrollTop, onHeightChange }: Props = $props();
+	let { comments, yPosition, scrollTop, onHeightChange, forceExpanded = false }: Props = $props();
 
 	// List of all unique authors in this cluster
 	let authorsInCluster = $derived.by(() => {
@@ -89,12 +92,26 @@
 
 	// Show expanded card when badge is hovered, highlight is hovered, comment is pinned, or input is active
 	let showCard = $derived(
-		hoveredTabCommentState ||
+		forceExpanded ||
+			hoveredTabCommentState ||
 			firstPinnedComment ||
 			firstEditingComment ||
 			firstReplyingComment ||
-			firstCommentHovered
+			firstCommentHovered ||
+			(!hasHoverCapability() && highlightHoveredComment)
 	);
+
+	/**
+	 * On mobile, only show connection line when the comment is being long-pressed
+	 */
+	function shouldShowConnectionLineOnMobile(): boolean {
+		if (hasHoverCapability()) {
+			return false; // Not mobile, use desktop logic
+		}
+
+		// Check if any of the comments in this cluster is being long-pressed
+		return comments.some((c) => c.id === documentStore.longPressCommentId);
+	}
 
 	let clusterRef: HTMLElement | null = $state(null);
 
@@ -143,6 +160,22 @@
 			class="relative z-50 overflow-hidden rounded bg-background shadow-lg ring-3 shadow-black/20 transition-all {firstPinnedComment
 				? 'ring-primary/70'
 				: 'ring-primary/30'}"
+			use:longPress={{
+				onLongPress: () => {
+					if (!hasHoverCapability()) {
+						// Mobile: Set active and show connection line on long press start
+						documentStore.activeCommentId = activeComment.id;
+						documentStore.longPressCommentId = activeComment.id;
+					}
+				},
+				onRelease: () => {
+					if (!hasHoverCapability()) {
+						// Mobile: Clear long press state
+						documentStore.longPressCommentId = null;
+					}
+				},
+				duration: 500
+			}}
 		>
 			<!-- Cluster header: tabs for multiple comments or single author header -->
 			<div class="w-full border-b border-text/30 p-1.5 pb-0">
@@ -157,22 +190,46 @@
 									: 'text-text/50 hover:animate-pulse hover:bg-text/5 hover:text-text/70'}"
 								onclick={(e) => {
 									e.stopPropagation();
-									if (activeComment === c && state) {								
-										state.isPinned = !state.isPinned;
-										return;
-									}
-									if (state) {
-										state.isCommentHovered = isHoverCapable;
-									}
-									if (activeCommentState) {
-										activeCommentState.isCommentHovered = false;
-									}
 
-									selectedTabId = c.id;
+									const isMobile = !hasHoverCapability();
+
+									if (isMobile) {
+										// Mobile: Pin/unpin and set as active only when pinning
+										if (state) {
+											const wasPinned = state.isPinned;
+											state.isPinned = !state.isPinned;
+
+											// Only set as active when pinning (not unpinning)
+											if (!wasPinned) {
+												documentStore.activeCommentId = c.id;
+											}
+										}
+									} else {
+										// Desktop: Pin if already active, otherwise switch tabs
+										if (activeComment === c && state) {
+											state.isPinned = !state.isPinned;
+											return;
+										}
+										if (state) {
+											state.isCommentHovered = hasHoverCapability();
+										}
+										if (activeCommentState) {
+											activeCommentState.isCommentHovered = false;
+										}
+
+										selectedTabId = c.id;
+									}
+								}}
+								oncontextmenu={(e) => {
+									// Prevent context menu on mobile
+									if (!hasHoverCapability()) {
+										e.preventDefault();
+										e.stopPropagation();
+									}
 								}}
 								onmouseenter={() => {
-									hoveredTabId = isHoverCapable ? c.id : null;
-									if (state) state.isCommentHovered = isHoverCapable;
+									hoveredTabId = hasHoverCapability() ? c.id : null;
+									if (state) state.isCommentHovered = hasHoverCapability();
 								}}
 								onmouseleave={() => {
 									hoveredTabId = null;
@@ -194,7 +251,7 @@
 			{#if activeComment}
 				<CommentCard comment={activeComment} />
 
-				{#if hoveredTabCommentState || firstCommentHovered || highlightHoveredComment}
+				{#if hoveredTabCommentState || firstCommentHovered || highlightHoveredComment || shouldShowConnectionLineOnMobile()}
 					<!-- Connection line for this card -->
 
 					{#key hoveredTabCommentState?.id ?? activeCommentState?.id}

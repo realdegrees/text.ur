@@ -29,6 +29,7 @@
 		onFitHeight: () => void;
 		onPrevPage: () => void;
 		onNextPage: () => void;
+		isMobile?: boolean;
 	}
 
 	let {
@@ -40,10 +41,11 @@
 		onZoomOut,
 		onFitHeight,
 		onPrevPage,
-		onNextPage
+		onNextPage,
+		isMobile = false
 	}: Props = $props();
 
-	let isExpanded = $state(true);
+	let isExpanded = $state(!isMobile); // Collapsed by default on mobile
 
 	const buttonClass =
 		'rounded text-text/70 transition-colors hover:bg-text/10 hover:text-text disabled:opacity-30 disabled:hover:bg-transparent';
@@ -120,7 +122,8 @@
 <div
 	class="no-scrollbar flex shrink-0 flex-col overflow-x-hidden overflow-y-auto border-r border-text/10 bg-inset transition-all duration-200 {isExpanded
 		? 'w-48'
-		: 'w-12'}"
+		: 'w-12'} {isMobile ? 'absolute left-0 top-0 z-40' : ''}"
+	style={isMobile ? 'height: calc(100% - var(--mobile-comment-panel-height, 0px));' : ''}
 >
 	<!-- Expand/Collapse Button -->
 	<button
