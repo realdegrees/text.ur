@@ -22,7 +22,8 @@
 
 		const resizeObserver = new ResizeObserver((entries) => {
 			for (const entry of entries) {
-				const height = entry.contentRect.height;
+				// Use borderBoxSize if available to include borders/padding, otherwise fallback to contentRect
+				const height = entry.borderBoxSize?.[0]?.blockSize ?? entry.contentRect.height;
 				document.documentElement.style.setProperty('--mobile-comment-panel-height', `${height}px`);
 			}
 		});
@@ -107,7 +108,10 @@
 	}
 </script>
 
-<div class="mobile-comment-panel fixed bottom-0 left-0 right-0 z-50 bg-background" bind:this={panelElement}>
+<div
+	class="mobile-comment-panel absolute bottom-0 left-0 right-0 z-50 bg-background"
+	bind:this={panelElement}
+>
 	<!-- Tab bar / Header - always visible -->
 	<div class="flex items-center border-b border-t border-text/10 bg-inset">
 		<!-- Tabs -->

@@ -53,7 +53,7 @@
 		if (!pdfAreaWrapper) return;
 		const parent = pdfAreaWrapper.parentElement;
 		if (parent) {
-			const available = parent.clientWidth - 48 - 288;
+			const available = screen.isMobile ? parent.clientWidth : parent.clientWidth - 48 - 288;
 			if (available > maxAvailableWidth) {
 				maxAvailableWidth = available;
 			}
@@ -176,8 +176,8 @@
 		const parent = pdfAreaWrapper.parentElement;
 		const resizeObserver = new ResizeObserver(() => {
 			if (screen.isMobile) {
-				// On mobile, account for spacer (48px), no comment sidebar
-				const available = parent.clientWidth - 48;
+				// On mobile, the parent is the wrapper which already accounts for layout
+				const available = parent.clientWidth;
 				maxAvailableWidth = available;
 			} else {
 				// On desktop, account for controls (48px) + sidebar (288px)
@@ -198,6 +198,12 @@
 	onMount(initialize);
 	onDestroy(() => unsubscribe?.());
 </script>
+
+{#snippet documentInfo()}
+	{#if documentStore.loadedDocument && documentStore.loadedDocument.description && documentStore.loadedDocument.description.trim().length > 0}
+		<DocumentInfo document={documentStore.loadedDocument} />
+	{/if}
+{/snippet}
 
 <div
 	class="pdf-viewer-container flex h-full w-full bg-background {screen.isMobile ? 'relative' : 'flex-col'}"
@@ -237,9 +243,7 @@
 			<!-- Right content column: Document Info above the PDF+Sidebar -->
 			<div class="flex flex-1 flex-col overflow-y-auto">
 				<!-- Document Info Section (above PDF and Sidebar only) -->
-				{#if documentStore.loadedDocument && documentStore.loadedDocument.description && documentStore.loadedDocument.description.trim().length > 0}
-					<DocumentInfo document={documentStore.loadedDocument} />
-				{/if}
+				{@render documentInfo()}
 
 				<!-- PDF Viewer and Sidebar Row -->
 				<div class="flex flex-1 overflow-hidden">
@@ -284,23 +288,26 @@
 
 	<!-- Mobile PDF viewer and bottom comment panel (mobile-only) -->
 	{#if screen.isMobile}
-		<div
-			class="relative h-full overflow-hidden bg-text/5 transition-[width] duration-150"
-			style="width: {pdfWidth > 0 ? `${pdfWidth}px` : '100%'}; max-width: 100%;"
-			bind:this={pdfAreaWrapper}
-		>
+		<div class="flex flex-1 flex-col overflow-y-auto w-full">
+			{@render documentInfo()}
 			<div
-				id="viewerContainer"
-				class="pdfSlickContainer absolute inset-0 custom-scrollbar overflow-x-hidden overflow-y-scroll {screen.isMobile ? 'pb-24' : ''}"
-				bind:this={container}
-				onscroll={handleScroll}
-				onwheel={handlePdfWheel}
+				class="relative flex-1 overflow-hidden bg-text/5 transition-[width] duration-150"
+				style="width: {pdfWidth > 0 ? `${pdfWidth}px` : '100%'}; max-width: 100%;"
+				bind:this={pdfAreaWrapper}
 			>
-				<div id="viewer" class="pdfSlickViewer pdfViewer m-0! p-0!"></div>
+				<div
+					id="viewerContainer"
+					class="pdfSlickContainer absolute inset-0 custom-scrollbar overflow-x-hidden overflow-y-scroll {screen.isMobile ? 'pb-24' : ''}"
+					bind:this={container}
+					onscroll={handleScroll}
+					onwheel={handlePdfWheel}
+				>
+					<div id="viewer" class="pdfSlickViewer pdfViewer m-0! p-0!"></div>
+				</div>
+				<AnnotationLayer viewerContainer={container} />
+				<TextSelectionHandler viewerContainer={container} />
+				<UserCursors viewerContainer={container} />
 			</div>
-			<AnnotationLayer viewerContainer={container} />
-			<TextSelectionHandler viewerContainer={container} />
-			<UserCursors viewerContainer={container} />
 		</div>
 
 		<MobileCommentPanel {scrollTop} bind:this={mobileCommentPanel} />
