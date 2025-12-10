@@ -51,6 +51,9 @@ const createDocumentStore = () => {
 	let pdfViewerRef: HTMLElement | null = $state<HTMLElement | null>(null);
 	let scrollContainerRef: HTMLElement | null = $state<HTMLElement | null>(null);
 	let commentSidebarRef: HTMLDivElement | null = $state<HTMLDivElement | null>(null);
+	let mobileCommentPanelRef: any = $state<any>(null);
+	let activeCommentId: number | null = $state<number | null>(null);
+	let longPressCommentId: number | null = $state<number | null>(null);
 
 	// Resets the store and loads root comments for a document
 	const setTopLevelComments = (comments: CommentRead[]) => {
@@ -607,6 +610,50 @@ const createDocumentStore = () => {
 		}
 	};
 
+	/**
+	 * Scroll to the first highlight of a comment
+	 */
+	const scrollToComment = (commentId: number): void => {
+		const comment = _comments.get(commentId);
+		if (!comment?.annotation?.boundingBoxes || comment.annotation.boundingBoxes.length === 0) {
+			return;
+		}
+
+		const firstBox = comment.annotation.boundingBoxes[0];
+		const container = scrollContainerRef;
+
+		if (!container) return;
+
+		const pageElement = container.querySelector(
+			`[data-page-number="${firstBox.pageNumber}"]`
+		) as HTMLElement | null;
+
+		if (!pageElement) return;
+
+		const textLayer = pageElement.querySelector('.textLayer') as HTMLElement | null;
+		if (!textLayer) return;
+
+		const textLayerRect = textLayer.getBoundingClientRect();
+		const containerRect = container.getBoundingClientRect();
+
+		// Calculate the absolute position of the highlight
+		const highlightTop =
+			textLayerRect.top -
+			containerRect.top +
+			container.scrollTop +
+			firstBox.y * textLayerRect.height;
+
+		// Scroll to center the highlight in the viewport (accounting for mobile comment panel)
+		const mobilePanel = document.querySelector('.mobile-comment-panel');
+		const panelHeight = mobilePanel?.getBoundingClientRect().height ?? 0;
+		const viewportHeight = container.clientHeight - panelHeight;
+
+		container.scrollTo({
+			top: highlightTop - viewportHeight / 2,
+			behavior: 'smooth'
+		});
+	};
+
 	const handleWebSocketEvent = (
 		event:
 			| CommentEvent
@@ -693,17 +740,36 @@ const createDocumentStore = () => {
 		set commentSidebarRef(value) {
 			commentSidebarRef = value;
 		},
+		get mobileCommentPanelRef() {
+			return mobileCommentPanelRef;
+		},
+		set mobileCommentPanelRef(value) {
+			mobileCommentPanelRef = value;
+		},
 		get showCursors() {
 			return showCursors;
 		},
 		set showCursors(value) {
 			showCursors = value;
 		},
+		get activeCommentId() {
+			return activeCommentId;
+		},
+		set activeCommentId(value) {
+			activeCommentId = value;
+		},
+		get longPressCommentId() {
+			return longPressCommentId;
+		},
+		set longPressCommentId(value) {
+			longPressCommentId = value;
+		},
 		handleWebSocketEvent,
 		setTopLevelComments,
 		clearHighlightReferences,
 		setHighlightHoveredDebounced,
-		setCommentHoveredDebounced
+		setCommentHoveredDebounced,
+		scrollToComment
 	};
 };
 

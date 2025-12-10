@@ -1,6 +1,6 @@
 // PDF viewer constants
 export const PDF_ZOOM_STEP = 0.2;
-export const PDF_MIN_SCALE = 0.25;
+export const PDF_MIN_SCALE = 0.5;
 
 // Annotation constants
 export const DEFAULT_HIGHLIGHT_COLOR = 'rgba(255, 235, 59, 0.4)';

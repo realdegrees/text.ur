@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { documentStore, type CommentState } from '$lib/runes/document.svelte';
+	import { hasHoverCapability } from '$lib/util/responsive.svelte';
 
 	interface Props {
 		commentState?: CommentState;
@@ -26,21 +27,17 @@
 
 		// Find all highlight elements for this comment
 		const highlightEls = commentState?.highlightElements;
-		const sidebarRect = documentStore.commentSidebarRef?.getBoundingClientRect();
-
-		if (!highlightEls || highlightEls.length === 0 || !sidebarRect) {
-			return null;
-		}
-
-		// Calculate cluster position from data instead of reading DOM
-		const LEFT_PADDING = 12; // left-3 class = 0.75rem = 12px
-		const clusterLeft = sidebarRect.left + LEFT_PADDING;
-		const clusterTop = sidebarRect.top + yPosition;
+		const isMobile = !hasHoverCapability();
 
 		// Get the rightmost edge from all highlights for horizontal positioning
 		let maxRight = -Infinity;
 		let minTop = +Infinity;
 		let heightTotal = 0;
+
+		if (!highlightEls || highlightEls.length === 0) {
+			return null;
+		}
+
 		highlightEls.forEach((el) => {
 			const rect = el.getBoundingClientRect();
 			heightTotal += rect.height;
@@ -53,10 +50,34 @@
 		const endX = maxRight + HIGHLIGHT_OFFSET;
 		const endY = minTop + heightTotal / 2;
 
-		// Start point: at cluster (using calculated position from data)
-		const COMMENT_OFFSET = -1.5; // pixels of offset from left edge of cluster
-		const startX = clusterLeft + COMMENT_OFFSET;
-		const startY = clusterTop + 36; // ~40px from top is where quote area is
+		let startX: number;
+		let startY: number;
+
+		if (isMobile) {
+			// Mobile: Anchor to the top center of the mobile comment panel
+			const mobilePanel = document.querySelector('.mobile-comment-panel');
+			if (!mobilePanel) return null;
+
+			const panelRect = mobilePanel.getBoundingClientRect();
+
+			// Anchor to center top of panel
+			startX = panelRect.left + panelRect.width / 2;
+			startY = panelRect.top;
+		} else {
+			// Desktop: Anchor to sidebar comment cluster
+			const sidebarRect = documentStore.commentSidebarRef?.getBoundingClientRect();
+			if (!sidebarRect) return null;
+
+			// Calculate cluster position from data instead of reading DOM
+			const LEFT_PADDING = 12; // left-3 class = 0.75rem = 12px
+			const clusterLeft = sidebarRect.left + LEFT_PADDING;
+			const clusterTop = sidebarRect.top + yPosition;
+
+			// Start point: at cluster (using calculated position from data)
+			const COMMENT_OFFSET = -1.5; // pixels of offset from left edge of cluster
+			startX = clusterLeft + COMMENT_OFFSET;
+			startY = clusterTop + 36; // ~40px from top is where quote area is
+		}
 
 		return { startX, startY, endX, endY };
 	});

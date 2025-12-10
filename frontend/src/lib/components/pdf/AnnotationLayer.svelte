@@ -9,6 +9,8 @@
 	import { OPACITY_TRANSITION_MS } from './constants';
 	import { onMount } from 'svelte';
 	import { preciseHover } from '$lib/actions/preciseHover';
+	import { longPress } from '$lib/actions/longPress';
+	import { hasHoverCapability } from '$lib/util/responsive.svelte';
 
 	let { viewerContainer }: { viewerContainer: HTMLElement } = $props();
 
@@ -71,8 +73,9 @@
 
 	// Store action destroy function for cleanup
 	type HighlightElement = HTMLDivElement & {
-		_actionDestroy?: () => void;
+		_actionDestroy: (() => void)[];
 		_clickListener?: () => void;
+		_contextMenuListener?: (e: Event) => void;
 	};
 
 	// Render highlights into the page elements
@@ -127,10 +130,22 @@
 					existingEl.style.pointerEvents = 'auto';
 					existingEl.style.opacity = isVisible ? '1' : '0.4';
 					existingEl.dataset.commentId = String(comment.id);
+					// If the contextmenu listener wasn't present (e.g., element was created
+					// before this code change), attach a preventer to avoid long-press
+					// opening the browser's context menu on mobile devices.
+					if (!existingEl._contextMenuListener) {
+						const ctxListener = (e: Event) => {
+							e.preventDefault();
+							e.stopPropagation();
+						};
+						existingEl._contextMenuListener = ctxListener;
+						existingEl.addEventListener('contextmenu', ctxListener);
+					}
 					continue;
 				}
 
 				const div = document.createElement('div') as HighlightElement;
+				div._actionDestroy = [];
 				state.highlightElements = [...(state.highlightElements || []), div];
 				div.className = 'annotation-highlight';
 				div.dataset.commentId = String(comment.id);
@@ -151,22 +166,62 @@
 					opacity: ${isVisible ? 1 : 0.4};
 					transition: opacity ${OPACITY_TRANSITION_MS}ms ease-in-out;
 				`;
+				// Improve touch behavior on iOS/Android: disable text/image callouts
+				div.style.setProperty('-webkit-touch-callout', 'none');
+				div.style.setProperty('-webkit-user-select', 'none');
+				div.style.setProperty('-ms-user-select', 'none');
+				div.style.setProperty('user-select', 'none');
 
-				// Use preciseHover action for hover detection
-				const action = preciseHover(div, {
+				const isTouchDevice = !hasHoverCapability();
+
+				// Desktop: Use hover for connection line, click to pin
+				const hoverAction = preciseHover(div, {
 					onEnter: () => documentStore.setHighlightHoveredDebounced(comment.id, true),
 					onLeave: () => documentStore.setHighlightHoveredDebounced(comment.id, false)
 				});
 
-				// Store action destroy function for cleanup
-				div._actionDestroy = action.destroy;
+				// Mobile: Use long press to show connection line
+				const longPressAction = longPress(div, {
+					onLongPress: () => {
+						if (isTouchDevice) {
+							// Set active and show connection line on long press start
+							documentStore.activeCommentId = comment.id;
+							documentStore.longPressCommentId = comment.id;
+						}
+					},
+					onRelease: () => {
+						if (isTouchDevice) {
+							// Clear long press state
+							documentStore.longPressCommentId = null;
+						}
+					},
+					duration: 500
+				});
 
-				// Add click listener separately
+				// Store action destroy function for cleanup
+				div._actionDestroy.push(longPressAction.destroy);
+				div._actionDestroy.push(hoverAction.destroy);
+
+				// Add click listener
 				const clickListener = () => {
-					state.isPinned = !state.isPinned;
+					if (isTouchDevice) {
+						// Mobile: Set as active comment (will trigger scrolling)
+						documentStore.activeCommentId = comment.id;
+					} else {
+						// Desktop: Pin/unpin
+						state.isPinned = !state.isPinned;
+					}
 				};
 				div._clickListener = clickListener;
 				div.addEventListener('click', clickListener);
+
+				// Prevent the context menu from appearing on long-press
+				const contextMenuListener = (e: Event) => {
+					e.preventDefault();
+					e.stopPropagation();
+				};
+				div._contextMenuListener = contextMenuListener;
+				div.addEventListener('contextmenu', contextMenuListener);
 
 				textLayer.appendChild(div);
 			}
@@ -179,12 +234,15 @@
 				if (!elKey) return;
 				if (!pageKeys.has(elKey)) {
 					// Clean up preciseHover action
-					if (el._actionDestroy) {
-						el._actionDestroy();
+					for (const actionDestroy of el._actionDestroy) {
+						actionDestroy();
 					}
 					// Clean up click listener
 					if (el._clickListener) {
 						el.removeEventListener('click', el._clickListener);
+					}
+					if (el._contextMenuListener) {
+						el.removeEventListener('contextmenu', el._contextMenuListener);
 					}
 					const commentState = documentStore.comments.getState(
 						parseInt(el.dataset.commentId ?? '-1')

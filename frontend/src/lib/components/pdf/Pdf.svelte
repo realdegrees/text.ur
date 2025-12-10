@@ -5,11 +5,13 @@
 	import AnnotationLayer from './AnnotationLayer.svelte';
 	import TextSelectionHandler from './TextSelectionHandler.svelte';
 	import CommentSidebar from './CommentSidebar.svelte';
+	import MobileCommentPanel from './MobileCommentPanel.svelte';
 	import PdfControls from './PdfControls.svelte';
 	import UserCursors from './UserCursors.svelte';
 	import DocumentInfo from './DocumentInfo.svelte';
 	import { PDF_ZOOM_STEP, PDF_MIN_SCALE } from './constants';
 	import { documentStore } from '$lib/runes/document.svelte';
+	import { createScreenState } from '$lib/util/responsive.svelte';
 
 	interface Props {
 		document: ArrayBuffer;
@@ -23,6 +25,10 @@
 	let sidebarContainer: HTMLDivElement | null = $state(null);
 	let pdfSlick: PDFSlick | null = $state(null);
 	let unsubscribe: (() => void) | null = $state(null);
+	let mobileCommentPanel: any = $state(null);
+
+	// Screen size detection
+	const screen = createScreenState();
 
 	let pageNumber = $state(1);
 	let scrollTop = $state(0);
@@ -47,7 +53,7 @@
 		if (!pdfAreaWrapper) return;
 		const parent = pdfAreaWrapper.parentElement;
 		if (parent) {
-			const available = parent.clientWidth - 48 - 288;
+			const available = screen.isMobile ? parent.clientWidth : parent.clientWidth - 48 - 288;
 			if (available > maxAvailableWidth) {
 				maxAvailableWidth = available;
 			}
@@ -68,7 +74,7 @@
 			container,
 			store,
 			options: {
-				scaleValue: 'page-height'
+				scaleValue: screen.isMobile ? 'page-width' : 'page-height'
 			}
 		});
 
@@ -169,24 +175,46 @@
 		if (!pdfAreaWrapper?.parentElement) return;
 		const parent = pdfAreaWrapper.parentElement;
 		const resizeObserver = new ResizeObserver(() => {
-			const available = parent.clientWidth - 48 - 288;
-			maxAvailableWidth = available;
+			if (screen.isMobile) {
+				// On mobile, the parent is the wrapper which already accounts for layout
+				const available = parent.clientWidth;
+				maxAvailableWidth = available;
+			} else {
+				// On desktop, account for controls (48px) + sidebar (288px)
+				const available = parent.clientWidth - 48 - 288;
+				maxAvailableWidth = available;
+			}
 		});
 		resizeObserver.observe(parent);
 		return () => resizeObserver.disconnect();
+	});
+
+	// Store refs in document store
+	$effect(() => {
+		documentStore.scrollContainerRef = container;
+		documentStore.mobileCommentPanelRef = mobileCommentPanel;
 	});
 
 	onMount(initialize);
 	onDestroy(() => unsubscribe?.());
 </script>
 
+{#snippet documentInfo()}
+	{#if documentStore.loadedDocument && documentStore.loadedDocument.description && documentStore.loadedDocument.description.trim().length > 0}
+		<DocumentInfo document={documentStore.loadedDocument} />
+	{/if}
+{/snippet}
+
 <div
-	class="pdf-viewer-container flex h-full w-full flex-col bg-background"
+	class="pdf-viewer-container flex h-full w-full bg-background {screen.isMobile
+		? 'relative'
+		: 'flex-col'}"
 	bind:this={rootContainer}
 >
-	<!-- Main PDF Viewer Area -->
-	<div class="flex flex-1 overflow-hidden">
-		<!-- Controls column - should take full container height -->
+	<!-- Responsive controls: Mobile overlay or desktop column -->
+	{#if screen.isMobile}
+		<!-- Mobile: small spacer for overlay controls to not overlap content -->
+		<div class="w-12 shrink-0"></div>
 		<PdfControls
 			minScale={PDF_MIN_SCALE}
 			{maxScale}
@@ -197,53 +225,97 @@
 			onFitHeight={fitHeight}
 			onPrevPage={prevPage}
 			onNextPage={nextPage}
+			isMobile={true}
 		/>
-		<!-- Right content column: Document Info above the PDF+Sidebar -->
-		<div class="flex flex-1 flex-col overflow-y-auto">
-			<!-- Document Info Section (above PDF and Sidebar only) -->
-			{#if documentStore.loadedDocument && documentStore.loadedDocument.description && documentStore.loadedDocument.description.trim().length > 0}
-				<DocumentInfo document={documentStore.loadedDocument} />
-			{/if}
+	{:else}
+		<div class="flex flex-1 overflow-hidden">
+			<!-- Controls column - should take full container height -->
+			<PdfControls
+				minScale={PDF_MIN_SCALE}
+				{maxScale}
+				{pageNumber}
+				numPages={documentStore.numPages}
+				onZoomIn={zoomIn}
+				onZoomOut={zoomOut}
+				onFitHeight={fitHeight}
+				onPrevPage={prevPage}
+				onNextPage={nextPage}
+				isMobile={false}
+			/>
+			<!-- Right content column: Document Info above the PDF+Sidebar -->
+			<div class="flex flex-1 flex-col overflow-y-auto">
+				<!-- Document Info Section (above PDF and Sidebar only) -->
+				{@render documentInfo()}
 
-			<!-- PDF Viewer and Sidebar Row -->
-			<div class="flex flex-1 overflow-hidden">
-				<!-- PDF Viewer Area - shrinks to fit content when zoomed out -->
-				<div
-					class="relative h-full overflow-hidden bg-text/5 transition-[width] duration-150"
-					style="width: {pdfWidth > 0 ? `${pdfWidth}px` : '100%'}; max-width: 100%;"
-					bind:this={pdfAreaWrapper}
-				>
+				<!-- PDF Viewer and Sidebar Row -->
+				<div class="flex flex-1 overflow-hidden">
+					<!-- PDF Viewer Area - shrinks to fit content when zoomed out -->
 					<div
-						id="viewerContainer"
-						class="pdfSlickContainer absolute inset-0 custom-scrollbar overflow-x-hidden overflow-y-scroll"
-						bind:this={container}
-						onscroll={handleScroll}
-						onwheel={handlePdfWheel}
+						class="relative h-full overflow-hidden bg-text/5 transition-[width] duration-150"
+						style="width: {pdfWidth > 0 ? `${pdfWidth}px` : '100%'}; max-width: 100%;"
+						bind:this={pdfAreaWrapper}
 					>
-						<div id="viewer" class="pdfSlickViewer pdfViewer m-0! p-0!"></div>
+						<div
+							id="viewerContainer"
+							class="pdfSlickContainer absolute inset-0 custom-scrollbar overflow-x-hidden overflow-y-scroll"
+							bind:this={container}
+							onscroll={handleScroll}
+							onwheel={handlePdfWheel}
+						>
+							<div id="viewer" class="pdfSlickViewer pdfViewer m-0! p-0!"></div>
+						</div>
+						<!-- Annotation highlights are rendered into the PDF pages -->
+						<AnnotationLayer viewerContainer={container} />
+
+						<!-- Text selection handler for creating new annotations -->
+						<TextSelectionHandler viewerContainer={container} />
+
+						<!-- Other users' cursors -->
+						<UserCursors viewerContainer={container} />
 					</div>
-					<!-- Annotation highlights are rendered into the PDF pages -->
-					<AnnotationLayer viewerContainer={container} />
 
-					<!-- Text selection handler for creating new annotations -->
-					<TextSelectionHandler viewerContainer={container} />
-
-					<!-- Other users' cursors -->
-					<UserCursors viewerContainer={container} />
-				</div>
-
-				<!-- Right Sidebar - Comments (expands to fill remaining space) -->
-				<div
-					class="relative min-w-72 flex-1 overflow-hidden border-l border-text/10 bg-background"
-					onwheel={handleCommentsWheel}
-					role="complementary"
-					bind:this={sidebarContainer}
-				>
-					<CommentSidebar viewerContainer={container} {scrollTop} />
+					<!-- Right Sidebar - Comments (expands to fill remaining space) -->
+					<div
+						class="relative min-w-72 flex-1 overflow-hidden border-l border-text/10 bg-background"
+						onwheel={handleCommentsWheel}
+						role="complementary"
+						bind:this={sidebarContainer}
+					>
+						<CommentSidebar viewerContainer={container} {scrollTop} />
+					</div>
 				</div>
 			</div>
 		</div>
-	</div>
+	{/if}
+
+	<!-- Mobile PDF viewer and bottom comment panel (mobile-only) -->
+	{#if screen.isMobile}
+		<div class="flex w-full flex-1 flex-col overflow-y-auto">
+			{@render documentInfo()}
+			<div
+				class="relative flex-1 overflow-hidden bg-text/5 transition-[width] duration-150"
+				style="width: 100%; max-width: 100%;"
+				bind:this={pdfAreaWrapper}
+			>
+				<div
+					id="viewerContainer"
+					class="pdfSlickContainer absolute inset-0 custom-scrollbar overflow-x-hidden overflow-y-scroll {screen.isMobile
+						? 'pb-24'
+						: ''}"
+					bind:this={container}
+					onscroll={handleScroll}
+					onwheel={handlePdfWheel}
+				>
+					<div id="viewer" class="pdfSlickViewer pdfViewer m-0! p-0!"></div>
+				</div>
+				<AnnotationLayer viewerContainer={container} />
+				<TextSelectionHandler viewerContainer={container} />
+				<UserCursors viewerContainer={container} />
+			</div>
+		</div>
+
+		<MobileCommentPanel {scrollTop} bind:this={mobileCommentPanel} />
+	{/if}
 </div>
 
 <style>

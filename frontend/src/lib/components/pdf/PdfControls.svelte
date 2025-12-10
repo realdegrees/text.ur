@@ -29,6 +29,7 @@
 		onFitHeight: () => void;
 		onPrevPage: () => void;
 		onNextPage: () => void;
+		isMobile?: boolean;
 	}
 
 	let {
@@ -40,10 +41,11 @@
 		onZoomOut,
 		onFitHeight,
 		onPrevPage,
-		onNextPage
+		onNextPage,
+		isMobile = false
 	}: Props = $props();
 
-	let isExpanded = $state(true);
+	let isExpanded = $state(!isMobile); // Collapsed by default on mobile
 
 	const buttonClass =
 		'rounded text-text/70 transition-colors hover:bg-text/10 hover:text-text disabled:opacity-30 disabled:hover:bg-transparent';
@@ -120,7 +122,8 @@
 <div
 	class="no-scrollbar flex shrink-0 flex-col overflow-x-hidden overflow-y-auto border-r border-text/10 bg-inset transition-all duration-200 {isExpanded
 		? 'w-48'
-		: 'w-12'}"
+		: 'w-12'} {isMobile ? 'absolute top-0 left-0 z-40' : ''}"
+	style={isMobile ? 'bottom: var(--mobile-comment-panel-height, 0px);' : ''}
 >
 	<!-- Expand/Collapse Button -->
 	<button
@@ -138,45 +141,47 @@
 
 	<div class="flex flex-col items-center gap-1 py-3 {isExpanded ? 'px-2' : ''}">
 		<!-- Zoom Controls -->
-		<div class="flex {isExpanded ? 'w-full justify-between' : 'flex-col'} items-center gap-1">
+		{#if !isMobile}
+			<div class="flex {isExpanded ? 'w-full justify-between' : 'flex-col'} items-center gap-1">
+				<button
+					class="{buttonClass} {isExpanded ? 'flex-1' : ''}"
+					onclick={onZoomIn}
+					disabled={documentStore.documentScale >= maxScale}
+					title="Zoom In"
+				>
+					<span class="flex items-center gap-2">
+						<ZoomInIcon class={iconSizeClass} />
+						{#if isExpanded}<span class="text-xs">Zoom In</span>{/if}
+					</span>
+				</button>
+				<button
+					class="{buttonClass} {isExpanded ? 'flex-1' : ''}"
+					onclick={onZoomOut}
+					disabled={documentStore.documentScale <= minScale}
+					title="Zoom Out"
+				>
+					<span class="flex items-center gap-2">
+						<ZoomOutIcon class={iconSizeClass} />
+						{#if isExpanded}<span class="text-xs">Zoom Out</span>{/if}
+					</span>
+				</button>
+			</div>
+
+			<div class="my-1 h-px w-full bg-text/20"></div>
+
 			<button
-				class="{buttonClass} {isExpanded ? 'flex-1' : ''}"
-				onclick={onZoomIn}
-				disabled={documentStore.documentScale >= maxScale}
-				title="Zoom In"
+				class="{buttonClass} {isExpanded ? 'w-full justify-start' : ''}"
+				onclick={onFitHeight}
+				title="Fit Height"
 			>
 				<span class="flex items-center gap-2">
-					<ZoomInIcon class={iconSizeClass} />
-					{#if isExpanded}<span class="text-xs">Zoom In</span>{/if}
+					<FitPageIcon class={iconSizeClass} />
+					{#if isExpanded}<span class="text-xs">Fit Height</span>{/if}
 				</span>
 			</button>
-			<button
-				class="{buttonClass} {isExpanded ? 'flex-1' : ''}"
-				onclick={onZoomOut}
-				disabled={documentStore.documentScale <= minScale}
-				title="Zoom Out"
-			>
-				<span class="flex items-center gap-2">
-					<ZoomOutIcon class={iconSizeClass} />
-					{#if isExpanded}<span class="text-xs">Zoom Out</span>{/if}
-				</span>
-			</button>
-		</div>
 
-		<div class="my-1 h-px w-full bg-text/20"></div>
-
-		<button
-			class="{buttonClass} {isExpanded ? 'w-full justify-start' : ''}"
-			onclick={onFitHeight}
-			title="Fit Height"
-		>
-			<span class="flex items-center gap-2">
-				<FitPageIcon class={iconSizeClass} />
-				{#if isExpanded}<span class="text-xs">Fit Height</span>{/if}
-			</span>
-		</button>
-
-		<div class="my-1 h-px w-full bg-text/20"></div>
+			<div class="my-1 h-px w-full bg-text/20"></div>
+		{/if}
 
 		{#if numPages > 1}
 			<!-- Page Navigation -->
