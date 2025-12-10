@@ -3,6 +3,8 @@
 from models.app_error import AppError
 from models.auth import GlobalJWTPayload, Token, UserJWTPayload
 from models.comment import (
+    Annotation,
+    BoundingBox,
     CommentCreate,
     CommentRead,
     CommentTagsUpdate,
@@ -75,6 +77,9 @@ CommentRead.model_rebuild()
 CommentUpdate.model_rebuild()
 CommentFilter.model_rebuild()
 CommentTagsUpdate.model_rebuild()
+
+BoundingBox.model_rebuild()
+Annotation.model_rebuild()
 
 ReactionCreate.model_rebuild()
 ReactionRead.model_rebuild()

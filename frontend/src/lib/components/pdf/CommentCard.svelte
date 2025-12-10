@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { documentStore, type TypedComment } from '$lib/runes/document.svelte.js';
+	import { documentStore } from '$lib/runes/document.svelte.js';
 	import { sessionStore } from '$lib/runes/session.svelte.js';
-	import type { TagRead } from '$api/types';
+	import type { CommentRead, TagRead } from '$api/types';
 	import CommentCard from './CommentCard.svelte';
 	import CommentVisibility from './CommentVisibility.svelte';
 	import ConfirmButton from '$lib/components/ConfirmButton.svelte';
@@ -19,7 +19,7 @@
 	import { env } from '$env/dynamic/public';
 
 	interface Props {
-		comment: TypedComment;
+		comment: CommentRead;
 		depth?: number;
 	}
 

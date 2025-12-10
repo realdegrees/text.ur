@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { documentStore, type TypedComment } from '$lib/runes/document.svelte.js';
+	import { documentStore } from '$lib/runes/document.svelte.js';
 	import CommentCluster from './CommentCluster.svelte';
 	import { onMount } from 'svelte';
 	import { BADGE_HEIGHT_PX } from './constants';
-	import type { Annotation } from '$types/pdf';
+	import type { Annotation, CommentRead } from '$api/types';
 	import { SvelteMap } from 'svelte/reactivity';
 
 	interface Props {
@@ -17,14 +17,14 @@
 
 	// Calculate the Y position of each comment relative to the sidebar's scroll position
 	// Returns the CENTER Y position of the first highlight box
-	const getCommentPosition = (comment: TypedComment): { x: number; y: number } | null => {
+	const getCommentPosition = (comment: CommentRead): { x: number; y: number } | null => {
 		if (!viewerContainer || !comment.annotation) return null;
 
 		const firstBox = comment.annotation.boundingBoxes[0];
 		if (!firstBox) return null;
 
 		const pageElement = viewerContainer.querySelector(
-			`[data-page-number="${firstBox.pageNumber}"]`
+			`[data-page-number="${firstBox.page_number}"]`
 		) as HTMLElement | null;
 		if (!pageElement) return null;
 
@@ -58,7 +58,7 @@
 	};
 
 	// Group comments by Y position proximity (clustering)
-	type CommentClusterData = (TypedComment & {
+	type CommentClusterData = (CommentRead & {
 		highlightPosition: { x: number; y: number };
 	})[];
 
@@ -66,7 +66,7 @@
 	let clusterHeights = new SvelteMap<string, number>();
 
 	// Helper to check if any comment in a cluster is expanded
-	const isClusterExpanded = (comments: TypedComment[]): boolean => {
+	const isClusterExpanded = (comments: CommentRead[]): boolean => {
 		return comments.some((c) => {
 			const state = documentStore.comments.getState(c.id);
 			return (
@@ -98,7 +98,7 @@
 				(
 					item
 				): item is {
-					comment: TypedComment & { annotation: Annotation };
+					comment: CommentRead & { annotation: Annotation };
 					highlightPosition: { x: number; y: number };
 				} => !!item.highlightPosition
 			)

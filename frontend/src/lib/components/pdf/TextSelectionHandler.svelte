@@ -14,12 +14,8 @@
 	 * - Bounding boxes are normalized to 0-1 range relative to page dimensions
 	 */
 	import { documentStore } from '$lib/runes/document.svelte.js';
-	import type { Annotation, BoundingBox } from '$types/pdf';
-	import {
-		BOX_MERGE_MARGIN,
-		BOX_VERTICAL_OVERLAP_THRESHOLD,
-		DEFAULT_HIGHLIGHT_COLOR
-	} from './constants';
+	import type { Annotation, BoundingBox } from '$api/types';
+	import { BOX_MERGE_MARGIN, BOX_VERTICAL_OVERLAP_THRESHOLD } from './constants';
 
 	interface Props {
 		viewerContainer: HTMLDivElement | null;
@@ -48,7 +44,7 @@
 	 * - Must be horizontally adjacent or overlapping (with margin)
 	 */
 	const shouldMergeBoxes = (a: BoundingBox, b: BoundingBox): boolean => {
-		if (a.pageNumber !== b.pageNumber) return false;
+		if (a.page_number !== b.page_number) return false;
 
 		// Check if boxes are on the same line (Y positions and heights are similar)
 		const aTop = a.y;
@@ -85,7 +81,7 @@
 		const bottom = Math.max(a.y + a.height, b.y + b.height);
 
 		return {
-			pageNumber: a.pageNumber,
+			page_number: a.page_number,
 			x: left,
 			y: top,
 			width: right - left,
@@ -129,7 +125,7 @@
 	// Selection State Management
 	// ============================================================================
 
-	const getPageNumber = (element: Element): number | null => {
+	const getpage_number = (element: Element): number | null => {
 		const pageElement = element.closest('[data-page-number]');
 		if (!pageElement) return null;
 		return parseInt(pageElement.getAttribute('data-page-number') ?? '0', 10);
@@ -146,11 +142,11 @@
 			const element = node.parentElement;
 			if (!element) return;
 
-			const pageNumber = getPageNumber(element);
-			if (!pageNumber) return;
+			const page_number = getpage_number(element);
+			if (!page_number) return;
 
 			const pageElement = viewerContainer!.querySelector(
-				`[data-page-number="${pageNumber}"]`
+				`[data-page-number="${page_number}"]`
 			) as HTMLElement | null;
 			if (!pageElement) return;
 
@@ -178,7 +174,7 @@
 				const height = rect.height / textLayerRect.height;
 
 				boxes.push({
-					pageNumber,
+					page_number,
 					x: Math.max(0, Math.min(1, x)),
 					y: Math.max(0, Math.min(1, y)),
 					width: Math.min(1 - Math.max(0, x), width),
@@ -333,8 +329,7 @@
 		try {
 			const annotation: Annotation = {
 				text: pendingSelection.text,
-				boundingBoxes: pendingSelection.boxes,
-				color: DEFAULT_HIGHLIGHT_COLOR
+				boundingBoxes: pendingSelection.boxes
 			};
 
 			const id = await documentStore.comments.create({ annotation, visibility: 'public' });

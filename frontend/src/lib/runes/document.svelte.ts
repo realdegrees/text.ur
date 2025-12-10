@@ -10,7 +10,8 @@ import {
 } from '$api/types';
 import type { Paginated } from '$api/pagination';
 import { notification } from '$lib/stores/notificationStore';
-import { annotationSchema, type Annotation } from '$types/pdf';
+import { type Annotation } from '$api/types';
+import { annotationSchema } from '$api/schemas';
 import { SvelteMap } from 'svelte/reactivity';
 import { invalidateAll } from '$app/navigation';
 
@@ -20,7 +21,6 @@ export interface FilterState<T = 'author' | 'tag'> {
 	id: number;
 	data: T extends 'author' ? { username: string } : { label: string; color: string };
 }
-export type TypedComment = Omit<CommentRead, 'annotation'> & { annotation: Annotation | null };
 
 export interface CommentState {
 	id: number;
@@ -41,7 +41,7 @@ export interface CommentState {
 }
 
 const createDocumentStore = () => {
-	const _comments = new SvelteMap<number, TypedComment>();
+	const _comments = new SvelteMap<number, CommentRead>();
 	const commentStates: SvelteMap<number, CommentState> = new SvelteMap<number, CommentState>();
 	let filterStates = $state<FilterState[]>([]);
 	let showCursors: boolean = $state<boolean>(true);
@@ -59,10 +59,9 @@ const createDocumentStore = () => {
 	const setTopLevelComments = (comments: CommentRead[]) => {
 		// Add/update comments
 		comments.forEach((c) => {
-			const annotationParsed = annotationSchema.safeParse(c.annotation);
-			const cachedComment: TypedComment = {
+			const cachedComment: CommentRead = {
 				...c,
-				annotation: annotationParsed.success ? annotationParsed.data : null
+				annotation: c.annotation
 			};
 			_comments.set(cachedComment.id, cachedComment);
 
@@ -113,7 +112,7 @@ const createDocumentStore = () => {
 
 	const topLevelComments = $derived.by(() => {
 		return Array.from(_comments.values()).filter(
-			(c): c is TypedComment & { annotation: Annotation } => !!c.annotation
+			(c): c is CommentRead & { annotation: Annotation } => !!c.annotation
 		);
 	});
 
@@ -196,11 +195,11 @@ const createDocumentStore = () => {
 
 	// Methods to update local comment data without API calls (on events)
 	const commentsLocal = $derived({
-		update: (data: TypedComment) => {
+		update: (data: CommentRead) => {
 			/** Update an existing comment in the local map. */
-			const existingComment: TypedComment | undefined = _comments.get(data.id);
+			const existingComment: CommentRead | undefined = _comments.get(data.id);
 			if (!existingComment) return;
-			const updatedComment: TypedComment = {
+			const updatedComment: CommentRead = {
 				...existingComment,
 				...data,
 				visibility: data.visibility ?? existingComment.visibility
@@ -208,18 +207,18 @@ const createDocumentStore = () => {
 			_comments.set(data.id, updatedComment);
 		},
 		create: (
-			data: TypedComment,
+			data: CommentRead,
 			skip_num_replies_increment?: boolean,
 			source: 'api' | 'client' = 'client'
 		) => {
-			const existingComment: TypedComment | undefined = _comments.get(data.id);
+			const existingComment: CommentRead | undefined = _comments.get(data.id);
 			if (existingComment) {
 				// Comment already exists, perform an update instead
 				commentsLocal.update(data);
 				return;
 			}
 			// Increment num_replies in parent comment
-			const parentComment: TypedComment | undefined = data.parent_id
+			const parentComment: CommentRead | undefined = data.parent_id
 				? _comments.get(data.parent_id)
 				: undefined;
 			if (parentComment && !skip_num_replies_increment) {
@@ -257,7 +256,7 @@ const createDocumentStore = () => {
 		delete: (commentId: number, deleteState = false) => {
 			/** Delete a comment and its replies from the local store. */
 			const commentState = commentStates.get(commentId);
-			const commentToDelete: TypedComment | undefined = _comments.get(commentId);
+			const commentToDelete: CommentRead | undefined = _comments.get(commentId);
 
 			/**
 			 * Recursively reset state for replies and delete comments.
@@ -299,7 +298,7 @@ const createDocumentStore = () => {
 
 			// Remove reply reference in parent comment state
 			const parentCommentState = commentStates.get(commentToDelete?.parent_id || -1);
-			const parentComment: TypedComment | undefined = commentToDelete?.parent_id
+			const parentComment: CommentRead | undefined = commentToDelete?.parent_id
 				? _comments.get(commentToDelete.parent_id)
 				: undefined;
 			if (parentCommentState && !!parentCommentState.replies?.length) {
@@ -330,7 +329,7 @@ const createDocumentStore = () => {
 	});
 
 	const comments = $derived({
-		update: async (comment: TypedComment) => {
+		update: async (comment: CommentRead) => {
 			const result = await api.update(`/comments/${comment.id}`, comment);
 			if (!result.success) {
 				notification(result.error);
@@ -350,14 +349,9 @@ const createDocumentStore = () => {
 				notification(result.error);
 				return;
 			}
-			const annotationParsed = annotationSchema.safeParse(result.data!.annotation);
-			const cachedComment: TypedComment = {
-				...result.data!,
-				annotation: annotationParsed.success ? annotationParsed.data : null
-			};
 
-			commentsLocal.create(cachedComment);
-			return cachedComment.id;
+			commentsLocal.create(result.data!);
+			return result.data!.id;
 		},
 		delete: async (commentId: number) => {
 			const result = await api.delete(`/comments/${commentId}`);
@@ -385,7 +379,7 @@ const createDocumentStore = () => {
 					.map((id) => currentDocument.tags.find((t) => t.id === id))
 					.filter((t): t is NonNullable<typeof t> => t !== undefined);
 
-				const updatedComment: TypedComment = {
+				const updatedComment: CommentRead = {
 					...comment,
 					tags: orderedTags
 				};
@@ -400,7 +394,7 @@ const createDocumentStore = () => {
 					.get(commentId)
 					?.replies.map((id) => commentStates.get(id))
 					.reduce((acc, state) => acc + (state?.source === 'api' ? 1 : 0), 0) || 0;
-			const targetComment: TypedComment | undefined = _comments.get(commentId);
+			const targetComment: CommentRead | undefined = _comments.get(commentId);
 			const targetState: CommentState | undefined = commentStates.get(commentId);
 
 			// Dont load more if all replies are already loaded
@@ -432,7 +426,7 @@ const createDocumentStore = () => {
 				return {
 					...c,
 					annotation: annotationParsed.success ? annotationParsed.data : null
-				} as TypedComment;
+				} as CommentRead;
 			});
 
 			// Add loaded replies to local comments array
@@ -443,7 +437,7 @@ const createDocumentStore = () => {
 		getState: (commentId: number): CommentState | undefined => {
 			return commentStates.get(commentId);
 		},
-		getComment: (commentId: number): TypedComment | undefined => {
+		getComment: (commentId: number): CommentRead | undefined => {
 			return _comments.get(commentId);
 		},
 		topLevelAuthors: topLevelAuthors,
@@ -625,7 +619,7 @@ const createDocumentStore = () => {
 		if (!container) return;
 
 		const pageElement = container.querySelector(
-			`[data-page-number="${firstBox.pageNumber}"]`
+			`[data-page-number="${firstBox.page_number}"]`
 		) as HTMLElement | null;
 
 		if (!pageElement) return;
@@ -668,7 +662,7 @@ const createDocumentStore = () => {
 			case 'create': {
 				const payload = event.payload as CommentRead;
 				const annotationParsed = annotationSchema.safeParse(payload.annotation);
-				const cachedComment: TypedComment = {
+				const cachedComment: CommentRead = {
 					...payload,
 					annotation: annotationParsed.success ? annotationParsed.data : null
 				};
@@ -678,7 +672,7 @@ const createDocumentStore = () => {
 			case 'update': {
 				const payload = event.payload as CommentRead;
 				const annotationParsed = annotationSchema.safeParse(payload.annotation);
-				const cachedComment: TypedComment = {
+				const cachedComment: CommentRead = {
 					...payload,
 					annotation: annotationParsed.success ? annotationParsed.data : null
 				};

@@ -25,18 +25,23 @@ def sanitize_content(value: str | None) -> str | None:
     value = ''.join(c for c in value if c in '\n\t\r' or (ord(c) >= 32 or ord(c) >= 127))
     return value
 
+class BoundingBox(SQLModel):
+	page_number: int
+	x: float
+	y: float
+	width: float
+	height: float
+ 
 class Annotation(SQLModel):
-    page_number: int
     text: str
-    rects: list[dict]
-
-
+    boundingBoxes: list[BoundingBox]
+    
 class CommentCreate(SQLModel):
     visibility: Visibility
     document_id: str
     parent_id: int | None = None
     content: str | None = Field(default=None, max_length=MAX_COMMENT_LENGTH)
-    annotation: dict | None = None
+    annotation: Annotation | None = None
 
     @field_validator('content', mode='before')
     @classmethod
@@ -50,7 +55,7 @@ class CommentRead(BaseModel):
     visibility: Visibility
     user: "UserRead | None"
     parent_id: int | None
-    annotation: dict | None
+    annotation: Annotation | None
     content: str | None
     num_replies: int
     reactions: list["ReactionRead"]
@@ -59,7 +64,7 @@ class CommentRead(BaseModel):
 class CommentUpdate(SQLModel):
     visibility: Visibility | None = None
     content: str | None = Field(default=None, max_length=MAX_COMMENT_LENGTH)
-    annotation: dict | None = None
+    annotation: Annotation | None = None
 
     @field_validator('content', mode='before')
     @classmethod

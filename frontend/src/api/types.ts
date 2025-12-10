@@ -61,6 +61,17 @@ export type Permission =
   | "add_reactions"
   | "manage_tags";
 
+export interface Annotation {
+  text: string;
+  boundingBoxes: BoundingBox[];
+}
+export interface BoundingBox {
+  page_number: number;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
 /**
  * Base class for all custom exceptions in the application.
  */
@@ -90,9 +101,7 @@ export interface CommentCreate {
   document_id: string;
   parent_id?: number | null;
   content?: string | null;
-  annotation?: {
-    [k: string]: unknown;
-  } | null;
+  annotation?: Annotation | null;
 }
 /**
  * Comment WebSocket event - concrete type for frontend type generation.
@@ -113,9 +122,7 @@ export interface CommentRead {
   visibility: Visibility;
   user: UserRead | null;
   parent_id: number | null;
-  annotation: {
-    [k: string]: unknown;
-  } | null;
+  annotation: Annotation | null;
   content: string | null;
   num_replies: number;
   reactions: ReactionRead[];
@@ -169,9 +176,7 @@ export interface CommentTagsUpdate {
 export interface CommentUpdate {
   visibility?: Visibility | null;
   content?: string | null;
-  annotation?: {
-    [k: string]: unknown;
-  } | null;
+  annotation?: Annotation | null;
 }
 /**
  * Document entity representing uploaded files.

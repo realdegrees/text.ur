@@ -1,18 +1,18 @@
 <script lang="ts">
-	import { documentStore, type TypedComment } from '$lib/runes/document.svelte.js';
+	import { documentStore } from '$lib/runes/document.svelte.js';
 	import { SvelteMap } from 'svelte/reactivity';
 	import CommentCard from './CommentCard.svelte';
 	import ConnectionLine from './ConnectionLine.svelte';
 	import CommentIcon from '~icons/material-symbols/comment-outline';
 	import PinIcon from '~icons/material-symbols/push-pin';
 	import PinOffIcon from '~icons/material-symbols/push-pin-outline';
-	import type { UserRead } from '$api/types';
+	import type { CommentRead, UserRead } from '$api/types';
 	import { preciseHover } from '$lib/actions/preciseHover';
 	import { longPress } from '$lib/actions/longPress';
 	import { hasHoverCapability } from '$lib/util/responsive.svelte';
 
 	interface Props {
-		comments: TypedComment[];
+		comments: CommentRead[];
 		yPosition: number;
 		scrollTop?: number;
 		onHeightChange?: (height: number) => void;
@@ -36,7 +36,7 @@
 	// Select the author to show in the preview, first by highest amount of replies on comment, then by order in cluster (default order is by id which is chronological)
 	let previewAuthor = $derived.by(() => {
 		let highestReplyCount = -1;
-		let highestReplyComment: TypedComment | null = null;
+		let highestReplyComment: CommentRead | null = null;
 		for (const comment of comments) {
 			if (comment.num_replies > 0 && comment.num_replies > highestReplyCount) {
 				highestReplyCount = comment.num_replies;
@@ -56,26 +56,26 @@
 
 	let hoveredTabId: number | null = $state(null);
 	let hoveredTabCommentState = $derived.by(() => commentStates.get(hoveredTabId ?? -1));
-	let highlightHoveredComment: TypedComment | null = $derived.by(() => {
+	let highlightHoveredComment: CommentRead | null = $derived.by(() => {
 		return comments.find((c) => commentStates.get(c.id)?.isHighlightHovered) ?? null;
 	});
-	let firstCommentHovered: TypedComment | null = $derived.by(() => {
+	let firstCommentHovered: CommentRead | null = $derived.by(() => {
 		return comments.find((c) => commentStates.get(c.id)?.isCommentHovered) ?? null;
 	});
-	let firstEditingComment: TypedComment | null = $derived.by(() => {
+	let firstEditingComment: CommentRead | null = $derived.by(() => {
 		return comments.find((c) => commentStates.get(c.id)?.isEditing) ?? null;
 	});
-	let firstReplyingComment: TypedComment | null = $derived.by(() => {
+	let firstReplyingComment: CommentRead | null = $derived.by(() => {
 		return comments.find((c) => commentStates.get(c.id)?.isReplying) ?? null;
 	});
-	let firstPinnedComment: TypedComment | null = $derived.by(() => {
+	let firstPinnedComment: CommentRead | null = $derived.by(() => {
 		return comments.find((c) => commentStates.get(c.id)?.isPinned) ?? null;
 	});
 	let selectedTabComment = $derived.by(() => {
 		return comments.find((c) => c.id === selectedTabId) ?? null;
 	});
 
-	let activeComment: TypedComment = $derived(
+	let activeComment: CommentRead = $derived(
 		highlightHoveredComment ??
 			firstEditingComment ??
 			firstReplyingComment ??

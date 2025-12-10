@@ -1,12 +1,8 @@
 <script lang="ts">
-	import {
-		documentStore,
-		type CommentState,
-		type TypedComment
-	} from '$lib/runes/document.svelte.js';
-	import { type Annotation, type BoundingBox } from '$types/pdf';
+	import { documentStore, type CommentState } from '$lib/runes/document.svelte.js';
+	import { type Annotation, type BoundingBox, type CommentRead } from '$api/types';
 	import { SvelteMap } from 'svelte/reactivity';
-	import { OPACITY_TRANSITION_MS } from './constants';
+	import { DEFAULT_HIGHLIGHT_COLOR, OPACITY_TRANSITION_MS } from './constants';
 	import { onMount } from 'svelte';
 	import { preciseHover } from '$lib/actions/preciseHover';
 	import { longPress } from '$lib/actions/longPress';
@@ -28,7 +24,7 @@
 		const map = new SvelteMap<
 			number,
 			Array<{
-				comment: TypedComment;
+				comment: CommentRead;
 				box: BoundingBox;
 				annotation: Annotation;
 				state: CommentState;
@@ -45,13 +41,15 @@
 		for (const comment of documentStore.comments.topLevelComments) {
 			if (!comment.annotation?.boundingBoxes) continue;
 
+			// TODO replace default_highlight_color with the custom color set per user
+
 			// Use first tag's color if available, otherwise fall back to annotation color
 			const highlightColor =
-				comment.tags && comment.tags.length > 0 ? comment.tags[0].color : comment.annotation.color;
+				comment.tags && comment.tags.length > 0 ? comment.tags[0].color : DEFAULT_HIGHLIGHT_COLOR;
 
 			for (let idx = 0; idx < comment.annotation.boundingBoxes.length; idx++) {
 				const box = comment.annotation.boundingBoxes[idx];
-				const pageNum = box.pageNumber;
+				const pageNum = box.page_number;
 				const state = documentStore.comments.getState(comment.id);
 				if (state) {
 					map.set(pageNum, [

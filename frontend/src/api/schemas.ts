@@ -11,6 +11,14 @@ export const viewModeSchema = z.union([z.literal("restricted"), z.literal("publi
 
 export const permissionSchema = z.union([z.literal("administrator"), z.literal("add_comments"), z.literal("remove_comments"), z.literal("view_restricted_comments"), z.literal("add_members"), z.literal("remove_members"), z.literal("manage_permissions"), z.literal("upload_documents"), z.literal("view_restricted_documents"), z.literal("delete_documents"), z.literal("remove_reactions"), z.literal("add_reactions"), z.literal("manage_tags")]);
 
+export const boundingBoxSchema = z.object({
+    page_number: z.number(),
+    x: z.number(),
+    y: z.number(),
+    width: z.number(),
+    height: z.number()
+});
+
 export const appErrorSchema = z.object({
     status_code: z.number(),
     error_code: appErrorCodeSchema,
@@ -29,12 +37,9 @@ export const commentSchema = z.object({
     annotation: z.record(z.string(), z.unknown()).optional()
 });
 
-export const commentCreateSchema = z.object({
-    visibility: visibilitySchema,
-    document_id: z.string(),
-    parent_id: z.number().optional().nullable(),
-    content: z.string().optional().nullable(),
-    annotation: z.record(z.string(), z.unknown()).optional().nullable()
+export const annotationSchema = z.object({
+    text: z.string(),
+    boundingBoxes: z.array(boundingBoxSchema)
 });
 
 export const userReadSchema = z.object({
@@ -79,7 +84,7 @@ export const commentTagsUpdateSchema = z.object({
 export const commentUpdateSchema = z.object({
     visibility: visibilitySchema.optional().nullable(),
     content: z.string().optional().nullable(),
-    annotation: z.record(z.string(), z.unknown()).optional().nullable()
+    annotation: annotationSchema.optional().nullable()
 });
 
 export const documentSchema = z.object({
@@ -366,6 +371,14 @@ export const viewModeChangedEventSchema = z.object({
     view_mode: viewModeSchema
 });
 
+export const commentCreateSchema = z.object({
+    visibility: visibilitySchema,
+    document_id: z.string(),
+    parent_id: z.number().optional().nullable(),
+    content: z.string().optional().nullable(),
+    annotation: annotationSchema.optional().nullable()
+});
+
 export const commentReadSchema = z.object({
     created_at: z.string().optional(),
     updated_at: z.string().optional(),
@@ -373,7 +386,7 @@ export const commentReadSchema = z.object({
     visibility: visibilitySchema,
     user: userReadSchema.nullable(),
     parent_id: z.number().nullable(),
-    annotation: z.record(z.string(), z.unknown()).nullable(),
+    annotation: annotationSchema.nullable(),
     content: z.string().nullable(),
     num_replies: z.number(),
     reactions: z.array(reactionReadSchema),

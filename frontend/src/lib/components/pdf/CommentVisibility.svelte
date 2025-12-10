@@ -1,13 +1,13 @@
 <script lang="ts">
-	import type { Visibility } from '$api/types';
-	import { documentStore, type TypedComment } from '$lib/runes/document.svelte';
+	import type { CommentRead, Visibility } from '$api/types';
+	import { documentStore } from '$lib/runes/document.svelte';
 	import Dropdown from '$lib/components/dropdown.svelte';
 	import LockIcon from '~icons/material-symbols/lock';
 	import GroupIcon from '~icons/material-symbols/group';
 	import PublicIcon from '~icons/material-symbols/public';
 
 	interface Props {
-		comment: TypedComment;
+		comment: CommentRead;
 		visibility: Visibility;
 		canEdit?: boolean;
 		isTopLevel?: boolean;
