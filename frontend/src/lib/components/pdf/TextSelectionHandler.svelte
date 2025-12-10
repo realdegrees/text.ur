@@ -140,74 +140,43 @@
 
 		const boxes: BoundingBox[] = [];
 		const range = selection.getRangeAt(0);
-		const rects = range.getClientRects();
+		const container = range.commonAncestorContainer;
 
-		for (let i = 0; i < rects.length; i++) {
-			const rect = rects[i];
+		const processTextNode = (node: Text, start: number, end: number) => {
+			const element = node.parentElement;
+			if (!element) return;
 
-			// Try multiple points inside each rect to find one that falls inside the text layer.
-			const samplePoints = [
-				{ x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 }, // center
-				{ x: rect.left + 1, y: rect.top + 1 }, // top-left inset
-				{ x: rect.left + rect.width - 1, y: rect.top + 1 }, // top-right inset
-				{ x: rect.left + 1, y: rect.top + rect.height - 1 } // bottom-left inset
-			];
+			const pageNumber = getPageNumber(element);
+			if (!pageNumber) return;
 
-			let elementAtPoint: Element | null = null;
-			for (const p of samplePoints) {
-				const el = document.elementFromPoint(p.x, p.y);
-				if (!el) continue;
-				// Prefer elements from the textLayer so we avoid sampling the canvas/background
-				if (el.closest && el.closest('.textLayer')) {
-					elementAtPoint = el;
-					break;
-				}
-				// Still accept an element if it has a page wrapper but not a textLayer—
-				// this is a fallback to resolve page number for edge cases
-				if (el.closest && el.closest('[data-page-number]')) {
-					elementAtPoint = el;
-					break;
-				}
-			}
-
-			if (!elementAtPoint) continue;
-
-			const pageNumber = getPageNumber(elementAtPoint);
-			if (!pageNumber) continue;
-
-			const pageElement = viewerContainer.querySelector(
+			const pageElement = viewerContainer!.querySelector(
 				`[data-page-number="${pageNumber}"]`
 			) as HTMLElement | null;
-			if (!pageElement) continue;
+			if (!pageElement) return;
 
-			const canvas = pageElement.querySelector('canvas');
-			if (!canvas) continue;
+			const textLayer = pageElement.querySelector('.textLayer');
+			if (!textLayer) return;
 
-			const textLayer = pageElement.querySelector('.textLayer') as HTMLElement | null;
-			if (!textLayer) continue;
-
-			// Use the text layer as the reference frame since that's where the text selection comes from
 			const textLayerRect = textLayer.getBoundingClientRect();
+			if (textLayerRect.width === 0 || textLayerRect.height === 0) return;
 
-			// Guard against degenerate text layers
-			if (textLayerRect.width === 0 || textLayerRect.height === 0) continue;
+			// Create a range for this specific text node segment
+			const subRange = document.createRange();
+			subRange.setStart(node, start);
+			subRange.setEnd(node, end);
 
-			// If the rect is nearly the size of the entire text layer, ignore it —
-			// this is typically the cause of full-page highlights when the
-			// selection range produces a block-level bounding rect.
-			const fullWidthRatio = rect.width / textLayerRect.width;
-			const fullHeightRatio = rect.height / textLayerRect.height;
-			const FULL_PAGE_THRESHOLD = 0.95; // 95% of the text layer
-			if (fullWidthRatio >= FULL_PAGE_THRESHOLD && fullHeightRatio >= FULL_PAGE_THRESHOLD) continue;
+			const rects = subRange.getClientRects();
 
-			// Normalize coordinates to 0-1 range relative to text layer
-			const x = (rect.left - textLayerRect.left) / textLayerRect.width;
-			const y = (rect.top - textLayerRect.top) / textLayerRect.height;
-			const width = rect.width / textLayerRect.width;
-			const height = rect.height / textLayerRect.height;
+			for (let i = 0; i < rects.length; i++) {
+				const rect = rects[i];
+				if (rect.width === 0 || rect.height === 0) continue;
 
-			// Only add valid boxes
-			if (x >= 0 && y >= 0 && width > 0 && height > 0) {
+				// Normalize coordinates to 0-1 range relative to text layer
+				const x = (rect.left - textLayerRect.left) / textLayerRect.width;
+				const y = (rect.top - textLayerRect.top) / textLayerRect.height;
+				const width = rect.width / textLayerRect.width;
+				const height = rect.height / textLayerRect.height;
+
 				boxes.push({
 					pageNumber,
 					x: Math.max(0, Math.min(1, x)),
@@ -215,6 +184,35 @@
 					width: Math.min(1 - Math.max(0, x), width),
 					height: Math.min(1 - Math.max(0, y), height)
 				});
+			}
+		};
+
+		if (container.nodeType === Node.TEXT_NODE) {
+			processTextNode(container as Text, range.startOffset, range.endOffset);
+		} else {
+			const treeWalker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, null);
+
+			let currentNode = treeWalker.nextNode();
+			let hasStarted = false;
+
+			while (currentNode) {
+				const node = currentNode as Text;
+				const intersects = range.intersectsNode(node);
+
+				if (intersects) {
+					hasStarted = true;
+					const start = node === range.startContainer ? range.startOffset : 0;
+					const end = node === range.endContainer ? range.endOffset : node.length;
+
+					if (start < end) {
+						processTextNode(node, start, end);
+					}
+				} else if (hasStarted) {
+					// We have passed the range
+					break;
+				}
+
+				currentNode = treeWalker.nextNode();
 			}
 		}
 
