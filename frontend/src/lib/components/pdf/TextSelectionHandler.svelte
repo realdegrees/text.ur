@@ -600,7 +600,7 @@
 
 {#if selectionButtonPosition}
 	<button
-		class="absolute z-1000 flex items-center justify-center rounded border border-blue-600 bg-blue-500 p-2 text-white shadow-lg transition-all duration-100 hover:scale-105 hover:bg-blue-600 active:scale-95"
+		class="absolute z-1000 flex items-center justify-center gap-2 rounded border border-blue-600 bg-blue-500 px-3 py-2 text-white shadow-lg transition-all duration-100 hover:scale-105 hover:bg-blue-600 active:scale-95"
 		style="top: {selectionButtonPosition.y}px; left: {selectionButtonPosition.x}px;"
 		onmousedown={(e) => e.preventDefault()}
 		onclick={createAnnotation}
@@ -608,8 +608,8 @@
 	>
 		<svg
 			xmlns="http://www.w3.org/2000/svg"
-			width="20"
-			height="20"
+			width="18"
+			height="18"
 			viewBox="0 0 24 24"
 			fill="none"
 			stroke="currentColor"
@@ -621,6 +621,7 @@
 			<line x1="9" y1="10" x2="15" y2="10"></line>
 			<line x1="12" y1="7" x2="12" y2="13"></line>
 		</svg>
+		<span class="text-sm font-medium whitespace-nowrap">Create Annotation</span>
 	</button>
 {/if}
 
