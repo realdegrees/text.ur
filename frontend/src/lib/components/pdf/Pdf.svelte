@@ -74,7 +74,7 @@
 			container,
 			store,
 			options: {
-				scaleValue: 'page-height'
+				scaleValue: screen.isMobile ? 'page-width' : 'page-height'
 			}
 		});
 
@@ -294,7 +294,7 @@
 			{@render documentInfo()}
 			<div
 				class="relative flex-1 overflow-hidden bg-text/5 transition-[width] duration-150"
-				style="width: {pdfWidth > 0 ? `${pdfWidth}px` : '100%'}; max-width: 100%;"
+				style="width: 100%; max-width: 100%;"
 				bind:this={pdfAreaWrapper}
 			>
 				<div

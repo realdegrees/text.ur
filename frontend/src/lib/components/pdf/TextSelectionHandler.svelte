@@ -536,6 +536,17 @@
 			viewerContainer.classList.remove('dragging-selection');
 		}
 	});
+
+	// Update handle positions when document scale changes
+	$effect(() => {
+		// Register dependency
+		void documentStore.documentScale;
+
+		if (pendingSelection && !draggingHandle) {
+			// Use setTimeout to ensure layout has updated
+			setTimeout(updateHandlePositions, 0);
+		}
+	});
 </script>
 
 {#if selectionHandles}
