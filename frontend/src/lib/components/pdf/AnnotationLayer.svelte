@@ -172,7 +172,7 @@
 				div.style.setProperty('-ms-user-select', 'none');
 				div.style.setProperty('user-select', 'none');
 
-					const isTouchDevice = !hasHoverCapability();
+				const isTouchDevice = !hasHoverCapability();
 
 				// Desktop: Use hover for connection line, click to pin
 				const hoverAction = preciseHover(div, {
@@ -215,14 +215,13 @@
 				div._clickListener = clickListener;
 				div.addEventListener('click', clickListener);
 
-					// Prevent the context menu from appearing on long-press
-					const contextMenuListener = (e: Event) => {
-						e.preventDefault();
-						e.stopPropagation();
-					};
-					div._contextMenuListener = contextMenuListener;
-					div.addEventListener('contextmenu', contextMenuListener);
-		
+				// Prevent the context menu from appearing on long-press
+				const contextMenuListener = (e: Event) => {
+					e.preventDefault();
+					e.stopPropagation();
+				};
+				div._contextMenuListener = contextMenuListener;
+				div.addEventListener('contextmenu', contextMenuListener);
 
 				textLayer.appendChild(div);
 			}

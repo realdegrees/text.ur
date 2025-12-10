@@ -270,7 +270,7 @@
 			onclick={(e) => {
 				e.stopPropagation();
 				if (activeCommentState) {
-					activeCommentState.isPinned	= true;
+					activeCommentState.isPinned = true;
 				}
 			}}
 			tabindex={activeComment.id}

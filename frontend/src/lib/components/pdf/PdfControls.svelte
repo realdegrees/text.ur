@@ -122,7 +122,7 @@
 <div
 	class="no-scrollbar flex shrink-0 flex-col overflow-x-hidden overflow-y-auto border-r border-text/10 bg-inset transition-all duration-200 {isExpanded
 		? 'w-48'
-		: 'w-12'} {isMobile ? 'absolute left-0 top-0 z-40' : ''}"
+		: 'w-12'} {isMobile ? 'absolute top-0 left-0 z-40' : ''}"
 	style={isMobile ? 'bottom: var(--mobile-comment-panel-height, 0px);' : ''}
 >
 	<!-- Expand/Collapse Button -->

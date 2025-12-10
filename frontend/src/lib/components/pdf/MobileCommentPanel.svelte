@@ -109,11 +109,11 @@
 </script>
 
 <div
-	class="mobile-comment-panel absolute bottom-0 left-0 right-0 z-50 bg-background"
+	class="mobile-comment-panel absolute right-0 bottom-0 left-0 z-50 bg-background"
 	bind:this={panelElement}
 >
 	<!-- Tab bar / Header - always visible -->
-	<div class="flex items-center border-b border-t border-text/10 bg-inset">
+	<div class="flex items-center border-t border-b border-text/10 bg-inset">
 		<!-- Tabs -->
 		<button
 			class="flex flex-1 items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-colors {activeTab ===
@@ -126,9 +126,7 @@
 			<IconPin class="h-4 w-4" />
 			<span>Pinned</span>
 			{#if pinnedComments.length > 0}
-				<span class="rounded-full bg-primary/20 px-2 py-0.5 text-xs"
-					>{pinnedComments.length}</span
-				>
+				<span class="rounded-full bg-primary/20 px-2 py-0.5 text-xs">{pinnedComments.length}</span>
 			{/if}
 		</button>
 
@@ -173,9 +171,9 @@
 					{#each displayedComments as comment (comment.id)}
 						<div
 							data-comment-id={comment.id}
-							class="{comment.id === documentStore.activeCommentId
-								? 'rounded ring-2 ring-primary'
-								: ''}"
+							class={comment.id === documentStore.activeCommentId
+								? 'rounded ring-5 ring-secondary'
+								: ''}
 							use:longPress={{
 								onLongPress: () => handleCommentLongPress(comment.id),
 								onRelease: handleCommentLongPressRelease,

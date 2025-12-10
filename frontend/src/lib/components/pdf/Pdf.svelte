@@ -206,7 +206,9 @@
 {/snippet}
 
 <div
-	class="pdf-viewer-container flex h-full w-full bg-background {screen.isMobile ? 'relative' : 'flex-col'}"
+	class="pdf-viewer-container flex h-full w-full bg-background {screen.isMobile
+		? 'relative'
+		: 'flex-col'}"
 	bind:this={rootContainer}
 >
 	<!-- Responsive controls: Mobile overlay or desktop column -->
@@ -288,7 +290,7 @@
 
 	<!-- Mobile PDF viewer and bottom comment panel (mobile-only) -->
 	{#if screen.isMobile}
-		<div class="flex flex-1 flex-col overflow-y-auto w-full">
+		<div class="flex w-full flex-1 flex-col overflow-y-auto">
 			{@render documentInfo()}
 			<div
 				class="relative flex-1 overflow-hidden bg-text/5 transition-[width] duration-150"
@@ -297,7 +299,9 @@
 			>
 				<div
 					id="viewerContainer"
-					class="pdfSlickContainer absolute inset-0 custom-scrollbar overflow-x-hidden overflow-y-scroll {screen.isMobile ? 'pb-24' : ''}"
+					class="pdfSlickContainer absolute inset-0 custom-scrollbar overflow-x-hidden overflow-y-scroll {screen.isMobile
+						? 'pb-24'
+						: ''}"
 					bind:this={container}
 					onscroll={handleScroll}
 					onwheel={handlePdfWheel}

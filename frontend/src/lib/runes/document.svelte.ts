@@ -22,7 +22,6 @@ export interface FilterState<T = 'author' | 'tag'> {
 }
 export type TypedComment = Omit<CommentRead, 'annotation'> & { annotation: Annotation | null };
 
-
 export interface CommentState {
 	id: number;
 	replies: number[];
@@ -567,7 +566,6 @@ const createDocumentStore = () => {
 		} else {
 			// Delay setting to false by 300ms
 			const timeoutId = setTimeout(() => {
-				
 				state.isHighlightHovered = false;
 				const currentTimeouts = hoverTimeouts.get(commentId);
 				if (currentTimeouts) {
@@ -639,7 +637,11 @@ const createDocumentStore = () => {
 		const containerRect = container.getBoundingClientRect();
 
 		// Calculate the absolute position of the highlight
-		const highlightTop = textLayerRect.top - containerRect.top + container.scrollTop + (firstBox.y * textLayerRect.height);
+		const highlightTop =
+			textLayerRect.top -
+			containerRect.top +
+			container.scrollTop +
+			firstBox.y * textLayerRect.height;
 
 		// Scroll to center the highlight in the viewport (accounting for mobile comment panel)
 		const mobilePanel = document.querySelector('.mobile-comment-panel');

@@ -157,7 +157,7 @@ app.mount("/static", StaticFiles(directory=static_path), name="static")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*" if config.DEBUG else config.FRONTEND_BASEURL],
+    allow_origins=[config.FRONTEND_BASEURL],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
