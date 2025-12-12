@@ -24,10 +24,12 @@
 	let { viewerContainer }: Props = $props();
 
 	let isCreating = $state(false);
-	let selectionButtonPosition = $state<{ x: number; y: number } | null>(null);
-	let selectionHandles = $state<{
-		start: { x: number; y: number; height: number };
-		end: { x: number; y: number; height: number };
+	let selectionUI = $state<{
+		handles: {
+			start: { x: number; y: number; height: number };
+			end: { x: number; y: number; height: number };
+		};
+		buttonPosition: { x: number; y: number };
 	} | null>(null);
 	let pendingSelection = $state<{ text: string; boxes: BoundingBox[] } | null>(null);
 	let draggingHandle = $state<'start' | 'end' | null>(null);
@@ -237,9 +239,8 @@
 	 * Clear all selection UI state
 	 */
 	const clearSelectionUI = () => {
-		selectionButtonPosition = null;
+		selectionUI = null;
 		pendingSelection = null;
-		selectionHandles = null;
 	};
 
 	/**
@@ -259,22 +260,23 @@
 		const lastRect = rects[rects.length - 1];
 		const containerRect = viewerContainer.getBoundingClientRect();
 
-		selectionHandles = {
-			start: {
-				x: firstRect.left - containerRect.left,
-				y: firstRect.top - containerRect.top,
-				height: firstRect.height
+		selectionUI = {
+			handles: {
+				start: {
+					x: firstRect.left - containerRect.left,
+					y: firstRect.top - containerRect.top,
+					height: firstRect.height
+				},
+				end: {
+					x: lastRect.right - containerRect.left,
+					y: lastRect.top - containerRect.top,
+					height: lastRect.height
+				}
 			},
-			end: {
-				x: lastRect.right - containerRect.left,
-				y: lastRect.top - containerRect.top,
-				height: lastRect.height
+			buttonPosition: {
+				x: lastRect.right - containerRect.left + 10,
+				y: lastRect.bottom - containerRect.top + 10
 			}
-		};
-
-		selectionButtonPosition = {
-			x: lastRect.right - containerRect.left + 10,
-			y: lastRect.bottom - containerRect.top + 10
 		};
 
 		return true;
@@ -335,9 +337,8 @@
 			const id = await documentStore.comments.create({ annotation, visibility: 'public' });
 
 			window.getSelection()?.removeAllRanges();
-			selectionButtonPosition = null;
+			selectionUI = null;
 			pendingSelection = null;
-			selectionHandles = null;
 
 			if (!id) return;
 			documentStore.activeCommentId = id;
@@ -544,13 +545,13 @@
 	});
 </script>
 
-{#if selectionHandles}
+{#if selectionUI}
 	<div
 		class="absolute z-1000 w-0.5 cursor-pointer bg-blue-500 {draggingHandle
 			? 'pointer-events-none'
 			: ''}"
-		style="top: {selectionHandles.start.y}px; left: {selectionHandles.start
-			.x}px; height: {selectionHandles.start.height}px;"
+		style="top: {selectionUI.handles.start.y}px; left: {selectionUI.handles.start
+			.x}px; height: {selectionUI.handles.start.height}px;"
 		onmousedown={(e) => onHandleDown('start', e)}
 		use:nonPassiveTouchStart={(e) => onHandleDown('start', e)}
 		role="button"
@@ -559,21 +560,21 @@
 	>
 		<div
 			class="absolute top-0 animate-ping rounded-l-full bg-blue-500 opacity-75"
-			style="left: -{selectionHandles.start.height / 2}px; height: {selectionHandles.start
-				.height}px; width: {selectionHandles.start.height / 2}px;"
+			style="left: -{selectionUI.handles.start.height / 2}px; height: {selectionUI.handles.start
+				.height}px; width: {selectionUI.handles.start.height / 2}px;"
 		></div>
 		<div
 			class="absolute top-0 rounded-l-full bg-blue-500 shadow-lg"
-			style="left: -{selectionHandles.start.height / 2}px; height: {selectionHandles.start
-				.height}px; width: {selectionHandles.start.height / 2}px;"
+			style="left: -{selectionUI.handles.start.height / 2}px; height: {selectionUI.handles.start
+				.height}px; width: {selectionUI.handles.start.height / 2}px;"
 		></div>
 	</div>
 	<div
 		class="absolute z-1000 w-0.5 cursor-pointer bg-blue-500 {draggingHandle
 			? 'pointer-events-none'
 			: ''}"
-		style="top: {selectionHandles.end.y}px; left: {selectionHandles.end
-			.x}px; height: {selectionHandles.end.height}px;"
+		style="top: {selectionUI.handles.end.y}px; left: {selectionUI.handles.end
+			.x}px; height: {selectionUI.handles.end.height}px;"
 		onmousedown={(e) => onHandleDown('end', e)}
 		use:nonPassiveTouchStart={(e) => onHandleDown('end', e)}
 		role="button"
@@ -582,21 +583,19 @@
 	>
 		<div
 			class="absolute bottom-0 animate-ping rounded-r-full bg-blue-500 opacity-75"
-			style="right: -{selectionHandles.end.height / 2}px; height: {selectionHandles.end
-				.height}px; width: {selectionHandles.end.height / 2}px;"
+			style="right: -{selectionUI.handles.end.height / 2}px; height: {selectionUI.handles.end
+				.height}px; width: {selectionUI.handles.end.height / 2}px;"
 		></div>
 		<div
 			class="absolute bottom-0 rounded-r-full bg-blue-500 shadow-lg"
-			style="right: -{selectionHandles.end.height / 2}px; height: {selectionHandles.end
-				.height}px; width: {selectionHandles.end.height / 2}px;"
+			style="right: -{selectionUI.handles.end.height / 2}px; height: {selectionUI.handles.end
+				.height}px; width: {selectionUI.handles.end.height / 2}px;"
 		></div>
 	</div>
-{/if}
 
-{#if selectionButtonPosition}
 	<button
 		class="absolute z-1000 flex items-center justify-center gap-2 rounded border border-blue-600 bg-blue-500 px-3 py-2 text-white shadow-lg transition-all duration-100 hover:scale-105 hover:bg-blue-600 active:scale-95"
-		style="top: {selectionButtonPosition.y}px; left: {selectionButtonPosition.x}px;"
+		style="top: {selectionUI.buttonPosition.y}px; left: {selectionUI.buttonPosition.x}px;"
 		onmousedown={(e) => e.preventDefault()}
 		onclick={createAnnotation}
 		aria-label="Add annotation"
