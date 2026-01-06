@@ -40,6 +40,9 @@
 	{/if}
 	<Field bind:value={username} label="Username/Email" required />
 	<Field bind:value={password} label="Password" hidden required />
+	<div class="flex justify-end">
+		<a href="/password-reset/request" class="forgot-password-link">Forgot password?</a>
+	</div>
 	<button type="submit" class="submit-button" disabled={isLoading}>
 		{#if isLoading}
 			<Loading />
@@ -53,6 +56,15 @@
 	.error-message {
 		color: red;
 		font-size: 0.875rem;
+	}
+	.forgot-password-link {
+		font-size: 0.875rem;
+		color: #3b82f6;
+		text-decoration: none;
+		margin-top: -0.5rem;
+	}
+	.forgot-password-link:hover {
+		text-decoration: underline;
 	}
 	.submit-button {
 		background-color: var(--color-primary);

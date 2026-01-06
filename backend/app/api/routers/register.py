@@ -319,9 +319,10 @@ async def verify(token: str, db: Database) -> RedirectResponse:
         token_type="bearer",
     )
 
-    # Create the redirect response
+    # Create the redirect response to login page with verified param
+    # Login page will redirect authenticated users to dashboard while preserving the param
     redirect_response = RedirectResponse(
-        url=f"{cfg.FRONTEND_BASEURL}?verified=true", status_code=303)
+        url=f"{cfg.FRONTEND_BASEURL}/login?verified=true", status_code=303)
 
     # Set cookies on that response
     redirect_response.set_cookie(

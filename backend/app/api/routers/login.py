@@ -12,8 +12,7 @@ from core.auth import (
     hash_password,
     validate_password,
 )
-from fastapi import Body, Depends, HTTPException, Request, Response
-from fastapi.responses import RedirectResponse
+from fastapi import Body, Depends, HTTPException, Response
 from fastapi.security import OAuth2PasswordRequestForm
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 from models.enums import AppErrorCode
@@ -71,7 +70,7 @@ async def login(
 
 
 @router.post("/refresh")
-async def refresh(response: Response, request: Request, db: Database, user: User = Authenticate(token_type="refresh")) -> Token:
+async def refresh(response: Response, db: Database, user: User = Authenticate(token_type="refresh")) -> Token:
     """Refresh the access token given a valid refresh token."""
     token = Token(
         access_token=generate_token(user, "access"),
@@ -104,16 +103,19 @@ async def refresh(response: Response, request: Request, db: Database, user: User
 
 
 @router.post("/reset")
-async def reset_password(request: Request, db: Database, mail: Mail, email: str = Body(..., embed=True)) -> None:
+async def reset_password(db: Database, mail: Mail, email: str = Body(..., embed=True)) -> None:
     """Send a password reset email with a presigned URL."""
     query = select(User).where(User.email == email)
     result = await db.exec(query)
     user: User | None = result.first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    reset_link: str = mail.generate_verification_link(
-        email, router, salt="password-reset", confirm_route="verify")
-    expiry_time = datetime.now(UTC) + timedelta(days=cfg.REGISTER_LINK_EXPIRY_DAYS)
+    # Generate token with email and password hash (for one-time use)
+    serializer = URLSafeTimedSerializer(cfg.EMAIL_PRESIGN_SECRET)
+    token_data = {"email": email, "pwd": user.password[:16]}
+    token = serializer.dumps(token_data, salt="password-reset")
+    reset_link = f"{cfg.FRONTEND_BASEURL}/password-reset/{token}"
+    expiry_time = datetime.now(UTC) + timedelta(minutes=cfg.PASSWORD_RESET_LINK_EXPIRY_MINUTES)
     try:
         mail.send_email(
             target_email=email,
@@ -132,20 +134,40 @@ async def reset_password(request: Request, db: Database, mail: Mail, email: str 
             status_code=500, detail="Failed to send reset email") from e
 
 
-@router.put("/reset/verify/{token}", response_class=RedirectResponse)
-async def reset_verify(token: str, db: Database, password: str = Body(..., embed=True)) -> RedirectResponse:
+@router.put("/reset/verify/{token}")
+async def reset_verify(token: str, db: Database, password: str = Body(..., embed=True)) -> None:
     """Confirm password reset using the presigned URL and update the user's password."""
     try:
-        email: str = URLSafeTimedSerializer(cfg.EMAIL_PRESIGN_SECRET).loads(
-            token, max_age=int(cfg.REGISTER_LINK_EXPIRY_DAYS * 24 * 60 * 60), salt="password-reset")
+        # Deserialize token to get token data (email + password hash for one-time use)
+        serializer = URLSafeTimedSerializer(cfg.EMAIL_PRESIGN_SECRET)
+        token_data = serializer.loads(
+            token, max_age=int(cfg.PASSWORD_RESET_LINK_EXPIRY_MINUTES * 60), salt="password-reset"
+        )
+
+        # Handle both old tokens (string) and new tokens (dict) for backwards compatibility
+        if isinstance(token_data, str):
+            email = token_data
+            pwd_hash_check = None
+        else:
+            email = token_data["email"]
+            pwd_hash_check = token_data.get("pwd")
+
     except (BadSignature, SignatureExpired) as e:
         raise HTTPException(
             status_code=403, detail="Invalid or expired token") from e
+
     query = select(User).where(User.email == email)
     result = await db.exec(query)
     user: User | None = result.first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+
+    # Check if token has already been used (password changed since token was issued)
+    if pwd_hash_check and user.password[:16] != pwd_hash_check:
+        raise HTTPException(status_code=403, detail="Reset link has already been used")
+
+    # Update password and rotate user secret to invalidate all sessions
     user.password = hash_password(password)
+    user.rotate_secret()
+    db.add(user)
     await db.commit()
-    return RedirectResponse(url="/login")
