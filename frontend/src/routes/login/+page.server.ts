@@ -3,9 +3,16 @@ import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals, url }) => {
 	if (locals.sessionUser) {
-		if (url.searchParams.get('redirect')) {
-			throw redirect(303, url.searchParams.get('redirect')!);
+		// Preserve verified param when redirecting authenticated users
+		const verified = url.searchParams.get('verified');
+		const redirectParam = url.searchParams.get('redirect');
+
+		if (redirectParam) {
+			const redirectUrl = verified ? `${redirectParam}?verified=true` : redirectParam;
+			throw redirect(303, redirectUrl);
 		}
-		throw redirect(303, '/');
+
+		const dashboardUrl = verified ? '/dashboard?verified=true' : '/dashboard';
+		throw redirect(303, dashboardUrl);
 	}
 };

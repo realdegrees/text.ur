@@ -15,7 +15,9 @@
 <div class="mt-20 flex h-fit w-full justify-center">
 	<div class="w-full max-w-md overflow-hidden rounded-lg bg-inset shadow-lg">
 		{#if showResetSuccess}
-			<div class="bg-green-500/20 text-text p-2 border-b-green-500 border-b-4">Password reset successful! You can now log in with your new password.</div>
+			<div class="border-b-4 border-b-green-500 bg-green-500/20 p-2 text-text">
+				Password reset successful! You can now log in with your new password.
+			</div>
 		{/if}
 		<TabContainer
 			tabs={[

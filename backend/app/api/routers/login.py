@@ -1,6 +1,5 @@
 from datetime import UTC, datetime, timedelta
 from typing import Annotated
-from uuid import uuid4
 
 import core.config as cfg
 from api.dependencies.authentication import Authenticate
@@ -13,8 +12,7 @@ from core.auth import (
     hash_password,
     validate_password,
 )
-from fastapi import Body, Depends, HTTPException, Request, Response
-from fastapi.responses import RedirectResponse
+from fastapi import Body, Depends, HTTPException, Response
 from fastapi.security import OAuth2PasswordRequestForm
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 from models.enums import AppErrorCode
@@ -72,7 +70,7 @@ async def login(
 
 
 @router.post("/refresh")
-async def refresh(response: Response, request: Request, db: Database, user: User = Authenticate(token_type="refresh")) -> Token:
+async def refresh(response: Response, db: Database, user: User = Authenticate(token_type="refresh")) -> Token:
     """Refresh the access token given a valid refresh token."""
     token = Token(
         access_token=generate_token(user, "access"),
@@ -105,7 +103,7 @@ async def refresh(response: Response, request: Request, db: Database, user: User
 
 
 @router.post("/reset")
-async def reset_password(request: Request, db: Database, mail: Mail, email: str = Body(..., embed=True)) -> None:
+async def reset_password(db: Database, mail: Mail, email: str = Body(..., embed=True)) -> None:
     """Send a password reset email with a presigned URL."""
     query = select(User).where(User.email == email)
     result = await db.exec(query)

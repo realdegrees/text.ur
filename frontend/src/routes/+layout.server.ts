@@ -3,7 +3,13 @@ import type { LayoutServerLoad } from './$types';
 import type { DocumentRead, MembershipRead } from '$api/types';
 import { api } from '$api/client';
 
-const noAuthRoutes = ['/login', '/', '/sharelink/[token]', '/password-reset/request', '/password-reset/[token]'];
+const noAuthRoutes = [
+	'/login',
+	'/',
+	'/sharelink/[token]',
+	'/password-reset/request',
+	'/password-reset/[token]'
+];
 export const load: LayoutServerLoad = async ({ locals, route, params, fetch, url }) => {
 	// Redirect to login if no session user and not on a no-auth route
 	if (!locals.sessionUser && !noAuthRoutes.includes(route.id || '')) {
