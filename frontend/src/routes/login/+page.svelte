@@ -34,14 +34,3 @@
 {#snippet Register()}
 	<RegisterForm onSuccess={handleSuccess} />
 {/snippet}
-
-<style>
-	.success-banner {
-		background-color: #d4edda;
-		color: #155724;
-		padding: 1rem;
-		text-align: center;
-		font-size: 0.875rem;
-		border-bottom: 1px solid #c3e6cb;
-	}
-</style>

@@ -1,14 +1,22 @@
 FROM python:3.12-slim
-WORKDIR /annotation-software  
+WORKDIR /annotation-software
 
-
+# Copy requirements first for better layer caching
 COPY requirements.txt .
 
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends build-essential jq postgresql-client && \
-    pip install --no-cache-dir -r requirements.txt && \
-    pip install --no-cache-dir uvicorn[standard] && \
-    apt-get purge -y --auto-remove build-essential && \
+# Install system dependencies and Python packages with cache mount
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && \
+    apt-get install -y --no-install-recommends build-essential jq postgresql-client
+
+# Install Python dependencies with pip cache mount
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install -r requirements.txt && \
+    pip install uvicorn[standard]
+
+# Clean up build dependencies (keep runtime deps like postgresql-client)
+RUN apt-get purge -y --auto-remove build-essential && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 

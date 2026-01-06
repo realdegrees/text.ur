@@ -1,16 +1,43 @@
 FROM node:20-alpine AS builder
 WORKDIR /app
-COPY package.json pnpm-lock.yaml ./
+
+# Install pnpm globally
 RUN npm install -g pnpm
-RUN pnpm install
+
+# Copy package files
+COPY package.json pnpm-lock.yaml ./
+
+# Copy svelte config early to avoid prepare script warnings
+COPY svelte.config.js ./
+COPY vite.config.ts ./
+COPY tsconfig.json ./
+
+# Install dependencies with cache mount for faster rebuilds
+RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
+    pnpm install --frozen-lockfile
+
+# Copy rest of application
 COPY . .
-RUN pnpm build
+
+# Build with cache mount
+RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
+    pnpm build
 
 FROM node:20-alpine AS dependencies
 WORKDIR /app
-COPY package.json pnpm-lock.yaml ./
+
+# Install pnpm globally
 RUN npm install -g pnpm
-RUN pnpm install --prod
+
+# Copy package files and configs
+COPY package.json pnpm-lock.yaml ./
+COPY svelte.config.js ./
+COPY vite.config.ts ./
+COPY tsconfig.json ./
+
+# Install production dependencies with cache mount
+RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
+    pnpm install --prod --frozen-lockfile
 
 FROM node:20-alpine
 WORKDIR /app
