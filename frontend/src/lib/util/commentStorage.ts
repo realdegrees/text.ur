@@ -1,3 +1,4 @@
+import { browser } from '$app/environment';
 import type { CommentState } from '$lib/runes/document.svelte';
 
 /**
@@ -17,6 +18,8 @@ const TTL_MS = 30 * 24 * 60 * 60 * 1000;
 const getKey = (userId: number, documentId: string) => `${PREFIX}:${userId}:${documentId}`;
 
 export function cleanupExpiredCommentStates(): void {
+	if (!browser) return;
+
 	const now = Date.now();
 	const keysToRemove: string[] = [];
 
@@ -40,6 +43,8 @@ export function saveCommentStates(
 	documentId: string,
 	states: Map<number, CommentState>
 ): void {
+	if (!browser) return;
+
 	const statesObj: Record<number, Partial<PersistedFields>> = {};
 
 	for (const [commentId, state] of states) {
@@ -83,6 +88,8 @@ export function loadCommentStates(
 ): Map<number, Partial<PersistedFields>> {
 	const result = new Map<number, Partial<PersistedFields>>();
 
+	if (!browser) return result;
+
 	try {
 		const key = getKey(userId, documentId);
 		const stored = localStorage.getItem(key);
@@ -123,10 +130,12 @@ export function loadCommentStates(
 }
 
 export function clearCommentStates(userId: number, documentId: string): void {
+	if (!browser) return;
 	localStorage.removeItem(getKey(userId, documentId));
 }
 
 export function clearAllCommentStates(userId: number): void {
+	if (!browser) return;
 	const prefix = `${PREFIX}:${userId}:`;
 	for (let i = localStorage.length - 1; i >= 0; i--) {
 		const key = localStorage.key(i);
