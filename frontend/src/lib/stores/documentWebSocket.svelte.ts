@@ -17,6 +17,7 @@ import type {
 } from '$types/websocket';
 import { SvelteMap } from 'svelte/reactivity';
 import { sessionStore } from '$lib/runes/session.svelte';
+import { documentStore } from '$lib/runes/document.svelte';
 
 /** Represents a user's cursor position */
 export interface UserCursor {
@@ -281,9 +282,30 @@ class DocumentWebSocketStore {
 		}
 		this.lastMouseSendTime = now;
 
+		// Respect the user's choice to not share their cursor
+		// If sharing is disabled, force visible to false
+		const effectiveVisible = visible && documentStore.shareCursor;
+
+		// If sharing is disabled, we still want to send at least one update with visible=false
+		// to hide the cursor for others. But if we continuously move the mouse while disabled,
+		// we don't necessarily need to spam visible=false.
+		// However, for simplicity and ensuring state consistency, sending effectiveVisible is fine.
+		// The throttle handles the volume.
+
 		this.send({
 			type: 'mouse_position',
-			payload: { x, y, page, visible }
+			payload: { x, y, page, visible: effectiveVisible }
+		});
+	}
+
+	/**
+	 * Immediately sends a hidden cursor update to other users.
+	 * Bypasses throttling to ensure immediate privacy when toggling off sharing.
+	 */
+	forceHideCursor(): void {
+		this.send({
+			type: 'mouse_position',
+			payload: { x: 0, y: 0, page: 0, visible: false }
 		});
 	}
 

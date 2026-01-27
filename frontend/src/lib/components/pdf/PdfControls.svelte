@@ -18,6 +18,10 @@
 	import TagIcon from '~icons/mdi/tag-outline';
 	import ActiveUsersIcon from '~icons/heroicons-outline/status-online';
 	import OfflineIcon from '~icons/oui/offline';
+	import PinIcon from '~icons/mdi/pin';
+	import PinOutlineIcon from '~icons/mdi/pin-outline';
+	import EyeIcon from '~icons/mdi/eye';
+	import EyeOffIcon from '~icons/mdi/eye-off';
 
 	interface Props {
 		minScale: number;
@@ -48,7 +52,7 @@
 	let isExpanded = $state(!isMobile); // Collapsed by default on mobile
 
 	const buttonClass =
-		'rounded text-text/70 transition-colors hover:bg-text/10 hover:text-text disabled:opacity-30 disabled:hover:bg-transparent';
+		'rounded p-2 text-text/70 transition-colors hover:bg-text/10 hover:text-text disabled:opacity-30 disabled:hover:bg-transparent';
 	const activeButtonClass =
 		'rounded p-2 text-primary bg-primary/10 transition-colors hover:bg-primary/20';
 
@@ -96,6 +100,10 @@
 
 	const anyFilterActive = $derived.by(() => {
 		return documentStore.filters.all.length > 0;
+	});
+
+	const globalPinStatus = $derived.by(() => {
+		return documentStore.getGlobalPinStatus();
 	});
 
 	// Get initials from username
@@ -213,21 +221,43 @@
 
 		<div class="my-1 h-px w-full bg-text/20"></div>
 
-		<!-- Other Cursors Toggle -->
-		<button
-			class="{documentStore.showCursors ? activeButtonClass : buttonClass} {isExpanded
-				? 'w-full justify-start'
-				: ''}"
-			onclick={() => (documentStore.showCursors = !documentStore.showCursors)}
-			title={documentStore.showCursors ? 'Hide other cursors' : 'Show other cursors'}
-		>
-			<span class="flex items-center gap-2">
-				<CursorIcon class={iconSizeClass} />
-				{#if isExpanded}<span class="text-xs"
-						>{documentStore.showCursors ? 'Cursors On' : 'Cursors Off'}</span
-					>{/if}
-			</span>
-		</button>
+		<!-- Cursor Controls -->
+		<div class="flex flex-col {isExpanded ? 'w-full justify-between' : ''} items-center gap-1">
+			<!-- Share My Cursor -->
+			<button
+				class="w-full {documentStore.shareCursor ? activeButtonClass : buttonClass} {isExpanded
+					? 'flex-1'
+					: ''}"
+				onclick={() => {
+					documentStore.shareCursor = !documentStore.shareCursor;
+					if (!documentStore.shareCursor) {
+						documentWebSocket.forceHideCursor();
+					}
+				}}
+			>
+				<span class="flex items-center justify-center gap-2">
+					<CursorIcon class={iconSizeClass} />
+					{#if isExpanded}<span class="text-xs">Share My Cursor</span>{/if}
+				</span>
+			</button>
+
+			<!-- Show Other Cursors -->
+			<button
+				class="w-full {documentStore.showCursors ? activeButtonClass : buttonClass} {isExpanded
+					? 'flex-1'
+					: ''}"
+				onclick={() => (documentStore.showCursors = !documentStore.showCursors)}
+			>
+				<span class="flex items-center justify-center gap-2">
+					{#if documentStore.showCursors}
+						<EyeIcon class={iconSizeClass} />
+					{:else}
+						<EyeOffIcon class={iconSizeClass} />
+					{/if}
+					{#if isExpanded}<span class="text-xs">Show Other Cursors</span>{/if}
+				</span>
+			</button>
+		</div>
 
 		<div class="my-1 h-px w-full bg-text/20"></div>
 
@@ -255,21 +285,39 @@
 
 		<div class="flex w-full items-center {isExpanded ? 'justify-between' : 'justify-center'} gap-2">
 			{#if isExpanded}
-				<p class="font-medium text-text/80">Filters</p>
+				<p class="font-medium text-text/80">Filters & Pins</p>
 			{/if}
-			{#if anyFilterActive}
+			<div class="flex items-center gap-1">
 				<button
 					onclick={() => {
-						documentStore.filters.clear();
+						documentStore.pinAll(!globalPinStatus.anyPinned);
 					}}
-					title="Clear All Filters"
+					title={globalPinStatus.anyPinned ? 'Unpin all comments' : 'Pin all comments'}
 					class="cursor-pointer hover:scale-110"
 					in:scale
 					out:scale
 				>
-					<ClearFilterIcon class="text-text/50 hover:text-text/70 {iconSizeClass}" />
+					{#if globalPinStatus.anyPinned}
+						<PinIcon class="text-text/50 hover:text-text/70 {iconSizeClass}" />
+					{:else}
+						<PinOutlineIcon class="text-text/50 hover:text-text/70 {iconSizeClass}" />
+					{/if}
 				</button>
-			{/if}
+
+				{#if anyFilterActive}
+					<button
+						onclick={() => {
+							documentStore.filters.clear();
+						}}
+						title="Clear All Filters"
+						class="cursor-pointer hover:scale-110"
+						in:scale
+						out:scale
+					>
+						<ClearFilterIcon class="text-text/50 hover:text-text/70 {iconSizeClass}" />
+					</button>
+				{/if}
+			</div>
 		</div>
 
 		<!-- Active Users -->

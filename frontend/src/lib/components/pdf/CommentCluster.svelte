@@ -157,7 +157,7 @@
 		<!-- Expanded card - hover anywhere on card keeps it open -->
 		<div
 			bind:this={clusterRef}
-			class="relative z-50 overflow-hidden rounded bg-background shadow-lg ring-3 shadow-black/20 transition-all {firstPinnedComment
+			class="relative z-50 overflow-hidden rounded bg-background shadow-lg ring-2 shadow-black/20 transition-all {firstPinnedComment
 				? 'ring-primary/70'
 				: 'ring-primary/30'}"
 			use:longPress={{
@@ -178,13 +178,13 @@
 			}}
 		>
 			<!-- Cluster header: tabs for multiple comments or single author header -->
-			<div class="w-full border-b border-text/30 p-1.5 pb-0">
-				<div class="flex items-center justify-between gap-1.5 border-b border-text/10 pb-0!">
-					<div class="flex flex-wrap items-center gap-1.5">
+			<div class="w-full border-b border-text/30 p-1 pb-0">
+				<div class="flex items-center justify-between gap-1 border-b border-text/10 pb-0!">
+					<div class="flex flex-wrap items-center gap-1">
 						{#each comments as c, idx (c.id)}
 							{@const state = commentStates.get(c.id)}
 							<button
-								class="flex cursor-pointer flex-row items-center gap-1.5 rounded-t bg-inset px-2 pt-1.5 pb-1 text-xs font-medium transition-colors
+								class="flex cursor-pointer flex-row items-center gap-1 rounded-t bg-inset px-1.5 pt-1 pb-0.5 text-xs font-medium transition-colors
 							{activeComment === c
 									? 'text-text shadow-inner shadow-text/40'
 									: 'text-text/50 hover:animate-pulse hover:bg-text/5 hover:text-text/70'}"

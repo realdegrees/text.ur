@@ -11,12 +11,13 @@ Thanks for signing up! To get started with collaborative document annotation, pl
 Verify your email address:
 {{ verification_link }}
 
-⏱️ This verification link expires on {{ expiry_time }}.
+This verification link expires on {{ expiry_time }}.
 
-🔒 If you didn't create an account on text.ur, you can safely ignore this email.
+If you didn't create an account on text.ur, you can safely ignore this email.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Need help? Visit our support page or reply to this email.
+You received this email because you registered an account on text.ur.
+Questions? Reply to this email for assistance.
 
 © {{ current_year }} text.ur. All rights reserved.

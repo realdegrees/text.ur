@@ -165,6 +165,21 @@ app.add_middleware(
 
 
 @app.middleware("http")
+async def add_security_headers(request: Request, call_next: Callable) -> Response:
+    """Add security headers to all responses."""
+    response = await call_next(request)
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains; preload"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+
+    if not request.url.path.startswith(("/api/docs", "/api/openapi.json")):
+         response.headers["Content-Security-Policy"] = "default-src 'self'; frame-ancestors 'none';"
+
+    return response
+
+
+@app.middleware("http")
 async def log_requests(request: Request, call_next: Callable) -> Response:
     """Log all incoming HTTP requests."""
     start_time = time.time()

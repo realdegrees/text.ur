@@ -12,8 +12,15 @@ import type { Paginated } from '$api/pagination';
 import { notification } from '$lib/stores/notificationStore';
 import { type Annotation } from '$api/types';
 import { annotationSchema } from '$api/schemas';
-import { SvelteMap } from 'svelte/reactivity';
+import { SvelteMap, SvelteSet } from 'svelte/reactivity';
 import { invalidateAll } from '$app/navigation';
+import {
+	loadCommentStates,
+	saveCommentStates,
+	cleanupExpiredCommentStates,
+	type PersistedFields
+} from '$lib/util/commentStorage';
+import { sessionStore } from '$lib/runes/session.svelte';
 
 export interface FilterState<T = 'author' | 'tag'> {
 	type: T;
@@ -43,9 +50,17 @@ export interface CommentState {
 const createDocumentStore = () => {
 	const _comments = new SvelteMap<number, CommentRead>();
 	const commentStates: SvelteMap<number, CommentState> = new SvelteMap<number, CommentState>();
+	let cachedPersistedStates = new Map<number, Partial<PersistedFields>>();
 	let filterStates = $state<FilterState[]>([]);
 	let showCursors: boolean = $state<boolean>(true);
+	let shareCursor: boolean = $state<boolean>(true);
 	let loadedDocument: DocumentRead | undefined = $state<DocumentRead | undefined>(undefined);
+
+	// Pinning state tracking (for empty states and future comments)
+	const pinnedAuthors = new SvelteSet<number>();
+	const pinnedTags = new SvelteSet<number>();
+	let isGlobalPin = $state(false);
+
 	let documentScale: number = $state<number>(1);
 	let numPages: number = $state<number>(0);
 	let pdfViewerRef: HTMLElement | null = $state<HTMLElement | null>(null);
@@ -54,6 +69,18 @@ const createDocumentStore = () => {
 	let mobileCommentPanelRef: any = $state<any>(null);
 	let activeCommentId: number | null = $state<number | null>(null);
 	let longPressCommentId: number | null = $state<number | null>(null);
+
+	// Helper to apply persisted state to a comment state object
+	const applyPersistedState = (state: CommentState, persisted: Partial<PersistedFields>) => {
+		if (persisted.isPinned !== undefined) state.isPinned = persisted.isPinned;
+		if (persisted.replyInputContent !== undefined)
+			state.replyInputContent = persisted.replyInputContent;
+		if (persisted.isReplying !== undefined) state.isReplying = persisted.isReplying;
+		if (persisted.repliesExpanded !== undefined) state.repliesExpanded = persisted.repliesExpanded;
+		if (persisted.isEditing !== undefined) state.isEditing = persisted.isEditing;
+		if (persisted.editInputContent !== undefined)
+			state.editInputContent = persisted.editInputContent;
+	};
 
 	// Resets the store and loads root comments for a document
 	const setTopLevelComments = (comments: CommentRead[]) => {
@@ -74,6 +101,13 @@ const createDocumentStore = () => {
 					replyInputContent: '',
 					source: 'api'
 				});
+
+				// Apply persisted state if available
+				const persisted = cachedPersistedStates.get(cachedComment.id);
+				if (persisted) {
+					applyPersistedState(newState, persisted);
+				}
+
 				commentStates.set(cachedComment.id, newState);
 			}
 		});
@@ -217,6 +251,31 @@ const createDocumentStore = () => {
 				commentsLocal.update(data);
 				return;
 			}
+
+			// Check global pin status BEFORE adding the comment to see if we should auto-pin
+			const { allPinned } = getGlobalPinStatus();
+
+			// Also check if the author is pinned (if all comments by this author are pinned)
+			let authorPinned = false;
+			if (data.user?.id) {
+				const { allPinned: isAuthorPinned } = getBatchPinStatus('author', data.user.id);
+				authorPinned = isAuthorPinned;
+			}
+
+			// Also check if any of the tags are pinned
+			let tagsPinned = false;
+			if (data.tags && data.tags.length > 0) {
+				for (const tag of data.tags) {
+					const { allPinned: isTagPinned } = getBatchPinStatus('tag', tag.id);
+					if (isTagPinned) {
+						tagsPinned = true;
+						break;
+					}
+				}
+			}
+
+			const shouldPin = allPinned || authorPinned || tagsPinned;
+
 			// Increment num_replies in parent comment
 			const parentComment: CommentRead | undefined = data.parent_id
 				? _comments.get(data.parent_id)
@@ -249,8 +308,16 @@ const createDocumentStore = () => {
 				replies: [],
 				editInputContent: data.content ?? '',
 				replyInputContent: '',
-				source: source
+				source: source,
+				isPinned: shouldPin
 			});
+
+			// Restore persisted state if available
+			const persisted = cachedPersistedStates.get(data.id);
+			if (persisted) {
+				applyPersistedState(newState, persisted);
+			}
+
 			commentStates.set(data.id, newState);
 		},
 		delete: (commentId: number, deleteState = false) => {
@@ -648,6 +715,106 @@ const createDocumentStore = () => {
 		});
 	};
 
+	const batchPin = (type: 'author' | 'tag', id: number, pinned: boolean): void => {
+		// Update persistent pin state for this group
+		if (type === 'author') {
+			if (pinned) pinnedAuthors.add(id);
+			else pinnedAuthors.delete(id);
+		} else if (type === 'tag') {
+			if (pinned) pinnedTags.add(id);
+			else pinnedTags.delete(id);
+		}
+
+		for (const [commentId, comment] of _comments.entries()) {
+			let matches = false;
+			if (type === 'author') {
+				matches = comment.user?.id === id;
+			} else if (type === 'tag') {
+				matches = comment.tags?.some((t) => t.id === id) ?? false;
+			}
+
+			if (matches) {
+				const state = commentStates.get(commentId);
+				if (state) {
+					state.isPinned = pinned;
+				}
+			}
+		}
+	};
+
+	const getBatchPinStatus = (
+		type: 'author' | 'tag',
+		id: number
+	): { allPinned: boolean; anyPinned: boolean } => {
+		let totalMatches = 0;
+		let pinnedMatches = 0;
+
+		for (const [commentId, comment] of _comments.entries()) {
+			let matches = false;
+			if (type === 'author') {
+				matches = comment.user?.id === id;
+			} else if (type === 'tag') {
+				matches = comment.tags?.some((t) => t.id === id) ?? false;
+			}
+
+			if (matches) {
+				totalMatches++;
+				const state = commentStates.get(commentId);
+				if (state?.isPinned) {
+					pinnedMatches++;
+				}
+			}
+		}
+
+		if (totalMatches === 0) {
+			const isSet = type === 'author' ? pinnedAuthors.has(id) : pinnedTags.has(id);
+			return { allPinned: isSet, anyPinned: isSet };
+		}
+
+		return {
+			allPinned: totalMatches > 0 && totalMatches === pinnedMatches,
+			anyPinned: pinnedMatches > 0
+		};
+	};
+
+	const pinAll = (pinned: boolean): void => {
+		isGlobalPin = pinned;
+
+		if (!pinned) {
+			pinnedAuthors.clear();
+			pinnedTags.clear();
+		}
+
+		for (const commentId of _comments.keys()) {
+			const state = commentStates.get(commentId);
+			if (state) {
+				state.isPinned = pinned;
+			}
+		}
+	};
+
+	const getGlobalPinStatus = (): { allPinned: boolean; anyPinned: boolean } => {
+		let totalMatches = 0;
+		let pinnedMatches = 0;
+
+		for (const commentId of _comments.keys()) {
+			totalMatches++;
+			const state = commentStates.get(commentId);
+			if (state?.isPinned) {
+				pinnedMatches++;
+			}
+		}
+
+		if (totalMatches === 0) {
+			return { allPinned: isGlobalPin, anyPinned: isGlobalPin };
+		}
+
+		return {
+			allPinned: totalMatches > 0 && totalMatches === pinnedMatches,
+			anyPinned: pinnedMatches > 0
+		};
+	};
+
 	const handleWebSocketEvent = (
 		event:
 			| CommentEvent
@@ -689,6 +856,65 @@ const createDocumentStore = () => {
 			default:
 				console.warn('Unknown WebSocket event type (unexpected):', event);
 		}
+	};
+
+	// Cleanup expired states on initialization
+	cleanupExpiredCommentStates();
+
+	const enablePersistence = () => {
+		let persistTimeout: ReturnType<typeof setTimeout> | null = null;
+		let hasLoadedPersistedStates = false;
+
+		// Effect 1: Load persisted states when user/doc changes
+		$effect(() => {
+			const userId = sessionStore.currentUser?.id;
+			const docId = loadedDocument?.id;
+
+			if (userId && docId && !hasLoadedPersistedStates) {
+				hasLoadedPersistedStates = true;
+				cachedPersistedStates = loadCommentStates(userId, docId);
+
+				// Apply persisted states to existing comment states
+				for (const [commentId, persisted] of cachedPersistedStates) {
+					const state = commentStates.get(commentId);
+					if (state) {
+						applyPersistedState(state, persisted);
+					}
+				}
+			}
+		});
+
+		// Effect 2: Track changes and save
+		$effect(() => {
+			const userId = sessionStore.currentUser?.id;
+			const docId = loadedDocument?.id;
+
+			// Track changes to persisted fields by accessing them
+			for (const state of commentStates.values()) {
+				// eslint-disable-next-line @typescript-eslint/no-unused-expressions
+				state.isPinned;
+				// eslint-disable-next-line @typescript-eslint/no-unused-expressions
+				state.replyInputContent;
+				// eslint-disable-next-line @typescript-eslint/no-unused-expressions
+				state.isReplying;
+				// eslint-disable-next-line @typescript-eslint/no-unused-expressions
+				state.repliesExpanded;
+				// eslint-disable-next-line @typescript-eslint/no-unused-expressions
+				state.isEditing;
+				// eslint-disable-next-line @typescript-eslint/no-unused-expressions
+				state.editInputContent;
+			}
+
+			// Only save if we have valid IDs and have finished loading
+			if (userId && docId && hasLoadedPersistedStates) {
+				// Debounce saves to avoid excessive writes
+				if (persistTimeout) clearTimeout(persistTimeout);
+				persistTimeout = setTimeout(() => {
+					console.log('[documentStore] Triggering save after debounce');
+					saveCommentStates(userId, docId, commentStates);
+				}, 500);
+			}
+		});
 	};
 
 	return {
@@ -746,6 +972,12 @@ const createDocumentStore = () => {
 		set showCursors(value) {
 			showCursors = value;
 		},
+		get shareCursor() {
+			return shareCursor;
+		},
+		set shareCursor(value) {
+			shareCursor = value;
+		},
 		get activeCommentId() {
 			return activeCommentId;
 		},
@@ -763,7 +995,12 @@ const createDocumentStore = () => {
 		clearHighlightReferences,
 		setHighlightHoveredDebounced,
 		setCommentHoveredDebounced,
-		scrollToComment
+		scrollToComment,
+		enablePersistence,
+		batchPin,
+		getBatchPinStatus,
+		pinAll,
+		getGlobalPinStatus
 	};
 };
 

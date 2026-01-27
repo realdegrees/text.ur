@@ -2,6 +2,7 @@ import os
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from email.utils import formataddr, make_msgid
 from functools import lru_cache
 from typing import Annotated, Any
 
@@ -11,6 +12,7 @@ from core.config import (
     DEBUG,
     EMAIL_PRESIGN_SECRET,
     JINJA_ENV,
+    SMTP_FROM_EMAIL,
     SMTP_PASSWORD,
     SMTP_PORT,
     SMTP_SERVER,
@@ -34,9 +36,9 @@ class EmailManager:
     def __init__(self) -> None:
         """Initialize the EmailManager, check SMTP configuration."""
         # Perform a connection verification automatically during initialization
-        if not all([SMTP_SERVER, SMTP_PORT, SMTP_USER, SMTP_PASSWORD]) and not DEBUG:
-            raise RuntimeError("Not all required SMTP configuration variables are set.")
-        
+        if not all([SMTP_SERVER, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, SMTP_FROM_EMAIL and "@" in SMTP_FROM_EMAIL]) and not DEBUG:
+            raise RuntimeError("Not all required SMTP configuration variables are set correctly.")
+
         self.verify_connection()
 
     def verify_connection(self) -> bool:
@@ -89,14 +91,18 @@ class EmailManager:
 
         # Build email
         msg: MIMEMultipart = MIMEMultipart("alternative")
-        msg["From"] = SMTP_USER
+        msg["From"] = formataddr(("text.ur", SMTP_FROM_EMAIL))
         msg["To"] = target_email
         msg["Subject"] = subject
+        msg["Reply-To"] = SMTP_FROM_EMAIL
+        msg["Message-ID"] = make_msgid(domain=SMTP_FROM_EMAIL.split("@")[1])
+        msg["X-Mailer"] = "text.ur"
+        msg["X-Auto-Response-Suppress"] = "OOF, DR, RN, NRN, AutoReply"
 
         mail_logger.info(f"\n[To: {target_email}]\n[Subject: {subject}]\n[Template: {template}]\n[Vars: {template_vars}]")
 
-        msg.attach(MIMEText(plain_text_body, "plain"))
-        msg.attach(MIMEText(html_body, "html"))
+        msg.attach(MIMEText(plain_text_body, "plain", "utf-8"))
+        msg.attach(MIMEText(html_body, "html", "utf-8"))
 
         # Send email
         try:
