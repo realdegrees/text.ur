@@ -48,7 +48,7 @@ jobs:
     name: Lint Backend (Ruff)
     needs: changes
     if: github.ref == 'refs/heads/main' || needs.changes.outputs.backend == 'true'
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -64,7 +64,7 @@ jobs:
     name: Lint Frontend (ESLint)
     needs: changes
     if: github.ref == 'refs/heads/main' || needs.changes.outputs.frontend == 'true'
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -152,7 +152,7 @@ jobs:
       (github.ref == 'refs/heads/main' || needs.changes.outputs.models == 'true') &&
       (needs.lint-backend.result == 'success' || needs.lint-backend.result == 'skipped') &&
       (needs.lint-frontend.result == 'success' || needs.lint-frontend.result == 'skipped')
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -199,7 +199,7 @@ jobs:
       (github.ref == 'refs/heads/main' || needs.changes.outputs.frontend == 'true') &&
       (needs.lint-frontend.result == 'success' || needs.lint-frontend.result == 'skipped') &&
       (needs.validate-types.result == 'success' || needs.validate-types.result == 'skipped')
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -302,7 +302,7 @@ jobs:
       (github.ref == 'refs/heads/main' || needs.changes.outputs.frontend == 'true') &&
       (needs.lint-frontend.result == 'success' || needs.lint-frontend.result == 'skipped') &&
       (needs.build-frontend.result == 'success' || needs.build-frontend.result == 'skipped')
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -336,7 +336,7 @@ jobs:
       (needs.lint-backend.result == 'success' || needs.lint-backend.result == 'skipped') &&
       (needs.validate-migrations.result == 'success' || needs.validate-migrations.result == 'skipped') &&
       (needs.test-backend.result == 'success' || needs.test-backend.result == 'skipped')
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
@@ -378,7 +378,7 @@ jobs:
       (needs.validate-types.result == 'success' || needs.validate-types.result == 'skipped') &&
       (needs.build-frontend.result == 'success' || needs.build-frontend.result == 'skipped') &&
       (needs.test-frontend.result == 'success' || needs.test-frontend.result == 'skipped')
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
