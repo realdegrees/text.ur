@@ -9,6 +9,7 @@
 	import CursorIcon from '~icons/material-symbols/near-me';
 	import ViewModeSelector from './ViewModeSelector.svelte';
 	import FilterList from './FilterList.svelte';
+	import DocumentTutorial from './DocumentTutorial.svelte';
 	import { documentStore, type FilterState } from '$lib/runes/document.svelte.js';
 	import { documentWebSocket } from '$lib/stores/documentWebSocket.svelte';
 	import { sessionStore } from '$lib/runes/session.svelte';
@@ -320,6 +321,7 @@
 			</div>
 		</div>
 
+		<DocumentTutorial {isExpanded} />
 		<!-- Active Users -->
 		<FilterList
 			placeholderLabel="No other users viewing"
