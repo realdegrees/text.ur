@@ -11,6 +11,7 @@ from core.config import (
     DEBUG,
     EMAIL_PRESIGN_SECRET,
     JINJA_ENV,
+    SMTP_FROM_EMAIL,
     SMTP_PASSWORD,
     SMTP_PORT,
     SMTP_SERVER,
@@ -34,9 +35,9 @@ class EmailManager:
     def __init__(self) -> None:
         """Initialize the EmailManager, check SMTP configuration."""
         # Perform a connection verification automatically during initialization
-        if not all([SMTP_SERVER, SMTP_PORT, SMTP_USER, SMTP_PASSWORD]) and not DEBUG:
+        if not all([SMTP_SERVER, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, SMTP_FROM_EMAIL]) and not DEBUG:
             raise RuntimeError("Not all required SMTP configuration variables are set.")
-        
+
         self.verify_connection()
 
     def verify_connection(self) -> bool:
@@ -89,7 +90,7 @@ class EmailManager:
 
         # Build email
         msg: MIMEMultipart = MIMEMultipart("alternative")
-        msg["From"] = SMTP_USER
+        msg["From"] = SMTP_FROM_EMAIL
         msg["To"] = target_email
         msg["Subject"] = subject
 

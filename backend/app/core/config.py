@@ -92,6 +92,8 @@ SMTP_SERVER = os.getenv("SMTP_SERVER")
 SMTP_PORT = int(os.getenv("SMTP_PORT")) if os.getenv("SMTP_PORT") else None
 # Default to True for most SMTP servers
 SMTP_TLS = os.getenv("SMTP_TLS", "True").lower() == "true"
+# Sender email address
+SMTP_FROM_EMAIL = os.getenv("SMTP_FROM_EMAIL")
 
 # APP
 JINJA_ENV = Environment(
