@@ -3,9 +3,11 @@ import type { CommentState } from '$lib/runes/document.svelte';
 
 /**
  * Fields from CommentState persisted across page refreshes.
- * Note: editInputContent is NOT persisted as it's just a draft while editing
  */
-type PersistedFields = Pick<CommentState, 'isPinned' | 'replyInputContent' | 'repliesExpanded'>;
+export type PersistedFields = Pick<
+	CommentState,
+	'isPinned' | 'replyInputContent' | 'repliesExpanded' | 'editInputContent' | 'isEditing' | 'isReplying'
+>;
 
 interface StorageEntry {
 	states: Record<number, Partial<PersistedFields>>;
@@ -59,6 +61,17 @@ export function saveCommentStates(
 		// Only save reply input content if it's not empty
 		if (state.replyInputContent && state.replyInputContent.trim()) {
 			persisted.replyInputContent = state.replyInputContent;
+		}
+
+		if (state.isReplying === true) {
+			persisted.isReplying = true;
+		}
+
+		// Only save edit state and content if currently editing
+		if (state.isEditing === true) {
+			persisted.isEditing = true;
+			// Save the content even if empty, as the user might be clearing it
+			persisted.editInputContent = state.editInputContent;
 		}
 
 		if (Object.keys(persisted).length > 0) statesObj[commentId] = persisted;

@@ -17,7 +17,8 @@ import { invalidateAll } from '$app/navigation';
 import {
 	loadCommentStates,
 	saveCommentStates,
-	cleanupExpiredCommentStates
+	cleanupExpiredCommentStates,
+	type PersistedFields
 } from '$lib/util/commentStorage';
 import { sessionStore } from '$lib/runes/session.svelte';
 
@@ -49,6 +50,7 @@ export interface CommentState {
 const createDocumentStore = () => {
 	const _comments = new SvelteMap<number, CommentRead>();
 	const commentStates: SvelteMap<number, CommentState> = new SvelteMap<number, CommentState>();
+	let cachedPersistedStates = new Map<number, Partial<PersistedFields>>();
 	let filterStates = $state<FilterState[]>([]);
 	let showCursors: boolean = $state<boolean>(true);
 	let loadedDocument: DocumentRead | undefined = $state<DocumentRead | undefined>(undefined);
@@ -60,6 +62,19 @@ const createDocumentStore = () => {
 	let mobileCommentPanelRef: any = $state<any>(null);
 	let activeCommentId: number | null = $state<number | null>(null);
 	let longPressCommentId: number | null = $state<number | null>(null);
+
+	// Helper to apply persisted state to a comment state object
+	const applyPersistedState = (state: CommentState, persisted: Partial<PersistedFields>) => {
+		if (persisted.isPinned !== undefined) state.isPinned = persisted.isPinned;
+		if (persisted.replyInputContent !== undefined)
+			state.replyInputContent = persisted.replyInputContent;
+		if (persisted.isReplying !== undefined) state.isReplying = persisted.isReplying;
+		if (persisted.repliesExpanded !== undefined)
+			state.repliesExpanded = persisted.repliesExpanded;
+		if (persisted.isEditing !== undefined) state.isEditing = persisted.isEditing;
+		if (persisted.editInputContent !== undefined)
+			state.editInputContent = persisted.editInputContent;
+	};
 
 	// Resets the store and loads root comments for a document
 	const setTopLevelComments = (comments: CommentRead[]) => {
@@ -80,6 +95,13 @@ const createDocumentStore = () => {
 					replyInputContent: '',
 					source: 'api'
 				});
+
+				// Apply persisted state if available
+				const persisted = cachedPersistedStates.get(cachedComment.id);
+				if (persisted) {
+					applyPersistedState(newState, persisted);
+				}
+
 				commentStates.set(cachedComment.id, newState);
 			}
 		});
@@ -257,6 +279,13 @@ const createDocumentStore = () => {
 				replyInputContent: '',
 				source: source
 			});
+
+			// Restore persisted state if available
+			const persisted = cachedPersistedStates.get(data.id);
+			if (persisted) {
+				applyPersistedState(newState, persisted);
+			}
+
 			commentStates.set(data.id, newState);
 		},
 		delete: (commentId: number, deleteState = false) => {
@@ -704,38 +733,29 @@ const createDocumentStore = () => {
 		let persistTimeout: ReturnType<typeof setTimeout> | null = null;
 		let hasLoadedPersistedStates = false;
 
+		// Effect 1: Load persisted states when user/doc changes
 		$effect(() => {
 			const userId = sessionStore.currentUser?.id;
 			const docId = loadedDocument?.id;
 
-			// Load persisted states once when both userId and docId become available
 			if (userId && docId && !hasLoadedPersistedStates) {
 				hasLoadedPersistedStates = true;
-				const persistedStates = loadCommentStates(userId, docId);
-
-				console.log('[documentStore] Applying persisted states:', {
-					userId,
-					docId,
-					persistedCount: persistedStates.size
-				});
+				cachedPersistedStates = loadCommentStates(userId, docId);
 
 				// Apply persisted states to existing comment states
-				for (const [commentId, persisted] of persistedStates) {
+				for (const [commentId, persisted] of cachedPersistedStates) {
 					const state = commentStates.get(commentId);
 					if (state) {
-						if (persisted.isPinned !== undefined) state.isPinned = persisted.isPinned;
-						if (persisted.replyInputContent !== undefined)
-							state.replyInputContent = persisted.replyInputContent;
-						if (persisted.repliesExpanded !== undefined)
-							state.repliesExpanded = persisted.repliesExpanded;
-
-						console.log('[documentStore] Applied persisted state to comment:', {
-							commentId,
-							persisted
-						});
+						applyPersistedState(state, persisted);
 					}
 				}
 			}
+		});
+
+		// Effect 2: Track changes and save
+		$effect(() => {
+			const userId = sessionStore.currentUser?.id;
+			const docId = loadedDocument?.id;
 
 			// Track changes to persisted fields by accessing them
 			for (const state of commentStates.values()) {
@@ -744,23 +764,24 @@ const createDocumentStore = () => {
 				// eslint-disable-next-line @typescript-eslint/no-unused-expressions
 				state.replyInputContent;
 				// eslint-disable-next-line @typescript-eslint/no-unused-expressions
+				state.isReplying;
+				// eslint-disable-next-line @typescript-eslint/no-unused-expressions
 				state.repliesExpanded;
+				// eslint-disable-next-line @typescript-eslint/no-unused-expressions
+				state.isEditing;
+				// eslint-disable-next-line @typescript-eslint/no-unused-expressions
+				state.editInputContent;
 			}
 
-			console.log('[documentStore] Persistence effect triggered:', {
-				userId,
-				docId,
-				stateCount: commentStates.size
-			});
-
-			// Debounce saves to avoid excessive writes
-			if (persistTimeout) clearTimeout(persistTimeout);
-			persistTimeout = setTimeout(() => {
-				if (userId && docId) {
+			// Only save if we have valid IDs and have finished loading
+			if (userId && docId && hasLoadedPersistedStates) {
+				// Debounce saves to avoid excessive writes
+				if (persistTimeout) clearTimeout(persistTimeout);
+				persistTimeout = setTimeout(() => {
 					console.log('[documentStore] Triggering save after debounce');
 					saveCommentStates(userId, docId, commentStates);
-				}
-			}, 500);
+				}, 500);
+			}
 		});
 	};
 
