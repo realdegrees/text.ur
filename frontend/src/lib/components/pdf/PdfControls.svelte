@@ -18,6 +18,8 @@
 	import TagIcon from '~icons/mdi/tag-outline';
 	import ActiveUsersIcon from '~icons/heroicons-outline/status-online';
 	import OfflineIcon from '~icons/oui/offline';
+	import PinIcon from '~icons/mdi/pin';
+	import PinOutlineIcon from '~icons/mdi/pin-outline';
 
 	interface Props {
 		minScale: number;
@@ -96,6 +98,10 @@
 
 	const anyFilterActive = $derived.by(() => {
 		return documentStore.filters.all.length > 0;
+	});
+
+	const globalPinStatus = $derived.by(() => {
+		return documentStore.getGlobalPinStatus();
 	});
 
 	// Get initials from username
@@ -255,21 +261,39 @@
 
 		<div class="flex w-full items-center {isExpanded ? 'justify-between' : 'justify-center'} gap-2">
 			{#if isExpanded}
-				<p class="font-medium text-text/80">Filters</p>
+				<p class="font-medium text-text/80">Filters & Pins</p>
 			{/if}
-			{#if anyFilterActive}
+			<div class="flex items-center gap-1">
 				<button
 					onclick={() => {
-						documentStore.filters.clear();
+						documentStore.pinAll(!globalPinStatus.anyPinned);
 					}}
-					title="Clear All Filters"
+					title={globalPinStatus.anyPinned ? 'Unpin all comments' : 'Pin all comments'}
 					class="cursor-pointer hover:scale-110"
 					in:scale
 					out:scale
 				>
-					<ClearFilterIcon class="text-text/50 hover:text-text/70 {iconSizeClass}" />
+					{#if globalPinStatus.anyPinned}
+						<PinIcon class="text-text/50 hover:text-text/70 {iconSizeClass}" />
+					{:else}
+						<PinOutlineIcon class="text-text/50 hover:text-text/70 {iconSizeClass}" />
+					{/if}
 				</button>
-			{/if}
+
+				{#if anyFilterActive}
+					<button
+						onclick={() => {
+							documentStore.filters.clear();
+						}}
+						title="Clear All Filters"
+						class="cursor-pointer hover:scale-110"
+						in:scale
+						out:scale
+					>
+						<ClearFilterIcon class="text-text/50 hover:text-text/70 {iconSizeClass}" />
+					</button>
+				{/if}
+			</div>
 		</div>
 
 		<!-- Active Users -->

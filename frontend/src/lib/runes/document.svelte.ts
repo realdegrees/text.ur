@@ -683,6 +683,81 @@ const createDocumentStore = () => {
 		});
 	};
 
+	const batchPin = (type: 'author' | 'tag', id: number, pinned: boolean): void => {
+		for (const [commentId, comment] of _comments.entries()) {
+			let matches = false;
+			if (type === 'author') {
+				matches = comment.user?.id === id;
+			} else if (type === 'tag') {
+				matches = comment.tags?.some((t) => t.id === id) ?? false;
+			}
+
+			if (matches) {
+				const state = commentStates.get(commentId);
+				if (state) {
+					state.isPinned = pinned;
+				}
+			}
+		}
+	};
+
+	const getBatchPinStatus = (
+		type: 'author' | 'tag',
+		id: number
+	): { allPinned: boolean; anyPinned: boolean } => {
+		let totalMatches = 0;
+		let pinnedMatches = 0;
+
+		for (const [commentId, comment] of _comments.entries()) {
+			let matches = false;
+			if (type === 'author') {
+				matches = comment.user?.id === id;
+			} else if (type === 'tag') {
+				matches = comment.tags?.some((t) => t.id === id) ?? false;
+			}
+
+			if (matches) {
+				totalMatches++;
+				const state = commentStates.get(commentId);
+				if (state?.isPinned) {
+					pinnedMatches++;
+				}
+			}
+		}
+
+		return {
+			allPinned: totalMatches > 0 && totalMatches === pinnedMatches,
+			anyPinned: pinnedMatches > 0
+		};
+	};
+
+	const pinAll = (pinned: boolean): void => {
+		for (const commentId of _comments.keys()) {
+			const state = commentStates.get(commentId);
+			if (state) {
+				state.isPinned = pinned;
+			}
+		}
+	};
+
+	const getGlobalPinStatus = (): { allPinned: boolean; anyPinned: boolean } => {
+		let totalMatches = 0;
+		let pinnedMatches = 0;
+
+		for (const commentId of _comments.keys()) {
+			totalMatches++;
+			const state = commentStates.get(commentId);
+			if (state?.isPinned) {
+				pinnedMatches++;
+			}
+		}
+
+		return {
+			allPinned: totalMatches > 0 && totalMatches === pinnedMatches,
+			anyPinned: pinnedMatches > 0
+		};
+	};
+
 	const handleWebSocketEvent = (
 		event:
 			| CommentEvent
@@ -858,7 +933,11 @@ const createDocumentStore = () => {
 		setHighlightHoveredDebounced,
 		setCommentHoveredDebounced,
 		scrollToComment,
-		enablePersistence
+		enablePersistence,
+		batchPin,
+		getBatchPinStatus,
+		pinAll,
+		getGlobalPinStatus
 	};
 };
 

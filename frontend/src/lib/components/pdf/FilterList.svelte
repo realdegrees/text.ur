@@ -5,6 +5,8 @@
 	import ChevronUp from '~icons/material-symbols/keyboard-arrow-up';
 	import type { Snippet } from 'svelte';
 	import ClearFilterIcon from '~icons/mdi/filter-remove-outline';
+	import PinIcon from '~icons/mdi/pin';
+	import PinOutlineIcon from '~icons/mdi/pin-outline';
 
 	type FilterData = TFilterState extends FilterState<infer U> ? U : never;
 
@@ -25,11 +27,18 @@
 	}: Props = $props();
 	let isExpanded = $state(true);
 
-	const handleClick = (filter: FilterState) => {
+	const handleVisibilityClick = (e: MouseEvent, filter: FilterState) => {
+		e.stopPropagation();
 		documentStore.filters.toggle(filter);
 		hoveredId = null;
 		justClickedId = filter.id; // Mark as just clicked to ignore spurious mouseenter from re-render
 	};
+
+	const handlePinClick = (e: MouseEvent, filter: FilterState, pin: boolean) => {
+		e.stopPropagation();
+		documentStore.batchPin(filter.type, filter.id, pin);
+	};
+
 	let hoveredId = $state<number | null>(null);
 	let justClickedId = $state<number | null>(null);
 </script>
@@ -101,9 +110,10 @@
 			>
 				{#each filters as filter (filter)}
 					{@const hovered = hoveredId === filter.id}
-					<button
-						class="flex w-full cursor-pointer items-center justify-between gap-2 rounded text-text/70 transition-colors hover:text-text"
-						onclick={() => handleClick(filter)}
+					{@const pinStatus = documentStore.getBatchPinStatus(filter.type, filter.id)}
+					<div
+						class="flex w-full items-center justify-between gap-2 rounded text-text/70 transition-colors hover:text-text"
+						role="group"
 						onmouseenter={() => {
 							// Ignore mouseenter if this filter was just clicked (prevents spurious hover from re-render)
 							if (justClickedId !== filter.id) {
@@ -121,20 +131,45 @@
 								: 'justify-center'}"
 						>
 							{@render item(filter as unknown as FilterState<FilterData>, compact)}
+
 							{#if compact}
-								<div
-									class="absolute -top-0.5 right-2 flex h-1.5 w-1.5 items-center justify-center rounded-full p-0.5"
+								<button
+									class="absolute -top-0.5 right-2 flex h-1.5 w-1.5 cursor-pointer items-center justify-center rounded-full p-0.5 hover:scale-125"
+									onclick={(e) => handleVisibilityClick(e, filter as unknown as FilterState)}
 								>
 									{@render filterStateElement(
 										hovered,
 										filter as unknown as FilterState<FilterData>
 									)}
-								</div>
+								</button>
 							{:else}
-								{@render filterStateElement(hovered, filter as unknown as FilterState<FilterData>)}
+								<div class="flex items-center gap-1">
+									<button
+										class="cursor-pointer rounded p-1 transition-colors hover:bg-text/10 hover:text-text"
+										title={pinStatus.anyPinned ? 'Unpin all' : 'Pin all'}
+										onclick={(e) =>
+											handlePinClick(e, filter as unknown as FilterState, !pinStatus.anyPinned)}
+									>
+										{#if pinStatus.anyPinned}
+											<PinIcon />
+										{:else}
+											<PinOutlineIcon class={hovered ? 'opacity-50' : 'opacity-0'} />
+										{/if}
+									</button>
+
+									<button
+										class="cursor-pointer rounded p-1 transition-colors hover:bg-text/10 hover:text-text"
+										onclick={(e) => handleVisibilityClick(e, filter as unknown as FilterState)}
+									>
+										{@render filterStateElement(
+											hovered,
+											filter as unknown as FilterState<FilterData>
+										)}
+									</button>
+								</div>
 							{/if}
 						</div>
-					</button>
+					</div>
 				{/each}
 			</div>
 		{/if}
