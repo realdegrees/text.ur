@@ -12,7 +12,7 @@ import type { Paginated } from '$api/pagination';
 import { notification } from '$lib/stores/notificationStore';
 import { type Annotation } from '$api/types';
 import { annotationSchema } from '$api/schemas';
-import { SvelteMap } from 'svelte/reactivity';
+import { SvelteMap, SvelteSet } from 'svelte/reactivity';
 import { invalidateAll } from '$app/navigation';
 import {
 	loadCommentStates,
@@ -53,7 +53,14 @@ const createDocumentStore = () => {
 	let cachedPersistedStates = new Map<number, Partial<PersistedFields>>();
 	let filterStates = $state<FilterState[]>([]);
 	let showCursors: boolean = $state<boolean>(true);
+	let shareCursor: boolean = $state<boolean>(true);
 	let loadedDocument: DocumentRead | undefined = $state<DocumentRead | undefined>(undefined);
+
+	// Pinning state tracking (for empty states and future comments)
+	const pinnedAuthors = new SvelteSet<number>();
+	const pinnedTags = new SvelteSet<number>();
+	let isGlobalPin = $state(false);
+
 	let documentScale: number = $state<number>(1);
 	let numPages: number = $state<number>(0);
 	let pdfViewerRef: HTMLElement | null = $state<HTMLElement | null>(null);
@@ -69,8 +76,7 @@ const createDocumentStore = () => {
 		if (persisted.replyInputContent !== undefined)
 			state.replyInputContent = persisted.replyInputContent;
 		if (persisted.isReplying !== undefined) state.isReplying = persisted.isReplying;
-		if (persisted.repliesExpanded !== undefined)
-			state.repliesExpanded = persisted.repliesExpanded;
+		if (persisted.repliesExpanded !== undefined) state.repliesExpanded = persisted.repliesExpanded;
 		if (persisted.isEditing !== undefined) state.isEditing = persisted.isEditing;
 		if (persisted.editInputContent !== undefined)
 			state.editInputContent = persisted.editInputContent;
@@ -245,6 +251,31 @@ const createDocumentStore = () => {
 				commentsLocal.update(data);
 				return;
 			}
+
+			// Check global pin status BEFORE adding the comment to see if we should auto-pin
+			const { allPinned } = getGlobalPinStatus();
+
+			// Also check if the author is pinned (if all comments by this author are pinned)
+			let authorPinned = false;
+			if (data.user?.id) {
+				const { allPinned: isAuthorPinned } = getBatchPinStatus('author', data.user.id);
+				authorPinned = isAuthorPinned;
+			}
+
+			// Also check if any of the tags are pinned
+			let tagsPinned = false;
+			if (data.tags && data.tags.length > 0) {
+				for (const tag of data.tags) {
+					const { allPinned: isTagPinned } = getBatchPinStatus('tag', tag.id);
+					if (isTagPinned) {
+						tagsPinned = true;
+						break;
+					}
+				}
+			}
+
+			const shouldPin = allPinned || authorPinned || tagsPinned;
+
 			// Increment num_replies in parent comment
 			const parentComment: CommentRead | undefined = data.parent_id
 				? _comments.get(data.parent_id)
@@ -277,7 +308,8 @@ const createDocumentStore = () => {
 				replies: [],
 				editInputContent: data.content ?? '',
 				replyInputContent: '',
-				source: source
+				source: source,
+				isPinned: shouldPin
 			});
 
 			// Restore persisted state if available
@@ -684,6 +716,15 @@ const createDocumentStore = () => {
 	};
 
 	const batchPin = (type: 'author' | 'tag', id: number, pinned: boolean): void => {
+		// Update persistent pin state for this group
+		if (type === 'author') {
+			if (pinned) pinnedAuthors.add(id);
+			else pinnedAuthors.delete(id);
+		} else if (type === 'tag') {
+			if (pinned) pinnedTags.add(id);
+			else pinnedTags.delete(id);
+		}
+
 		for (const [commentId, comment] of _comments.entries()) {
 			let matches = false;
 			if (type === 'author') {
@@ -725,6 +766,11 @@ const createDocumentStore = () => {
 			}
 		}
 
+		if (totalMatches === 0) {
+			const isSet = type === 'author' ? pinnedAuthors.has(id) : pinnedTags.has(id);
+			return { allPinned: isSet, anyPinned: isSet };
+		}
+
 		return {
 			allPinned: totalMatches > 0 && totalMatches === pinnedMatches,
 			anyPinned: pinnedMatches > 0
@@ -732,6 +778,13 @@ const createDocumentStore = () => {
 	};
 
 	const pinAll = (pinned: boolean): void => {
+		isGlobalPin = pinned;
+
+		if (!pinned) {
+			pinnedAuthors.clear();
+			pinnedTags.clear();
+		}
+
 		for (const commentId of _comments.keys()) {
 			const state = commentStates.get(commentId);
 			if (state) {
@@ -750,6 +803,10 @@ const createDocumentStore = () => {
 			if (state?.isPinned) {
 				pinnedMatches++;
 			}
+		}
+
+		if (totalMatches === 0) {
+			return { allPinned: isGlobalPin, anyPinned: isGlobalPin };
 		}
 
 		return {
@@ -914,6 +971,12 @@ const createDocumentStore = () => {
 		},
 		set showCursors(value) {
 			showCursors = value;
+		},
+		get shareCursor() {
+			return shareCursor;
+		},
+		set shareCursor(value) {
+			shareCursor = value;
 		},
 		get activeCommentId() {
 			return activeCommentId;

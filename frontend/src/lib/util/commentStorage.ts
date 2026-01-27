@@ -6,7 +6,12 @@ import type { CommentState } from '$lib/runes/document.svelte';
  */
 export type PersistedFields = Pick<
 	CommentState,
-	'isPinned' | 'replyInputContent' | 'repliesExpanded' | 'editInputContent' | 'isEditing' | 'isReplying'
+	| 'isPinned'
+	| 'replyInputContent'
+	| 'repliesExpanded'
+	| 'editInputContent'
+	| 'isEditing'
+	| 'isReplying'
 >;
 
 interface StorageEntry {

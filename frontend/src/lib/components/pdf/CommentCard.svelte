@@ -212,7 +212,7 @@
 {#snippet actionButtons()}
 	{#if commentState && canReply && !commentState.isReplying}
 		<button
-			class="flex items-center gap-1 rounded bg-primary/10 px-1.5 py-0.5 text-[11px] font-medium text-primary hover:bg-primary/20 transition-colors"
+			class="flex items-center gap-1 rounded bg-primary/10 px-1.5 py-0.5 text-[11px] font-medium text-primary transition-colors hover:bg-primary/20"
 			onclick={(e) => {
 				e.stopPropagation();
 				commentState.isReplying = true;
@@ -225,7 +225,7 @@
 	{/if}
 	{#if commentState && !commentState.isEditing && isAuthor}
 		<button
-			class="flex items-center gap-1 rounded bg-text/5 px-1.5 py-0.5 text-[11px] font-medium text-text/60 hover:bg-text/10 hover:text-text/80 transition-colors"
+			class="flex items-center gap-1 rounded bg-text/5 px-1.5 py-0.5 text-[11px] font-medium text-text/60 transition-colors hover:bg-text/10 hover:text-text/80"
 			onclick={(e) => {
 				e.stopPropagation();
 				editingTags = [...comment.tags];
@@ -242,7 +242,7 @@
 			{#snippet button(isOpen)}
 				{#if !isOpen}
 					<div
-						class="flex items-center gap-1 rounded bg-orange-500/10 px-1.5 py-0.5 text-[11px] font-medium text-orange-600 hover:bg-orange-500/20 hover:text-orange-700 transition-colors cursor-pointer"
+						class="flex cursor-pointer items-center gap-1 rounded bg-orange-500/10 px-1.5 py-0.5 text-[11px] font-medium text-orange-600 transition-colors hover:bg-orange-500/20 hover:text-orange-700"
 						title="Delete"
 					>
 						<DeleteIcon class="h-3 w-3" />
@@ -250,7 +250,7 @@
 					</div>
 				{:else}
 					<div
-						class="flex items-center gap-1 rounded bg-orange-500/20 px-1.5 py-0.5 text-[11px] font-medium text-orange-600 hover:bg-orange-500/30 transition-colors cursor-pointer"
+						class="flex cursor-pointer items-center gap-1 rounded bg-orange-500/20 px-1.5 py-0.5 text-[11px] font-medium text-orange-600 transition-colors hover:bg-orange-500/30"
 						title="Confirm Delete"
 					>
 						<CheckIcon class="h-3 w-3" />
@@ -261,9 +261,7 @@
 
 			{#snippet slideout()}
 				<!-- Slideout content if needed, though button itself handles confirmation state mostly -->
-				<div
-					class="flex items-center gap-1 rounded bg-orange-500/10 px-2 py-0.5"
-				>
+				<div class="flex items-center gap-1 rounded bg-orange-500/10 px-2 py-0.5">
 					<span class="text-xs text-orange-600">Delete?</span>
 				</div>
 			{/snippet}
@@ -441,7 +439,7 @@
 
 		<!-- Action Bar: Expand (Only visible when not replying) -->
 		{#if !commentState?.isReplying && comment.num_replies > 0}
-			<div class="flex items-center gap-3 {isTopLevel ? 'mb-1 mt-1' : 'mt-1'}">
+			<div class="flex items-center gap-3 {isTopLevel ? 'mt-1 mb-1' : 'mt-1'}">
 				{@render expandButton()}
 			</div>
 		{/if}
