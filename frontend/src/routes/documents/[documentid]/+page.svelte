@@ -23,6 +23,9 @@
 		documentStore.loadedDocument = data.document;
 	});
 
+	// Enable auto-persistence of comment states to localStorage
+	documentStore.enablePersistence();
+
 	// WebSocket connection lifecycle (separate effect with cleanup)
 	// Only re-runs when documentId actually changes, not on every data refresh
 	$effect(() => {

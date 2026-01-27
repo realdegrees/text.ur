@@ -14,6 +14,12 @@ import { type Annotation } from '$api/types';
 import { annotationSchema } from '$api/schemas';
 import { SvelteMap } from 'svelte/reactivity';
 import { invalidateAll } from '$app/navigation';
+import {
+	loadCommentStates,
+	saveCommentStates,
+	cleanupExpiredCommentStates
+} from '$lib/util/commentStorage';
+import { sessionStore } from '$lib/runes/session.svelte';
 
 export interface FilterState<T = 'author' | 'tag'> {
 	type: T;
@@ -691,6 +697,73 @@ const createDocumentStore = () => {
 		}
 	};
 
+	// Cleanup expired states on initialization
+	cleanupExpiredCommentStates();
+
+	const enablePersistence = () => {
+		let persistTimeout: ReturnType<typeof setTimeout> | null = null;
+		let hasLoadedPersistedStates = false;
+
+		$effect(() => {
+			const userId = sessionStore.currentUser?.id;
+			const docId = loadedDocument?.id;
+
+			// Load persisted states once when both userId and docId become available
+			if (userId && docId && !hasLoadedPersistedStates) {
+				hasLoadedPersistedStates = true;
+				const persistedStates = loadCommentStates(userId, docId);
+
+				console.log('[documentStore] Applying persisted states:', {
+					userId,
+					docId,
+					persistedCount: persistedStates.size
+				});
+
+				// Apply persisted states to existing comment states
+				for (const [commentId, persisted] of persistedStates) {
+					const state = commentStates.get(commentId);
+					if (state) {
+						if (persisted.isPinned !== undefined) state.isPinned = persisted.isPinned;
+						if (persisted.replyInputContent !== undefined)
+							state.replyInputContent = persisted.replyInputContent;
+						if (persisted.repliesExpanded !== undefined)
+							state.repliesExpanded = persisted.repliesExpanded;
+
+						console.log('[documentStore] Applied persisted state to comment:', {
+							commentId,
+							persisted
+						});
+					}
+				}
+			}
+
+			// Track changes to persisted fields by accessing them
+			for (const state of commentStates.values()) {
+				// eslint-disable-next-line @typescript-eslint/no-unused-expressions
+				state.isPinned;
+				// eslint-disable-next-line @typescript-eslint/no-unused-expressions
+				state.replyInputContent;
+				// eslint-disable-next-line @typescript-eslint/no-unused-expressions
+				state.repliesExpanded;
+			}
+
+			console.log('[documentStore] Persistence effect triggered:', {
+				userId,
+				docId,
+				stateCount: commentStates.size
+			});
+
+			// Debounce saves to avoid excessive writes
+			if (persistTimeout) clearTimeout(persistTimeout);
+			persistTimeout = setTimeout(() => {
+				if (userId && docId) {
+					console.log('[documentStore] Triggering save after debounce');
+					saveCommentStates(userId, docId, commentStates);
+				}
+			}, 500);
+		});
+	};
+
 	return {
 		get comments() {
 			return comments;
@@ -763,7 +836,8 @@ const createDocumentStore = () => {
 		clearHighlightReferences,
 		setHighlightHoveredDebounced,
 		setCommentHoveredDebounced,
-		scrollToComment
+		scrollToComment,
+		enablePersistence
 	};
 };
 

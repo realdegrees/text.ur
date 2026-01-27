@@ -18,9 +18,10 @@ const config = {
 				'default-src': ['self'],
 				'script-src': ['self'],
 				'style-src': ['self', 'unsafe-inline'],
-				'connect-src': process.env.NODE_ENV === 'development'
-					? ['self', 'wss:', 'ws:', 'http:', 'https:', 'blob:']
-					: ['self', 'wss:', 'https:', 'blob:'],
+				'connect-src':
+					process.env.NODE_ENV === 'development'
+						? ['self', 'wss:', 'ws:', 'http:', 'https:', 'blob:']
+						: ['self', 'wss:', 'https:', 'blob:'],
 				'img-src': ['self', 'data:', 'blob:'],
 				'worker-src': ['self', 'blob:'],
 				'object-src': ['none'],
