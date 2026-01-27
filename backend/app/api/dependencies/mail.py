@@ -97,11 +97,12 @@ class EmailManager:
         msg["Reply-To"] = SMTP_FROM_EMAIL
         msg["Message-ID"] = make_msgid(domain=SMTP_FROM_EMAIL.split("@")[1])
         msg["X-Mailer"] = "text.ur"
+        msg["X-Auto-Response-Suppress"] = "OOF, DR, RN, NRN, AutoReply"
 
         mail_logger.info(f"\n[To: {target_email}]\n[Subject: {subject}]\n[Template: {template}]\n[Vars: {template_vars}]")
 
-        msg.attach(MIMEText(plain_text_body, "plain"))
-        msg.attach(MIMEText(html_body, "html"))
+        msg.attach(MIMEText(plain_text_body, "plain", "utf-8"))
+        msg.attach(MIMEText(html_body, "html", "utf-8"))
 
         # Send email
         try:
