@@ -183,4 +183,13 @@ const apiProxy: Handle = ({ event, resolve }) => {
 	return resolve(event);
 };
 
-export const handle = sequence(apiProxy, dark, translation, user);
+const securityHeaders: Handle = async ({ event, resolve }) => {
+	const response = await resolve(event);
+	response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+	response.headers.set('X-Frame-Options', 'DENY');
+	response.headers.set('X-Content-Type-Options', 'nosniff');
+	response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+	return response;
+};
+
+export const handle = sequence(securityHeaders, apiProxy, dark, translation, user);
