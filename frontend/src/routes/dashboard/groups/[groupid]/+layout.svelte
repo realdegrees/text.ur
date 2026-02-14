@@ -20,7 +20,7 @@
 		condition: boolean;
 	};
 
-	const menuItems: MenuItem[] = [
+	const menuItems: MenuItem[] = $derived([
 		{ path: '/documents', i18nKey: $LL.group.documents, icon: DocumentIcon, condition: true },
 		{ path: '/memberships', i18nKey: $LL.group.members, icon: PeopleIcon, condition: true },
 		{
@@ -37,7 +37,7 @@
 			icon: SettingsIcon,
 			condition: sessionStore.validatePermissions(['administrator'])
 		}
-	];
+	]);
 
 	function isActive(itemPath: string): boolean {
 		const currentPath = page.url.pathname;
@@ -59,17 +59,19 @@
 		<!-- Navigation Tabs -->
 		<nav class="flex flex-row gap-2 border-b border-text/20">
 			{#each menuItems as item (item.path)}
-				<a
-					href="/dashboard/groups/{group?.id}{item.path}"
-					class="flex flex-row items-center gap-2 border-b-2 px-4 py-2 transition-all {isActive(
-						item.path
-					)
-						? 'border-primary text-primary'
-						: 'border-transparent text-text/70 hover:border-text/30 hover:text-text'}"
-				>
-					<item.icon class="h-5 w-5" />
-					<span>{item.i18nKey()}</span>
-				</a>
+				{#if item.condition}
+					<a
+						href="/dashboard/groups/{group?.id}{item.path}"
+						class="flex flex-row items-center gap-2 border-b-2 px-4 py-2 transition-all {isActive(
+							item.path
+						)
+							? 'border-primary text-primary'
+							: 'border-transparent text-text/70 hover:border-text/30 hover:text-text'}"
+					>
+						<item.icon class="h-5 w-5" />
+						<span>{item.i18nKey()}</span>
+					</a>
+				{/if}
 			{/each}
 		</nav>
 

@@ -7,7 +7,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		const verified = url.searchParams.get('verified');
 		const redirectParam = url.searchParams.get('redirect');
 
-		if (redirectParam) {
+		if (redirectParam && redirectParam.startsWith('/') && !redirectParam.startsWith('//')) {
 			const redirectUrl = verified ? `${redirectParam}?verified=true` : redirectParam;
 			throw redirect(303, redirectUrl);
 		}

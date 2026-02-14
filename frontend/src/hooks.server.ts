@@ -53,11 +53,16 @@ export const handleFetch: HandleFetch = async ({ request, fetch, event }) => {
 		headers.set('Cookie', cookieHeader);
 	}
 
+	// Buffer the body so it can be replayed on 401 retry
+	const bodyBuffer =
+		request.method !== 'GET' && request.method !== 'HEAD' && request.body
+			? await request.arrayBuffer()
+			: null;
+
 	request = new Request(request.url, {
 		method: request.method,
 		headers,
-		body: request.body,
-		duplex: request.body ? 'half' : undefined
+		body: bodyBuffer
 	} as RequestInit);
 
 	let response = await fetch(request);
@@ -90,22 +95,10 @@ export const handleFetch: HandleFetch = async ({ request, fetch, event }) => {
 				);
 				retryHeaders.set('Cookie', cookieHeader);
 
-				// Clone the original request body if it exists
-				// Note: We need to handle body cloning carefully
-				let retryBody = null;
-				if (request.method !== 'GET' && request.method !== 'HEAD') {
-					// For requests with bodies, we need to be careful as body can only be read once
-					// Since we've already sent the request once, we can't access the body again
-					// This is a limitation of the fetch API
-					// For most cases, this should work as the body is typically small
-					retryBody = request.body;
-				}
-
 				const retryRequest = new Request(request.url, {
 					method: request.method,
 					headers: retryHeaders,
-					body: retryBody,
-					duplex: retryBody ? 'half' : undefined
+					body: bodyBuffer
 				} as RequestInit);
 
 				response = await fetch(retryRequest);
