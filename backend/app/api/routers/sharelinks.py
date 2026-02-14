@@ -108,18 +108,10 @@ async def update_share_link(
 
     # Handle token rotation and membership deletions
     if share_link_update.rotate_token:
-        share_link.rotate_token()
-        # Delete all memberships that were using this token
-        # Query memberships associated with the sharelink relationship that match the token and group.
-        result = await db.exec(
-            select(Membership).join(ShareLink, Membership.share_link).where(
-                ShareLink.token == share_link.token,
-                Membership.group_id == group.id,
-            )
-        )
-        memberships: list[Membership] = result.all()
+        # Delete memberships BEFORE rotating, while old token is still in DB
         for membership in memberships:
             await db.delete(membership)
+        share_link.rotate_token()
 
     # Handle permission updates:
 

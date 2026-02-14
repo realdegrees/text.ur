@@ -22,7 +22,7 @@ def sanitize_content(value: str | None) -> str | None:
     # Remove null bytes which PostgreSQL doesn't accept
     value = value.replace('\x00', '')
     # Remove other control characters except newlines and tabs
-    value = ''.join(c for c in value if c in '\n\t\r' or (ord(c) >= 32 or ord(c) >= 127))
+    value = ''.join(c for c in value if c in '\n\t\r' or ord(c) >= 32)
     return value
 
 class BoundingBox(SQLModel):

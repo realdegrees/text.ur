@@ -2,6 +2,7 @@ from datetime import datetime
 from types import SimpleNamespace
 from uuid import uuid4
 
+import core.config as cfg
 from api.dependencies.authentication import Authenticate, BasicAuthentication
 from api.dependencies.database import Database
 from api.dependencies.events import Events
@@ -245,10 +246,27 @@ async def create_document(
 ) -> DocumentRead:
     """Create a new document entry and return presigned S3 upload URL."""
     document_create = DocumentCreate.model_validate_json(data)
+
+    # Validate file type and size
+    if file.content_type != "application/pdf":
+        raise AppException(
+            status_code=400,
+            error_code=AppErrorCode.INVALID_INPUT,
+            detail="Only PDF files are allowed.",
+        )
+    max_size_bytes = cfg.MAX_UPLOAD_SIZE_MB * 1024 * 1024
+    if file.size and file.size > max_size_bytes:
+        raise AppException(
+            status_code=400,
+            error_code=AppErrorCode.INVALID_INPUT,
+            detail=f"File size exceeds maximum of {cfg.MAX_UPLOAD_SIZE_MB}MB.",
+        )
+
     # Check if user is authorized if they are uploading to a group
     result = await db.exec(select(Membership).where(
         Membership.user_id == session_user.id,
-        Membership.group_id == document_create.group_id
+        Membership.group_id == document_create.group_id,
+        Membership.accepted == True,  # noqa: E712
     ))
     membership = result.first()
     if not membership:
@@ -259,14 +277,18 @@ async def create_document(
     # Generate unique S3 key
     s3_key = f"document-{uuid4()}.pdf"
 
-    # Create document entry
-    document = Document(s3_key=s3_key, size_bytes=file.size, **document_create.model_dump(exclude_unset=True))
-
-    db.add(document)
-    await db.commit()
-    await db.refresh(document)
-
+    # Upload to S3 first so we don't create orphaned DB records
     s3.upload(s3_key, file.file, content_type=file.content_type)
+
+    # Create document entry; delete S3 object if DB commit fails
+    document = Document(s3_key=s3_key, size_bytes=file.size, **document_create.model_dump(exclude_unset=True))
+    db.add(document)
+    try:
+        await db.commit()
+    except Exception:
+        s3.delete(s3_key)
+        raise
+    await db.refresh(document)
     return document
 
 @router.get("/{document_id}", response_model=DocumentRead)
@@ -323,7 +345,8 @@ async def transfer_document(
     result = await db.exec(
         select(Membership).where(
             Membership.user_id == session_user.id,
-            Membership.group_id == document_update.group_id
+            Membership.group_id == document_update.group_id,
+            Membership.accepted == True,  # noqa: E712
         )
     )
     target_membership = result.first()

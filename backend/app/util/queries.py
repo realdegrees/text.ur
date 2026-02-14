@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from http.client import HTTPException
 from typing import Any, Literal
 
+from fastapi import HTTPException
 from fastapi.datastructures import QueryParams
 from models.enums import Permission, ViewMode, Visibility
 from models.pagination import Paginated

@@ -230,6 +230,13 @@ class EventManager:
                 result = on_event(data)
                 if asyncio.iscoroutine(result):
                     await result
+            except RuntimeError as e:
+                # Sending to a closed websocket is expected during
+                # disconnect race conditions — log at debug and clean up.
+                events_logger.debug(
+                    "WebSocket send failed (likely disconnected): %s", e
+                )
+                to_remove.add(ws)
             except Exception as e:
                 events_logger.error("Error in on_event callback: %s", e, exc_info=True)
                 to_remove.add(ws)

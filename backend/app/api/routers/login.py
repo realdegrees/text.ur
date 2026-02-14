@@ -109,7 +109,8 @@ async def reset_password(db: Database, mail: Mail, email: str = Body(..., embed=
     result = await db.exec(query)
     user: User | None = result.first()
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        # Return silently to avoid leaking whether an email is registered
+        return
     # Generate token with email and password hash (for one-time use)
     serializer = URLSafeTimedSerializer(cfg.EMAIL_PRESIGN_SECRET)
     token_data = {"email": email, "pwd": user.password[:16]}

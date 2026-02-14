@@ -33,7 +33,7 @@ class UserPrivate(UserRead):
 
 class UserUpdate(SQLModel):
     username: str | None = Field(default=None, max_length=MAX_USERNAME_LENGTH)
-    new_password: str | None = Field(default=None, max_length=MAX_PASSWORD_LENGTH)
+    new_password: str | None = Field(default=None, min_length=MIN_PASSWORD_LENGTH, max_length=MAX_PASSWORD_LENGTH)
     old_password: str | None = Field(default=None, max_length=MAX_PASSWORD_LENGTH)
     email: str | None = Field(default=None, max_length=MAX_EMAIL_LENGTH)
     first_name: str | None = Field(default=None, max_length=MAX_FIRST_NAME_LENGTH)

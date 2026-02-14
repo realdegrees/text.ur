@@ -153,7 +153,7 @@ async def transfer_ownership(
     current_owner_membership = result.first()
 
     current_owner_membership.is_owner = False
-    current_owner_membership.permissions = list(Permission.ADMINISTRATOR)
+    current_owner_membership.permissions = [Permission.ADMINISTRATOR]
     transfer_membership.is_owner = True
 
     db.add(current_owner_membership)
