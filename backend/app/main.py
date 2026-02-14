@@ -38,34 +38,16 @@ from fastapi.responses import (
 from fastapi.staticfiles import StaticFiles
 from models.app_error import AppError
 from models.enums import AppErrorCode
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 from util.api_router import APIRouter
+from util.ip import get_client_ip
 from util.openapi import custom_openapi
 
 routers = [RegisterRouter, LoginRouter, LogoutRouter, UserRouter, MembershipRouter, GroupRouter, ShareLinkRouter, DocumentsRouter, CommentRouter, TagRouter]
 
 logger = get_logger("requests")
 app_logger = get_logger("app")
-
-def get_client_ip(request: Request) -> str:
-    """Extract client IP from proxy headers or direct connection.
-
-    Checks headers in order:
-    1. X-Forwarded-For (set by reverse proxies like Traefik)
-    2. X-Real-IP (alternative proxy header)
-    3. Direct connection IP (fallback for non-proxied requests)
-    """
-    # X-Forwarded-For contains comma-separated list, first is original client
-    forwarded_for = request.headers.get("X-Forwarded-For")
-    if forwarded_for:
-        return forwarded_for.split(",")[0].strip()
-
-    # Fallback to X-Real-IP
-    real_ip = request.headers.get("X-Real-IP")
-    if real_ip:
-        return real_ip
-
-    # Last resort: direct connection (works for non-proxied requests)
-    return request.client.host if request.client else "unknown"
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
@@ -112,6 +94,32 @@ app = FastAPI(
     docs_url=None,  # Swagger doc is manually adjusted at /docs below
     redoc_url=None,  # Redoc is disabled
 )
+
+# --- Rate Limiting ---
+from core.rate_limit import limiter  # noqa: E402
+
+app.state.limiter = limiter
+
+
+@app.exception_handler(RateLimitExceeded)
+async def rate_limit_handler(
+    request: Request, exc: RateLimitExceeded
+) -> JSONResponse:
+    """Return a structured AppError when a rate limit is exceeded."""
+    retry_after = exc.detail.split("per")[0].strip() if exc.detail else "later"
+    return JSONResponse(
+        status_code=429,
+        content=AppError(
+            status_code=429,
+            error_code=AppErrorCode.RATE_LIMITED,
+            detail=(
+                f"Rate limit exceeded ({exc.detail}). "
+                f"Please try again later."
+            ),
+        ).model_dump(),
+        headers={"Retry-After": retry_after},
+    )
+
 
 @app.exception_handler(AppException)
 async def app_exception_handler(request: Request, exc: AppException) -> JSONResponse:
@@ -163,6 +171,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from slowapi.middleware import SlowAPIMiddleware  # noqa: E402
+
+app.add_middleware(SlowAPIMiddleware)
+
 
 @app.middleware("http")
 async def add_security_headers(request: Request, call_next: Callable) -> Response:
@@ -176,6 +188,14 @@ async def add_security_headers(request: Request, call_next: Callable) -> Respons
 
     if not request.url.path.startswith(("/api/docs", "/api/openapi.json")):
          response.headers["Content-Security-Policy"] = "default-src 'self'; frame-ancestors 'none';"
+
+    # Cache-Control: endpoints may override via their own headers
+    if request.url.path == "/api/health":
+        response.headers.setdefault("Cache-Control", "no-cache")
+    elif request.url.path.startswith("/api/"):
+        response.headers.setdefault(
+            "Cache-Control", "private, no-store"
+        )
 
     return response
 

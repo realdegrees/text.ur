@@ -2,7 +2,7 @@ import asyncio
 import contextlib
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path as PathLibPath
 from uuid import uuid4
 
@@ -26,29 +26,9 @@ from pydantic import create_model as internal_model
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import SQLModel, select
 from util.api_router import APIRouter
+from util.ip import get_client_ip
 
 logger = get_logger("app")
-
-def get_websocket_client_ip(websocket: WebSocket) -> str:
-    """Extract client IP from WebSocket proxy headers or direct connection.
-
-    Checks headers in order:
-    1. X-Forwarded-For (set by reverse proxies like Traefik)
-    2. X-Real-IP (alternative proxy header)
-    3. Direct connection IP (fallback for non-proxied requests)
-    """
-    # X-Forwarded-For contains comma-separated list, first is original client
-    forwarded_for = websocket.headers.get("X-Forwarded-For")
-    if forwarded_for:
-        return forwarded_for.split(",")[0].strip()
-
-    # Fallback to X-Real-IP
-    real_ip = websocket.headers.get("X-Real-IP")
-    if real_ip:
-        return real_ip
-
-    # Last resort: direct connection (works for non-proxied requests)
-    return websocket.client.host if websocket.client else "unknown"
 
 # Load the WebSocket description template
 WEBSOCKET_TEMPLATE_PATH = PathLibPath(__file__).parent.parent / "docs" / "websocket.jinja"
@@ -137,7 +117,7 @@ def get_events_router[RelatedResourceModel: BaseModel](  # noqa: C901
         websocket: WebSocket, events: WebsocketEvents, resource_id: str, user: WebsocketAuthentication
     ) -> None:
         """Connect a client to the event stream."""
-        client_ip = get_websocket_client_ip(websocket)
+        client_ip = get_client_ip(websocket)
         logger.info(
             f"[WS] Connection attempt for resource_id={resource_id}, user={user.id if user else None}, ip={client_ip}"
         )
@@ -202,7 +182,7 @@ def get_events_router[RelatedResourceModel: BaseModel](  # noqa: C901
                     "user_id": user.id,
                     "username": user.username,
                     "connection_id": connection_id,
-                    "connected_at": datetime.now().isoformat()
+                    "connected_at": datetime.now(UTC).isoformat()
                 },
                 "originating_connection_id": connection_id
             }
@@ -338,7 +318,7 @@ def get_events_router[RelatedResourceModel: BaseModel](  # noqa: C901
                     if "event_id" not in event_data:
                         event_data["event_id"] = str(uuid4())
                     if "published_at" not in event_data:
-                        event_data["published_at"] = datetime.now().isoformat()
+                        event_data["published_at"] = datetime.now(UTC).isoformat()
                     if "resource" not in event_data:
                         event_data["resource"] = None
                     if "resource_id" not in event_data:

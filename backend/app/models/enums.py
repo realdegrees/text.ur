@@ -83,6 +83,9 @@ class AppErrorCode(str, Enum):
     CANNOT_REMOVE_PERMISSION_REASON_DEFAULT_GROUP = "cannot_remove_permission_reason_default_group"  # use when trying to remove a permission that is included in the group's default permission reason
     CANNOT_REMOVE_PERMISSION_REASON_SHARELINK = "cannot_remove_permission_reason_sharelink"  # use when trying to remove a permission that is included in the related sharelink's permission reason
     
+    # Rate Limiting
+    RATE_LIMITED = "rate_limited"  # use when a client has exceeded the request rate limit
+
     # Registration Errors
     USERNAME_TAKEN = "username_taken"  # use when the username is already registered
     EMAIL_TAKEN = "email_taken"  # use when the email is already registered

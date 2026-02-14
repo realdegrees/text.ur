@@ -98,7 +98,8 @@ const de = {
 		not_in_group: 'Sie sind kein Mitglied dieser Gruppe',
 		email_not_verified: 'Bitte bestätigen Sie Ihre E-Mail-Adresse, bevor Sie fortfahren',
 		membership_not_found: 'Mitgliedschaft nicht gefunden',
-		owner_cannot_leave_group: 'Der Gruppeninhaber kann die Gruppe nicht verlassen'
+		owner_cannot_leave_group: 'Der Gruppeninhaber kann die Gruppe nicht verlassen',
+		rate_limited: 'Zu viele Anfragen. Bitte versuchen Sie es in Kürze erneut.'
 	},
 	invitations: 'Einladungen',
 	continue: 'Weiter',

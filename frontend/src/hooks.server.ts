@@ -3,6 +3,7 @@ import type { Handle, HandleFetch } from '@sveltejs/kit';
 import { env } from '$env/dynamic/private';
 import { loadAllLocales } from '$i18n/i18n-util.sync';
 import { detectLocale } from '$i18n/i18n-util';
+import { userCache } from '$lib/server/cache';
 import { forwardCookies } from '$lib/server/cookies';
 
 const baseUrl = env.INTERNAL_BACKEND_BASEURL;
@@ -37,7 +38,17 @@ export const handleFetch: HandleFetch = async ({ request, fetch, event }) => {
 	const forwardedProto = event.request.headers.get('X-Forwarded-Proto');
 	const forwardedHost = event.request.headers.get('X-Forwarded-Host');
 
-	if (forwardedFor) headers.set('X-Forwarded-For', forwardedFor);
+	if (forwardedFor) {
+		headers.set('X-Forwarded-For', forwardedFor);
+	} else {
+		// Fall back to adapter-node's resolved client address when no
+		// X-Forwarded-For header was passed through (e.g. internal routing)
+		try {
+			headers.set('X-Forwarded-For', event.getClientAddress());
+		} catch {
+			// getClientAddress() throws if ADDRESS_HEADER is not configured
+		}
+	}
 	if (realIp) headers.set('X-Real-IP', realIp);
 	if (forwardedProto) headers.set('X-Forwarded-Proto', forwardedProto);
 	if (forwardedHost) headers.set('X-Forwarded-Host', forwardedHost);
@@ -112,20 +123,41 @@ export const handleFetch: HandleFetch = async ({ request, fetch, event }) => {
 /**
  * Fetches the user info from the backend and attaches it to the SvelteKit session store.
  */
+/** Allow ETag and Cache-Control headers to pass through to universal load functions during SSR. */
+const serializeOptions = {
+	filterSerializedResponseHeaders: (name: string) =>
+		['etag', 'cache-control'].includes(name.toLowerCase())
+};
+
 const user: Handle = async ({ event, resolve }) => {
 	if (event.url.pathname.startsWith('/api')) return resolve(event); // Only needed for server side requests
+
+	const accessToken = event.cookies.get('access_token');
+
+	// Check TTL cache first (keyed by access token)
+	if (accessToken) {
+		const cached = userCache.get(accessToken) as typeof event.locals.sessionUser;
+		if (cached) {
+			event.locals.sessionUser = cached;
+			return resolve(event, serializeOptions);
+		}
+	}
 
 	try {
 		const userResponse = await event.fetch(`${baseUrl}/api/users/me`);
 		if (userResponse.ok) {
-			event.locals.sessionUser = await userResponse.json();
+			const userData = await userResponse.json();
+			event.locals.sessionUser = userData;
+			if (accessToken) {
+				userCache.set(accessToken, userData);
+			}
 		}
 	} catch (e) {
 		// Failed to fetch user, continue without user
 		console.log('Unable to fetch user:', e);
 	}
 
-	return resolve(event);
+	return resolve(event, serializeOptions);
 };
 /**
  * Sets the dark mode based on the user's cookie.

@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from types import SimpleNamespace
 from uuid import uuid4
 
@@ -21,6 +21,7 @@ from fastapi import (
     File,
     Form,
     HTTPException,
+    Request,
     Response,
     UploadFile,
     WebSocket,
@@ -306,16 +307,41 @@ def slugify(text: str) -> str:
 
 @router.get("/{document_id}/file")
 async def get_document_file(
+    request: Request,
     s3: S3,
     _: User = Authenticate(guards=[Guard.document_access()]),
     document: Document = Resource(Document, param_alias="document_id"),
- ) -> StreamingResponse:
-    """Download the document file from S3 and return it."""
-    # Use the streaming helper to get an iterator of bytes from S3.
-    iterator = s3.download_stream(document.s3_key)
+) -> Response:
+    """Download the document file from S3 and return it.
 
-    headers = {"Content-Disposition": f"attachment; filename=\"{slugify(document.name)}.pdf\""}
-    return StreamingResponse(iterator, media_type="application/pdf", headers=headers)
+    Supports conditional requests via ETag/If-None-Match to avoid
+    re-downloading unchanged files.
+    """
+    # Cheap HEAD request to get S3 metadata (including ETag)
+    metadata = s3.metadata(document.s3_key)
+    etag = (
+        metadata.get("ETag", "").strip('"') if metadata else ""
+    )
+
+    # Check conditional request header
+    if_none_match = request.headers.get("If-None-Match", "").strip('"')
+    if etag and if_none_match == etag:
+        return Response(status_code=304)
+
+    # Stream the file from S3 with caching headers
+    iterator = s3.download_stream(document.s3_key)
+    headers = {
+        "Content-Disposition": (
+            f'attachment; filename="{slugify(document.name)}.pdf"'
+        ),
+        "Cache-Control": "private, max-age=3600",
+    }
+    if etag:
+        headers["ETag"] = f'"{etag}"'
+
+    return StreamingResponse(
+        iterator, media_type="application/pdf", headers=headers
+    )
 
 @router.get("/", response_model=Paginated[DocumentRead], response_class=ExcludableFieldsJSONResponse)
 async def list_documents(
@@ -399,7 +425,7 @@ async def update_document(
     if document.view_mode != old_view_mode:
         view_mode_event = Event(
             event_id=uuid4(),
-            published_at=datetime.now(),
+            published_at=datetime.now(UTC),
             payload=ViewModeChangedEvent(
                 document_id=document.id,
                 view_mode=document.view_mode,

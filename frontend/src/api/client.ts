@@ -34,6 +34,8 @@ class ApiClient {
 	private baseUrl: string = env.PUBLIC_BACKEND_BASEURL;
 	private connectionId: string = browser ? generateConnectionId() : '';
 	private isRefreshing = false;
+	/** ETag cache for download() — maps URL to { etag, data } */
+	private etagCache = new Map<string, { etag: string; data: ArrayBuffer }>();
 
 	/**
 	 * Get the configured base URL.
@@ -334,10 +336,18 @@ class ApiClient {
 		const actualFetch = fetchFnOverride ?? fetch!;
 		const url = this.buildUrl(input);
 
+		// Attach If-None-Match header when we have a cached ETag
+		const cached = this.etagCache.get(url);
+		const etagHeaders: Record<string, string> = {};
+		if (cached) {
+			etagHeaders['If-None-Match'] = `"${cached.etag}"`;
+		}
+
 		const requestInit: RequestInit = {
 			...init,
 			method: 'GET',
-			credentials: init.credentials || 'include'
+			credentials: init.credentials || 'include',
+			headers: { ...init.headers, ...etagHeaders }
 		};
 
 		let response: Response;
@@ -366,11 +376,23 @@ class ApiClient {
 			}
 		}
 
+		// 304 Not Modified — return cached data
+		if (response.status === 304 && cached) {
+			return { success: true, data: cached.data };
+		}
+
 		if (!response.ok) {
 			return this.handleErrorResponse(response);
 		}
 
 		const arrayBuffer = await response.arrayBuffer();
+
+		// Cache the response with its ETag for future conditional requests
+		const responseEtag = response.headers.get('ETag')?.replace(/"/g, '');
+		if (responseEtag) {
+			this.etagCache.set(url, { etag: responseEtag, data: arrayBuffer });
+		}
+
 		return { success: true, data: arrayBuffer };
 	}
 

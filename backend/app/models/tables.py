@@ -1,9 +1,9 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import ClassVar, Optional
 from uuid import UUID, uuid4
 
 from nanoid import generate
-from sqlalchemy import Boolean, Column, String
+from sqlalchemy import Boolean, Column, DateTime, String
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.ext.hybrid import hybrid_property
@@ -316,11 +316,15 @@ class ShareLink(BaseModel, table=True):
         default=False, sa_column=Column(Boolean, server_default="false"))
 
     token: str = Field(
-        default_factory=func.gen_random_uuid,
+        default_factory=lambda: str(uuid4())[:8],
         sa_column=Column(String, unique=True, index=True)
     )
 
-    expires_at: datetime | None = Field(default=None, nullable=True)
+    expires_at: datetime | None = Field(
+        default=None,
+        nullable=True,
+        sa_type=DateTime(timezone=True),
+    )
     # e.g. "Link for review team"
     label: str | None = Field(default=None, nullable=True)
 
@@ -334,7 +338,7 @@ class ShareLink(BaseModel, table=True):
         """Return whether the share link is currently valid (Python-side)."""
         if self.expires_at is None:
             return False  # If no expiry date, the link is not expired
-        return datetime.now(self.expires_at.tzinfo) > self.expires_at
+        return datetime.now(UTC) > self.expires_at
 
     @is_expired.expression
     def is_expired(cls) -> ColumnElement[bool]:

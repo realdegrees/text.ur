@@ -343,6 +343,10 @@ type RootTranslation = {
 		 * G​r​o​u​p​ ​o​w​n​e​r​ ​c​a​n​n​o​t​ ​l​e​a​v​e​ ​t​h​e​ ​g​r​o​u​p
 		 */
 		owner_cannot_leave_group: string
+		/**
+		 * T​o​o​ ​m​a​n​y​ ​r​e​q​u​e​s​t​s​.​ ​P​l​e​a​s​e​ ​t​r​y​ ​a​g​a​i​n​ ​s​h​o​r​t​l​y​.
+		 */
+		rate_limited: string
 	}
 	/**
 	 * I​n​v​i​t​a​t​i​o​n​s
@@ -827,6 +831,10 @@ export type TranslationFunctions = {
 		 * Group owner cannot leave the group
 		 */
 		owner_cannot_leave_group: () => LocalizedString
+		/**
+		 * Too many requests. Please try again shortly.
+		 */
+		rate_limited: () => LocalizedString
 	}
 	/**
 	 * Invitations

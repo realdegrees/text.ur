@@ -2,7 +2,7 @@ import asyncio
 import contextlib
 import json
 from collections.abc import Callable
-from datetime import datetime
+from datetime import UTC, datetime
 from functools import lru_cache
 from typing import Annotated, Any, Literal
 
@@ -110,7 +110,7 @@ class EventManager:
             user_id=user_id,
             username=username,
             connection_id=connection_id,
-            connected_at=datetime.now().isoformat()
+            connected_at=datetime.now(UTC).isoformat()
         )
         
         # Cache and merge to avoid race condition
