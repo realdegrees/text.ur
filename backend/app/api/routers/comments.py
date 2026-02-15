@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import uuid4
 
 from api.dependencies.authentication import Authenticate, BasicAuthentication
@@ -66,7 +66,7 @@ async def create_comment(
     # Broadcast creation event
     event = Event(
         event_id=uuid4(),
-        published_at=datetime.now(),
+        published_at=datetime.now(UTC),
         payload=CommentRead.model_validate(comment),
         resource_id=comment.id,
         resource="comment",
@@ -112,7 +112,7 @@ async def update_comment(
     # Broadcast update event with old_visibility for visibility change detection
     event = Event(
         event_id=uuid4(),
-        published_at=datetime.now(),
+        published_at=datetime.now(UTC),
         payload=CommentRead.model_validate(comment),
         resource_id=comment.id,
         resource="comment",
@@ -152,7 +152,7 @@ async def delete_comment(
     # Broadcast delete event
     event = Event(
         event_id=uuid4(),
-        published_at=datetime.now(),
+        published_at=datetime.now(UTC),
         payload=comment_payload,
         resource_id=comment_id,
         resource="comment",
@@ -237,7 +237,7 @@ async def update_comment_tags(
     # Broadcast single update event
     event = Event(
         event_id=uuid4(),
-        published_at=datetime.now(),
+        published_at=datetime.now(UTC),
         payload=CommentRead.model_validate(comment),
         resource_id=comment.id,
         resource="comment",

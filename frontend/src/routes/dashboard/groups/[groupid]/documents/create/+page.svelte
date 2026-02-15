@@ -3,6 +3,7 @@
 	import { visibilitySchema } from '$api/schemas';
 	import { goto } from '$app/navigation';
 	import { api } from '$api/client';
+	import { env } from '$env/dynamic/public';
 	import LL from '$i18n/i18n-svelte';
 	import UploadIcon from '~icons/material-symbols/upload-file-outline';
 	import DocumentIcon from '~icons/material-symbols/description-outline';
@@ -14,7 +15,9 @@
 	import { sessionStore } from '$lib/runes/session.svelte.js';
 	import MarkdownTextEditor from '$lib/components/pdf/MarkdownTextEditor.svelte';
 
-	const MAX_FILE_SIZE_MB: number = 50;
+	const MAX_FILE_SIZE_MB: number = env.PUBLIC_MAX_UPLOAD_SIZE_MB
+		? parseInt(env.PUBLIC_MAX_UPLOAD_SIZE_MB)
+		: 50;
 	const MAX_FILE_SIZE_BYTES: number = MAX_FILE_SIZE_MB * 1024 * 1024;
 	const ALLOWED_FILE_TYPE: string = 'application/pdf';
 

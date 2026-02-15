@@ -31,6 +31,9 @@ services:
     restart: always
     env_file:
       - .env
+    environment:
+      - ADDRESS_HEADER=X-Forwarded-For
+      - XFF_DEPTH=1
     ports:
       - "3000:3000"
     depends_on:

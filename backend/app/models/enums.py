@@ -1,8 +1,8 @@
-from enum import Enum
+from enum import Enum, StrEnum
 
 
 # ENUMS
-class ReactionType(str, Enum):
+class ReactionType(StrEnum):
     """Types of reactions users can give to comments."""
 
     LIKE = "like"
@@ -12,7 +12,7 @@ class ReactionType(str, Enum):
     FIRE = "fire"
 
 
-class Permission(str, Enum):
+class Permission(StrEnum):
     """Available permissions for group members."""
 
     ADMINISTRATOR = "administrator"
@@ -39,7 +39,7 @@ class Permission(str, Enum):
     # Tags
     MANAGE_TAGS = "manage_tags"
 
-class ViewMode(str, Enum):
+class ViewMode(StrEnum):
     """Document view mode settings.
 
     RESTRICTED: Only owner, admins, and users with VIEW_RESTRICTED_COMMENTS can see comments
@@ -50,14 +50,14 @@ class ViewMode(str, Enum):
     PUBLIC = "public"
 
 
-class Visibility(str, Enum):
+class Visibility(StrEnum):
     """Visibility levels for comments."""
 
     PRIVATE = "private"
     RESTRICTED = "restricted"
     PUBLIC = "public"
 
-class AppErrorCode(str, Enum):
+class AppErrorCode(StrEnum):
     """Types of custom application exceptions."""
 
     UNKNOWN_ERROR = "unknown_error"
@@ -83,6 +83,9 @@ class AppErrorCode(str, Enum):
     CANNOT_REMOVE_PERMISSION_REASON_DEFAULT_GROUP = "cannot_remove_permission_reason_default_group"  # use when trying to remove a permission that is included in the group's default permission reason
     CANNOT_REMOVE_PERMISSION_REASON_SHARELINK = "cannot_remove_permission_reason_sharelink"  # use when trying to remove a permission that is included in the related sharelink's permission reason
     
+    # Rate Limiting
+    RATE_LIMITED = "rate_limited"  # use when a client has exceeded the request rate limit
+
     # Registration Errors
     USERNAME_TAKEN = "username_taken"  # use when the username is already registered
     EMAIL_TAKEN = "email_taken"  # use when the email is already registered

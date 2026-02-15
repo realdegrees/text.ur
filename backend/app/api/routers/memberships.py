@@ -279,11 +279,12 @@ async def promote_guest_to_member(
         )
     )
     membership: Membership | None = result.first()
-    db.add(membership)
 
     if not membership:
         raise HTTPException(
             status_code=404, detail="Target user is not a member of this group")
+
+    db.add(membership)
 
     membership.sharelink_id = None
     await db.commit()

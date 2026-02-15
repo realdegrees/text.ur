@@ -5,6 +5,7 @@
 	import AnnotationLayer from './AnnotationLayer.svelte';
 	import TextSelectionHandler from './TextSelectionHandler.svelte';
 	import CommentSidebar from './CommentSidebar.svelte';
+	import ConnectionLines from './ConnectionLines.svelte';
 	import MobileCommentPanel from './MobileCommentPanel.svelte';
 	import PdfControls from './PdfControls.svelte';
 	import UserCursors from './UserCursors.svelte';
@@ -244,11 +245,13 @@
 			/>
 			<!-- Right content column: Document Info above the PDF+Sidebar -->
 			<div class="flex flex-1 flex-col overflow-y-auto">
-				<!-- Document Info Section (above PDF and Sidebar only) -->
-				{@render documentInfo()}
+				<!-- Document Info Section (above PDF and Sidebar only, z-40 to stay above connection lines) -->
+				<div class="relative z-40">
+					{@render documentInfo()}
+				</div>
 
 				<!-- PDF Viewer and Sidebar Row -->
-				<div class="flex flex-1 overflow-hidden">
+				<div class="flex flex-1 gap-4 overflow-hidden">
 					<!-- PDF Viewer Area - shrinks to fit content when zoomed out -->
 					<div
 						class="relative h-full overflow-hidden bg-text/5 transition-[width] duration-150"
@@ -276,7 +279,7 @@
 
 					<!-- Right Sidebar - Comments (expands to fill remaining space) -->
 					<div
-						class="relative min-w-72 flex-1 overflow-hidden border-l border-text/10 bg-background"
+						class="relative min-w-72 flex-1 overflow-hidden bg-background"
 						onwheel={handleCommentsWheel}
 						role="complementary"
 						bind:this={sidebarContainer}
@@ -286,6 +289,9 @@
 				</div>
 			</div>
 		</div>
+
+		<!-- Shared connection lines overlay (desktop) -->
+		<ConnectionLines {scrollTop} />
 	{/if}
 
 	<!-- Mobile PDF viewer and bottom comment panel (mobile-only) -->
@@ -314,7 +320,10 @@
 			</div>
 		</div>
 
-		<MobileCommentPanel {scrollTop} bind:this={mobileCommentPanel} />
+		<MobileCommentPanel bind:this={mobileCommentPanel} />
+
+		<!-- Shared connection lines overlay (mobile) -->
+		<ConnectionLines {scrollTop} />
 	{/if}
 </div>
 

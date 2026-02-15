@@ -2,7 +2,7 @@ import asyncio
 import contextlib
 import json
 from collections.abc import Callable
-from datetime import datetime
+from datetime import UTC, datetime
 from functools import lru_cache
 from typing import Annotated, Any, Literal
 
@@ -110,7 +110,7 @@ class EventManager:
             user_id=user_id,
             username=username,
             connection_id=connection_id,
-            connected_at=datetime.now().isoformat()
+            connected_at=datetime.now(UTC).isoformat()
         )
         
         # Cache and merge to avoid race condition
@@ -230,6 +230,13 @@ class EventManager:
                 result = on_event(data)
                 if asyncio.iscoroutine(result):
                     await result
+            except RuntimeError as e:
+                # Sending to a closed websocket is expected during
+                # disconnect race conditions — log at debug and clean up.
+                events_logger.debug(
+                    "WebSocket send failed (likely disconnected): %s", e
+                )
+                to_remove.add(ws)
             except Exception as e:
                 events_logger.error("Error in on_event callback: %s", e, exc_info=True)
                 to_remove.add(ws)

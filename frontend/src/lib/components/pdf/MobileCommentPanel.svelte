@@ -8,12 +8,6 @@
 	import { onMount } from 'svelte';
 	import { longPress } from '$lib/actions/longPress';
 
-	interface Props {
-		scrollTop: number;
-	}
-
-	let { scrollTop }: Props = $props();
-
 	let panelElement: HTMLDivElement | null = $state(null);
 
 	// Update CSS variable for panel height so controls can avoid it
@@ -180,7 +174,7 @@
 								duration: 500
 							}}
 						>
-							<CommentCluster comments={[comment]} yPosition={0} {scrollTop} forceExpanded={true} />
+							<CommentCluster comments={[comment]} forceExpanded={true} />
 						</div>
 					{/each}
 				</div>

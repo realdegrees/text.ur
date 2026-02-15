@@ -3,6 +3,10 @@
 	"private": true,
 	"version": "0.0.1",
 	"type": "module",
+	"engines": {
+		"node": ">=20",
+		"pnpm": "10"
+	},
 	"scripts": {
 		"typegen": "export PYTHONPATH=\"${PYTHONPATH}:$(pwd)/../backend/app\" && pydantic2ts --module ../backend/app/models/__init__.py --output src/api/types.ts && node scripts/dedupe-types.js && pnpx ts-to-zod --config=api && cd ../backend && python scripts/generate_exclusion_maps.py",
 		"dev": "vite dev",

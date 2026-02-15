@@ -40,7 +40,7 @@ DB_CONNECTION_TIMEOUT: int = int(
 DB_STATEMENT_TIMEOUT: int = int(
     os.getenv("DB_STATEMENT_TIMEOUT", 10000))  # milliseconds
 
-IS_TEST_ENV = any("pytest" in str(arg) for arg in sys.argv)
+IS_TEST_ENV = os.getenv("TESTING", "").lower() == "true"
 if IS_TEST_ENV:
     POSTGRES_DB = "test"
 
@@ -100,13 +100,26 @@ JINJA_ENV = Environment(
     loader=FileSystemLoader(os.path.join(os.getcwd(), "templates")),
     autoescape=select_autoescape(["html"])
 )
-FRONTEND_BASEURL = os.getenv("ORIGIN")
+FRONTEND_BASEURL: str | None = os.getenv("ORIGIN")
+if not FRONTEND_BASEURL and not IS_TEST_ENV:
+    print(
+        "=" * 80 + "\n"
+        "WARNING: Environment variable ORIGIN is not set!\n"
+        "=" * 80 + "\n"
+        "The following features will not work correctly:\n"
+        "  - CORS: Frontend requests will be blocked\n"
+        "  - Email verification links will have invalid URLs\n"
+        "  - Password reset links will have invalid URLs\n"
+        "=" * 80 + "\n",
+        file=sys.stderr,
+    )
 BACKEND_BASEURL = os.getenv("PUBLIC_BACKEND_BASEURL", "http://localhost:8000")
 # Should be True in production (requires HTTPS)
 COOKIE_SECURE = os.getenv("COOKIE_SECURE", "True").lower() == "true"
 COOKIE_SAMESITE = os.getenv(
     "COOKIE_SAMESITE", "lax"
 )
+MAX_UPLOAD_SIZE_MB = int(os.getenv("PUBLIC_MAX_UPLOAD_SIZE_MB", 50))
 MAX_COMMENT_LENGTH = int(os.getenv("PUBLIC_MAX_COMMENT_LENGTH", 2000))
 MAX_DOCUMENT_NAME_LENGTH = int(os.getenv("PUBLIC_MAX_DOCUMENT_NAME_LENGTH", 255))
 MAX_DOCUMENT_DESCRIPTION_LENGTH = int(os.getenv("PUBLIC_MAX_DOCUMENT_DESCRIPTION_LENGTH", 5000))

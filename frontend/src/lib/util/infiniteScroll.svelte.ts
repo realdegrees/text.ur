@@ -2,18 +2,25 @@ import type { Paginated } from '$api/pagination';
 import { onMount } from 'svelte';
 
 export function infiniteScroll<T, ExcludedFields extends PropertyKey = never>(
-	initialData: Paginated<T, ExcludedFields> | undefined,
+	getInitialData: () => Paginated<T, ExcludedFields> | undefined,
 	loadMore: (offset: number, limit: number) => Promise<Paginated<T, ExcludedFields> | undefined>,
 	step: number,
 	autoLoad: boolean
 ) {
-	let data = $state<Paginated<T, ExcludedFields>>(
-		initialData ?? { data: [], total: 0, offset: 0, limit: 0 }
-	);
+	const fallback: Paginated<T, ExcludedFields> = { data: [], total: 0, offset: 0, limit: 0 };
+	let data = $state<Paginated<T, ExcludedFields>>(getInitialData() ?? fallback);
 	let loadingMore = $state(false);
 	let sentinel = $state<HTMLDivElement>();
 	let scrollContainer = $state<HTMLElement>();
 	let observer: IntersectionObserver | null = null;
+
+	// Reset internal state when the source data changes (e.g. after invalidation)
+	$effect(() => {
+		const fresh = getInitialData();
+		if (fresh) {
+			data = fresh;
+		}
+	});
 
 	const items = $derived(data.data);
 	const hasMore = $derived(data.data.length < data.total);

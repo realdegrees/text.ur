@@ -65,7 +65,7 @@
 		const createData: ShareLinkCreateData = {
 			permissions: createFormPermissions,
 			label: createFormLabel || null,
-			expires_at: createFormExpiresAt || null,
+			expires_at: createFormExpiresAt ? new Date(createFormExpiresAt).toISOString() : null,
 			allow_anonymous_access: createFormAllowAnonymous
 		};
 
@@ -84,7 +84,7 @@
 		const updateData: ShareLinkUpdate = {
 			permissions: editFormPermissions,
 			label: editFormLabel || null,
-			expires_at: editFormExpiresAt || null,
+			expires_at: editFormExpiresAt ? new Date(editFormExpiresAt).toISOString() : null,
 			allow_anonymous_access: editFormAllowAnonymous,
 			rotate_token: null
 		};

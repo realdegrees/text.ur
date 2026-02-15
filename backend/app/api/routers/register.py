@@ -10,12 +10,14 @@ from core.auth import (
     generate_token,
     hash_password,
 )
+from core.rate_limit import limiter
 from fastapi import HTTPException, Request, Response
 from fastapi.responses import RedirectResponse
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 from models.enums import AppErrorCode
 from models.tables import Membership, ShareLink, User
 from models.user import UserCreate
+from slowapi.util import get_remote_address
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 from util.api_router import APIRouter
@@ -82,7 +84,7 @@ async def _upgrade_guest_account(
                 "expiry_time": expiry_time.strftime("%B %d, %Y at %H:%M UTC"),
                 "username": user.username,
                 "email": user.email,
-                "current_year": datetime.now().year
+                "current_year": datetime.now(UTC).year
             }
         )
     except Exception as e:
@@ -150,7 +152,7 @@ async def _register_regular_user(
                 "expiry_time": expiry_time.strftime("%B %d, %Y at %H:%M UTC"),
                 "username": user.username,
                 "email": user.email,
-                "current_year": datetime.now().year
+                "current_year": datetime.now(UTC).year
             }
         )
     except Exception as e:
@@ -178,7 +180,7 @@ async def _register_anonymous_user(
                            error_code=AppErrorCode.INVALID_TOKEN)
 
     # Check if expired
-    if share_link.expires_at and share_link.expires_at < datetime.now(share_link.expires_at.tzinfo):
+    if share_link.expires_at and share_link.expires_at < datetime.now(UTC):
         raise AppException(status_code=403, detail="Share link has expired",
                            error_code=AppErrorCode.SHARELINK_EXPIRED)
 
@@ -239,6 +241,7 @@ async def _register_anonymous_user(
 
 
 @router.post("/")
+@limiter.limit("3/minute", key_func=get_remote_address)
 async def register(
     request: Request,
     db: Database,
@@ -286,7 +289,8 @@ async def register(
 
 
 @router.get("/verify/{token}")
-async def verify(token: str, db: Database) -> RedirectResponse:
+@limiter.limit("10/minute", key_func=get_remote_address)
+async def verify(request: Request, token: str, db: Database) -> RedirectResponse:
     """Verify the user's email address."""
     try:
         email = URLSafeTimedSerializer(cfg.EMAIL_PRESIGN_SECRET).loads(

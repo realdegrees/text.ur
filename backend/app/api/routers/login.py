@@ -12,11 +12,13 @@ from core.auth import (
     hash_password,
     validate_password,
 )
-from fastapi import Body, Depends, HTTPException, Response
+from core.rate_limit import limiter
+from fastapi import Body, Depends, HTTPException, Request, Response
 from fastapi.security import OAuth2PasswordRequestForm
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 from models.enums import AppErrorCode
 from models.tables import Membership, User
+from slowapi.util import get_remote_address
 from sqlmodel import or_, select
 from util.api_router import APIRouter
 
@@ -27,7 +29,9 @@ router = APIRouter(
 
 
 @router.post("/")
+@limiter.limit("5/minute", key_func=get_remote_address)
 async def login(
+    request: Request,
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()], db: Database, response: Response
 ) -> Token:
     """Return a JWT if the user is authenticated successfully."""
@@ -70,7 +74,8 @@ async def login(
 
 
 @router.post("/refresh")
-async def refresh(response: Response, db: Database, user: User = Authenticate(token_type="refresh")) -> Token:
+@limiter.limit("10/minute", key_func=get_remote_address)
+async def refresh(request: Request, response: Response, db: Database, user: User = Authenticate(token_type="refresh")) -> Token:
     """Refresh the access token given a valid refresh token."""
     token = Token(
         access_token=generate_token(user, "access"),
@@ -103,13 +108,15 @@ async def refresh(response: Response, db: Database, user: User = Authenticate(to
 
 
 @router.post("/reset")
-async def reset_password(db: Database, mail: Mail, email: str = Body(..., embed=True)) -> None:
+@limiter.limit("3/minute", key_func=get_remote_address)
+async def reset_password(request: Request, db: Database, mail: Mail, email: str = Body(..., embed=True)) -> None:
     """Send a password reset email with a presigned URL."""
     query = select(User).where(User.email == email)
     result = await db.exec(query)
     user: User | None = result.first()
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        # Return silently to avoid leaking whether an email is registered
+        return
     # Generate token with email and password hash (for one-time use)
     serializer = URLSafeTimedSerializer(cfg.EMAIL_PRESIGN_SECRET)
     token_data = {"email": email, "pwd": user.password[:16]}
@@ -135,7 +142,8 @@ async def reset_password(db: Database, mail: Mail, email: str = Body(..., embed=
 
 
 @router.put("/reset/verify/{token}")
-async def reset_verify(token: str, db: Database, password: str = Body(..., embed=True)) -> None:
+@limiter.limit("5/minute", key_func=get_remote_address)
+async def reset_verify(request: Request, token: str, db: Database, password: str = Body(..., embed=True)) -> None:
     """Confirm password reset using the presigned URL and update the user's password."""
     try:
         # Deserialize token to get token data (email + password hash for one-time use)

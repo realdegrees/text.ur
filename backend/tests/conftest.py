@@ -1,7 +1,9 @@
-# These 3 lines must stay at the top of the file
+# These lines must stay at the top of the file
 # fmt: on
 import os  # noq: I001
 import sys  # noq: I001
+
+os.environ["TESTING"] = "true"
 
 sys.path.insert(
     0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "app"))

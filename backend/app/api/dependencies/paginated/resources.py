@@ -1,7 +1,7 @@
 """Handle paginated resource queries with advanced filtering and sorting."""
 
 from collections.abc import Callable, Sequence
-from typing import Any, TypeVar
+from typing import Any
 
 from api.dependencies.authentication import Authenticate
 from api.dependencies.database import Database
@@ -22,10 +22,6 @@ from sqlalchemy.sql import tuple_
 from sqlmodel import SQLModel, select
 from sqlmodel.orm.session import SelectOfScalar
 from util.queries import EndpointGuard
-
-# Define a generic model type.
-Model = TypeVar("Model", bound=SQLModel)
-FilterModel = TypeVar("FilterModel", bound=SQLModel)
 
 
 def build_paginated_description(base_description: str, guards: Sequence[EndpointGuard]) -> str:
@@ -55,7 +51,7 @@ def build_paginated_description(base_description: str, guards: Sequence[Endpoint
     return base_description
 
 
-def PaginatedResource(  # noqa: C901
+def PaginatedResource[Model: SQLModel, FilterModel: SQLModel](  # noqa: C901
     base_model: type[Model],
     filter_model: type[FilterModel],
     *,

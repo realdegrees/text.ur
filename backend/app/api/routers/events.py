@@ -2,7 +2,7 @@ import asyncio
 import contextlib
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path as PathLibPath
 from uuid import uuid4
 
@@ -26,29 +26,9 @@ from pydantic import create_model as internal_model
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import SQLModel, select
 from util.api_router import APIRouter
+from util.ip import get_client_ip
 
 logger = get_logger("app")
-
-def get_websocket_client_ip(websocket: WebSocket) -> str:
-    """Extract client IP from WebSocket proxy headers or direct connection.
-
-    Checks headers in order:
-    1. X-Forwarded-For (set by reverse proxies like Traefik)
-    2. X-Real-IP (alternative proxy header)
-    3. Direct connection IP (fallback for non-proxied requests)
-    """
-    # X-Forwarded-For contains comma-separated list, first is original client
-    forwarded_for = websocket.headers.get("X-Forwarded-For")
-    if forwarded_for:
-        return forwarded_for.split(",")[0].strip()
-
-    # Fallback to X-Real-IP
-    real_ip = websocket.headers.get("X-Real-IP")
-    if real_ip:
-        return real_ip
-
-    # Last resort: direct connection (works for non-proxied requests)
-    return websocket.client.host if websocket.client else "unknown"
 
 # Load the WebSocket description template
 WEBSOCKET_TEMPLATE_PATH = PathLibPath(__file__).parent.parent / "docs" / "websocket.jinja"
@@ -137,11 +117,11 @@ def get_events_router[RelatedResourceModel: BaseModel](  # noqa: C901
         websocket: WebSocket, events: WebsocketEvents, resource_id: str, user: WebsocketAuthentication
     ) -> None:
         """Connect a client to the event stream."""
-        client_ip = get_websocket_client_ip(websocket)
+        client_ip = get_client_ip(websocket)
         logger.info(
             f"[WS] Connection attempt for resource_id={resource_id}, user={user.id if user else None}, ip={client_ip}"
         )
-        logger.info(f"[WS] Cookies: {websocket.cookies}")
+        logger.info("[WS] Cookies present: %s", list(websocket.cookies.keys()))
 
         # Create on-demand session for initial resource verification
         async with SessionFactory() as db:
@@ -202,7 +182,7 @@ def get_events_router[RelatedResourceModel: BaseModel](  # noqa: C901
                     "user_id": user.id,
                     "username": user.username,
                     "connection_id": connection_id,
-                    "connected_at": datetime.now().isoformat()
+                    "connected_at": datetime.now(UTC).isoformat()
                 },
                 "originating_connection_id": connection_id
             }
@@ -225,6 +205,25 @@ def get_events_router[RelatedResourceModel: BaseModel](  # noqa: C901
             """Get the event configuration for a given event type."""
             return config.event_types.get(event_type)
 
+        async def _safe_send_json(data: dict) -> None:
+            """Send JSON to the websocket, suppressing errors if already closed.
+
+            When a client disconnects there is an inherent race between the
+            disconnect being processed (which unregisters the client) and the
+            Redis subscriber forwarding events. Attempting to send on a closed
+            websocket raises ``RuntimeError``. We catch it here so that the
+            subscriber loop treats the send as a harmless no-op rather than
+            propagating the error.
+            """
+            try:
+                await websocket.send_json(data)
+            except RuntimeError:
+                logger.debug(
+                    "[WS] Suppressed send to closed websocket "
+                    "(connection_id=%s)",
+                    getattr(websocket.state, "connection_id", "?"),
+                )
+
         async def on_event(event_data: dict) -> None:
             """Validate outgoing event before sending to client.
 
@@ -246,7 +245,7 @@ def get_events_router[RelatedResourceModel: BaseModel](  # noqa: C901
             system_events = {"handshake", "user_connected", "user_disconnected"}
             if event_type in system_events:
                 logger.debug(f"[WS] Sending system event: {event_type}")
-                await websocket.send_json(event_data)
+                await _safe_send_json(event_data)
                 return
 
             # Get event configuration for user-defined events
@@ -284,7 +283,7 @@ def get_events_router[RelatedResourceModel: BaseModel](  # noqa: C901
                     # Fail-safe: if the transformation errors, skip sending to avoid leaking info
                     return
 
-            await websocket.send_json(event_data)
+            await _safe_send_json(event_data)
             
         async def client_event_loop() -> None: # noqa: C901
             """Handle incoming events from the client."""
@@ -319,7 +318,7 @@ def get_events_router[RelatedResourceModel: BaseModel](  # noqa: C901
                     if "event_id" not in event_data:
                         event_data["event_id"] = str(uuid4())
                     if "published_at" not in event_data:
-                        event_data["published_at"] = datetime.now().isoformat()
+                        event_data["published_at"] = datetime.now(UTC).isoformat()
                     if "resource" not in event_data:
                         event_data["resource"] = None
                     if "resource_id" not in event_data:
@@ -375,6 +374,10 @@ def get_events_router[RelatedResourceModel: BaseModel](  # noqa: C901
                 with contextlib.suppress(asyncio.CancelledError):
                     await heartbeat_task
 
+            # Unregister the client FIRST so the subscriber loop will no
+            # longer attempt to send events to this (now-closed) websocket.
+            await events.unregister_client(websocket)
+
             # Remove user from active users and notify others if tracking is enabled
             if config.track_active_users:
                 await events.remove_active_user(channel_key, user.id)
@@ -390,8 +393,6 @@ def get_events_router[RelatedResourceModel: BaseModel](  # noqa: C901
                     user_disconnected_event,
                     channel=channel_key,
                 )
-
-            await events.unregister_client(websocket)
 
         # Client event loop (Incoming events from client to server)
         try:

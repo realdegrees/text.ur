@@ -67,7 +67,7 @@ class DatabaseManager:
     async def verify_connection(self) -> None:
         """Run a lightweight query to validate DB connectivity."""
         try:
-            db_logger.debug("Checking connection to %s", DATABASE_URL)
+            db_logger.debug("Checking database connection")
             async with self.engine.begin() as conn:
                 await conn.execute(text("SELECT 1"))
             db_logger.info("Connection verified successfully")

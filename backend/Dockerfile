@@ -12,8 +12,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 
 # Install Python dependencies with pip cache mount
 RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install -r requirements.txt && \
-    pip install uvicorn[standard]
+    pip install -r requirements.txt
 
 # Clean up build dependencies (keep runtime deps like postgresql-client)
 RUN apt-get purge -y --auto-remove build-essential && \

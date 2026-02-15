@@ -27,6 +27,7 @@ from core import config
 from core.app_exception import AppException
 from core.logger import get_current_user, get_logger
 from fastapi import FastAPI, Request
+from fastapi.exceptions import ResponseValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.responses import (
@@ -38,34 +39,16 @@ from fastapi.responses import (
 from fastapi.staticfiles import StaticFiles
 from models.app_error import AppError
 from models.enums import AppErrorCode
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 from util.api_router import APIRouter
+from util.ip import get_client_ip
 from util.openapi import custom_openapi
 
 routers = [RegisterRouter, LoginRouter, LogoutRouter, UserRouter, MembershipRouter, GroupRouter, ShareLinkRouter, DocumentsRouter, CommentRouter, TagRouter]
 
 logger = get_logger("requests")
 app_logger = get_logger("app")
-
-def get_client_ip(request: Request) -> str:
-    """Extract client IP from proxy headers or direct connection.
-
-    Checks headers in order:
-    1. X-Forwarded-For (set by reverse proxies like Traefik)
-    2. X-Real-IP (alternative proxy header)
-    3. Direct connection IP (fallback for non-proxied requests)
-    """
-    # X-Forwarded-For contains comma-separated list, first is original client
-    forwarded_for = request.headers.get("X-Forwarded-For")
-    if forwarded_for:
-        return forwarded_for.split(",")[0].strip()
-
-    # Fallback to X-Real-IP
-    real_ip = request.headers.get("X-Real-IP")
-    if real_ip:
-        return real_ip
-
-    # Last resort: direct connection (works for non-proxied requests)
-    return request.client.host if request.client else "unknown"
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
@@ -113,6 +96,32 @@ app = FastAPI(
     redoc_url=None,  # Redoc is disabled
 )
 
+# --- Rate Limiting ---
+from core.rate_limit import limiter  # noqa: E402
+
+app.state.limiter = limiter
+
+
+@app.exception_handler(RateLimitExceeded)
+async def rate_limit_handler(
+    request: Request, exc: RateLimitExceeded
+) -> JSONResponse:
+    """Return a structured AppError when a rate limit is exceeded."""
+    retry_after = exc.detail.split("per")[0].strip() if exc.detail else "later"
+    return JSONResponse(
+        status_code=429,
+        content=AppError(
+            status_code=429,
+            error_code=AppErrorCode.RATE_LIMITED,
+            detail=(
+                f"Rate limit exceeded ({exc.detail}). "
+                f"Please try again later."
+            ),
+        ).model_dump(),
+        headers={"Retry-After": retry_after},
+    )
+
+
 @app.exception_handler(AppException)
 async def app_exception_handler(request: Request, exc: AppException) -> JSONResponse:
     """Transform uncaught exceptions into AppException."""
@@ -150,11 +159,51 @@ async def global_exception_handler(request: Request, exc: Exception) -> JSONResp
         ).model_dump()
     )
 
+@app.exception_handler(ResponseValidationError)
+async def response_validation_error_handler(
+    request: Request, exc: ResponseValidationError
+) -> JSONResponse:
+    """Catch response serialization failures.
+
+    Without an explicit handler, ResponseValidationError bypasses
+    the exception handler layer and propagates through the
+    middleware stack as a raw exception. CORSMiddleware never sees
+    a proper response, so the browser reports a misleading CORS
+    error instead of the real 500.
+    """
+    app_logger.error(
+        "ResponseValidationError on %s %s: %s",
+        request.method,
+        request.url.path,
+        exc.errors(),
+    )
+    error_detail: str = (
+        str(exc.errors())
+        if config.DEBUG
+        else "Unknown error occurred. Please contact an"
+        " administrator to check the logs."
+    )
+    return JSONResponse(
+        status_code=500,
+        content=AppError(
+            status_code=500,
+            error_code=AppErrorCode.UNKNOWN_ERROR,
+            detail=error_detail,
+        ).model_dump(),
+    )
+
 static_path = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "static")
 )
 app.mount("/static", StaticFiles(directory=static_path), name="static")
 
+from slowapi.middleware import SlowAPIMiddleware  # noqa: E402
+
+app.add_middleware(SlowAPIMiddleware)
+
+# CORSMiddleware must be added last so it is the outermost
+# middleware, ensuring CORS headers are present on all responses
+# (including errors from inner middlewares like SlowAPI).
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[config.FRONTEND_BASEURL],
@@ -168,6 +217,7 @@ app.add_middleware(
 async def add_security_headers(request: Request, call_next: Callable) -> Response:
     """Add security headers to all responses."""
     response = await call_next(request)
+
     response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains; preload"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["X-Content-Type-Options"] = "nosniff"
@@ -176,6 +226,14 @@ async def add_security_headers(request: Request, call_next: Callable) -> Respons
 
     if not request.url.path.startswith(("/api/docs", "/api/openapi.json")):
          response.headers["Content-Security-Policy"] = "default-src 'self'; frame-ancestors 'none';"
+
+    # Cache-Control: endpoints may override via their own headers
+    if request.url.path == "/api/health":
+        response.headers.setdefault("Cache-Control", "no-cache")
+    elif request.url.path.startswith("/api/"):
+        response.headers.setdefault(
+            "Cache-Control", "private, no-store"
+        )
 
     return response
 

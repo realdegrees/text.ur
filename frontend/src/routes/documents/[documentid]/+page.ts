@@ -6,7 +6,8 @@ import type { PageLoad } from './$types';
 import type { Paginated } from '$api/pagination';
 import type { BreadcrumbItem } from '$types/breadcrumb';
 
-export const load: PageLoad = async ({ params, parent, fetch }) => {
+export const load: PageLoad = async ({ params, parent, fetch, depends }) => {
+	depends('app:document-view');
 	const { routeMembership: membership } = await parent();
 	// Fetch document by param
 	const documentResult = await api.get<DocumentRead>(`/documents/${params.documentid}`, {

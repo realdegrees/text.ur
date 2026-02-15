@@ -59,7 +59,7 @@ async def update_user(
     await db.merge(user)
     if user_update.new_password:
         # Re-validate the old password
-        if not validate_password(user_update.old_password, user.password):
+        if not validate_password(user, user_update.old_password):
             raise HTTPException(status_code=403, detail="Forbidden: Invalid old password")
         user.password = hash_password(user_update.new_password)
     user.sqlmodel_update(user_update.model_dump(exclude_unset=True, exclude={"old_password", "new_password"}))

@@ -10,10 +10,11 @@ const noAuthRoutes = [
 	'/password-reset/request',
 	'/password-reset/[token]'
 ];
-export const load: LayoutServerLoad = async ({ locals, route, params, fetch, url }) => {
+export const load: LayoutServerLoad = async ({ locals, route, params, fetch, url, depends }) => {
+	depends('app:route-membership');
 	// Redirect to login if no session user and not on a no-auth route
 	if (!locals.sessionUser && !noAuthRoutes.includes(route.id || '')) {
-		throw redirect(303, '/login?redirect=' + url.pathname + url.searchParams.toString());
+		throw redirect(303, '/login?redirect=' + encodeURIComponent(url.pathname + url.search));
 	}
 
 	let groupId = params.groupid;

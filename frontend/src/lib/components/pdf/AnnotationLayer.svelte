@@ -43,7 +43,7 @@
 
 			// TODO replace default_highlight_color with the custom color set per user
 
-			// Use first tag's color if available, otherwise fall back to annotation color
+			// Use first tag's color if available, otherwise fall back to default
 			const highlightColor =
 				comment.tags && comment.tags.length > 0 ? comment.tags[0].color : DEFAULT_HIGHLIGHT_COLOR;
 
@@ -80,7 +80,7 @@
 	const renderHighlights = () => {
 		if (!viewerContainer) return;
 
-		const isAnyCommentHovered = documentStore.comments.commentHovered.size > 0;
+		const isAnyHovered = documentStore.isAnyCommentHovered;
 
 		// Do not remove all highlights here; we'll reconcile per-page instead.
 		// For each page with highlights
@@ -111,7 +111,7 @@
 				const top = box.y * textLayerRect.height;
 				const width = box.width * textLayerRect.width;
 				const height = box.height * textLayerRect.height;
-				const isVisible = !isAnyCommentHovered || !!state?.isPinned || !!state?.isCommentHovered;
+				const isVisible = !isAnyHovered || !!state?.isPinned || !!state?.isCommentHovered;
 
 				// reuse an existing element if one already exists for this key
 				const existingEl = textLayer.querySelector<HighlightElement>(
@@ -174,8 +174,8 @@
 
 				// Desktop: Use hover for connection line, click to pin
 				const hoverAction = preciseHover(div, {
-					onEnter: () => documentStore.setHighlightHoveredDebounced(comment.id, true),
-					onLeave: () => documentStore.setHighlightHoveredDebounced(comment.id, false)
+					onEnter: () => documentStore.setHighlightHovered(comment.id, true),
+					onLeave: () => documentStore.setHighlightHovered(comment.id, false)
 				});
 
 				// Mobile: Use long press to show connection line
@@ -316,6 +316,8 @@
 	$effect(() => {
 		void highlightsByPage;
 		void documentStore.documentScale;
+		// Re-render when hover state changes (for opacity dimming)
+		void documentStore.isAnyCommentHovered;
 
 		if (!viewerContainer) return;
 		renderHighlights();

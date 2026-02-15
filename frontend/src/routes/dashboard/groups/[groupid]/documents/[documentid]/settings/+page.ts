@@ -4,7 +4,8 @@ import { error } from '@sveltejs/kit';
 import type { PageLoad } from './$types';
 import type { BreadcrumbItem } from '$types/breadcrumb';
 
-export const load: PageLoad = async ({ params, parent, fetch }) => {
+export const load: PageLoad = async ({ params, parent, fetch, depends }) => {
+	depends('app:document');
 	const { membership } = await parent();
 
 	// Fetch document details

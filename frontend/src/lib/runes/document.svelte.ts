@@ -6,7 +6,8 @@ import {
 	type CommentRead,
 	type DocumentRead,
 	type ViewMode,
-	type CommentTagsUpdate
+	type CommentTagsUpdate,
+	type Filter
 } from '$api/types';
 import type { Paginated } from '$api/pagination';
 import { notification } from '$lib/stores/notificationStore';
@@ -70,6 +71,11 @@ const createDocumentStore = () => {
 	let activeCommentId: number | null = $state<number | null>(null);
 	let longPressCommentId: number | null = $state<number | null>(null);
 
+	// Cluster element refs: maps commentId → the cluster's inner HTMLElement.
+	// Written by CommentCluster on mount, cleared on destroy.
+	// Used by ConnectionLines to find line start positions without registration.
+	const clusterElements = new Map<number, HTMLElement>();
+
 	// Helper to apply persisted state to a comment state object
 	const applyPersistedState = (state: CommentState, persisted: Partial<PersistedFields>) => {
 		if (persisted.isPinned !== undefined) state.isPinned = persisted.isPinned;
@@ -86,10 +92,7 @@ const createDocumentStore = () => {
 	const setTopLevelComments = (comments: CommentRead[]) => {
 		// Add/update comments
 		comments.forEach((c) => {
-			const cachedComment: CommentRead = {
-				...c,
-				annotation: c.annotation
-			};
+			const cachedComment: CommentRead = { ...c };
 			_comments.set(cachedComment.id, cachedComment);
 
 			// Ensure commentState exists for this comment
@@ -152,7 +155,7 @@ const createDocumentStore = () => {
 
 	const filteredTopLevelComments = $derived.by(() => {
 		// Build an array of comment values from the internal SvelteMap for array filtering
-		const allComments = [...topLevelComments.values()];
+		const allComments = [...topLevelComments];
 		let filteredArray = allComments;
 
 		// Build arrays of include/exclude filter states.
@@ -395,138 +398,158 @@ const createDocumentStore = () => {
 		}
 	});
 
-	const comments = $derived({
-		update: async (comment: CommentRead) => {
-			const result = await api.update(`/comments/${comment.id}`, comment);
-			if (!result.success) {
-				notification(result.error);
-				return;
-			}
-			commentsLocal.update(comment);
-		},
-		create: async (
-			data: Omit<CommentCreate, 'document_id' | 'annotation'> & { annotation: Annotation | null }
-		): Promise<number | undefined> => {
-			if (!loadedDocument) return;
-			const result = await api.post<CommentRead>('/comments', {
-				...data,
-				document_id: loadedDocument?.id
+	// --- Plain accessor functions (no $derived needed — SvelteMap.get() is already reactive) ---
+
+	const getState = (commentId: number): CommentState | undefined => {
+		return commentStates.get(commentId);
+	};
+
+	const getComment = (commentId: number): CommentRead | undefined => {
+		return _comments.get(commentId);
+	};
+
+	// --- API methods (plain closures, not reactive) ---
+
+	const commentsUpdate = async (comment: CommentRead) => {
+		const result = await api.update(`/comments/${comment.id}`, comment);
+		if (!result.success) {
+			notification(result.error);
+			return;
+		}
+		commentsLocal.update(comment);
+	};
+
+	const commentsCreate = async (
+		data: Omit<CommentCreate, 'document_id' | 'annotation'> & { annotation: Annotation | null }
+	): Promise<number | undefined> => {
+		if (!loadedDocument) return;
+		const result = await api.post<CommentRead>('/comments', {
+			...data,
+			document_id: loadedDocument?.id
+		});
+		if (!result.success) {
+			notification(result.error);
+			return;
+		}
+
+		commentsLocal.create(result.data!);
+		return result.data!.id;
+	};
+
+	const commentsDelete = async (commentId: number) => {
+		const result = await api.delete(`/comments/${commentId}`);
+		if (!result.success) {
+			notification(result.error);
+			return;
+		}
+
+		commentsLocal.delete(commentId, true);
+	};
+
+	const commentsUpdateTags = async (commentId: number, tagIds: number[]) => {
+		const result = await api.update(`/comments/${commentId}/tags`, {
+			tag_ids: tagIds
+		} satisfies CommentTagsUpdate);
+		if (!result.success) {
+			notification(result.error);
+			return;
+		}
+
+		// Optimistically update the comment's tags
+		const comment = _comments.get(commentId);
+		const currentDocument = loadedDocument;
+		if (comment && currentDocument) {
+			const orderedTags = tagIds
+				.map((id) => currentDocument.tags.find((t) => t.id === id))
+				.filter((t): t is NonNullable<typeof t> => t !== undefined);
+
+			const updatedComment: CommentRead = {
+				...comment,
+				tags: orderedTags
+			};
+			_comments.set(commentId, updatedComment);
+		}
+	};
+
+	const commentsLoadMoreReplies = async (commentId: number) => {
+		const limit = 20;
+		// Offset by the amount of comments that were already received from the api
+		const offset =
+			commentStates
+				.get(commentId)
+				?.replies.map((id) => commentStates.get(id))
+				.reduce((acc, state) => acc + (state?.source === 'api' ? 1 : 0), 0) || 0;
+		const targetComment: CommentRead | undefined = _comments.get(commentId);
+		const targetState: CommentState | undefined = commentStates.get(commentId);
+
+		// Dont load more if all replies are already loaded
+		if (!targetComment || (targetComment.num_replies || 0) <= offset) return;
+		if (!targetComment || targetComment.num_replies <= offset) return;
+		if (!targetState) return;
+
+		// Exclude comments that were created locally (not yet persisted)
+		const clientCreatedIds = targetState.replies.filter(
+			(id) => commentStates.get(id)?.source === 'client'
+		);
+		const filters: Filter[] = [{ field: 'parent_id', operator: '==', value: commentId.toString() }];
+		if (clientCreatedIds.length > 0) {
+			filters.push({
+				field: 'id',
+				operator: 'notin',
+				value: `[${clientCreatedIds.join(',')}]`
 			});
-			if (!result.success) {
-				notification(result.error);
-				return;
-			}
+		}
 
-			commentsLocal.create(result.data!);
-			return result.data!.id;
-		},
-		delete: async (commentId: number) => {
-			const result = await api.delete(`/comments/${commentId}`);
-			if (!result.success) {
-				notification(result.error);
-				return;
-			}
+		const result = await api.get<Paginated<CommentRead>>(
+			`/comments?limit=${limit}&offset=${offset}`,
+			{ filters }
+		);
+		if (!result.success) {
+			notification(result.error);
+			return;
+		}
 
-			commentsLocal.delete(commentId, true);
-		},
-		updateTags: async (commentId: number, tagIds: number[]) => {
-			const result = await api.update(`/comments/${commentId}/tags`, {
-				tag_ids: tagIds
-			} satisfies CommentTagsUpdate);
-			if (!result.success) {
-				notification(result.error);
-				return;
-			}
+		const data = result.data.data.map((c) => {
+			const annotationParsed = annotationSchema.safeParse(c.annotation);
+			return {
+				...c,
+				annotation: annotationParsed.success ? annotationParsed.data : null
+			} as CommentRead;
+		});
 
-			// Optimistically update the comment's tags
-			const comment = _comments.get(commentId);
-			const currentDocument = loadedDocument;
-			if (comment && currentDocument) {
-				const orderedTags = tagIds
-					.map((id) => currentDocument.tags.find((t) => t.id === id))
-					.filter((t): t is NonNullable<typeof t> => t !== undefined);
+		// Add loaded replies to local comments array
+		data.forEach((c) => {
+			commentsLocal.create(c, true, 'api');
+		});
+	};
 
-				const updatedComment: CommentRead = {
-					...comment,
-					tags: orderedTags
-				};
-				_comments.set(commentId, updatedComment);
-			}
-		},
-		loadMoreReplies: async (commentId: number) => {
-			const limit = 20;
-			// Offset by the amount of comments that were already received from the api
-			const offset =
-				commentStates
-					.get(commentId)
-					?.replies.map((id) => commentStates.get(id))
-					.reduce((acc, state) => acc + (state?.source === 'api' ? 1 : 0), 0) || 0;
-			const targetComment: CommentRead | undefined = _comments.get(commentId);
-			const targetState: CommentState | undefined = commentStates.get(commentId);
+	// --- Lightweight derived flags for hover state (replaces expensive SvelteMap construction) ---
 
-			// Dont load more if all replies are already loaded
-			if (!targetComment || (targetComment.num_replies || 0) <= offset) return;
-			if (!targetComment || targetComment.num_replies <= offset) return;
-			if (!targetState) return;
-
-			const result = await api.get<Paginated<CommentRead>>(
-				`/comments?limit=${limit}&offset=${offset}`,
-				{
-					filters: [
-						{ field: 'parent_id', operator: '==', value: commentId.toString() },
-						// Exclude comments that were created locally
-						{
-							field: 'id',
-							operator: 'notin',
-							value: `[${targetState.replies.filter((id) => commentStates.get(id)?.source === 'client').join(',')}]`
-						}
-					]
-				}
-			);
-			if (!result.success) {
-				notification(result.error);
-				return;
-			}
-
-			const data = result.data.data.map((c) => {
-				const annotationParsed = annotationSchema.safeParse(c.annotation);
-				return {
-					...c,
-					annotation: annotationParsed.success ? annotationParsed.data : null
-				} as CommentRead;
-			});
-
-			// Add loaded replies to local comments array
-			data.forEach((c) => {
-				commentsLocal.create(c, true, 'api');
-			});
-		},
-		getState: (commentId: number): CommentState | undefined => {
-			return commentStates.get(commentId);
-		},
-		getComment: (commentId: number): CommentRead | undefined => {
-			return _comments.get(commentId);
-		},
-		topLevelAuthors: topLevelAuthors,
-		// Comment subsets
-		all: new SvelteMap(_comments),
-		pinned: new SvelteMap(
-			Array.from(commentStates.entries()).filter(([, state]) => state.isPinned)
-		),
-		topLevelComments: filteredTopLevelComments,
-		editing: new SvelteMap(
-			Array.from(commentStates.entries()).filter(([, state]) => state.isEditing)
-		),
-		replying: new SvelteMap(
-			Array.from(commentStates.entries()).filter(([, state]) => state.isReplying)
-		),
-		highlightHovered: new SvelteMap(
-			Array.from(commentStates.entries()).filter(([, state]) => state.isHighlightHovered)
-		),
-		commentHovered: new SvelteMap(
-			Array.from(commentStates.entries()).filter(([, state]) => state.isCommentHovered)
-		)
+	const isAnyCommentHovered = $derived.by(() => {
+		for (const state of commentStates.values()) {
+			if (state.isCommentHovered) return true;
+		}
+		return false;
 	});
+
+	// --- Bundled comments object for backward-compatible access ---
+	// API methods, accessors, and structural data only — NO hover-related SvelteMaps.
+
+	const comments = {
+		update: commentsUpdate,
+		create: commentsCreate,
+		delete: commentsDelete,
+		updateTags: commentsUpdateTags,
+		loadMoreReplies: commentsLoadMoreReplies,
+		getState,
+		getComment,
+		get topLevelAuthors() {
+			return topLevelAuthors;
+		},
+		get topLevelComments() {
+			return filteredTopLevelComments;
+		}
+	};
 
 	/**
 	 * Simple getter for filters with overloaded return types.
@@ -602,73 +625,10 @@ const createDocumentStore = () => {
 		}
 	};
 
-	// Store timeouts for debounced hover state updates
-	const hoverTimeouts = new SvelteMap<number, { highlight?: number; comment?: number }>();
-
-	/**
-	 * Set highlight hover state with debouncing on the "false" transition.
-	 * - When setting to true: immediately set and clear any pending debounced false assignment
-	 * - When setting to false: debounce the assignment by 300ms
-	 */
-	const setHighlightHoveredDebounced = (commentId: number, hovered: boolean): void => {
+	/** Set highlight hover state immediately. */
+	const setHighlightHovered = (commentId: number, hovered: boolean): void => {
 		const state = commentStates.get(commentId);
-		if (!state) return;
-
-		const timeouts = hoverTimeouts.get(commentId) || {};
-
-		if (hovered) {
-			// Clear any pending "unhover" timeout
-			if (timeouts.highlight) {
-				clearTimeout(timeouts.highlight);
-				hoverTimeouts.set(commentId, { ...timeouts, highlight: undefined });
-			}
-			// Immediately set to true
-			state.isHighlightHovered = true;
-		} else {
-			// Delay setting to false by 300ms
-			const timeoutId = setTimeout(() => {
-				state.isHighlightHovered = false;
-				const currentTimeouts = hoverTimeouts.get(commentId);
-				if (currentTimeouts) {
-					hoverTimeouts.set(commentId, { ...currentTimeouts, highlight: undefined });
-				}
-			}, 50) as unknown as number;
-
-			hoverTimeouts.set(commentId, { ...timeouts, highlight: timeoutId });
-		}
-	};
-
-	/**
-	 * Set comment hover state with debouncing on the "false" transition.
-	 * - When setting to true: immediately set and clear any pending debounced false assignment
-	 * - When setting to false: debounce the assignment by 100ms
-	 */
-	const setCommentHoveredDebounced = (commentId: number, hovered: boolean): void => {
-		const state = commentStates.get(commentId);
-		if (!state) return;
-
-		const timeouts = hoverTimeouts.get(commentId) || {};
-
-		if (hovered) {
-			// Clear any pending "unhover" timeout
-			if (timeouts.comment) {
-				clearTimeout(timeouts.comment);
-				hoverTimeouts.set(commentId, { ...timeouts, comment: undefined });
-			}
-			// Immediately set to true
-			state.isCommentHovered = true;
-		} else {
-			// Delay setting to false by 100ms
-			const timeoutId = setTimeout(() => {
-				state.isCommentHovered = false;
-				const currentTimeouts = hoverTimeouts.get(commentId);
-				if (currentTimeouts) {
-					hoverTimeouts.set(commentId, { ...currentTimeouts, comment: undefined });
-				}
-			}, 50) as unknown as number;
-
-			hoverTimeouts.set(commentId, { ...timeouts, comment: timeoutId });
-		}
+		if (state) state.isHighlightHovered = hovered;
 	};
 
 	/**
@@ -918,8 +878,9 @@ const createDocumentStore = () => {
 	};
 
 	return {
-		get comments() {
-			return comments;
+		comments,
+		get isAnyCommentHovered() {
+			return isAnyCommentHovered;
 		},
 		get filters() {
 			return filters;
@@ -990,11 +951,12 @@ const createDocumentStore = () => {
 		set longPressCommentId(value) {
 			longPressCommentId = value;
 		},
+		// Cluster element refs for connection lines (plain Map, not reactive)
+		clusterElements,
 		handleWebSocketEvent,
 		setTopLevelComments,
 		clearHighlightReferences,
-		setHighlightHoveredDebounced,
-		setCommentHoveredDebounced,
+		setHighlightHovered,
 		scrollToComment,
 		enablePersistence,
 		batchPin,
