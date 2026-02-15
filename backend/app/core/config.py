@@ -100,10 +100,18 @@ JINJA_ENV = Environment(
     loader=FileSystemLoader(os.path.join(os.getcwd(), "templates")),
     autoescape=select_autoescape(["html"])
 )
-FRONTEND_BASEURL = os.getenv("ORIGIN")
+FRONTEND_BASEURL: str | None = os.getenv("ORIGIN")
 if not FRONTEND_BASEURL and not IS_TEST_ENV:
-    raise RuntimeError(
-        "Required environment variable ORIGIN is not set"
+    print(
+        "=" * 80 + "\n"
+        "WARNING: Environment variable ORIGIN is not set!\n"
+        "=" * 80 + "\n"
+        "The following features will not work correctly:\n"
+        "  - CORS: Frontend requests will be blocked\n"
+        "  - Email verification links will have invalid URLs\n"
+        "  - Password reset links will have invalid URLs\n"
+        "=" * 80 + "\n",
+        file=sys.stderr,
     )
 BACKEND_BASEURL = os.getenv("PUBLIC_BACKEND_BASEURL", "http://localhost:8000")
 # Should be True in production (requires HTTPS)
