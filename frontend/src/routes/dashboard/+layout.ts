@@ -6,7 +6,8 @@ import type { BreadcrumbItem } from '$types/breadcrumb';
 import type { LayoutLoad } from './$types';
 
 // TODO this can probably be a serverlayout in order to prerender the initial list of groups so it gets loaded instantly
-export const load: LayoutLoad = async ({ fetch, parent }) => {
+export const load: LayoutLoad = async ({ fetch, parent, depends }) => {
+	depends('app:memberships');
 	// Load all groups the user is a member of (endpoint only returns groups for the session user)
 	const { sessionUser, routeMembership } = await parent();
 

@@ -5,7 +5,8 @@ import { redirect } from '@sveltejs/kit';
 import type { PageLoad } from './$types';
 import type { BreadcrumbItem } from '$types/breadcrumb';
 
-export const load: PageLoad = async ({ parent, params, fetch }) => {
+export const load: PageLoad = async ({ parent, params, fetch, depends }) => {
+	depends('app:sharelinks');
 	const { membership, sessionUser } = await parent();
 
 	// Check permissions directly (don't use sessionStore in load functions - it's for components only)

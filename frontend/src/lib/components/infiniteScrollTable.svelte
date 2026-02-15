@@ -38,7 +38,7 @@
 		rowBgClass?: string;
 	} = $props();
 
-	const scroll = infiniteScroll(initialData, loadMore, step, autoLoad);
+	const scroll = infiniteScroll(() => initialData, loadMore, step, autoLoad);
 
 	// Convert simple string array to column configs
 	const columnConfigs = $derived.by(() => {

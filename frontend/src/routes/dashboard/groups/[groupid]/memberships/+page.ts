@@ -4,7 +4,8 @@ import type { MembershipRead } from '$api/types';
 import type { PageLoad } from './$types';
 import type { BreadcrumbItem } from '$types/breadcrumb';
 
-export const load: PageLoad = async ({ fetch, params, url, parent }) => {
+export const load: PageLoad = async ({ fetch, params, url, parent, depends }) => {
+	depends('app:group-memberships');
 	const { membership } = await parent();
 
 	const result = await api.get<Paginated<MembershipRead>, 'group'>(
