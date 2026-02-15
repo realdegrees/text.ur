@@ -43,7 +43,7 @@
 
 			// TODO replace default_highlight_color with the custom color set per user
 
-			// Use first tag's color if available, otherwise fall back to annotation color
+			// Use first tag's color if available, otherwise fall back to default
 			const highlightColor =
 				comment.tags && comment.tags.length > 0 ? comment.tags[0].color : DEFAULT_HIGHLIGHT_COLOR;
 
@@ -316,6 +316,9 @@
 	$effect(() => {
 		void highlightsByPage;
 		void documentStore.documentScale;
+		// Re-render when hover state changes (for opacity dimming)
+		void documentStore.comments.highlightHovered.size;
+		void documentStore.comments.commentHovered.size;
 
 		if (!viewerContainer) return;
 		renderHighlights();

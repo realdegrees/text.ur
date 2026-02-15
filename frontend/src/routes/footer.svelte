@@ -31,9 +31,11 @@
 </script>
 
 <div class="h-11 w-full"></div>
-<div class="fixed bottom-10 left-0 min-h-1 w-full bg-background shadow-inner shadow-black/80"></div>
+<div
+	class="fixed bottom-10 left-0 z-40 min-h-1 w-full bg-background shadow-inner shadow-black/80"
+></div>
 <footer
-	class="fixed bottom-0 left-0 flex h-10 w-full flex-row items-center justify-between bg-inset p-1 text-sm"
+	class="fixed bottom-0 left-0 z-40 flex h-10 w-full flex-row items-center justify-between bg-inset p-1 text-sm"
 >
 	<!-- Controls -->
 	<section class="ml-2 flex flex-row items-center gap-2">

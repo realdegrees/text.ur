@@ -240,11 +240,11 @@
 <div class="relative h-full" bind:this={containerElement}>
 	{#key repositionedClusters.length}
 		{#each repositionedClusters as cluster, idx (idx)}
-			<div class="absolute right-3 left-3" style="top: {cluster[0].highlightPosition.y}px;">
+			{@const clusterY = cluster[0].highlightPosition.y}
+			<div class="absolute right-3" style="top: {clusterY}px; left: 12px;">
 				<CommentCluster
 					comments={cluster}
-					yPosition={cluster[0].highlightPosition.y}
-					{scrollTop}
+					yPosition={clusterY}
 					onHeightChange={(height: number) => {
 						clusterHeights.set(cluster[0].id.toString(), height);
 					}}

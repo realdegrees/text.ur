@@ -6,7 +6,8 @@ import {
 	type CommentRead,
 	type DocumentRead,
 	type ViewMode,
-	type CommentTagsUpdate
+	type CommentTagsUpdate,
+	type Filter
 } from '$api/types';
 import type { Paginated } from '$api/pagination';
 import { notification } from '$lib/stores/notificationStore';
@@ -47,6 +48,15 @@ export interface CommentState {
 	highlightElements?: HTMLElement[]; // Associated highlight elements in the PDF
 }
 
+export interface VisibleLineInfo {
+	commentState: CommentState;
+	yPosition: number;
+	isHovered: boolean;
+	clusterElement: HTMLElement | null;
+	/** Hex color from the comment's first tag (or default highlight color) */
+	color: string;
+}
+
 const createDocumentStore = () => {
 	const _comments = new SvelteMap<number, CommentRead>();
 	const commentStates: SvelteMap<number, CommentState> = new SvelteMap<number, CommentState>();
@@ -69,6 +79,17 @@ const createDocumentStore = () => {
 	let mobileCommentPanelRef: any = $state<any>(null);
 	let activeCommentId: number | null = $state<number | null>(null);
 	let longPressCommentId: number | null = $state<number | null>(null);
+
+	// Connection line tracking: maps commentId → line info for all visible lines
+	const visibleLines = new SvelteMap<number, VisibleLineInfo>();
+
+	const registerLine = (commentId: number, info: VisibleLineInfo) => {
+		visibleLines.set(commentId, info);
+	};
+
+	const unregisterLine = (commentId: number) => {
+		visibleLines.delete(commentId);
+	};
 
 	// Helper to apply persisted state to a comment state object
 	const applyPersistedState = (state: CommentState, persisted: Partial<PersistedFields>) => {
@@ -469,19 +490,24 @@ const createDocumentStore = () => {
 			if (!targetComment || targetComment.num_replies <= offset) return;
 			if (!targetState) return;
 
+			// Exclude comments that were created locally (not yet persisted)
+			const clientCreatedIds = targetState.replies.filter(
+				(id) => commentStates.get(id)?.source === 'client'
+			);
+			const filters: Filter[] = [
+				{ field: 'parent_id', operator: '==', value: commentId.toString() }
+			];
+			if (clientCreatedIds.length > 0) {
+				filters.push({
+					field: 'id',
+					operator: 'notin',
+					value: `[${clientCreatedIds.join(',')}]`
+				});
+			}
+
 			const result = await api.get<Paginated<CommentRead>>(
 				`/comments?limit=${limit}&offset=${offset}`,
-				{
-					filters: [
-						{ field: 'parent_id', operator: '==', value: commentId.toString() },
-						// Exclude comments that were created locally
-						{
-							field: 'id',
-							operator: 'notin',
-							value: `[${targetState.replies.filter((id) => commentStates.get(id)?.source === 'client').join(',')}]`
-						}
-					]
-				}
+				{ filters }
 			);
 			if (!result.success) {
 				notification(result.error);
@@ -990,6 +1016,12 @@ const createDocumentStore = () => {
 		set longPressCommentId(value) {
 			longPressCommentId = value;
 		},
+		// Connection line tracking
+		get visibleLines() {
+			return visibleLines;
+		},
+		registerLine,
+		unregisterLine,
 		handleWebSocketEvent,
 		setTopLevelComments,
 		clearHighlightReferences,

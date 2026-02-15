@@ -27,6 +27,7 @@ from core import config
 from core.app_exception import AppException
 from core.logger import get_current_user, get_logger
 from fastapi import FastAPI, Request
+from fastapi.exceptions import ResponseValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.responses import (
@@ -158,11 +159,51 @@ async def global_exception_handler(request: Request, exc: Exception) -> JSONResp
         ).model_dump()
     )
 
+@app.exception_handler(ResponseValidationError)
+async def response_validation_error_handler(
+    request: Request, exc: ResponseValidationError
+) -> JSONResponse:
+    """Catch response serialization failures.
+
+    Without an explicit handler, ResponseValidationError bypasses
+    the exception handler layer and propagates through the
+    middleware stack as a raw exception. CORSMiddleware never sees
+    a proper response, so the browser reports a misleading CORS
+    error instead of the real 500.
+    """
+    app_logger.error(
+        "ResponseValidationError on %s %s: %s",
+        request.method,
+        request.url.path,
+        exc.errors(),
+    )
+    error_detail: str = (
+        str(exc.errors())
+        if config.DEBUG
+        else "Unknown error occurred. Please contact an"
+        " administrator to check the logs."
+    )
+    return JSONResponse(
+        status_code=500,
+        content=AppError(
+            status_code=500,
+            error_code=AppErrorCode.UNKNOWN_ERROR,
+            detail=error_detail,
+        ).model_dump(),
+    )
+
 static_path = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "static")
 )
 app.mount("/static", StaticFiles(directory=static_path), name="static")
 
+from slowapi.middleware import SlowAPIMiddleware  # noqa: E402
+
+app.add_middleware(SlowAPIMiddleware)
+
+# CORSMiddleware must be added last so it is the outermost
+# middleware, ensuring CORS headers are present on all responses
+# (including errors from inner middlewares like SlowAPI).
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[config.FRONTEND_BASEURL],
@@ -171,15 +212,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-from slowapi.middleware import SlowAPIMiddleware  # noqa: E402
-
-app.add_middleware(SlowAPIMiddleware)
-
 
 @app.middleware("http")
 async def add_security_headers(request: Request, call_next: Callable) -> Response:
     """Add security headers to all responses."""
     response = await call_next(request)
+
     response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains; preload"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["X-Content-Type-Options"] = "nosniff"

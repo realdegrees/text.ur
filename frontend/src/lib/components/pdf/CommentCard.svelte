@@ -225,7 +225,7 @@
 	{/if}
 	{#if commentState && !commentState.isEditing && isAuthor}
 		<button
-			class="flex items-center gap-1 rounded bg-text/5 px-1.5 py-0.5 text-[11px] font-medium text-text/60 transition-colors hover:bg-text/10 hover:text-text/80"
+			class="flex items-center rounded bg-text/5 p-1 text-text/60 transition-colors hover:bg-text/10 hover:text-text/80"
 			onclick={(e) => {
 				e.stopPropagation();
 				editingTags = [...comment.tags];
@@ -233,8 +233,7 @@
 			}}
 			title="Edit"
 		>
-			<EditIcon class="h-3 w-3" />
-			<span>Edit</span>
+			<EditIcon class="h-3.5 w-3.5" />
 		</button>
 	{/if}
 	{#if canDeleteComment}
@@ -242,19 +241,17 @@
 			{#snippet button(isOpen)}
 				{#if !isOpen}
 					<div
-						class="flex cursor-pointer items-center gap-1 rounded bg-orange-500/10 px-1.5 py-0.5 text-[11px] font-medium text-orange-600 transition-colors hover:bg-orange-500/20 hover:text-orange-700"
+						class="flex cursor-pointer items-center rounded bg-orange-500/10 p-1 text-orange-600 transition-colors hover:bg-orange-500/20 hover:text-orange-700"
 						title="Delete"
 					>
-						<DeleteIcon class="h-3 w-3" />
-						<span>Delete</span>
+						<DeleteIcon class="h-3.5 w-3.5" />
 					</div>
 				{:else}
 					<div
-						class="flex cursor-pointer items-center gap-1 rounded bg-orange-500/20 px-1.5 py-0.5 text-[11px] font-medium text-orange-600 transition-colors hover:bg-orange-500/30"
+						class="flex cursor-pointer items-center rounded bg-orange-500/20 p-1 text-orange-600 transition-colors hover:bg-orange-500/30"
 						title="Confirm Delete"
 					>
-						<CheckIcon class="h-3 w-3" />
-						<span>Confirm</span>
+						<CheckIcon class="h-3.5 w-3.5" />
 					</div>
 				{/if}
 			{/snippet}
@@ -327,19 +324,15 @@
 				<!-- Tags inline with header for top-level comments -->
 				{#if isTopLevel && commentState && !commentState.isEditing}
 					{#if comment.tags && comment.tags.length > 0}
-						<div class="group/tags flex items-center gap-1">
+						<div class="flex items-center gap-1">
 							<TagIcon class="h-3.5 w-3.5" />
 							{#each comment.tags as tag (tag.id)}
 								<div
-									class="relative flex overflow-hidden rounded-full transition-all duration-300 ease-in-out {commentState?.isHighlightHovered
-										? 'h-4 w-auto px-1.5 py-0.5'
-										: 'h-1.5 w-1.5 group-hover/tags:h-4 group-hover/tags:w-auto group-hover/tags:px-1.5 group-hover/tags:py-0.5'} items-center justify-center"
+									class="relative flex h-4 w-auto items-center justify-center overflow-hidden rounded-full px-1.5 py-0.5"
 								>
 									<div class="absolute inset-0" style="background-color: {tag.color};"></div>
 									<p
-										class="relative z-10 cursor-default text-[11px] font-medium whitespace-nowrap text-text transition-opacity duration-300 {commentState?.isHighlightHovered
-											? 'opacity-100'
-											: 'opacity-0 group-hover/tags:opacity-100'}"
+										class="relative z-10 cursor-default text-[11px] font-medium whitespace-nowrap text-text"
 										style="text-shadow: 0 0px 4px rgba(0, 0, 0, 0.9);"
 									>
 										{tag.label}
