@@ -174,7 +174,7 @@
 								duration: 500
 							}}
 						>
-							<CommentCluster comments={[comment]} yPosition={0} forceExpanded={true} />
+							<CommentCluster comments={[comment]} forceExpanded={true} />
 						</div>
 					{/each}
 				</div>

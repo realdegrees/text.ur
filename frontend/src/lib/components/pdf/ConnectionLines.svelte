@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { documentStore, type VisibleLineInfo } from '$lib/runes/document.svelte';
+	import { documentStore, type CommentState } from '$lib/runes/document.svelte';
 	import { hasHoverCapability } from '$lib/util/responsive.svelte';
 	import { onMount } from 'svelte';
 	import {
@@ -9,7 +9,8 @@
 		LINE_ENDPOINT_RADIUS,
 		LINE_FADE_MS,
 		LINE_OPACITY,
-		LINE_CHANNEL_GAP
+		LINE_CHANNEL_GAP,
+		DEFAULT_HIGHLIGHT_COLOR
 	} from './constants';
 
 	interface Props {
@@ -20,8 +21,6 @@
 
 	/**
 	 * Build an orthogonal SVG path with rounded corners at the two bends.
-	 *
-	 * Route: comment(startX,startY) --H left--> channelX --V--> endY --H left--> highlight(endX,endY)
 	 */
 	function buildOrthogonalPath(
 		startX: number,
@@ -68,10 +67,10 @@
 	}
 
 	/**
-	 * Get valid highlight rects for a comment, filtering detached/zero-size.
+	 * Get valid highlight rects for a comment state.
 	 */
-	function getValidHighlightRects(info: VisibleLineInfo): DOMRect[] {
-		const els = info.commentState.highlightElements;
+	function getValidHighlightRects(state: CommentState): DOMRect[] {
+		const els = state.highlightElements;
 		if (!els || els.length === 0) return [];
 
 		const rects: DOMRect[] = [];
@@ -84,30 +83,75 @@
 		return rects;
 	}
 
-	// --- SVG element ref for imperative DOM updates ---
-	let svgRef: SVGSVGElement | null = $state(null);
+	interface LineData {
+		commentId: number;
+		state: CommentState;
+		isHovered: boolean;
+		color: string;
+	}
 
 	/**
-	 * Imperatively update SVG content from live DOM positions.
-	 * Completely bypasses Svelte's reactivity for scroll tracking.
+	 * Derive which comments should have visible connection lines.
+	 * Purely reactive — a line shows when isCommentHovered || isHighlightHovered || longPress.
 	 */
-	function updateLines() {
-		if (!svgRef) return;
+	let activeLines: LineData[] = $derived.by(() => {
+		const lines: LineData[] = [];
+		const longPressId = documentStore.longPressCommentId;
+
+		for (const comment of documentStore.comments.topLevelComments) {
+			const state = documentStore.comments.getState(comment.id);
+			if (!state) continue;
+
+			const isHovered = !!state.isCommentHovered || !!state.isHighlightHovered;
+			const isLongPressed = comment.id === longPressId;
+
+			if (!isHovered && !isLongPressed) continue;
+
+			const color =
+				comment.tags && comment.tags.length > 0 ? comment.tags[0].color : DEFAULT_HIGHLIGHT_COLOR;
+
+			lines.push({ commentId: comment.id, state, isHovered, color });
+		}
+
+		return lines;
+	});
+
+	/**
+	 * Compute SVG geometry for each active line.
+	 * Depends on scroll/zoom (via scrollTick) and activeLines (reactive).
+	 */
+	interface RenderedLine {
+		id: number;
+		color: string;
+		strokeW: number;
+		dotR: number;
+		startX: number;
+		startY: number;
+		pathD: string;
+		minTop: number;
+		maxBottom: number;
+		endX: number;
+	}
+
+	// Bumped every scroll/resize frame to force re-derive of positions
+	let scrollTick = $state(0);
+
+	let renderedLines: RenderedLine[] = $derived.by(() => {
+		// Subscribe to scroll/zoom
+		void scrollTick;
+		void scrollTop;
+		void documentStore.documentScale;
 
 		const isMobile = !hasHoverCapability();
 		const pdfRight = documentStore.scrollContainerRef?.getBoundingClientRect().right ?? 0;
-
-		// Single channel X — all vertical segments share this X position
 		const channelX = pdfRight + LINE_CHANNEL_GAP;
 
-		// Build SVG content imperatively
-		let svgContent = '';
+		const result: RenderedLine[] = [];
 
-		for (const [id, info] of documentStore.visibleLines) {
-			const rects = getValidHighlightRects(info);
+		for (const line of activeLines) {
+			const rects = getValidHighlightRects(line.state);
 			if (rects.length === 0) continue;
 
-			// Highlight bounding box: find the extents of all highlight elements
 			let minTop = Infinity;
 			let minLeft = Infinity;
 			let maxBottom = -Infinity;
@@ -116,11 +160,9 @@
 				if (rect.left < minLeft) minLeft = rect.left;
 				if (rect.bottom > maxBottom) maxBottom = rect.bottom;
 			}
-			// Line endpoint anchors at the top-left of the bounding box
 			const endX = minLeft;
 			const endY = minTop;
 
-			// Comment cluster anchor: top-left corner
 			let startX: number;
 			let startY: number;
 
@@ -131,50 +173,51 @@
 				startX = panelRect.left + panelRect.width / 2;
 				startY = panelRect.top;
 			} else {
-				const clusterEl = info.clusterElement;
+				const clusterEl = documentStore.clusterElements.get(line.commentId);
 				if (!clusterEl || !clusterEl.isConnected) continue;
 				const clusterRect = clusterEl.getBoundingClientRect();
 				startX = clusterRect.left;
 				startY = clusterRect.top;
 			}
 
-			const strokeW = info.isHovered ? LINE_HOVERED_STROKE_WIDTH : LINE_STROKE_WIDTH;
-			const dotR = info.isHovered ? LINE_ENDPOINT_RADIUS + 1 : LINE_ENDPOINT_RADIUS;
-			const color = info.color;
+			const strokeW = line.isHovered ? LINE_HOVERED_STROKE_WIDTH : LINE_STROKE_WIDTH;
+			const dotR = line.isHovered ? LINE_ENDPOINT_RADIUS + 1 : LINE_ENDPOINT_RADIUS;
 
 			const pathD = buildOrthogonalPath(startX, startY, channelX, endX, endY, LINE_CORNER_RADIUS);
 
-			svgContent += `<g data-line-id="${id}" style="opacity: ${LINE_OPACITY}; transition: stroke-width ${LINE_FADE_MS}ms ease;">`;
-			svgContent += `<circle cx="${startX}" cy="${startY}" r="${dotR}" fill="${color}" />`;
-			svgContent += `<path d="${pathD}" fill="none" stroke="${color}" stroke-width="${strokeW}" />`;
-			// 4th segment: vertical line down the left edge of the highlight group
-			svgContent += `<line x1="${endX}" y1="${minTop}" x2="${endX}" y2="${maxBottom}" stroke="${color}" stroke-width="${strokeW}" />`;
-			svgContent += `</g>`;
+			result.push({
+				id: line.commentId,
+				color: line.color,
+				strokeW,
+				dotR,
+				startX,
+				startY,
+				pathD,
+				minTop,
+				maxBottom,
+				endX
+			});
 		}
 
-		// eslint-disable-next-line svelte/no-dom-manipulating -- Intentional imperative rendering to bypass Svelte reactivity batching for scroll performance
-		svgRef.innerHTML = svgContent;
-	}
+		return result;
+	});
 
-	// --- Scroll tracking via direct scroll event + RAF ---
-	let rafId: number | null = null;
-
-	function scheduleUpdate() {
-		if (rafId !== null) return;
-		rafId = requestAnimationFrame(() => {
-			rafId = null;
-			updateLines();
-		});
-	}
-
+	// Scroll tracking: bump scrollTick so renderedLines re-derives positions
 	onMount(() => {
 		const scrollContainer = documentStore.scrollContainerRef;
+		let rafId: number | null = null;
+
+		function scheduleUpdate() {
+			if (rafId !== null) return;
+			rafId = requestAnimationFrame(() => {
+				rafId = null;
+				scrollTick++;
+			});
+		}
+
 		if (scrollContainer) {
 			scrollContainer.addEventListener('scroll', scheduleUpdate, { passive: true });
 		}
-
-		// Initial render
-		updateLines();
 
 		return () => {
 			if (scrollContainer) {
@@ -185,21 +228,25 @@
 			}
 		};
 	});
-
-	// Re-render when lines are added/removed, hover state changes, or zoom changes.
-	// This is the only reactive path — scroll is handled imperatively above.
-	$effect(() => {
-		void scrollTop;
-		void documentStore.documentScale;
-		void documentStore.visibleLines.size;
-		// Also re-render when any line's hover state might have changed
-		for (const [, info] of documentStore.visibleLines) {
-			void info.isHovered;
-		}
-		updateLines();
-	});
 </script>
 
 <div class="pointer-events-none fixed inset-0 z-30">
-	<svg bind:this={svgRef} class="absolute inset-0 h-full w-full overflow-visible"></svg>
+	<svg class="absolute inset-0 h-full w-full overflow-visible">
+		{#each renderedLines as line (line.id)}
+			<g
+				style="opacity: {LINE_OPACITY}; transition: opacity {LINE_FADE_MS}ms ease, stroke-width {LINE_FADE_MS}ms ease;"
+			>
+				<circle cx={line.startX} cy={line.startY} r={line.dotR} fill={line.color} />
+				<path d={line.pathD} fill="none" stroke={line.color} stroke-width={line.strokeW} />
+				<line
+					x1={line.endX}
+					y1={line.minTop}
+					x2={line.endX}
+					y2={line.maxBottom}
+					stroke={line.color}
+					stroke-width={line.strokeW}
+				/>
+			</g>
+		{/each}
+	</svg>
 </div>

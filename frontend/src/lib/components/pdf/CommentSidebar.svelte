@@ -65,17 +65,12 @@
 	// Track actual rendered heights of clusters (key is comment IDs joined)
 	let clusterHeights = new SvelteMap<string, number>();
 
-	// Helper to check if any comment in a cluster is expanded
+	// Helper to check if any comment in a cluster is expanded (pinned/editing/replying).
+	// Hover alone no longer expands clusters — only explicit pin or interaction does.
 	const isClusterExpanded = (comments: CommentRead[]): boolean => {
 		return comments.some((c) => {
 			const state = documentStore.comments.getState(c.id);
-			return (
-				state?.isCommentHovered ||
-				state?.isHighlightHovered ||
-				state?.isPinned ||
-				state?.isEditing ||
-				state?.isReplying
-			);
+			return state?.isPinned || state?.isEditing || state?.isReplying;
 		});
 	};
 
@@ -244,7 +239,6 @@
 			<div class="absolute right-3" style="top: {clusterY}px; left: 12px;">
 				<CommentCluster
 					comments={cluster}
-					yPosition={clusterY}
 					onHeightChange={(height: number) => {
 						clusterHeights.set(cluster[0].id.toString(), height);
 					}}

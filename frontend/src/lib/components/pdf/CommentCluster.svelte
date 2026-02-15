@@ -13,12 +13,11 @@
 
 	interface Props {
 		comments: CommentRead[];
-		yPosition: number;
 		onHeightChange?: (height: number) => void;
 		forceExpanded?: boolean;
 	}
 
-	let { comments, yPosition, onHeightChange, forceExpanded = false }: Props = $props();
+	let { comments, onHeightChange, forceExpanded = false }: Props = $props();
 
 	let commentStates = $derived.by(
 		() => new SvelteMap(comments.map((c) => [c.id, documentStore.comments.getState(c.id)]))
@@ -27,14 +26,11 @@
 	// Track which comment is selected in this group (defaults to first)
 
 	let selectedTabId = $state<number | null>(null);
+	let isClusterHovered = $state(false);
 
 	let hoveredTabId: number | null = $state(null);
-	let hoveredTabCommentState = $derived.by(() => commentStates.get(hoveredTabId ?? -1));
 	let highlightHoveredComment: CommentRead | null = $derived.by(() => {
 		return comments.find((c) => commentStates.get(c.id)?.isHighlightHovered) ?? null;
-	});
-	let firstCommentHovered: CommentRead | null = $derived.by(() => {
-		return comments.find((c) => commentStates.get(c.id)?.isCommentHovered) ?? null;
 	});
 	let firstEditingComment: CommentRead | null = $derived.by(() => {
 		return comments.find((c) => commentStates.get(c.id)?.isEditing) ?? null;
@@ -59,8 +55,6 @@
 			comments[0]
 	);
 
-	let activeCommentState = $derived.by(() => commentStates.get(activeComment.id));
-
 	// Border color follows hovered tab if any, otherwise activeComment's first tag
 	let hoveredTabComment = $derived.by(() => {
 		if (hoveredTabId == null) return null;
@@ -81,14 +75,6 @@
 			(!hasHoverCapability() && highlightHoveredComment)
 	);
 
-	// When a comment gets pinned (e.g. via highlight click), make it the active tab
-	// so the cluster shows that comment's card.
-	$effect(() => {
-		if (firstPinnedComment) {
-			selectedTabId = firstPinnedComment.id;
-		}
-	});
-
 	/** Unpin every comment in this cluster. */
 	function unpinAll() {
 		for (const c of comments) {
@@ -100,15 +86,6 @@
 	/**
 	 * On mobile, only show connection line when the comment is being long-pressed
 	 */
-	function shouldShowConnectionLineOnMobile(): boolean {
-		if (hasHoverCapability()) {
-			return false; // Not mobile, use desktop logic
-		}
-
-		// Check if any of the comments in this cluster is being long-pressed
-		return comments.some((c) => c.id === documentStore.longPressCommentId);
-	}
-
 	let clusterRef: HTMLElement | null = $state(null);
 
 	// Measure and report cluster height when it changes
@@ -132,51 +109,21 @@
 		};
 	});
 
-	/**
-	 * Determine the comment whose connection line should be shown.
-	 * Priority: hovered tab > highlight-hovered > comment-hovered > long-pressed > none.
-	 */
-	let lineComment: CommentRead | null = $derived.by(() => {
-		if (hoveredTabId != null) {
-			const c = comments.find((c) => c.id === hoveredTabId);
-			if (c) return c;
-		}
-		if (highlightHoveredComment) return highlightHoveredComment;
-		if (firstCommentHovered) return firstCommentHovered;
-		// Mobile long-press
-		const longPressComment = comments.find((c) => c.id === documentStore.longPressCommentId);
-		if (longPressComment) return longPressComment;
-		return null;
-	});
-
-	// Register/unregister connection lines with the shared overlay.
-	// Lines are only visible on hover or long-press (mobile), not when merely pinned.
+	// Register cluster element refs so ConnectionLines can find them.
+	// Each comment in this cluster maps to the same clusterRef element.
 	$effect(() => {
-		const isHovered = !!(hoveredTabCommentState || firstCommentHovered || highlightHoveredComment);
-		const shouldShow = isHovered || shouldShowConnectionLineOnMobile();
+		const el = clusterRef;
+		if (!el) return;
 
-		// Use the specific comment that triggered the line (not activeComment)
-		const targetComment = lineComment ?? activeComment;
-		const lineState = documentStore.comments.getState(targetComment.id);
-		// Get the highlight color from the triggering comment's first tag
-		const tagColor =
-			targetComment.tags && targetComment.tags.length > 0
-				? targetComment.tags[0].color
-				: DEFAULT_HIGHLIGHT_COLOR;
-		if (shouldShow && lineState) {
-			documentStore.registerLine(targetComment.id, {
-				commentState: lineState,
-				yPosition,
-				isHovered,
-				clusterElement: clusterRef,
-				color: tagColor
-			});
-		} else {
-			documentStore.unregisterLine(targetComment.id);
+		const ids = comments.map((c) => c.id);
+		for (const id of ids) {
+			documentStore.clusterElements.set(id, el);
 		}
 
 		return () => {
-			documentStore.unregisterLine(targetComment.id);
+			for (const id of ids) {
+				documentStore.clusterElements.delete(id);
+			}
 		};
 	});
 </script>
@@ -184,22 +131,18 @@
 <div
 	tabindex="-1"
 	use:preciseHover={{
-		onEnter: () => {
-			documentStore.setCommentHoveredDebounced(activeComment.id, true);
-		},
-		onLeave: () => {
-			for (const comment of comments) {
-				documentStore.setCommentHoveredDebounced(comment.id, false);
-			}
-		}
+		onEnter: () => (isClusterHovered = true),
+		onLeave: () => (isClusterHovered = false)
 	}}
 	data-comment-badge={activeComment?.id}
 	data-badge-active="true"
-	class={showCard ? 'w-full' : 'w-fit'}
+	class="w-fit"
 >
 	<div
 		bind:this={clusterRef}
-		class="relative z-50 overflow-hidden rounded bg-background shadow-lg ring-2 shadow-black/20 transition-all"
+		class="relative z-50 overflow-hidden rounded bg-background shadow-lg {showCard
+			? 'ring-[2.5px]'
+			: 'ring-2'} shadow-black/20 transition-shadow"
 		style="--tw-ring-color: {activeTagColor}{firstPinnedComment ? 'b3' : '4d'};"
 		use:longPress={{
 			onLongPress: () => {
@@ -226,12 +169,18 @@
 				<div class="flex flex-wrap items-center gap-1">
 					{#each comments as c, idx (c.id)}
 						{@const state = commentStates.get(c.id)}
+						{@const tabColor =
+							c.tags && c.tags.length > 0 ? c.tags[0].color : DEFAULT_HIGHLIGHT_COLOR}
+						{@const isVisuallyHovered = state?.isCommentHovered || state?.isHighlightHovered}
 						<button
 							class="flex cursor-pointer flex-row items-center gap-1 bg-inset px-1.5 pt-1 pb-0.5 text-xs font-medium transition-colors
 							{showCard ? 'rounded-t' : 'rounded'}
 							{showCard && activeComment === c
 								? 'text-text shadow-inner shadow-text/40'
-								: 'text-text/50 hover:animate-pulse hover:bg-text/5 hover:text-text/70'}"
+								: isVisuallyHovered
+									? 'bg-text/10 text-text ring-1'
+									: 'text-text/50 hover:bg-text/10 hover:text-text hover:ring-1'}"
+							style="--tw-ring-color: {tabColor}80;"
 							onclick={(e) => {
 								e.stopPropagation();
 
@@ -251,18 +200,13 @@
 										state.isPinned = true;
 									}
 									selectedTabId = c.id;
-								} else {
-									// Expanded: toggle pin if already active, otherwise switch tabs
-									if (activeComment === c && state) {
-										state.isPinned = !state.isPinned;
-										return;
-									}
+								} else if (activeComment === c) {
+									// Expanded, clicking the active tab: toggle its pin
 									if (state) {
-										state.isCommentHovered = hasHoverCapability();
+										state.isPinned = !state.isPinned;
 									}
-									if (activeCommentState) {
-										activeCommentState.isCommentHovered = false;
-									}
+								} else {
+									// Expanded, clicking an inactive tab: just switch to it
 									selectedTabId = c.id;
 								}
 							}}
@@ -272,22 +216,28 @@
 									e.stopPropagation();
 								}
 							}}
-							onmouseenter={() => {
-								hoveredTabId = hasHoverCapability() ? c.id : null;
-								if (state) state.isCommentHovered = hasHoverCapability();
-							}}
-							onmouseleave={() => {
-								hoveredTabId = null;
-								if (activeComment === c) return;
-								if (state) state.isCommentHovered = false;
+							use:preciseHover={{
+								onEnter: () => {
+									hoveredTabId = c.id;
+									if (state) state.isCommentHovered = true;
+								},
+								onLeave: () => {
+									if (hoveredTabId === c.id) hoveredTabId = null;
+									if (state) state.isCommentHovered = false;
+								}
 							}}
 						>
-							<p>{c.user?.username?.slice(0, 10) ?? `Comment ${idx + 1}`}</p>
-							{#if state?.isPinned}
-								<PinIcon class="h-4 w-4 text-text transition-colors hover:text-red-400" />
-							{:else if showCard && c.id === activeComment.id}
-								<PinOffIcon class="h-4 w-4 hover:text-text" />
-							{/if}
+							<div class="flex items-center">
+								{#if state?.isPinned && (isClusterHovered || state?.isHighlightHovered)}
+									<PinIcon class="h-4 w-4 text-text transition-colors hover:text-red-400" />
+									<p class="ml-1">{c.user?.username?.slice(0, 10) ?? `Comment ${idx + 1}`}</p>
+								{:else if showCard && c.id === activeComment.id && (isClusterHovered || state?.isHighlightHovered)}
+									<PinOffIcon class="h-4 w-4 hover:text-text" />
+									<p class="ml-1">{c.user?.username?.slice(0, 10) ?? `Comment ${idx + 1}`}</p>
+								{:else}
+									<p>{c.user?.username?.slice(0, 10) ?? `Comment ${idx + 1}`}</p>
+								{/if}
+							</div>
 						</button>
 					{/each}
 				</div>

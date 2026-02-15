@@ -23,5 +23,5 @@ export const LINE_CHANNEL_GAP = 8; // px gap between PDF right edge and vertical
 export const LINE_STROKE_WIDTH = 1.5; // px stroke width for non-hovered lines
 export const LINE_HOVERED_STROKE_WIDTH = 3; // px stroke width for hovered/active line
 export const LINE_ENDPOINT_RADIUS = 3; // px radius for endpoint dots
-export const LINE_FADE_MS = 150; // ms for fade in/out transitions
+export const LINE_FADE_MS = 80; // ms for stroke-width transitions on hover
 export const LINE_OPACITY = 0.6; // opacity for all connection lines
