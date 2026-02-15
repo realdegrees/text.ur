@@ -55,7 +55,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install ruff
-        run: pip install --no-cache-dir ruff
+        run: pip install --no-cache-dir ruff==0.15.1
       - name: Run ruff
         working-directory: ./backend
         run: ruff check .

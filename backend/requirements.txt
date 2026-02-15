@@ -50,7 +50,7 @@ python-dotenv==1.2.1
 python-multipart==0.0.20
 PyYAML==6.0.3
 redis==7.0.1
-ruff==0.14.4
+ruff==0.15.1
 s3transfer==0.14.0
 six==1.17.0
 slowapi==0.1.9

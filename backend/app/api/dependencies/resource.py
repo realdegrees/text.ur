@@ -1,7 +1,7 @@
 """Exports the Resource dependency which is a dependency factory for complex filter queries."""
 
 from collections.abc import Callable
-from typing import TypeVar, cast, overload
+from typing import cast, overload
 
 from api.dependencies.authentication import Authenticate, BasicAuthentication
 from api.dependencies.database import Database
@@ -12,15 +12,12 @@ from models.tables import User
 from sqlalchemy import ColumnElement, Integer, String
 from sqlmodel import select
 
-ResourceModel = TypeVar("ResourceModel", bound=BaseModel)
-IndexFieldType = TypeVar("IndexFieldType")
-
 DEFAULT_ID_ALIAS: str = "id"
 
 logger = get_logger("app")
 
 @overload
-def Resource(
+def Resource[ResourceModel: BaseModel](
     resource: type[ResourceModel],
     *,
     key_column: ColumnElement | None = None,
@@ -32,7 +29,7 @@ def Resource(
     ...
 
 @overload
-def Resource(
+def Resource[ResourceModel: BaseModel](
     resource: type[ResourceModel],
     *,
     key_column: ColumnElement | None = None,
@@ -44,11 +41,12 @@ def Resource(
     ...
 
 
-def Resource(
+def Resource[ResourceModel: BaseModel](
     resource: type[ResourceModel],
     *,
     key_column: ColumnElement | None = None,
     param_alias: str = DEFAULT_ID_ALIAS,
+    index_field_type: type = int,
     model_validator: Callable[[ResourceModel, User | None], ResourceModel] | None = None,
     raise_on_not_found: bool = True,
 ) -> Callable[..., ResourceModel] | Callable[..., ResourceModel | None]:

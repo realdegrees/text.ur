@@ -1,8 +1,8 @@
-from enum import Enum
+from enum import Enum, StrEnum
 
 
 # ENUMS
-class ReactionType(str, Enum):
+class ReactionType(StrEnum):
     """Types of reactions users can give to comments."""
 
     LIKE = "like"
@@ -12,7 +12,7 @@ class ReactionType(str, Enum):
     FIRE = "fire"
 
 
-class Permission(str, Enum):
+class Permission(StrEnum):
     """Available permissions for group members."""
 
     ADMINISTRATOR = "administrator"
@@ -39,7 +39,7 @@ class Permission(str, Enum):
     # Tags
     MANAGE_TAGS = "manage_tags"
 
-class ViewMode(str, Enum):
+class ViewMode(StrEnum):
     """Document view mode settings.
 
     RESTRICTED: Only owner, admins, and users with VIEW_RESTRICTED_COMMENTS can see comments
@@ -50,14 +50,14 @@ class ViewMode(str, Enum):
     PUBLIC = "public"
 
 
-class Visibility(str, Enum):
+class Visibility(StrEnum):
     """Visibility levels for comments."""
 
     PRIVATE = "private"
     RESTRICTED = "restricted"
     PUBLIC = "public"
 
-class AppErrorCode(str, Enum):
+class AppErrorCode(StrEnum):
     """Types of custom application exceptions."""
 
     UNKNOWN_ERROR = "unknown_error"
