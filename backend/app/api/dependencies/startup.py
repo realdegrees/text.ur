@@ -23,30 +23,16 @@ def verify_all_dependencies_sync() -> None:
     # Database - use psycopg2 for synchronous connection test
     try:
         app_logger.debug("Checking database connection (sync)")
-        # Parse DATABASE_URL to get connection params
-        # Format: postgresql+asyncpg://user:pass@host:port/db
-        db_url = cfg.DATABASE_URL.replace("postgresql+asyncpg://", "")
-        if "@" in db_url:
-            auth, rest = db_url.split("@", 1)
-            user, password = auth.split(":", 1) if ":" in auth else (auth, "")
-            host_db = rest
-            if "/" in host_db:
-                host_port, db_name = host_db.split("/", 1)
-                host, port = host_port.split(":", 1) if ":" in host_port else (host_port, "5432")
-            else:
-                host, port = host_db.split(":", 1) if ":" in host_db else (host_db, "5432")
-                db_name = "postgres"
-                
-            conn = psycopg2.connect(
-                host=host,
-                port=port,
-                user=user,
-                password=password,
-                database=db_name,
-                connect_timeout=5,
-            )
-            conn.close()
-            app_logger.info("Database connection verified (sync)")
+        conn = psycopg2.connect(
+            host=cfg.PGBOUNCER_HOST or cfg.POSTGRES_HOST,
+            port=cfg.PGBOUNCER_PORT or cfg.POSTGRES_PORT,
+            user=cfg.POSTGRES_USER,
+            password=cfg.POSTGRES_PASSWORD,
+            database=cfg.POSTGRES_DB,
+            connect_timeout=5,
+        )
+        conn.close()
+        app_logger.info("Database connection verified (sync)")
     except Exception as e:
         app_logger.error("Database verification failed (sync): %s", e)
         raise RuntimeError(f"Failed to connect to database: {e}") from e

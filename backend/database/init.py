@@ -138,10 +138,12 @@ def run_alembic_commands(upgrade_to_version: str = "head") -> None:
         raise RuntimeError("alembic.ini not found next to init.py")
 
     alembic_cfg = Config(alembic_ini)
+    # Alembic uses configparser which treats '%' as interpolation;
+    # escape them so the URL is stored literally.
     alembic_cfg.set_main_option(
-            "sqlalchemy.url",
-            SYNC_DATABASE_URL,
-        )
+        "sqlalchemy.url",
+        SYNC_DATABASE_URL.replace("%", "%%"),
+    )
 
     # Ensure alembic can find env.py and the migrations package by using an
     # absolute script_location path.

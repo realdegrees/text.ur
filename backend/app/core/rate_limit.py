@@ -1,5 +1,7 @@
 """Rate limiting configuration using slowapi with Redis backend."""
 
+from urllib.parse import quote
+
 import core.config as cfg
 from slowapi import Limiter
 from slowapi.util import get_remote_address
@@ -21,7 +23,9 @@ def _default_key_func(request):  # noqa: ANN001, ANN202
 def _build_redis_uri() -> str:
     """Build the Redis URI from configuration."""
     password_part = (
-        f":{cfg.REDIS_PASSWORD}@" if cfg.REDIS_PASSWORD else "@"
+        f":{quote(cfg.REDIS_PASSWORD, safe='')}@"
+        if cfg.REDIS_PASSWORD
+        else ""
     )
     return (
         f"redis://{password_part}{cfg.REDIS_HOST}:{cfg.REDIS_PORT}/1"

@@ -2,6 +2,7 @@ import os
 import sys
 from logging.config import fileConfig
 from pathlib import Path
+from urllib.parse import quote_plus
 
 import alembic_postgresql_enum as PostgresqlEnum
 from alembic import context
@@ -35,7 +36,16 @@ if not config.get_main_option("sqlalchemy.url"):
         print("One or more required environment variables are not set.")
         raise ValueError("One or more required environment variables are not set.")
 
-    config.set_main_option("sqlalchemy.url", f"postgresql+psycopg2://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}")
+    db_url = (
+        f"postgresql+psycopg2://"
+        f"{quote_plus(POSTGRES_USER)}:{quote_plus(POSTGRES_PASSWORD)}"
+        f"@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}"
+    )
+    # Alembic uses configparser which treats '%' as interpolation;
+    # escape them so the URL is stored literally.
+    config.set_main_option(
+        "sqlalchemy.url", db_url.replace("%", "%%")
+    )
 else:
     print("Using existing SQLAlchemy URL from Alembic config.")
     print(f"SQLAlchemy URL: {config.get_main_option('sqlalchemy.url')}")
