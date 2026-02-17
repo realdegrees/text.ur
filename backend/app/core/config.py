@@ -47,8 +47,8 @@ if IS_TEST_ENV:
 
 user = POSTGRES_USER
 password = POSTGRES_PASSWORD
-host = PGBOUNCER_HOST or POSTGRES_HOST if not IS_TEST_ENV else POSTGRES_HOST
-port = PGBOUNCER_PORT or POSTGRES_PORT if not IS_TEST_ENV else POSTGRES_PORT
+host = (PGBOUNCER_HOST or POSTGRES_HOST) if not IS_TEST_ENV else POSTGRES_HOST
+port = (PGBOUNCER_PORT or POSTGRES_PORT) if not IS_TEST_ENV else POSTGRES_PORT
 db = POSTGRES_DB if not IS_TEST_ENV else "test"
 
 # Async database URL for application (using asyncpg)
@@ -71,8 +71,12 @@ REDIS_HOST: str = os.getenv("REDIS_HOST", "localhost")
 # S3
 AWS_ACCESS_KEY = os.getenv("AWS_ACCESS_KEY")
 AWS_ENDPOINT_PORT = os.getenv("AWS_ENDPOINT_PORT")
-AWS_ENDPOINT_URL = os.getenv("AWS_ENDPOINT_URL") + \
-    f":{AWS_ENDPOINT_PORT}" if AWS_ENDPOINT_PORT else ""
+_aws_endpoint_base = os.getenv("AWS_ENDPOINT_URL")
+AWS_ENDPOINT_URL = (
+    f"{_aws_endpoint_base}:{AWS_ENDPOINT_PORT}"
+    if AWS_ENDPOINT_PORT
+    else _aws_endpoint_base
+)
 AWS_REGION = os.getenv("AWS_REGION")
 AWS_SECRET_KEY = os.getenv("AWS_SECRET_KEY")
 S3_BUCKET = os.getenv("S3_BUCKET", "default")

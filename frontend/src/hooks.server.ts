@@ -1,12 +1,13 @@
 import { sequence } from '@sveltejs/kit/hooks';
 import type { Handle, HandleFetch } from '@sveltejs/kit';
 import { env } from '$env/dynamic/private';
+import { env as publicEnv } from '$env/dynamic/public';
 import { loadAllLocales } from '$i18n/i18n-util.sync';
 import { detectLocale } from '$i18n/i18n-util';
 import { userCache } from '$lib/server/cache';
 import { forwardCookies } from '$lib/server/cookies';
 
-const baseUrl = env.INTERNAL_BACKEND_BASEURL;
+const baseUrl = env.INTERNAL_BACKEND_BASEURL || publicEnv.PUBLIC_BACKEND_BASEURL;
 const withBaseUrl = (request: Request, baseUrl: string): Request => {
 	const url = new URL(request.url);
 	return new Request(`${baseUrl}${url.pathname}${url.search}`, request);
