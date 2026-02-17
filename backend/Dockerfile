@@ -25,6 +25,8 @@ COPY app ./app
 COPY database ./database
 # Copy gunicorn configuration
 COPY gunicorn.conf.py ./gunicorn.conf.py
+# Copy email templates
+COPY templates ./templates
 
 # Copy entrypoint
 COPY docker-entrypoint.sh /docker-entrypoint.sh
