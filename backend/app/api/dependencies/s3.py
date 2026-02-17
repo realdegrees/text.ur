@@ -24,7 +24,7 @@ class S3Manager:
 
     def __init__(self) -> None:
         """Initialize the S3Manager with a boto3 client."""
-        if not all([AWS_ACCESS_KEY, AWS_SECRET_KEY, S3_BUCKET]):
+        if not all([AWS_ACCESS_KEY, AWS_SECRET_KEY, S3_BUCKET, AWS_ENDPOINT_URL]):
             raise RuntimeError("Not all required S3 configuration variables are set.")
 
         self.verify_connection()
@@ -34,7 +34,7 @@ class S3Manager:
         self._client = boto3.client(
             "s3",
             endpoint_url=AWS_ENDPOINT_URL,
-            region_name=AWS_REGION,
+            region_name=AWS_REGION or "auto",
             aws_access_key_id=AWS_ACCESS_KEY,
             aws_secret_access_key=AWS_SECRET_KEY,
             config=Config(
@@ -43,21 +43,9 @@ class S3Manager:
                 read_timeout=30,
             ),
         )
-                
-        try:
-            self._client.head_bucket(Bucket=S3_BUCKET)
-            s3_logger.info("Connection verified successfully (bucket: %s)", S3_BUCKET)
-        except ClientError as e:
-            error_code = e.response.get("Error", {}).get("Code", "Unknown")
-            if error_code == "404":
-                raise RuntimeError(f"Bucket '{S3_BUCKET}' does not exist") from e
-            elif error_code == "403":
-                raise RuntimeError(f"Access denied to bucket '{S3_BUCKET}'") from e
-            else:
-                raise RuntimeError(f"Failed to connect to S3: {e}") from e
-        except Exception as e:
-            s3_logger.error("S3 connection failed: %s", e)
-            raise RuntimeError(f"Failed to connect: {e}") from e
+        s3_logger.info(
+            "S3 client configured (bucket: %s)", S3_BUCKET
+        )
 
     def metadata(self, key: str) -> dict | None:
         """Check if an object exists in S3 and return its metadata."""
