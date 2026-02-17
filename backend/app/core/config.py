@@ -21,6 +21,12 @@ else:
     print("No .env file found, using system environment variables.")
 
 DEBUG = os.getenv("DEBUG", "False").lower() == "true"
+# Allow user creation even when email delivery fails (links
+# are logged instead).  Intended for environments where SMTP
+# is unavailable (e.g. PaaS free tiers that block SMTP ports).
+DEBUG_ALLOW_REGISTRATION_WITHOUT_EMAIL = os.getenv(
+    "DEBUG_ALLOW_REGISTRATION_WITHOUT_EMAIL", "False"
+).lower() == "true"
 LOG_FILE_DIR = os.getenv("LOG_FILE_DIR", os.path.join(backend_path, "logs"))
 ENABLE_LOGGING = os.getenv("ENABLE_LOGGING", "False").lower() == "true"
 

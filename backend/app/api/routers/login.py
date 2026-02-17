@@ -12,6 +12,7 @@ from core.auth import (
     hash_password,
     validate_password,
 )
+from core.logger import get_logger
 from core.rate_limit import limiter
 from fastapi import Body, Depends, HTTPException, Request, Response
 from fastapi.security import OAuth2PasswordRequestForm
@@ -21,6 +22,8 @@ from models.tables import Membership, User
 from slowapi.util import get_remote_address
 from sqlmodel import or_, select
 from util.api_router import APIRouter
+
+login_logger = get_logger("app")
 
 router = APIRouter(
     prefix="/login",
@@ -130,15 +133,29 @@ async def reset_password(request: Request, db: Database, mail: Mail, email: str 
             template="reset_password.jinja",
             template_vars={
                 "reset_link": reset_link,
-                "expiry_time": expiry_time.strftime("%B %d, %Y at %H:%M UTC"),
+                "expiry_time": expiry_time.strftime(
+                    "%B %d, %Y at %H:%M UTC"
+                ),
                 "email": email,
                 "username": user.username,
-                "current_year": datetime.now(UTC).year
-            }
+                "current_year": datetime.now(UTC).year,
+            },
         )
     except Exception as e:
+        if cfg.DEBUG_ALLOW_REGISTRATION_WITHOUT_EMAIL:
+            login_logger.warning(
+                "Email delivery failed but"
+                " DEBUG_ALLOW_REGISTRATION_WITHOUT_EMAIL"
+                " is set. Password reset email for '%s'"
+                " not sent.\n[Reset link: %s]",
+                email,
+                reset_link,
+            )
+            return
         raise HTTPException(
-            status_code=500, detail="Failed to send reset email") from e
+            status_code=500,
+            detail="Failed to send reset email",
+        ) from e
 
 
 @router.put("/reset/verify/{token}")
