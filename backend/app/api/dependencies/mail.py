@@ -16,6 +16,7 @@ from core.config import (
     SMTP_PASSWORD,
     SMTP_PORT,
     SMTP_SERVER,
+    SMTP_SSL,
     SMTP_TLS,
     SMTP_USER,
 )
@@ -41,28 +42,52 @@ class EmailManager:
 
         self.verify_connection()
 
-    def verify_connection(self) -> bool:
-        """Verify SMTP connection at startup.
+    def _smtp_connection(
+        self, timeout: int = 10
+    ) -> smtplib.SMTP:
+        """Return the appropriate SMTP connection.
 
-        Returns True if successful, False if verification failed but the service
-        is disabled or DEBUG is set. Raises an exception when SMTP is enabled and
-        the verification fails in non-debug (production) mode.
+        Uses SMTP_SSL (implicit TLS, typically port 465) when
+        SMTP_SSL is set, otherwise plain SMTP (with optional
+        STARTTLS upgrade via SMTP_TLS, typically port 587).
         """
+        if SMTP_SSL:
+            return smtplib.SMTP_SSL(
+                SMTP_SERVER, SMTP_PORT, timeout=timeout
+            )
+        return smtplib.SMTP(
+            SMTP_SERVER, SMTP_PORT, timeout=timeout
+        )
+
+    def verify_connection(self) -> bool:
+        """Verify SMTP connection at startup."""
         try:
             mail_logger.debug(
-                "Attempting SMTP connection: server=%s, port=%s, tls=%s, user=%s",
-                SMTP_SERVER, SMTP_PORT, SMTP_TLS, SMTP_USER
+                "Attempting SMTP connection: server=%s,"
+                " port=%s, tls=%s, ssl=%s, user=%s",
+                SMTP_SERVER,
+                SMTP_PORT,
+                SMTP_TLS,
+                SMTP_SSL,
+                SMTP_USER,
             )
-            with smtplib.SMTP(SMTP_SERVER, SMTP_PORT, timeout=10) as server:
-                if SMTP_TLS:
+            with self._smtp_connection() as server:
+                if SMTP_TLS and not SMTP_SSL:
                     server.starttls()
                 server.login(SMTP_USER, SMTP_PASSWORD)
-            mail_logger.info("SMTP connection verified successfully")
+            mail_logger.info(
+                "SMTP connection verified successfully"
+            )
             return True
         except smtplib.SMTPAuthenticationError as e:
-            raise RuntimeError(f"SMTP authentication failed for user '{SMTP_USER}': {e}") from e
+            raise RuntimeError(
+                "SMTP authentication failed for user"
+                f" '{SMTP_USER}': {e}"
+            ) from e
         except Exception as e:
-            raise RuntimeError(f"Failed to connect to SMTP server: {e}") from e
+            raise RuntimeError(
+                f"Failed to connect to SMTP server: {e}"
+            ) from e
 
     def generate_verification_link(self, email: str, router: APIRouter, *, salt: str, confirm_route: str) -> str:
             """Generate a signed verification link."""
@@ -106,8 +131,8 @@ class EmailManager:
 
         # Send email
         try:
-            with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
-                if SMTP_TLS:
+            with self._smtp_connection() as server:
+                if SMTP_TLS and not SMTP_SSL:
                     server.starttls()
                 server.login(SMTP_USER, SMTP_PASSWORD)
                 server.send_message(msg)
