@@ -39,7 +39,7 @@ class EventManager:
         
     def __init__(self) -> None:
         """Initialize the EventManager with Redis connection details."""
-        if not all([cfg.REDIS_HOST, cfg.REDIS_PORT, cfg.REDIS_PASSWORD]):
+        if not all([cfg.REDIS_HOST, cfg.REDIS_PORT]):
             raise RuntimeError("Not all required Redis configuration variables are set.")
 
     # ---------------- Lifecycle ----------------
