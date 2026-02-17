@@ -35,12 +35,32 @@ class EmailManager:
     """Utility class for sending emails."""
 
     def __init__(self) -> None:
-        """Initialize the EmailManager, check SMTP configuration."""
-        # Perform a connection verification automatically during initialization
-        if not all([SMTP_SERVER, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, SMTP_FROM_EMAIL and "@" in SMTP_FROM_EMAIL]) and not DEBUG:
-            raise RuntimeError("Not all required SMTP configuration variables are set correctly.")
+        """Initialize the EmailManager, validate SMTP configuration."""
+        required = {
+            "SMTP_SERVER": SMTP_SERVER,
+            "SMTP_PORT": SMTP_PORT,
+            "SMTP_USER": SMTP_USER,
+            "SMTP_PASSWORD": SMTP_PASSWORD,
+            "SMTP_FROM_EMAIL": SMTP_FROM_EMAIL,
+        }
+        missing = [k for k, v in required.items() if not v]
+        if missing and not DEBUG:
+            raise RuntimeError(
+                "Missing SMTP configuration: "
+                + ", ".join(missing)
+            )
+        if SMTP_FROM_EMAIL and "@" not in SMTP_FROM_EMAIL:
+            raise RuntimeError(
+                f"Invalid SMTP_FROM_EMAIL:"
+                f" '{SMTP_FROM_EMAIL}' is missing '@'"
+            )
 
-        self.verify_connection()
+        self._smtp_available = False
+        mail_logger.info(
+            "SMTP client configured (server: %s, port: %s)",
+            SMTP_SERVER,
+            SMTP_PORT,
+        )
 
     def _smtp_connection(
         self, timeout: int = 10
@@ -60,7 +80,14 @@ class EmailManager:
         )
 
     def verify_connection(self) -> bool:
-        """Verify SMTP connection at startup."""
+        """Verify SMTP connection at startup.
+
+        Returns True if the connection succeeds. On network-level
+        failures (timeouts, unreachable hosts) logs a warning and
+        returns False so the application can still boot.  Auth
+        errors are re-raised because they indicate a real config
+        problem.
+        """
         try:
             mail_logger.debug(
                 "Attempting SMTP connection: server=%s,"
@@ -78,6 +105,7 @@ class EmailManager:
             mail_logger.info(
                 "SMTP connection verified successfully"
             )
+            self._smtp_available = True
             return True
         except smtplib.SMTPAuthenticationError as e:
             raise RuntimeError(
@@ -85,9 +113,14 @@ class EmailManager:
                 f" '{SMTP_USER}': {e}"
             ) from e
         except Exception as e:
-            raise RuntimeError(
-                f"Failed to connect to SMTP server: {e}"
-            ) from e
+            mail_logger.warning(
+                "SMTP connection failed: %s. Email sending"
+                " will be unavailable — email content will"
+                " be logged on send attempts.",
+                e,
+            )
+            self._smtp_available = False
+            return False
 
     def generate_verification_link(self, email: str, router: APIRouter, *, salt: str, confirm_route: str) -> str:
             """Generate a signed verification link."""
@@ -136,10 +169,30 @@ class EmailManager:
                     server.starttls()
                 server.login(SMTP_USER, SMTP_PASSWORD)
                 server.send_message(msg)
-                mail_logger.info("Email sent to %s (subject: %s)", target_email, subject)
+                mail_logger.info(
+                    "Email sent to %s (subject: %s)",
+                    target_email,
+                    subject,
+                )
         except Exception as e:
-            mail_logger.error("Failed to send email to %s: %s", target_email, e, exc_info=True)
-            raise HTTPException(status_code=500, detail="Failed to send email") from e
+            mail_logger.error(
+                "Failed to send email to %s: %s",
+                target_email,
+                e,
+            )
+            mail_logger.warning(
+                "Email delivery failed. Content logged"
+                " below for manual recovery.\n"
+                "[To: %s]\n[Subject: %s]\n"
+                "[Body]\n%s",
+                target_email,
+                subject,
+                plain_text_body,
+            )
+            raise HTTPException(
+                status_code=500,
+                detail="Failed to send email",
+            ) from e
 
 
 @lru_cache(maxsize=1)

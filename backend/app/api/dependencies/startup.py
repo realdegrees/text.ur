@@ -62,14 +62,28 @@ def verify_all_dependencies_sync() -> None:
         app_logger.error("S3 configuration validation failed: %s", e)
         raise RuntimeError(f"S3 configuration invalid: {e}") from e
 
-    # Mail - just validate configuration by instantiating
+    # Mail - validate configuration, then attempt connection
+    # Config errors (missing vars, bad credentials) are fatal.
+    # Network errors (SMTP port blocked) are non-fatal — the app
+    # boots and email content is logged on send attempts.
     try:
         app_logger.debug("Validating Mail configuration")
-        get_mail_manager()
+        mail_manager = get_mail_manager()
         app_logger.info("Mail configuration validated")
     except Exception as e:
-        app_logger.error("Mail configuration validation failed: %s", e)
-        raise RuntimeError(f"Mail configuration invalid: {e}") from e
+        app_logger.error(
+            "Mail configuration validation failed: %s", e
+        )
+        raise RuntimeError(
+            f"Mail configuration invalid: {e}"
+        ) from e
+
+    if not mail_manager.verify_connection():
+        app_logger.warning(
+            "SMTP server unreachable — email sending will"
+            " be unavailable. Email content will be logged"
+            " on send attempts for manual recovery."
+        )
 
     app_logger.info("All dependencies verified successfully (sync)")
 
