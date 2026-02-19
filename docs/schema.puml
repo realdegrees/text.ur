@@ -46,21 +46,23 @@ class Group {
     ____
         **Column Properties**
         # member_count: int
+        # document_count: int
 }
 
 enum Permission {
     administrator
-    add_annotations
-    view_public_annotations
-    view_public_annotation_user
-    view_restricted_annotations
-    view_restricted_annotation_user
-    endorse_comments
-    manage_members
+    add_comments
+    remove_comments
+    view_restricted_comments
+    add_members
+    remove_members
     manage_permissions
     upload_documents
+    view_restricted_documents
     delete_documents
-    modify_documents
+    remove_reactions
+    add_reactions
+    manage_tags
 }
 
 enum ViewMode {
@@ -91,6 +93,7 @@ class Document {
     - id : string [PK, INDEXED]
     - group_id : string [FK, NULLABLE]
     - name : string
+    - description : string [NULLABLE]
     - s3_key : string [UNIQUE, INDEXED]
     - size_bytes : int
     - visibility : Visibility
@@ -137,20 +140,21 @@ class Comment {
 class Tag {
     - id : int [PK]
     - document_id : string [FK]
-    - label : string
-    - description : string [NULLABLE]
-    - color : string
+    - label : string [max: 50]
+    - description : string [NULLABLE, max: 200]
+    - color : string [max: 7]
     - created_at : datetime
     - updated_at : datetime
     ____
         **Relationships**
-        # group: Group
+        # document: Document
         # comments: list[Comment]
 }
 
 class CommentTag {
     - comment_id : int [PK, FK]
     - tag_id : int [PK, FK]
+    - order : int
     - created_at : datetime
     - updated_at : datetime
     ____
@@ -160,8 +164,11 @@ class CommentTag {
 }
 
 enum ReactionType {
-    upvote
-    downvote
+    like
+    dislike
+    laugh
+    confused
+    fire
 }
 
 class Reaction {

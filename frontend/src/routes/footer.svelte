@@ -87,7 +87,7 @@
 			<GithubIcon />
 		</a>
 		<a
-			href="mailto:fabian.schebera@stud.uni-regensburg.de"
+			href="mailto:Text.ur@sprachlit.uni-regensburg.de"
 			target="_blank"
 			rel="noreferrer noopener"
 			class="h-full"

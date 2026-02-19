@@ -1,38 +1,98 @@
-# sv
+# 🖥️ Frontend
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+> [Back to main README](../README.md)
 
-## Creating a project
+SvelteKit application using Svelte 5, TypeScript (strict), and TailwindCSS 4. Handles SSR, client-side API calls, WebSocket connections, and the PDF annotation interface. Linting is handled by Prettier ([`.prettierrc`](.prettierrc)) and ESLint ([`eslint.config.js`](eslint.config.js)).
 
-If you're seeing this, you've probably already done this step. Congrats!
+## 🛠️ Commands
 
-```sh
-# create a new project in the current directory
-npx sv create
+All commands use `pnpm` and are run from `frontend/`.
 
-# create a new project in my-app
-npx sv create my-app
+| Task | Command |
+|---|---|
+| **Dev server** | `pnpm dev` |
+| **Build** | `pnpm build` |
+| **Type check** | `pnpm check` |
+| **Lint** | `pnpm lint` |
+| **Lint fix** | `pnpm lint:fix` |
+| **Run all tests** | `pnpm test` |
+| **Test with coverage** | `pnpm test:coverage` |
+| **Regenerate types** | `pnpm typegen` |
+
+---
+
+## 🧩 Key Patterns
+
+### Hybrid Request Model
+
+The app uses two backend base URLs:
+
+- **`INTERNAL_BACKEND_BASEURL`** (private) - used by the SvelteKit server during SSR. The `handleFetch` hook in `hooks.server.ts` intercepts `/api/*` requests, rewrites them to this URL, and forwards cookies.
+- **`PUBLIC_BACKEND_BASEURL`** (public) - used by the browser for client-side API calls and WebSocket connections.
+
+See [Architecture: Request Flow](../docs/architecture.md#-request-flow) for details.
+
+### API Client
+
+The `ApiClient` singleton (`src/api/client.ts`) wraps `fetch` with automatic credentials, transparent 401/token refresh, and ETag caching. All methods return discriminated unions:
+
+```typescript
+const result = await api.get<DocumentRead>('/api/documents/abc');
+
+if (result.success) {
+  console.log(result.data);  // DocumentRead
+} else {
+  console.log(result.error); // AppError
+}
 ```
 
-## Developing
+### Server Hooks
 
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
+`hooks.server.ts` handles SSR API proxying (rewrites to `INTERNAL_BACKEND_BASEURL`), cookie forwarding, transparent token refresh during SSR, security headers, dark mode detection, and i18n locale detection.
 
-```sh
-npm run dev
+### WebSocket
 
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
+`documentWebSocket.svelte.ts` manages the real-time connection for the document viewer. WebSocket connections go directly from the browser to the backend via `PUBLIC_BACKEND_BASEURL`. The store handles comment sync (create/update/delete), active user tracking with heartbeat, live cursor positions, and automatic reconnection with exponential backoff.
+
+### PDF Rendering
+
+The PDF viewer uses [PDFSlick](https://pdfslick.dev/) (`@pdfslick/core`). Key components live in `lib/components/pdf/`:
+
+- `Pdf.svelte` - core renderer
+- `AnnotationLayer.svelte` - overlay for annotation bounding boxes
+- `TextSelectionHandler.svelte` - text selection for creating annotations
+- `ConnectionLines.svelte` - visual lines connecting annotations to comments
+- `CommentSidebar.svelte` - scrollable comment panel
+
+---
+
+## 📄 Generated Files
+
+These files are auto-generated and **must not be edited manually**:
+
+| File | Generator | Source |
+|---|---|---|
+| `src/api/types.ts` | `pydantic2ts` | Backend Pydantic models |
+| `src/api/schemas.ts` | `ts-to-zod` | `types.ts` |
+| `src/api/maps.generated.ts` | `generate_exclusion_maps.py` | Backend filter models |
+| `src/i18n/i18n-types.ts` | `typesafe-i18n` | Translation files |
+
+After any backend model change:
+
+```bash
+pnpm typegen
 ```
 
-## Building
+Always commit the regenerated files alongside model changes. The CI pipeline fails if they are out of sync.
 
-To create a production version of your app:
+---
 
-```sh
-npm run build
-```
+## 🌐 Internationalization
 
-You can preview the production build with `npm run preview`.
+The project uses [typesafe-i18n](https://github.com/ivanhofer/typesafe-i18n) with English (`en`) and German (`de`). Add translation keys in `src/i18n/en/index.ts`, then add the corresponding German translations in `src/i18n/de/index.ts`. Types are generated automatically.
 
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+---
+
+## 🧪 Testing
+
+Tests use `.spec.ts` files and vitest (`describe`/`it`/`expect`).
