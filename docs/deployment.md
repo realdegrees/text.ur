@@ -233,40 +233,7 @@ Create `.env` from the template and update for production:
 cp .env.template .env
 ```
 
-Critical production settings:
-
-```env
-DEBUG=False
-
-# Your public domain
-ORIGIN=https://textur.example.com
-
-# Internal Docker networking (SSR requests)
-INTERNAL_BACKEND_BASEURL=http://backend:8000
-# Public backend URL (browser API calls and WebSocket)
-PUBLIC_BACKEND_BASEURL=https://textur.example.com
-
-# Docker service hostnames
-POSTGRES_HOST=postgres
-PGBOUNCER_HOST=pgbouncer
-REDIS_HOST=redis
-AWS_ENDPOINT_URL=http://minio
-AWS_ENDPOINT_PORT=9000
-
-# Security
-COOKIE_SECURE=True
-COOKIE_SAMESITE=lax
-JWT_SECRET=<generate with: openssl rand -hex 32>
-EMAIL_PRESIGN_SECRET=<generate with: openssl rand -hex 32>
-
-# Real SMTP configuration
-SMTP_SERVER=smtp.yourprovider.com
-SMTP_PORT=587
-SMTP_TLS=True
-SMTP_USER=your-smtp-user
-SMTP_PASSWORD=your-smtp-password
-SMTP_FROM_EMAIL=noreply@example.com
-```
+See the [Environment Variables](#-environment-variables) section for descriptions and required variables.
 
 ### 2. Start Services
 
@@ -337,64 +304,6 @@ The proxy must:
 - Terminate TLS (HTTPS)
 - Forward `X-Forwarded-For` and `X-Real-IP` headers
 - Support WebSocket upgrade for `/api/documents/*/events`
-
-### Example: nginx
-
-```nginx
-server {
-    listen 443 ssl;
-    server_name textur.example.com;
-
-    ssl_certificate     /etc/ssl/certs/textur.crt;
-    ssl_certificate_key /etc/ssl/private/textur.key;
-
-    # Frontend (pages, SSR)
-    location / {
-        proxy_pass http://localhost:3000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-
-    # Backend API and WebSocket
-    location /api/ {
-        proxy_pass http://localhost:8000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-
-        # WebSocket support
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-    }
-}
-
-server {
-    listen 80;
-    server_name textur.example.com;
-    return 301 https://$host$request_uri;
-}
-```
-
-### Example: Caddy
-
-```
-textur.example.com {
-    handle /api/* {
-        reverse_proxy localhost:8000
-    }
-    handle {
-        reverse_proxy localhost:3000
-    }
-}
-```
-
-Caddy handles TLS automatically via Let's Encrypt and supports WebSockets out of the box.
-
-> When `PUBLIC_BACKEND_BASEURL` is set to the same origin as `ORIGIN` (e.g. both `https://textur.example.com`), the reverse proxy routes `/api/*` to the backend and everything else to the frontend. This keeps cookies on a single domain.
 
 ---
 
