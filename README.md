@@ -112,6 +112,13 @@ Set individual comments to **public**, **restricted** (admins only), or **privat
 | **Cache & Pub/Sub** | Redis 8 |
 | **Deployment** | Docker Compose, Gunicorn + Uvicorn |
 
+## 📱 Demo
+
+A live demo version of the stable `main` branch is available at [https://textur.realdegrees.dev](https://textur.realdegrees.dev).
+
+> [!CAUTION]
+> This demo version is not guaranteed to be up at all times and may be reset without notice. For a stable, private instance, follow the [Deployment Guide](docs/deployment.md) to set up your own server or contact the maintainers for assistance.
+
 ## 🚀 Quick Start
 
 **Prerequisites:** Docker, Python 3.12+, Node.js 20+, pnpm 10
@@ -156,7 +163,8 @@ pnpm dev
 
 The app is available at `http://localhost:5173`. Captured emails can be viewed at `http://localhost:6026` (MailHog).
 
-> 💡 The repository includes **VS Code launch configurations** for debugging both the backend (debugpy) and frontend (Node + Chrome DevTools). See the [Deployment Guide](docs/deployment.md#-vs-code) for details.
+> [!TIP] 
+> The repository includes **VS Code launch configurations** for debugging both the backend (debugpy) and frontend (Node + Chrome DevTools). See the [Deployment Guide](docs/deployment.md#-vs-code) for details.
 
 For production deployment, see the [Deployment Guide](docs/deployment.md).
 
