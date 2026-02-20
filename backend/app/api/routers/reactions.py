@@ -11,7 +11,7 @@ from models.comment import CommentRead
 from models.enums import AppErrorCode, Permission
 from models.event import Event
 from models.reaction import ReactionCreate, ReactionRead
-from models.tables import Comment, Reaction, User
+from models.tables import Comment, GroupReaction, Reaction, User
 from sqlmodel import select
 from util.api_router import APIRouter
 from util.queries import Guard
@@ -21,6 +21,16 @@ router = APIRouter(
     prefix="/reactions",
     tags=["Reactions"],
 )
+
+
+def _to_reaction_read(reaction: Reaction) -> ReactionRead:
+    """Build a ReactionRead by flattening the group_reaction relationship."""
+    return ReactionRead(
+        group_reaction_id=reaction.group_reaction_id,
+        emoji=reaction.group_reaction.emoji,
+        user=reaction.user,
+        comment_id=reaction.comment_id,
+    )
 
 
 async def _publish_reaction_event(
@@ -55,9 +65,7 @@ async def add_reaction(
     ),
     reaction_create: ReactionCreate = Body(...),
     comment: Comment = Resource(Comment, param_alias="comment_id"),
-    x_connection_id: str | None = Header(
-        None, alias="X-Connection-ID"
-    ),
+    x_connection_id: str | None = Header(None, alias="X-Connection-ID"),
 ) -> ReactionRead:
     """Create or update a reaction on a root-level comment."""
     if comment.user_id == user.id:
@@ -71,12 +79,24 @@ async def add_reaction(
         raise AppException(
             status_code=400,
             error_code=AppErrorCode.REPLY_REACTION,
-            detail=(
-                "Reactions are only allowed on root-level comments"
-            ),
+            detail=("Reactions are only allowed on root-level comments"),
         )
 
-    # Upsert: update type if reaction already exists
+    # Validate group_reaction_id belongs to the comment's group
+    result = await db.exec(
+        select(GroupReaction).where(
+            GroupReaction.id == reaction_create.group_reaction_id,
+            GroupReaction.group_id == comment.document.group_id,
+        )
+    )
+    if result.first() is None:
+        raise AppException(
+            status_code=400,
+            error_code=AppErrorCode.INVALID_INPUT,
+            detail="Invalid reaction type for this group",
+        )
+
+    # Upsert: update group_reaction_id if reaction already exists
     result = await db.exec(
         select(Reaction).where(
             Reaction.user_id == user.id,
@@ -87,13 +107,11 @@ async def add_reaction(
 
     if existing:
         await db.merge(existing)
-        existing.type = reaction_create.type
+        existing.group_reaction_id = reaction_create.group_reaction_id
         await db.commit()
         await db.refresh(existing)
-        await _publish_reaction_event(
-            db, events, comment, x_connection_id
-        )
-        return existing
+        await _publish_reaction_event(db, events, comment, x_connection_id)
+        return _to_reaction_read(existing)
 
     reaction = Reaction(
         **reaction_create.model_dump(),
@@ -103,10 +121,8 @@ async def add_reaction(
     db.add(reaction)
     await db.commit()
     await db.refresh(reaction)
-    await _publish_reaction_event(
-        db, events, comment, x_connection_id
-    )
-    return reaction
+    await _publish_reaction_event(db, events, comment, x_connection_id)
+    return _to_reaction_read(reaction)
 
 
 @router.delete("/")
@@ -117,9 +133,7 @@ async def remove_reaction(
         guards=[Guard.comment_access({Permission.ADD_REACTIONS})]
     ),
     comment: Comment = Resource(Comment, param_alias="comment_id"),
-    x_connection_id: str | None = Header(
-        None, alias="X-Connection-ID"
-    ),
+    x_connection_id: str | None = Header(None, alias="X-Connection-ID"),
 ) -> Response:
     """Remove the current user's reaction from a comment."""
     result = await db.exec(
@@ -134,9 +148,7 @@ async def remove_reaction(
 
     await db.delete(reaction)
     await db.commit()
-    await _publish_reaction_event(
-        db, events, comment, x_connection_id
-    )
+    await _publish_reaction_event(db, events, comment, x_connection_id)
     return Response(status_code=204)
 
 
@@ -146,14 +158,10 @@ async def remove_user_reaction(
     events: Events,
     user_id: int,
     admin: User = Authenticate(
-        guards=[
-            Guard.comment_access({Permission.REMOVE_REACTIONS})
-        ]
+        guards=[Guard.comment_access({Permission.REMOVE_REACTIONS})]
     ),
     comment: Comment = Resource(Comment, param_alias="comment_id"),
-    x_connection_id: str | None = Header(
-        None, alias="X-Connection-ID"
-    ),
+    x_connection_id: str | None = Header(None, alias="X-Connection-ID"),
 ) -> Response:
     """Remove another user's reaction (admin/permission required)."""
     result = await db.exec(
@@ -168,7 +176,5 @@ async def remove_user_reaction(
 
     await db.delete(reaction)
     await db.commit()
-    await _publish_reaction_event(
-        db, events, comment, x_connection_id
-    )
+    await _publish_reaction_event(db, events, comment, x_connection_id)
     return Response(status_code=204)

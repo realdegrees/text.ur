@@ -9,7 +9,8 @@ from __future__ import annotations
 import pytest
 from api.routers.memberships import _compute_score
 from factories import models as f
-from models.enums import Permission, ReactionType
+from models.enums import Emoji, Permission
+from models.tables import GroupReaction, ScoreConfig
 from sqlmodel.ext.asyncio.session import AsyncSession as SQLModelAsyncSession
 
 
@@ -18,22 +19,19 @@ async def _make_scenario(
 ) -> dict:
     """Create a basic group + user setup for score tests.
 
-    Returns a dict with keys: user, other_user, admin_user, group, document.
+    Returns a dict with keys: user, other_user, admin_user, group,
+    document, group_reactions (dict keyed by emoji name).
     """
     user = await db.run_sync(lambda s: f.UserFactory())
     other_user = await db.run_sync(lambda s: f.UserFactory())
     admin_user = await db.run_sync(lambda s: f.UserFactory())
 
     group = await db.run_sync(lambda s: f.GroupFactory())
-    document = await db.run_sync(
-        lambda s: f.DocumentFactory(group=group)
-    )
+    document = await db.run_sync(lambda s: f.DocumentFactory(group=group))
 
     # user is a regular member
     await db.run_sync(
-        lambda s: f.MembershipFactory(
-            user=user, group=group, accepted=True
-        )
+        lambda s: f.MembershipFactory(user=user, group=group, accepted=True)
     )
     # other_user is a regular member
     await db.run_sync(
@@ -48,6 +46,27 @@ async def _make_scenario(
         )
     )
 
+    # Create ScoreConfig with defaults
+    await db.run_sync(lambda s: f.ScoreConfigFactory(group=group))
+
+    # Create default group reactions
+    emojis = [
+        (Emoji.THUMBS_UP, 0),
+        (Emoji.SMILE, 1),
+        (Emoji.HEART, 2),
+        (Emoji.FIRE, 3),
+        (Emoji.PINCH, 4),
+        (Emoji.NERD, 5),
+    ]
+    group_reactions = {}
+    for emoji, order in emojis:
+        gr = await db.run_sync(
+            lambda s, e=emoji, o=order: f.GroupReactionFactory(
+                group=group, emoji=e, order=o
+            )
+        )
+        group_reactions[emoji] = gr
+
     await db.flush()
 
     return {
@@ -56,15 +75,14 @@ async def _make_scenario(
         "admin_user": admin_user,
         "group": group,
         "document": document,
+        "group_reactions": group_reactions,
     }
 
 
 class TestScoreEmpty:
     """Score should be zero when the user has no activity."""
 
-    async def test_empty_score(
-        self, db: SQLModelAsyncSession
-    ) -> None:
+    async def test_empty_score(self, db: SQLModelAsyncSession) -> None:
         """A member with no comments/reactions gets score 0."""
         s = await _make_scenario(db)
 
@@ -81,9 +99,7 @@ class TestScoreEmpty:
 class TestScoreHighlightsAndComments:
     """Points from root-level highlights and comments."""
 
-    async def test_highlight_only(
-        self, db: SQLModelAsyncSession
-    ) -> None:
+    async def test_highlight_only(self, db: SQLModelAsyncSession) -> None:
         """A root comment with annotation but no content gives 1 pt."""
         s = await _make_scenario(db)
 
@@ -105,9 +121,7 @@ class TestScoreHighlightsAndComments:
         assert score.breakdown.comment_points == 0
         assert score.total == 1
 
-    async def test_comment_only(
-        self, db: SQLModelAsyncSession
-    ) -> None:
+    async def test_comment_only(self, db: SQLModelAsyncSession) -> None:
         """A root comment with content but empty annotation gives 5 pt."""
         s = await _make_scenario(db)
 
@@ -150,9 +164,7 @@ class TestScoreHighlightsAndComments:
         assert score.breakdown.comments == 1
         assert score.total == 6  # 1 + 5
 
-    async def test_replies_do_not_count(
-        self, db: SQLModelAsyncSession
-    ) -> None:
+    async def test_replies_do_not_count(self, db: SQLModelAsyncSession) -> None:
         """Replies (parent_id != null) should not earn any points."""
         s = await _make_scenario(db)
 
@@ -184,11 +196,10 @@ class TestScoreHighlightsAndComments:
 class TestScoreReactions:
     """Points from reactions given and received."""
 
-    async def test_reaction_given(
-        self, db: SQLModelAsyncSession
-    ) -> None:
-        """Giving a reaction earns 2 pts for the reactor."""
+    async def test_reaction_given(self, db: SQLModelAsyncSession) -> None:
+        """Giving a reaction earns giver_points (2 by default)."""
         s = await _make_scenario(db)
+        gr = s["group_reactions"][Emoji.HEART]
 
         # other_user creates a root comment
         comment = await db.run_sync(
@@ -203,14 +214,12 @@ class TestScoreReactions:
             lambda sess: f.ReactionFactory(
                 user=s["user"],
                 comment=comment,
-                type=ReactionType.HEART,
+                group_reaction=gr,
             )
         )
         await db.flush()
 
-        score = await _compute_score(
-            db, s["group"].id, s["user"].id
-        )
+        score = await _compute_score(db, s["group"].id, s["user"].id)
 
         assert score.breakdown.reactions_given == 1
         assert score.breakdown.reaction_given_points == 2
@@ -218,8 +227,9 @@ class TestScoreReactions:
     async def test_reaction_received_from_normal(
         self, db: SQLModelAsyncSession
     ) -> None:
-        """Receiving a reaction from a normal user earns 2 pts."""
+        """Receiving a reaction from a normal user earns points (2)."""
         s = await _make_scenario(db)
+        gr = s["group_reactions"][Emoji.THUMBS_UP]
 
         comment = await db.run_sync(
             lambda sess: f.CommentFactory(
@@ -233,14 +243,12 @@ class TestScoreReactions:
             lambda sess: f.ReactionFactory(
                 user=s["other_user"],
                 comment=comment,
-                type=ReactionType.THUMBS_UP,
+                group_reaction=gr,
             )
         )
         await db.flush()
 
-        score = await _compute_score(
-            db, s["group"].id, s["user"].id
-        )
+        score = await _compute_score(db, s["group"].id, s["user"].id)
 
         assert score.breakdown.reactions_received == 1
         assert score.breakdown.reactions_received_from_admin == 0
@@ -249,8 +257,9 @@ class TestScoreReactions:
     async def test_reaction_received_from_admin(
         self, db: SQLModelAsyncSession
     ) -> None:
-        """Receiving a reaction from an admin/owner earns 4 pts."""
+        """Receiving a reaction from an admin/owner earns admin_points (4)."""
         s = await _make_scenario(db)
+        gr = s["group_reactions"][Emoji.FIRE]
 
         comment = await db.run_sync(
             lambda sess: f.CommentFactory(
@@ -264,14 +273,12 @@ class TestScoreReactions:
             lambda sess: f.ReactionFactory(
                 user=s["admin_user"],
                 comment=comment,
-                type=ReactionType.FIRE,
+                group_reaction=gr,
             )
         )
         await db.flush()
 
-        score = await _compute_score(
-            db, s["group"].id, s["user"].id
-        )
+        score = await _compute_score(db, s["group"].id, s["user"].id)
 
         assert score.breakdown.reactions_received == 1
         assert score.breakdown.reactions_received_from_admin == 1
@@ -281,9 +288,7 @@ class TestScoreReactions:
 class TestScoreTags:
     """Points from tags on root comments."""
 
-    async def test_tag_points(
-        self, db: SQLModelAsyncSession
-    ) -> None:
+    async def test_tag_points(self, db: SQLModelAsyncSession) -> None:
         """Each tag on a root comment earns 2 pts."""
         s = await _make_scenario(db)
 
@@ -316,19 +321,13 @@ class TestScoreTags:
         db.add(tag2)
         await db.flush()
 
-        ct1 = CommentTag(
-            comment_id=comment.id, tag_id=tag1.id, order=0
-        )
-        ct2 = CommentTag(
-            comment_id=comment.id, tag_id=tag2.id, order=1
-        )
+        ct1 = CommentTag(comment_id=comment.id, tag_id=tag1.id, order=0)
+        ct2 = CommentTag(comment_id=comment.id, tag_id=tag2.id, order=1)
         db.add(ct1)
         db.add(ct2)
         await db.flush()
 
-        score = await _compute_score(
-            db, s["group"].id, s["user"].id
-        )
+        score = await _compute_score(db, s["group"].id, s["user"].id)
 
         assert score.breakdown.tags == 2
         assert score.breakdown.tag_points == 4
@@ -337,9 +336,7 @@ class TestScoreTags:
 class TestScoreDocumentFilter:
     """Score scoped to a single document via document_id."""
 
-    async def test_filter_by_document(
-        self, db: SQLModelAsyncSession
-    ) -> None:
+    async def test_filter_by_document(self, db: SQLModelAsyncSession) -> None:
         """Only activity on the specified document is counted."""
         s = await _make_scenario(db)
 
@@ -368,9 +365,7 @@ class TestScoreDocumentFilter:
         await db.flush()
 
         # Unfiltered: both comments
-        score_all = await _compute_score(
-            db, s["group"].id, s["user"].id
-        )
+        score_all = await _compute_score(db, s["group"].id, s["user"].id)
         assert score_all.breakdown.comments == 2
         assert score_all.total == 10  # 2 * 5
 
@@ -420,6 +415,8 @@ class TestScoreDocumentFilter:
     ) -> None:
         """Reaction counts are scoped to the specified document."""
         s = await _make_scenario(db)
+        gr_heart = s["group_reactions"][Emoji.HEART]
+        gr_fire = s["group_reactions"][Emoji.FIRE]
 
         doc2 = await db.run_sync(
             lambda sess: f.DocumentFactory(group=s["group"])
@@ -438,7 +435,7 @@ class TestScoreDocumentFilter:
             lambda sess: f.ReactionFactory(
                 user=s["other_user"],
                 comment=c1,
-                type=ReactionType.HEART,
+                group_reaction=gr_heart,
             )
         )
 
@@ -454,7 +451,7 @@ class TestScoreDocumentFilter:
             lambda sess: f.ReactionFactory(
                 user=s["other_user"],
                 comment=c2,
-                type=ReactionType.FIRE,
+                group_reaction=gr_fire,
             )
         )
         await db.flush()
@@ -471,11 +468,12 @@ class TestScoreDocumentFilter:
 class TestScoreCombined:
     """Full scenario combining all point sources."""
 
-    async def test_combined_score(
-        self, db: SQLModelAsyncSession
-    ) -> None:
+    async def test_combined_score(self, db: SQLModelAsyncSession) -> None:
         """Verify the total across highlights, comments, tags, and reactions."""
         s = await _make_scenario(db)
+        gr_smile = s["group_reactions"][Emoji.SMILE]
+        gr_nerd = s["group_reactions"][Emoji.NERD]
+        gr_heart = s["group_reactions"][Emoji.HEART]
 
         # Root comment with highlight + content = 6 pts
         comment = await db.run_sync(
@@ -499,32 +497,28 @@ class TestScoreCombined:
         )
         db.add(tag)
         await db.flush()
-        db.add(
-            CommentTag(
-                comment_id=comment.id, tag_id=tag.id, order=0
-            )
-        )
+        db.add(CommentTag(comment_id=comment.id, tag_id=tag.id, order=0))
         await db.flush()
 
-        # 1 reaction from normal user = 2 pts
+        # 1 reaction from normal user = 2 pts (points)
         await db.run_sync(
             lambda sess: f.ReactionFactory(
                 user=s["other_user"],
                 comment=comment,
-                type=ReactionType.SMILE,
+                group_reaction=gr_smile,
             )
         )
 
-        # 1 reaction from admin = 4 pts
+        # 1 reaction from admin = 4 pts (admin_points)
         await db.run_sync(
             lambda sess: f.ReactionFactory(
                 user=s["admin_user"],
                 comment=comment,
-                type=ReactionType.NERD,
+                group_reaction=gr_nerd,
             )
         )
 
-        # User reacts to someone else's comment = 2 pts given
+        # User reacts to someone else's comment = 2 pts (giver_points)
         other_comment = await db.run_sync(
             lambda sess: f.CommentFactory(
                 document=s["document"],
@@ -536,14 +530,12 @@ class TestScoreCombined:
             lambda sess: f.ReactionFactory(
                 user=s["user"],
                 comment=other_comment,
-                type=ReactionType.HEART,
+                group_reaction=gr_heart,
             )
         )
         await db.flush()
 
-        score = await _compute_score(
-            db, s["group"].id, s["user"].id
-        )
+        score = await _compute_score(db, s["group"].id, s["user"].id)
 
         # 1 highlight (1) + 1 comment (5) + 1 tag (2)
         # + 1 normal reaction received (2) + 1 admin reaction received (4)

@@ -22,6 +22,9 @@
 	$effect(() => {
 		documentStore.loadedDocument = data.document;
 	});
+	$effect(() => {
+		documentStore.groupReactions = data.scoreConfig?.reactions ?? [];
+	});
 
 	// Enable auto-persistence of comment states to localStorage
 	documentStore.enablePersistence();

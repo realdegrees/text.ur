@@ -281,6 +281,11 @@
 				snippet: usernameSnippet
 			},
 			{
+				label: 'Score',
+				width: '0.7fr',
+				snippet: scoreSnippet
+			},
+			{
 				label: $LL.status(),
 				width: '1fr',
 				snippet: badgeSnippet
@@ -289,11 +294,6 @@
 				label: $LL.permissions.label(),
 				width: '5fr',
 				snippet: permissionsSnippet
-			},
-			{
-				label: 'Score',
-				width: '0.7fr',
-				snippet: scoreSnippet
 			},
 			{
 				label: $LL.memberships.actions(),

@@ -18,7 +18,14 @@ from models.group import (
     MembershipPermissionUpdate,
 )
 from models.pagination import Paginated
-from models.tables import Group, Membership, User
+from models.reaction import DEFAULT_REACTIONS
+from models.tables import (
+    Group,
+    GroupReaction,
+    Membership,
+    ScoreConfig,
+    User,
+)
 from sqlmodel import select
 from util.api_router import APIRouter
 from util.queries import Guard
@@ -31,12 +38,17 @@ router = APIRouter(
 
 # region Groups
 
-@router.get("/", response_model=Paginated[GroupRead], response_class=ExcludableFieldsJSONResponse)
+
+@router.get(
+    "/",
+    response_model=Paginated[GroupRead],
+    response_class=ExcludableFieldsJSONResponse,
+)
 async def list_groups(
     _: BasicAuthentication,
     groups: Paginated[Group] = PaginatedResource(
         Group, GroupFilter, guards=[Guard.group_access()]
-    )
+    ),
 ) -> Paginated[GroupRead]:
     """Get all groups the user is a member of."""
     return groups
@@ -44,12 +56,12 @@ async def list_groups(
 
 @router.post("/", response_model=GroupRead)
 async def create_group(
-    db: Database, user: BasicAuthentication, group_create: GroupCreate = Body(...)
+    db: Database,
+    user: BasicAuthentication,
+    group_create: GroupCreate = Body(...),
 ) -> Group:
     """Create a new group."""
-    result = await db.exec(
-        select(Group).where(Group.name == group_create.name)
-    )
+    result = await db.exec(select(Group).where(Group.name == group_create.name))
     existing_group = result.first()
     if existing_group:
         raise HTTPException(
@@ -62,27 +74,44 @@ async def create_group(
     await db.refresh(group)
 
     groupMembership = Membership(
-        user_id=user.id, group_id=group.id, permissions=[Permission.ADMINISTRATOR], is_owner=True, accepted=True
+        user_id=user.id,
+        group_id=group.id,
+        permissions=[Permission.ADMINISTRATOR],
+        is_owner=True,
+        accepted=True,
     )
     db.add(groupMembership)
     await db.commit()
     await db.refresh(groupMembership)
 
+    # Seed default score config and group reactions
+    score_config = ScoreConfig(group_id=group.id)
+    db.add(score_config)
+
+    for r in DEFAULT_REACTIONS:
+        db.add(GroupReaction(group_id=group.id, **r))
+
+    await db.commit()
+
     return group
+
 
 # TODO maybe if the group system becomes invite only then by default only return if the user is a part of the group
 @router.get("/{group_id}", response_model=GroupRead)
 async def read_group(
     _: User = Authenticate([Guard.group_access()]),
-    group: Group = Resource(Group, param_alias="group_id")
+    group: Group = Resource(Group, param_alias="group_id"),
 ) -> Group:
     """Get a group by ID. Reject if the user is not a member."""
     return group
 
+
 @router.put("/{group_id}", response_model=GroupRead)
 async def update_group(
     db: Database,
-    session_user: User = Authenticate([Guard.group_access({Permission.ADMINISTRATOR})]),
+    session_user: User = Authenticate(
+        [Guard.group_access({Permission.ADMINISTRATOR})]
+    ),
     group: Group = Resource(Group, param_alias="group_id"),
     group_update: GroupUpdate = Body(...),
 ) -> Group:
@@ -97,13 +126,17 @@ async def update_group(
         result = await db.exec(
             select(Membership).where(
                 Membership.group_id == group.id,
-                ~Membership.permissions.contains(group_update.default_permissions)
+                ~Membership.permissions.contains(
+                    group_update.default_permissions
+                ),
             )
         )
         memberships_missing_permissions = result.all()
         for membership in memberships_missing_permissions:
             membership.permissions = list(
-                set(membership.permissions).union(set(group_update.default_permissions))
+                set(membership.permissions).union(
+                    set(group_update.default_permissions)
+                )
             )
             db.add(membership)
         await db.commit()
@@ -111,43 +144,43 @@ async def update_group(
     await db.refresh(group)
     return group
 
+
 @router.post("/{group_id}/transfer")
 async def transfer_ownership(
     db: Database,
     transfer: GroupTransfer = Body(...),
-    session_user: User = Authenticate([Guard.group_access(None, only_owner=True)]),
+    session_user: User = Authenticate(
+        [Guard.group_access(None, only_owner=True)]
+    ),
     group: Group = Resource(Group, param_alias="group_id"),
 ) -> None:
     """Transfer group ownership."""
     # Check if transfer user exists
-    result = await db.exec(
-        select(User).where(User.id == transfer.user_id)
-    )
+    result = await db.exec(select(User).where(User.id == transfer.user_id))
     transfer_user = result.first()
 
     if not transfer_user:
-        raise HTTPException(
-            status_code=404, detail="Target user not found")
-
+        raise HTTPException(status_code=404, detail="Target user not found")
 
     # Check if the new owner is a member of the group
     result = await db.exec(
         select(Membership).where(
             Membership.user_id == transfer.user_id,
             Membership.group_id == group.id,
-            Membership.accepted == True, # noqa: E712
+            Membership.accepted == True,  # noqa: E712
         )
     )
     transfer_membership = result.first()
 
     if not transfer_membership:
         raise HTTPException(
-            status_code=404, detail="Target user is not a member of the group")
+            status_code=404, detail="Target user is not a member of the group"
+        )
 
     result = await db.exec(
         select(Membership).where(
             Membership.user_id == session_user.id,
-            Membership.group_id == group.id
+            Membership.group_id == group.id,
         )
     )
     current_owner_membership = result.first()
@@ -160,6 +193,7 @@ async def transfer_ownership(
     db.add(transfer_membership)
     await db.commit()
 
+
 @router.delete("/{group_id}")
 async def delete_group(
     db: Database,
@@ -171,12 +205,16 @@ async def delete_group(
     await db.commit()
     return Response(status_code=204)
 
+
 # endregion
+
+from api.routers.score_config import router as ScoreConfigRouter  # noqa: E402
 
 tags = router.tags
 router.tags = []
 router.include_router(ShareLinkRouter, prefix="/{group_id}")
 router.include_router(GroupMembershipRouter, prefix="/{group_id}/memberships")
+router.include_router(ScoreConfigRouter, prefix="/{group_id}")
 router.tags = tags
 
 # TODO: add sharelink management endpoints (only owner and admin can create share links, admins can not create share links with admin permissions)

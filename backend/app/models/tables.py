@@ -3,7 +3,7 @@ from typing import ClassVar, Optional
 from uuid import UUID, uuid4
 
 from nanoid import generate
-from sqlalchemy import Boolean, Column, DateTime, String
+from sqlalchemy import Boolean, Column, DateTime, String, UniqueConstraint
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.ext.hybrid import hybrid_property
@@ -12,7 +12,7 @@ from sqlalchemy.sql.elements import ColumnElement
 from sqlmodel import Field, Relationship, func, select
 
 from models.base import BaseModel
-from models.enums import Permission, ReactionType, ViewMode, Visibility
+from models.enums import Emoji, Permission, ReactionType, ViewMode, Visibility
 
 # TABLES
 
@@ -197,6 +197,51 @@ class Group(BaseModel, table=True):
 
 
 
+class ScoreConfig(BaseModel, table=True):
+    """Per-group scoring configuration for highlights, comments, and tags."""
+
+    group_id: str = Field(
+        foreign_key="group.id",
+        ondelete="CASCADE",
+        primary_key=True,
+    )
+    highlight_points: int = Field(default=1)
+    comment_points: int = Field(default=5)
+    tag_points: int = Field(default=2)
+
+    group: "Group" = Relationship(
+        sa_relationship_kwargs={"lazy": "selectin"}
+    )
+
+
+class GroupReaction(BaseModel, table=True):
+    """A reaction emoji available within a group, with scoring rules."""
+
+    __table_args__ = (
+        UniqueConstraint("group_id", "emoji", name="uq_groupreaction_group_emoji"),
+    )
+
+    id: int = Field(default=None, primary_key=True)
+    group_id: str = Field(foreign_key="group.id", ondelete="CASCADE")
+    emoji: Emoji = Field(sa_column=Column(String))
+    points: int = Field(default=2)
+    admin_points: int = Field(default=4)
+    giver_points: int = Field(default=2)
+    order: int = Field(default=0)
+
+    group: "Group" = Relationship(
+        sa_relationship_kwargs={"lazy": "selectin"}
+    )
+    reactions: list["Reaction"] = Relationship(
+        back_populates="group_reaction",
+        sa_relationship_kwargs={
+            "lazy": "noload",
+            "cascade": "all, delete-orphan",
+            "passive_deletes": True,
+        },
+    )
+
+
 class Comment(BaseModel, table=True):
     """Comment entity for annotations and discussions."""
 
@@ -257,10 +302,13 @@ class Reaction(BaseModel, table=True):
                          ondelete="CASCADE", primary_key=True)
     comment_id: int = Field(foreign_key="comment.id",
                             ondelete="CASCADE", primary_key=True)
-    type: ReactionType = Field(sa_column=Column(String))
+    group_reaction_id: int = Field(
+        foreign_key="groupreaction.id", ondelete="CASCADE"
+    )
 
     user: "User" = Relationship(back_populates="reactions", sa_relationship_kwargs={"lazy": "selectin"})
     comment: "Comment" = Relationship(back_populates="reactions", sa_relationship_kwargs={"lazy": "selectin"})
+    group_reaction: "GroupReaction" = Relationship(back_populates="reactions", sa_relationship_kwargs={"lazy": "selectin"})
 
 
 class Tag(BaseModel, table=True):

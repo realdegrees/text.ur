@@ -36,9 +36,43 @@ export type AppErrorCode =
  */
 export type Visibility = "private" | "restricted" | "public";
 /**
- * Types of reactions users can give to comments.
+ * Available emoji characters that admins can pick from.
  */
-export type ReactionType = "thumbs_up" | "smile" | "heart" | "fire" | "pinch" | "nerd";
+export type Emoji =
+  | "👍"
+  | "👎"
+  | "👏"
+  | "👋"
+  | "❤️"
+  | "🔥"
+  | "⭐"
+  | "✨"
+  | "🎉"
+  | "🚀"
+  | "😊"
+  | "😂"
+  | "🤔"
+  | "🤓"
+  | "😎"
+  | "😢"
+  | "😡"
+  | "😲"
+  | "🤯"
+  | "👀"
+  | "💯"
+  | "✅"
+  | "❌"
+  | "⚠️"
+  | "❓"
+  | "💡"
+  | "📌"
+  | "🔖"
+  | "🏆"
+  | "🏅"
+  | "👑"
+  | "💎"
+  | "🫰"
+  | "🧠";
 /**
  * Document view mode settings.
  *
@@ -140,8 +174,12 @@ export interface UserRead {
   last_name?: string | null;
   is_guest?: boolean;
 }
+/**
+ * Read schema for a reaction, including emoji info.
+ */
 export interface ReactionRead {
-  type: ReactionType;
+  group_reaction_id: number;
+  emoji: Emoji;
   user: UserRead;
   comment_id: number;
 }
@@ -256,6 +294,50 @@ export interface GroupFilter {
   member_count: number;
   accepted: boolean;
 }
+/**
+ * A reaction emoji available within a group, with scoring rules.
+ */
+export interface GroupReaction {
+  created_at?: string;
+  updated_at?: string;
+  id?: number;
+  group_id: string;
+  emoji: Emoji;
+  points?: number;
+  admin_points?: number;
+  giver_points?: number;
+  order?: number;
+}
+/**
+ * Create a new reaction emoji for a group.
+ */
+export interface GroupReactionCreate {
+  emoji: Emoji;
+  points?: number;
+  admin_points?: number;
+  giver_points?: number;
+  order?: number;
+}
+/**
+ * Read schema for a group reaction config.
+ */
+export interface GroupReactionRead {
+  id: number;
+  emoji: Emoji;
+  points: number;
+  admin_points: number;
+  giver_points: number;
+  order: number;
+}
+/**
+ * Update a group reaction's settings.
+ */
+export interface GroupReactionUpdate {
+  points?: number | null;
+  admin_points?: number | null;
+  giver_points?: number | null;
+  order?: number | null;
+}
 export interface GroupRead {
   created_at?: string;
   updated_at?: string;
@@ -350,8 +432,23 @@ export interface Filter {
   value: string;
   [k: string]: unknown;
 }
+/**
+ * Per-emoji breakdown of received/given reactions and points.
+ */
+export interface ReactionBreakdownItem {
+  group_reaction_id: number;
+  emoji: string;
+  received_count: number;
+  received_from_admin: number;
+  received_points: number;
+  given_count: number;
+  given_points: number;
+}
+/**
+ * Create a reaction using a group_reaction_id.
+ */
 export interface ReactionCreate {
-  type: ReactionType;
+  group_reaction_id: number;
 }
 /**
  * Detailed breakdown of a user's score components.
@@ -368,6 +465,36 @@ export interface ScoreBreakdown {
   reaction_received_points: number;
   reactions_given: number;
   reaction_given_points: number;
+  reaction_breakdown?: ReactionBreakdownItem[];
+}
+/**
+ * Per-group scoring configuration for highlights, comments, and tags.
+ */
+export interface ScoreConfig {
+  created_at?: string;
+  updated_at?: string;
+  group_id: string;
+  highlight_points?: number;
+  comment_points?: number;
+  tag_points?: number;
+}
+/**
+ * Read schema for per-group scoring configuration.
+ */
+export interface ScoreConfigRead {
+  group_id: string;
+  highlight_points: number;
+  comment_points: number;
+  tag_points: number;
+  reactions: GroupReactionRead[];
+}
+/**
+ * Update schema for per-group scoring configuration.
+ */
+export interface ScoreConfigUpdate {
+  highlight_points?: number | null;
+  comment_points?: number | null;
+  tag_points?: number | null;
 }
 /**
  * User score for a specific group, with caching metadata.

@@ -3,7 +3,12 @@ from enum import Enum, StrEnum
 
 # ENUMS
 class ReactionType(StrEnum):
-    """Types of reactions users can give to comments."""
+    """Types of reactions users can give to comments.
+
+    .. deprecated::
+        Kept only for migration compatibility. Use ``Emoji`` and
+        ``GroupReaction`` for new code.
+    """
 
     THUMBS_UP = "thumbs_up"
     SMILE = "smile"
@@ -11,6 +16,45 @@ class ReactionType(StrEnum):
     FIRE = "fire"
     PINCH = "pinch"
     NERD = "nerd"
+
+
+class Emoji(StrEnum):
+    """Available emoji characters that admins can pick from."""
+
+    THUMBS_UP = "\U0001f44d"
+    THUMBS_DOWN = "\U0001f44e"
+    CLAP = "\U0001f44f"
+    WAVE = "\U0001f44b"
+    HEART = "\u2764\ufe0f"
+    FIRE = "\U0001f525"
+    STAR = "\u2b50"
+    SPARKLES = "\u2728"
+    PARTY = "\U0001f389"
+    ROCKET = "\U0001f680"
+    SMILE = "\U0001f60a"
+    LAUGH = "\U0001f602"
+    THINKING = "\U0001f914"
+    NERD = "\U0001f913"
+    COOL = "\U0001f60e"
+    CRY = "\U0001f622"
+    ANGRY = "\U0001f621"
+    SURPRISED = "\U0001f632"
+    MINDBLOWN = "\U0001f92f"
+    EYES = "\U0001f440"
+    HUNDRED = "\U0001f4af"
+    CHECK = "\u2705"
+    CROSS = "\u274c"
+    WARNING = "\u26a0\ufe0f"
+    QUESTION = "\u2753"
+    BULB = "\U0001f4a1"
+    PIN = "\U0001f4cc"
+    BOOKMARK = "\U0001f516"
+    TROPHY = "\U0001f3c6"
+    MEDAL = "\U0001f3c5"
+    CROWN = "\U0001f451"
+    GEM = "\U0001f48e"
+    PINCH = "\U0001faf0"
+    BRAIN = "\U0001f9e0"
 
 
 class Permission(StrEnum):

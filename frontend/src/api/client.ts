@@ -448,6 +448,31 @@ class ApiClient {
 	}
 
 	/**
+	 * PATCH request wrapper for partial updates with automatic JSON headers.
+	 */
+	async patch<T>(
+		input: string | URL,
+		body?: unknown,
+		options?: FetchOptions
+	): Promise<ApiCreateResult<T>> {
+		const result = await this.fetch<T>(input, {
+			...options,
+			method: 'PATCH',
+			headers: {
+				'Content-Type': 'application/json',
+				...options?.headers
+			},
+			body
+		});
+
+		if (!result.success) {
+			return result as any;
+		}
+
+		return { success: true, data: result.data! };
+	}
+
+	/**
 	 * DELETE request wrapper with automatic authentication.
 	 */
 	async delete(

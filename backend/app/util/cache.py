@@ -19,9 +19,7 @@ SCORE_CACHE_TTL = 300  # 5 minutes
 def _build_redis_url() -> str:
     """Build Redis URL for cache database (db 2)."""
     password_part = (
-        f":{quote(cfg.REDIS_PASSWORD, safe='')}@"
-        if cfg.REDIS_PASSWORD
-        else ""
+        f":{quote(cfg.REDIS_PASSWORD, safe='')}@" if cfg.REDIS_PASSWORD else ""
     )
     return f"redis://{password_part}{cfg.REDIS_HOST}:{cfg.REDIS_PORT}/2"
 
@@ -61,6 +59,27 @@ async def set_cached(
         await r.set(key, json.dumps(value), ex=ttl)
     except Exception as e:
         cache_logger.warning("Cache write error for %s: %s", key, e)
+
+
+async def invalidate_group_scores(group_id: str) -> None:
+    """Delete all cached scores for a group.
+
+    Uses SCAN + DELETE to remove keys matching
+    ``score:{group_id}:*``.  Called when score config or
+    group reactions change.
+    """
+    r = _get_redis()
+    pattern = f"score:{group_id}:*"
+    try:
+        cursor: int | str = 0
+        while True:
+            cursor, keys = await r.scan(cursor=cursor, match=pattern, count=200)
+            if keys:
+                await r.delete(*keys)
+            if int(cursor) == 0:
+                break
+    except Exception as e:
+        cache_logger.warning("Cache invalidation error for %s: %s", pattern, e)
 
 
 def score_cache_key(

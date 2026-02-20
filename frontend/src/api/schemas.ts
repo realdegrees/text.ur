@@ -5,7 +5,7 @@ export const appErrorCodeSchema = z.union([z.literal("unknown_error"), z.literal
 
 export const visibilitySchema = z.union([z.literal("private"), z.literal("restricted"), z.literal("public")]);
 
-export const reactionTypeSchema = z.union([z.literal("thumbs_up"), z.literal("smile"), z.literal("heart"), z.literal("fire"), z.literal("pinch"), z.literal("nerd")]);
+export const emojiSchema = z.union([z.literal("\uD83D\uDC4D"), z.literal("\uD83D\uDC4E"), z.literal("\uD83D\uDC4F"), z.literal("\uD83D\uDC4B"), z.literal("\u2764\uFE0F"), z.literal("\uD83D\uDD25"), z.literal("\u2B50"), z.literal("\u2728"), z.literal("\uD83C\uDF89"), z.literal("\uD83D\uDE80"), z.literal("\uD83D\uDE0A"), z.literal("\uD83D\uDE02"), z.literal("\uD83E\uDD14"), z.literal("\uD83E\uDD13"), z.literal("\uD83D\uDE0E"), z.literal("\uD83D\uDE22"), z.literal("\uD83D\uDE21"), z.literal("\uD83D\uDE32"), z.literal("\uD83E\uDD2F"), z.literal("\uD83D\uDC40"), z.literal("\uD83D\uDCAF"), z.literal("\u2705"), z.literal("\u274C"), z.literal("\u26A0\uFE0F"), z.literal("\u2753"), z.literal("\uD83D\uDCA1"), z.literal("\uD83D\uDCCC"), z.literal("\uD83D\uDD16"), z.literal("\uD83C\uDFC6"), z.literal("\uD83C\uDFC5"), z.literal("\uD83D\uDC51"), z.literal("\uD83D\uDC8E"), z.literal("\uD83E\uDEF0"), z.literal("\uD83E\uDDE0")]);
 
 export const viewModeSchema = z.union([z.literal("restricted"), z.literal("public")]);
 
@@ -53,7 +53,8 @@ export const userReadSchema = z.object({
 });
 
 export const reactionReadSchema = z.object({
-    type: reactionTypeSchema,
+    group_reaction_id: z.number(),
+    emoji: emojiSchema,
     user: userReadSchema,
     comment_id: z.number()
 });
@@ -159,6 +160,42 @@ export const groupFilterSchema = z.object({
     accepted: z.boolean()
 });
 
+export const groupReactionSchema = z.object({
+    created_at: z.string().optional(),
+    updated_at: z.string().optional(),
+    id: z.number().optional(),
+    group_id: z.string(),
+    emoji: emojiSchema,
+    points: z.number().optional(),
+    admin_points: z.number().optional(),
+    giver_points: z.number().optional(),
+    order: z.number().optional()
+});
+
+export const groupReactionCreateSchema = z.object({
+    emoji: emojiSchema,
+    points: z.number().optional(),
+    admin_points: z.number().optional(),
+    giver_points: z.number().optional(),
+    order: z.number().optional()
+});
+
+export const groupReactionReadSchema = z.object({
+    id: z.number(),
+    emoji: emojiSchema,
+    points: z.number(),
+    admin_points: z.number(),
+    giver_points: z.number(),
+    order: z.number()
+});
+
+export const groupReactionUpdateSchema = z.object({
+    points: z.number().optional().nullable(),
+    admin_points: z.number().optional().nullable(),
+    giver_points: z.number().optional().nullable(),
+    order: z.number().optional().nullable()
+});
+
 export const groupReadSchema = z.object({
     created_at: z.string().optional(),
     updated_at: z.string().optional(),
@@ -237,8 +274,18 @@ export const filterSchema = z.record(z.string(), z.unknown()).and(z.object({
     value: z.string()
 }));
 
+export const reactionBreakdownItemSchema = z.object({
+    group_reaction_id: z.number(),
+    emoji: z.string(),
+    received_count: z.number(),
+    received_from_admin: z.number(),
+    received_points: z.number(),
+    given_count: z.number(),
+    given_points: z.number()
+});
+
 export const reactionCreateSchema = z.object({
-    type: reactionTypeSchema
+    group_reaction_id: z.number()
 });
 
 export const scoreBreakdownSchema = z.object({
@@ -252,7 +299,31 @@ export const scoreBreakdownSchema = z.object({
     reactions_received_from_admin: z.number(),
     reaction_received_points: z.number(),
     reactions_given: z.number(),
-    reaction_given_points: z.number()
+    reaction_given_points: z.number(),
+    reaction_breakdown: z.array(reactionBreakdownItemSchema).optional()
+});
+
+export const scoreConfigSchema = z.object({
+    created_at: z.string().optional(),
+    updated_at: z.string().optional(),
+    group_id: z.string(),
+    highlight_points: z.number().optional(),
+    comment_points: z.number().optional(),
+    tag_points: z.number().optional()
+});
+
+export const scoreConfigReadSchema = z.object({
+    group_id: z.string(),
+    highlight_points: z.number(),
+    comment_points: z.number(),
+    tag_points: z.number(),
+    reactions: z.array(groupReactionReadSchema)
+});
+
+export const scoreConfigUpdateSchema = z.object({
+    highlight_points: z.number().optional().nullable(),
+    comment_points: z.number().optional().nullable(),
+    tag_points: z.number().optional().nullable()
 });
 
 export const scoreReadSchema = z.object({

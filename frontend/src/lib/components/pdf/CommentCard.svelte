@@ -17,7 +17,6 @@
 	import ExpandIcon from '~icons/material-symbols/expand-more';
 	import TagIcon from '~icons/mdi/tag-search-outline';
 	import AddReactionIcon from '~icons/material-symbols/add-reaction-outline';
-	import type { ReactionType } from '$api/types';
 	import { formatDateTime } from '$lib/util/dateFormat';
 	import { env } from '$env/dynamic/public';
 
@@ -73,45 +72,23 @@
 		return { top: rect.top, left: rect.right };
 	});
 
-	const EMOJI_MAP: Record<ReactionType, string> = {
-		thumbs_up: '\u{1F44D}',
-		smile: '\u{1F60A}',
-		heart: '\u{2764}\u{FE0F}',
-		fire: '\u{1F525}',
-		pinch: '\u{1FAF0}',
-		nerd: '\u{1F913}'
-	};
-
-	const EMOJI_LABELS: Record<ReactionType, string> = {
-		thumbs_up: 'Thumbs up',
-		smile: 'Smile',
-		heart: 'Heart',
-		fire: 'Fire',
-		pinch: 'Pinch',
-		nerd: 'Nerd'
-	};
-
-	const ALL_REACTION_TYPES: ReactionType[] = [
-		'thumbs_up',
-		'smile',
-		'heart',
-		'fire',
-		'pinch',
-		'nerd'
-	];
+	// Dynamic group reactions from store (sorted by order)
+	let availableReactions = $derived(
+		[...documentStore.groupReactions].sort((a, b) => a.order - b.order)
+	);
 
 	let myReaction = $derived(
 		comment.reactions?.find((r) => r.user.id === sessionStore.currentUserId)
 	);
 
-	const handlePickerReaction = async (type: ReactionType) => {
+	const handlePickerReaction = async (groupReactionId: number) => {
 		if (isReactionSubmitting || isAuthor) return;
 		isReactionSubmitting = true;
 		try {
-			if (myReaction?.type === type) {
+			if (myReaction?.group_reaction_id === groupReactionId) {
 				await documentStore.comments.removeReaction(comment.id);
 			} else {
-				await documentStore.comments.addReaction(comment.id, type);
+				await documentStore.comments.addReaction(comment.id, groupReactionId);
 			}
 		} finally {
 			isReactionSubmitting = false;
@@ -267,8 +244,8 @@
 </script>
 
 {#snippet actionButtons()}
-	<!-- Add reaction button (top-level only) -->
-	{#if isTopLevel && !isAuthor}
+	<!-- Add reaction button (top-level only, hidden when no reactions configured) -->
+	{#if isTopLevel && !isAuthor && availableReactions.length > 0}
 		<button
 			bind:this={reactionButtonRef}
 			class="flex cursor-pointer items-center rounded bg-text/5 p-1 text-text/40 transition-colors hover:bg-text/10 hover:text-text/60"
@@ -607,18 +584,18 @@
 			style="top: {pickerPos.top}px; left: {pickerPos.left}px; transform: translate(-100%, -100%) translateY(-4px);"
 			onclick={(e) => e.stopPropagation()}
 		>
-			{#each ALL_REACTION_TYPES as type (type)}
+			{#each availableReactions as gr (gr.id)}
 				<button
 					class="cursor-pointer rounded-md p-1 text-base transition-colors hover:bg-text/10
-						{myReaction?.type === type ? 'bg-primary/20 ring-1 ring-primary/50' : ''}"
-					title={EMOJI_LABELS[type]}
+					{myReaction?.group_reaction_id === gr.id ? 'bg-primary/20 ring-1 ring-primary/50' : ''}"
+					title="{gr.points} {gr.points === 1 ? 'point' : 'points'}"
 					onclick={(e) => {
 						e.stopPropagation();
-						handlePickerReaction(type);
+						handlePickerReaction(gr.id);
 					}}
 					disabled={isReactionSubmitting}
 				>
-					{EMOJI_MAP[type]}
+					{gr.emoji}
 				</button>
 			{/each}
 		</div>

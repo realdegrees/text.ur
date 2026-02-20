@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { CommentRead, ReactionRead, ReactionType } from '$api/types';
+	import type { CommentRead, ReactionRead } from '$api/types';
 	import { preciseHover } from '$lib/actions/preciseHover.js';
 	import { documentStore } from '$lib/runes/document.svelte.js';
 	import { sessionStore } from '$lib/runes/session.svelte.js';
@@ -12,22 +12,13 @@
 
 	let { comment }: Props = $props();
 
-	const EMOJI_MAP: Record<ReactionType, string> = {
-		thumbs_up: '\u{1F44D}',
-		smile: '\u{1F60A}',
-		heart: '\u{2764}\u{FE0F}',
-		fire: '\u{1F525}',
-		pinch: '\u{1FAF0}',
-		nerd: '\u{1F913}'
-	};
-
-	// Group reactions by type
+	// Group reactions by group_reaction_id
 	let groupedReactions = $derived.by(() => {
-		const groups = new SvelteMap<ReactionType, ReactionRead[]>();
+		const groups = new SvelteMap<number, ReactionRead[]>();
 		for (const reaction of comment.reactions) {
-			const existing = groups.get(reaction.type) ?? [];
+			const existing = groups.get(reaction.group_reaction_id) ?? [];
 			existing.push(reaction);
-			groups.set(reaction.type, existing);
+			groups.set(reaction.group_reaction_id, existing);
 		}
 		return groups;
 	});
@@ -43,7 +34,7 @@
 	let isSubmitting = $state(false);
 
 	// --- Hover popup state ---
-	let hoveredType = $state<ReactionType | null>(null);
+	let hoveredGroupReactionId = $state<number | null>(null);
 	let popupPos = $state<{ x: number; y: number }>({ x: 0, y: 0 });
 	let badgeHovered = $state(false);
 	let popupHovered = $state(false);
@@ -61,7 +52,7 @@
 		closeRafId = requestAnimationFrame(() => {
 			closeRafId = null;
 			if (!badgeHovered && !popupHovered) {
-				hoveredType = null;
+				hoveredGroupReactionId = null;
 			}
 		});
 	};
@@ -69,14 +60,14 @@
 	// Svelte action wrapper that creates preciseHover params for a badge.
 	// The action receives the DOM node directly from `use:`, so we can
 	// read getBoundingClientRect inside onEnter.
-	function badgePreciseHover(node: HTMLElement, type: ReactionType) {
-		const makeParams = (t: ReactionType) => ({
+	function badgePreciseHover(node: HTMLElement, groupReactionId: number) {
+		const makeParams = (id: number) => ({
 			onEnter: () => {
 				badgeHovered = true;
 				const rect = node.getBoundingClientRect();
 				// 1px overlap: badge (z-50) paints over popup (z-40) top border at seam
 				popupPos = { x: rect.left, y: rect.bottom - 1 };
-				hoveredType = t;
+				hoveredGroupReactionId = id;
 			},
 			onLeave: () => {
 				badgeHovered = false;
@@ -84,11 +75,11 @@
 			}
 		});
 
-		const action = preciseHover(node, makeParams(type));
+		const action = preciseHover(node, makeParams(groupReactionId));
 		return {
 			destroy: action.destroy,
-			update(newType: ReactionType) {
-				action.update(makeParams(newType));
+			update(newId: number) {
+				action.update(makeParams(newId));
 			}
 		};
 	}
@@ -103,14 +94,14 @@
 		}
 	};
 
-	const handleReactionClick = async (type: ReactionType) => {
+	const handleReactionClick = async (groupReactionId: number) => {
 		if (isSubmitting || isAuthor) return;
 		isSubmitting = true;
 		try {
-			if (myReaction?.type === type) {
+			if (myReaction?.group_reaction_id === groupReactionId) {
 				await documentStore.comments.removeReaction(comment.id);
 			} else {
-				await documentStore.comments.addReaction(comment.id, type);
+				await documentStore.comments.addReaction(comment.id, groupReactionId);
 			}
 		} finally {
 			isSubmitting = false;
@@ -130,31 +121,32 @@
 
 {#if groupedReactions.size > 0}
 	<div class="relative flex items-center gap-1">
-		{#each [...groupedReactions.entries()] as [type, reactions] (type)}
-			{@const isOpen = hoveredType === type}
+		{#each [...groupedReactions.entries()] as [groupReactionId, reactions] (groupReactionId)}
+			{@const isOpen = hoveredGroupReactionId === groupReactionId}
+			{@const firstReaction = reactions[0]}
 			<button
 				class="flex cursor-pointer items-center gap-0.5 px-1.5 py-0.5 text-xs transition-colors
 					{isOpen
 					? 'z-50 rounded-t rounded-b-none border border-b-0 border-text/20 bg-inset'
-					: myReaction?.type === type
+					: myReaction?.group_reaction_id === groupReactionId
 						? 'rounded-full bg-primary/20 ring-1 ring-primary/50'
 						: 'rounded-full bg-text/5 hover:bg-text/10'}"
 				onclick={(e) => {
 					e.stopPropagation();
-					handleReactionClick(type);
+					handleReactionClick(groupReactionId);
 				}}
-				use:badgePreciseHover={type}
+				use:badgePreciseHover={groupReactionId}
 				disabled={isSubmitting || isAuthor}
 			>
-				<span class="text-[13px] leading-[1]">{EMOJI_MAP[type]}</span>
+				<span class="text-[13px] leading-[1]">{firstReaction.emoji}</span>
 				<span class="text-[11px] leading-[1] text-text/70 tabular-nums">{reactions.length}</span>
 			</button>
 		{/each}
 	</div>
 
 	<!-- Hover popup: flush below badge, merges visually into one element -->
-	{#if hoveredType && groupedReactions.has(hoveredType)}
-		{@const reactions = groupedReactions.get(hoveredType)!}
+	{#if hoveredGroupReactionId && groupedReactions.has(hoveredGroupReactionId)}
+		{@const reactions = groupedReactions.get(hoveredGroupReactionId)!}
 		<div
 			class="fixed z-40 w-max rounded-tl-none rounded-tr-md rounded-b-md border border-text/20 bg-inset px-2 py-1.5 shadow-xl"
 			style="left: {popupPos.x}px; top: {popupPos.y}px;"

@@ -9,7 +9,7 @@ import {
 	type CommentTagsUpdate,
 	type ReactionCreate,
 	type ReactionRead,
-	type ReactionType,
+	type GroupReactionRead,
 	type Filter
 } from '$api/types';
 import type { Paginated } from '$api/pagination';
@@ -59,6 +59,7 @@ const createDocumentStore = () => {
 	let showCursors: boolean = $state<boolean>(true);
 	let shareCursor: boolean = $state<boolean>(true);
 	let loadedDocument: DocumentRead | undefined = $state<DocumentRead | undefined>(undefined);
+	let groupReactions: GroupReactionRead[] = $state<GroupReactionRead[]>([]);
 
 	// Pinning state tracking (for empty states and future comments)
 	const pinnedAuthors = new SvelteSet<number>();
@@ -474,9 +475,9 @@ const createDocumentStore = () => {
 		}
 	};
 
-	const commentsAddReaction = async (commentId: number, type: ReactionType) => {
+	const commentsAddReaction = async (commentId: number, groupReactionId: number) => {
 		const result = await api.post<ReactionRead>(`/comments/${commentId}/reactions`, {
-			type
+			group_reaction_id: groupReactionId
 		} satisfies ReactionCreate);
 		if (!result.success) {
 			notification(result.error);
@@ -956,6 +957,12 @@ const createDocumentStore = () => {
 		},
 		set loadedDocument(value) {
 			loadedDocument = value;
+		},
+		get groupReactions() {
+			return groupReactions;
+		},
+		set groupReactions(value) {
+			groupReactions = value;
 		},
 		get documentScale() {
 			return documentScale;
