@@ -5,6 +5,7 @@
 		MembershipPermissionUpdate,
 		MembershipRead,
 		Permission,
+		ScoreRead,
 		UserRead
 	} from '$api/types';
 	import OwnerIcon from '~icons/material-symbols/admin-panel-settings-outline';
@@ -28,7 +29,7 @@
 	import LeaveIcon from '~icons/mdi/exit-run';
 	import { formatDateTime } from '$lib/util/dateFormat';
 	import ExpandablePermissionBadge from '$lib/components/expandablePermissionBadge.svelte';
-	import { SvelteSet } from 'svelte/reactivity';
+	import { SvelteMap, SvelteSet } from 'svelte/reactivity';
 
 	let { data } = $props();
 	let memberships = $derived(data.memberships);
@@ -37,6 +38,27 @@
 	let selected = $state<Omit<MembershipRead, 'group'>[]>([]);
 	let username = $state('');
 	let selectedUser = $state<UserRead | undefined>(undefined);
+
+	const scores = new SvelteMap<number, number>();
+	const scoresFetching = new SvelteSet<number>();
+
+	$effect(() => {
+		const items = memberships.data;
+		const toFetch = items
+			.map((m) => m.user.id)
+			.filter((id) => !scores.has(id) && !scoresFetching.has(id));
+		if (toFetch.length === 0) return;
+
+		toFetch.forEach((id) => scoresFetching.add(id));
+		Promise.all(
+			toFetch.map(async (userId) => {
+				const result = await api.get<ScoreRead>(`/groups/${group.id}/memberships/${userId}/score`);
+				if (result.success) {
+					scores.set(userId, result.data.total);
+				}
+			})
+		);
+	});
 
 	const availablePermissions = permissionSchema.options.map((p) => p.value);
 
@@ -269,6 +291,11 @@
 				snippet: permissionsSnippet
 			},
 			{
+				label: 'Score',
+				width: '0.7fr',
+				snippet: scoreSnippet
+			},
+			{
 				label: $LL.memberships.actions(),
 				width: '2fr',
 				snippet: actionsSnippet
@@ -308,9 +335,21 @@
 	</p>
 {/snippet}
 
+{#snippet scoreSnippet(membership: Omit<MembershipRead, 'group'>)}
+	{@const total = scores.get(membership.user.id)}
+	<span class="text-sm font-medium text-text/70">
+		{total !== undefined ? total : '\u{2014}'}
+	</span>
+{/snippet}
+
 {#snippet usernameSnippet(membership: Omit<MembershipRead, 'group'>)}
 	<div class="flex flex-row items-center text-text">
-		<p class="font-medium">{membership.user.username || 'Unknown User'}</p>
+		<a
+			href="/dashboard/groups/{group.id}/memberships/{membership.user.id}"
+			class="font-medium underline decoration-text/20 underline-offset-2 transition-colors hover:text-primary hover:decoration-primary/50"
+		>
+			{membership.user.username || 'Unknown User'}
+		</a>
 		{#if membership.user.first_name || membership.user.last_name}
 			<p class="ml-1 whitespace-nowrap text-text/70">
 				({membership.user.first_name || ''}

@@ -8,6 +8,7 @@
 	import MarkdownTextEditor from './MarkdownTextEditor.svelte';
 	import MarkdownRenderer from '$lib/components/MarkdownRenderer.svelte';
 	import CommentTagSelector from './CommentTagSelector.svelte';
+	import CommentReactions from './CommentReactions.svelte';
 	import ReplyIcon from '~icons/material-symbols/reply';
 	import EditIcon from '~icons/material-symbols/edit-outline';
 	import DeleteIcon from '~icons/material-symbols/delete-outline';
@@ -15,6 +16,8 @@
 	import CloseIcon from '~icons/material-symbols/close';
 	import ExpandIcon from '~icons/material-symbols/expand-more';
 	import TagIcon from '~icons/mdi/tag-search-outline';
+	import AddReactionIcon from '~icons/material-symbols/add-reaction-outline';
+	import type { ReactionType } from '$api/types';
 	import { formatDateTime } from '$lib/util/dateFormat';
 	import { env } from '$env/dynamic/public';
 
@@ -61,6 +64,60 @@
 	let isQuoteExpanded = $state(false);
 	let quoteRef: HTMLParagraphElement | null = $state(null);
 	let hasQuoteOverflow = $state(false);
+	let isReactionPickerOpen = $state(false);
+	let isReactionSubmitting = $state(false);
+	let reactionButtonRef = $state<HTMLButtonElement | null>(null);
+	let pickerPos = $derived.by(() => {
+		if (!reactionButtonRef || !isReactionPickerOpen) return { top: 0, left: 0 };
+		const rect = reactionButtonRef.getBoundingClientRect();
+		return { top: rect.top, left: rect.right };
+	});
+
+	const EMOJI_MAP: Record<ReactionType, string> = {
+		thumbs_up: '\u{1F44D}',
+		smile: '\u{1F60A}',
+		heart: '\u{2764}\u{FE0F}',
+		fire: '\u{1F525}',
+		pinch: '\u{1FAF0}',
+		nerd: '\u{1F913}'
+	};
+
+	const EMOJI_LABELS: Record<ReactionType, string> = {
+		thumbs_up: 'Thumbs up',
+		smile: 'Smile',
+		heart: 'Heart',
+		fire: 'Fire',
+		pinch: 'Pinch',
+		nerd: 'Nerd'
+	};
+
+	const ALL_REACTION_TYPES: ReactionType[] = [
+		'thumbs_up',
+		'smile',
+		'heart',
+		'fire',
+		'pinch',
+		'nerd'
+	];
+
+	let myReaction = $derived(
+		comment.reactions?.find((r) => r.user.id === sessionStore.currentUserId)
+	);
+
+	const handlePickerReaction = async (type: ReactionType) => {
+		if (isReactionSubmitting || isAuthor) return;
+		isReactionSubmitting = true;
+		try {
+			if (myReaction?.type === type) {
+				await documentStore.comments.removeReaction(comment.id);
+			} else {
+				await documentStore.comments.addReaction(comment.id, type);
+			}
+		} finally {
+			isReactionSubmitting = false;
+			isReactionPickerOpen = false;
+		}
+	};
 
 	let hasUnloadedReplies = $derived(
 		comment?.num_replies > 0 &&
@@ -210,6 +267,22 @@
 </script>
 
 {#snippet actionButtons()}
+	<!-- Add reaction button (top-level only) -->
+	{#if isTopLevel && !isAuthor}
+		<button
+			bind:this={reactionButtonRef}
+			class="flex cursor-pointer items-center rounded bg-text/5 p-1 text-text/40 transition-colors hover:bg-text/10 hover:text-text/60"
+			title="Add reaction"
+			onclick={(e) => {
+				e.stopPropagation();
+				isReactionPickerOpen = !isReactionPickerOpen;
+			}}
+			disabled={isReactionSubmitting}
+		>
+			<AddReactionIcon class="h-3.5 w-3.5" />
+		</button>
+	{/if}
+
 	{#if commentState && canReply && !commentState.isReplying}
 		<button
 			class="flex items-center gap-1 rounded bg-primary/10 px-1.5 py-0.5 text-[11px] font-medium text-primary transition-colors hover:bg-primary/20"
@@ -430,10 +503,15 @@
 			</div>
 		{/if}
 
-		<!-- Action Bar: Expand (Only visible when not replying) -->
-		{#if !commentState?.isReplying && comment.num_replies > 0}
+		<!-- Action Bar: Expand + Reactions -->
+		{#if isTopLevel || (!commentState?.isReplying && comment.num_replies > 0)}
 			<div class="flex items-center gap-3 {isTopLevel ? 'mt-1 mb-1' : 'mt-1'}">
-				{@render expandButton()}
+				{#if !commentState?.isReplying && comment.num_replies > 0}
+					{@render expandButton()}
+				{/if}
+				{#if isTopLevel}
+					<CommentReactions {comment} />
+				{/if}
 			</div>
 		{/if}
 
@@ -518,3 +596,31 @@
 		{/if}
 	</div>
 </div>
+
+<!-- Reaction picker popup (rendered outside card to escape overflow clipping) -->
+{#if isReactionPickerOpen}
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<!-- svelte-ignore a11y_click_events_have_key_events -->
+	<div class="fixed inset-0 z-[100]" onclick={() => (isReactionPickerOpen = false)}>
+		<div
+			class="fixed z-[101] flex items-center gap-0.5 rounded-lg bg-inset p-1 shadow-xl ring-1 ring-text/20"
+			style="top: {pickerPos.top}px; left: {pickerPos.left}px; transform: translate(-100%, -100%) translateY(-4px);"
+			onclick={(e) => e.stopPropagation()}
+		>
+			{#each ALL_REACTION_TYPES as type (type)}
+				<button
+					class="cursor-pointer rounded-md p-1 text-base transition-colors hover:bg-text/10
+						{myReaction?.type === type ? 'bg-primary/20 ring-1 ring-primary/50' : ''}"
+					title={EMOJI_LABELS[type]}
+					onclick={(e) => {
+						e.stopPropagation();
+						handlePickerReaction(type);
+					}}
+					disabled={isReactionSubmitting}
+				>
+					{EMOJI_MAP[type]}
+				</button>
+			{/each}
+		</div>
+	</div>
+{/if}

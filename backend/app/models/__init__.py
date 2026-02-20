@@ -39,6 +39,7 @@ from models.group import (
 )
 from models.pagination import PaginatedBase
 from models.reaction import ReactionCreate, ReactionRead
+from models.score import ScoreBreakdown, ScoreRead
 from models.sharelink import (
     ShareLinkCreate,
     ShareLinkRead,
@@ -83,6 +84,9 @@ Annotation.model_rebuild()
 
 ReactionCreate.model_rebuild()
 ReactionRead.model_rebuild()
+
+ScoreBreakdown.model_rebuild()
+ScoreRead.model_rebuild()
 
 DocumentCreate.model_rebuild()
 DocumentRead.model_rebuild()

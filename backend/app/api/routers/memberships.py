@@ -1,3 +1,5 @@
+from datetime import UTC, datetime
+
 from api.dependencies.authentication import Authenticate
 from api.dependencies.database import Database
 from api.dependencies.paginated.resources import (
@@ -5,7 +7,7 @@ from api.dependencies.paginated.resources import (
 )
 from api.dependencies.resource import Resource
 from core.app_exception import AppException
-from fastapi import Body, HTTPException, Response
+from fastapi import Body, HTTPException, Query, Response
 from models.enums import AppErrorCode, Permission
 from models.filter import MembershipFilter
 from models.group import (
@@ -14,9 +16,20 @@ from models.group import (
     MembershipRead,
 )
 from models.pagination import Paginated
-from models.tables import Group, Membership, User
+from models.score import ScoreBreakdown, ScoreRead
+from models.tables import (
+    Comment,
+    CommentTag,
+    Document,
+    Group,
+    Membership,
+    Reaction,
+    User,
+)
+from sqlalchemy import case, func, or_
 from sqlmodel import select
 from util.api_router import APIRouter
+from util.cache import get_cached, score_cache_key, set_cached
 from util.queries import Guard
 from util.response import ExcludableFieldsJSONResponse
 
@@ -289,3 +302,200 @@ async def promote_guest_to_member(
     membership.sharelink_id = None
     await db.commit()
     return Response(status_code=204)
+
+
+@groupmembership_router.get(
+    "/{user_id}/score", response_model=ScoreRead
+)
+async def get_member_score(
+    db: Database,
+    session_user: User = Authenticate(
+        [Guard.group_access()],
+    ),
+    group: Group = Resource(Group, param_alias="group_id"),
+    member: User = Resource(User, param_alias="user_id"),
+    document_id: str | None = Query(
+        None,
+        description="Filter score to a specific document",
+    ),
+) -> ScoreRead:
+    """Get the gamification score for a user within a group.
+
+    Optionally filter to a single document via ``document_id``.
+    Scores are cached in Redis for 5 minutes. The response
+    includes a ``cached_at`` timestamp so the frontend can
+    show when the score was last computed.
+    """
+    cache_key = score_cache_key(
+        group.id, member.id, document_id
+    )
+    cached = await get_cached(cache_key)
+    if cached is not None:
+        return ScoreRead.model_validate(cached)
+
+    score = await _compute_score(
+        db, group.id, member.id, document_id
+    )
+    await set_cached(cache_key, score.model_dump(mode="json"))
+    return score
+
+
+async def _compute_score(
+    db: Database,
+    group_id: str,
+    user_id: int,
+    document_id: str | None = None,
+) -> ScoreRead:
+    """Compute a user's score within a group.
+
+    When *document_id* is supplied the score is scoped to that
+    single document; otherwise all documents in the group are
+    included.  Only root-level comments (parent_id IS NULL)
+    count.
+    """
+    # Document scope: single document or all group documents
+    if document_id is not None:
+        doc_filter = (
+            Comment.document_id == document_id,  # type: ignore[union-attr]
+        )
+    else:
+        group_docs = (
+            select(Document.id)
+            .where(Document.group_id == group_id)
+            .scalar_subquery()
+        )
+        doc_filter = (
+            Comment.document_id.in_(group_docs),  # type: ignore[union-attr]
+        )
+
+    # Base filter: root comments by this user in scoped documents
+    root_comments_filter = (
+        Comment.user_id == user_id,
+        Comment.parent_id.is_(None),  # type: ignore[union-attr]
+        *doc_filter,
+    )
+
+    # 1. Highlights: comments with non-empty annotation
+    highlight_result = await db.exec(
+        select(func.count()).select_from(Comment).where(
+            *root_comments_filter,
+            Comment.annotation != {},
+        )
+    )
+    highlights: int = highlight_result.one()
+
+    # 2. Comments with text content
+    comment_result = await db.exec(
+        select(func.count()).select_from(Comment).where(
+            *root_comments_filter,
+            Comment.content.is_not(None),  # type: ignore[union-attr]
+        )
+    )
+    comments: int = comment_result.one()
+
+    # 3. Tags on user's root comments
+    tag_result = await db.exec(
+        select(func.count())
+        .select_from(CommentTag)
+        .join(Comment, CommentTag.comment_id == Comment.id)
+        .where(
+            Comment.user_id == user_id,
+            Comment.parent_id.is_(None),  # type: ignore[union-attr]
+            *doc_filter,
+        )
+    )
+    tags: int = tag_result.one()
+
+    # 4. Reactions received — split by admin/normal
+    #    A reactor is admin if they are owner or have ADMINISTRATOR
+    #    in their membership permissions for this group.
+    reactor_membership = (
+        select(Membership)
+        .where(Membership.group_id == group_id)
+        .subquery()
+    )
+
+    is_admin_case = case(
+        (
+            or_(
+                reactor_membership.c.is_owner.is_(True),
+                reactor_membership.c.permissions.contains(
+                    [Permission.ADMINISTRATOR.value]
+                ),
+            ),
+            1,
+        ),
+        else_=0,
+    )
+
+    received_result = await db.exec(
+        select(
+            func.count(),
+            func.coalesce(func.sum(is_admin_case), 0),
+        )
+        .select_from(Reaction)
+        .join(Comment, Reaction.comment_id == Comment.id)
+        .outerjoin(
+            reactor_membership,
+            Reaction.user_id == reactor_membership.c.user_id,
+        )
+        .where(
+            Comment.user_id == user_id,
+            Comment.parent_id.is_(None),  # type: ignore[union-attr]
+            *doc_filter,
+        )
+    )
+    row = received_result.one()
+    reactions_received: int = row[0]
+    reactions_from_admin: int = int(row[1])
+    reactions_from_normal = reactions_received - reactions_from_admin
+
+    # 5. Reactions given by this user on root comments in the group
+    given_result = await db.exec(
+        select(func.count())
+        .select_from(Reaction)
+        .join(Comment, Reaction.comment_id == Comment.id)
+        .where(
+            Reaction.user_id == user_id,
+            Comment.parent_id.is_(None),  # type: ignore[union-attr]
+            *doc_filter,
+        )
+    )
+    reactions_given: int = given_result.one()
+
+    # Calculate points
+    highlight_points = highlights * 1
+    comment_points = comments * 5
+    tag_points = tags * 2
+    reaction_received_points = (
+        reactions_from_normal * 2 + reactions_from_admin * 4
+    )
+    reaction_given_points = reactions_given * 2
+
+    total = (
+        highlight_points
+        + comment_points
+        + tag_points
+        + reaction_received_points
+        + reaction_given_points
+    )
+
+    breakdown = ScoreBreakdown(
+        highlights=highlights,
+        highlight_points=highlight_points,
+        comments=comments,
+        comment_points=comment_points,
+        tags=tags,
+        tag_points=tag_points,
+        reactions_received=reactions_received,
+        reactions_received_from_admin=reactions_from_admin,
+        reaction_received_points=reaction_received_points,
+        reactions_given=reactions_given,
+        reaction_given_points=reaction_given_points,
+    )
+
+    return ScoreRead(
+        total=total,
+        breakdown=breakdown,
+        cached_at=datetime.now(UTC),
+    )

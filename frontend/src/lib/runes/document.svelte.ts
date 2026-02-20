@@ -7,6 +7,9 @@ import {
 	type DocumentRead,
 	type ViewMode,
 	type CommentTagsUpdate,
+	type ReactionCreate,
+	type ReactionRead,
+	type ReactionType,
 	type Filter
 } from '$api/types';
 import type { Paginated } from '$api/pagination';
@@ -471,6 +474,66 @@ const createDocumentStore = () => {
 		}
 	};
 
+	const commentsAddReaction = async (commentId: number, type: ReactionType) => {
+		const result = await api.post<ReactionRead>(`/comments/${commentId}/reactions`, {
+			type
+		} satisfies ReactionCreate);
+		if (!result.success) {
+			notification(result.error);
+			return;
+		}
+
+		// Optimistically update the comment's reactions
+		const comment = _comments.get(commentId);
+		if (comment && result.data) {
+			const currentUser = sessionStore.currentUser;
+			// Remove existing reaction from this user (if any) then add the new one
+			const filtered = comment.reactions.filter((r) => r.user.id !== currentUser?.id);
+			const updatedComment: CommentRead = {
+				...comment,
+				reactions: [...filtered, result.data]
+			};
+			_comments.set(commentId, updatedComment);
+		}
+	};
+
+	const commentsRemoveReaction = async (commentId: number) => {
+		const result = await api.delete(`/comments/${commentId}/reactions`);
+		if (!result.success) {
+			notification(result.error);
+			return;
+		}
+
+		// Optimistically remove the current user's reaction
+		const comment = _comments.get(commentId);
+		if (comment) {
+			const currentUser = sessionStore.currentUser;
+			const updatedComment: CommentRead = {
+				...comment,
+				reactions: comment.reactions.filter((r) => r.user.id !== currentUser?.id)
+			};
+			_comments.set(commentId, updatedComment);
+		}
+	};
+
+	const commentsRemoveReactionByUser = async (commentId: number, userId: number) => {
+		const result = await api.delete(`/comments/${commentId}/reactions/${userId}`);
+		if (!result.success) {
+			notification(result.error);
+			return;
+		}
+
+		// Optimistically remove the target user's reaction
+		const comment = _comments.get(commentId);
+		if (comment) {
+			const updatedComment: CommentRead = {
+				...comment,
+				reactions: comment.reactions.filter((r) => r.user.id !== userId)
+			};
+			_comments.set(commentId, updatedComment);
+		}
+	};
+
 	const commentsLoadMoreReplies = async (commentId: number) => {
 		const limit = 20;
 		// Offset by the amount of comments that were already received from the api
@@ -540,6 +603,9 @@ const createDocumentStore = () => {
 		create: commentsCreate,
 		delete: commentsDelete,
 		updateTags: commentsUpdateTags,
+		addReaction: commentsAddReaction,
+		removeReaction: commentsRemoveReaction,
+		removeReactionByUser: commentsRemoveReactionByUser,
 		loadMoreReplies: commentsLoadMoreReplies,
 		getState,
 		getComment,

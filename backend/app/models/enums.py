@@ -5,11 +5,12 @@ from enum import Enum, StrEnum
 class ReactionType(StrEnum):
     """Types of reactions users can give to comments."""
 
-    LIKE = "like"
-    DISLIKE = "dislike"
-    LAUGH = "laugh"
-    CONFUSED = "confused"
+    THUMBS_UP = "thumbs_up"
+    SMILE = "smile"
+    HEART = "heart"
     FIRE = "fire"
+    PINCH = "pinch"
+    NERD = "nerd"
 
 
 class Permission(StrEnum):
@@ -83,6 +84,10 @@ class AppErrorCode(StrEnum):
     CANNOT_REMOVE_PERMISSION_REASON_DEFAULT_GROUP = "cannot_remove_permission_reason_default_group"  # use when trying to remove a permission that is included in the group's default permission reason
     CANNOT_REMOVE_PERMISSION_REASON_SHARELINK = "cannot_remove_permission_reason_sharelink"  # use when trying to remove a permission that is included in the related sharelink's permission reason
     
+    # Reactions
+    SELF_REACTION = "self_reaction"  # use when a user tries to react to their own comment
+    REPLY_REACTION = "reply_reaction"  # use when a user tries to react to a reply (only root comments allowed)
+
     # Rate Limiting
     RATE_LIMITED = "rate_limited"  # use when a client has exceeded the request rate limit
 

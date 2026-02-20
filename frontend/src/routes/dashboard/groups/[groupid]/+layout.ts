@@ -10,9 +10,10 @@ export const load: LayoutLoad = async ({ parent }) => {
 		notification('error', 'You are not a member of this group.'); // TODO i18n
 		throw redirect(303, '/dashboard');
 	}
+
 	return {
-		membership,
 		...data,
+		membership,
 		breadcrumbs: [
 			{ label: 'Dashboard', href: '/dashboard' },
 			{ label: membership.group.name }

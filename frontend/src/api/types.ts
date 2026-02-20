@@ -25,6 +25,9 @@ export type AppErrorCode =
   | "owner_cannot_leave_group"
   | "cannot_remove_permission_reason_default_group"
   | "cannot_remove_permission_reason_sharelink"
+  | "self_reaction"
+  | "reply_reaction"
+  | "rate_limited"
   | "username_taken"
   | "email_taken"
   | "sharelink_anonymous_disabled";
@@ -35,7 +38,7 @@ export type Visibility = "private" | "restricted" | "public";
 /**
  * Types of reactions users can give to comments.
  */
-export type ReactionType = "like" | "dislike" | "laugh" | "confused" | "fire";
+export type ReactionType = "thumbs_up" | "smile" | "heart" | "fire" | "pinch" | "nerd";
 /**
  * Document view mode settings.
  *
@@ -350,6 +353,33 @@ export interface Filter {
 export interface ReactionCreate {
   type: ReactionType;
 }
+/**
+ * Detailed breakdown of a user's score components.
+ */
+export interface ScoreBreakdown {
+  highlights: number;
+  highlight_points: number;
+  comments: number;
+  comment_points: number;
+  tags: number;
+  tag_points: number;
+  reactions_received: number;
+  reactions_received_from_admin: number;
+  reaction_received_points: number;
+  reactions_given: number;
+  reaction_given_points: number;
+}
+/**
+ * User score for a specific group, with caching metadata.
+ */
+export interface ScoreRead {
+  total: number;
+  breakdown: ScoreBreakdown;
+  cached_at: string;
+}
+/**
+ * Schema for creating a share link.
+ */
 export interface ShareLinkCreate {
   permissions: Permission[];
   allow_anonymous_access?: boolean;
@@ -387,6 +417,9 @@ export interface ShareLinkReadFromToken {
   group: GroupRead;
   token: string;
 }
+/**
+ * Schema for updating a share link.
+ */
 export interface ShareLinkUpdate {
   permissions?: Permission[] | null;
   expires_at?: string | null;

@@ -9,7 +9,7 @@
 	import { goto, invalidateAll } from '$app/navigation';
 
 	let groupName: string = $state('');
-	let selectedPermissions: Permission[] = $state([]);
+	let selectedPermissions: Permission[] = $state(['add_comments', 'add_reactions']);
 	let isLoading: boolean = $state(false);
 	let errorMessage: string = $state('');
 	let successMessage: string = $state('');

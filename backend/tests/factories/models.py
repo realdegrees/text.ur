@@ -106,7 +106,7 @@ class ReactionFactory(BaseFactory):
 
     user = factory.SubFactory(UserFactory)
     comment = factory.SubFactory(CommentFactory)
-    type = "like"
+    type = "thumbs_up"
 
 
 class ShareLinkFactory(BaseFactory):
