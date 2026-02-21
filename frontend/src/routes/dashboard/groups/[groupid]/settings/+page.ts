@@ -3,7 +3,7 @@ import type { PageLoad } from './$types';
 import type { BreadcrumbItem } from '$types/breadcrumb';
 
 export const load: PageLoad = async ({ parent }) => {
-	const { membership, sessionUser } = await parent();
+	const { membership, sessionUser, scoreConfig } = await parent();
 
 	// Check if user is admin or owner
 	const isAdmin = membership.permissions.includes('administrator') || membership.is_owner;
@@ -15,6 +15,7 @@ export const load: PageLoad = async ({ parent }) => {
 	return {
 		membership,
 		sessionUser,
+		scoreConfig,
 		breadcrumbs: [
 			{ label: 'Dashboard', href: '/dashboard' },
 			{

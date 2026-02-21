@@ -2,7 +2,8 @@
 	import AddIcon from '~icons/material-symbols/add-2-rounded';
 	import { api } from '$api/client';
 	import { notification } from '$lib/stores/notificationStore';
-	import { invalidateAll } from '$app/navigation';
+	import { invalidate } from '$app/navigation';
+	import LL from '$i18n/i18n-svelte';
 	import type {
 		ShareLinkCreate as ShareLinkCreateData,
 		ShareLinkRead,
@@ -72,9 +73,9 @@
 		const result = await api.post(`/groups/${groupId}/sharelinks`, createData);
 
 		if (result.success) {
-			notification('success', 'Share link created successfully');
+			notification('success', $LL.sharelinks.created());
 			resetCreateForm();
-			await invalidateAll();
+			await invalidate('app:sharelinks');
 		} else {
 			notification(result.error);
 		}
@@ -92,9 +93,9 @@
 		const result = await api.update(`/groups/${groupId}/sharelinks/${linkId}`, updateData);
 
 		if (result.success) {
-			notification('success', 'Share link updated successfully');
+			notification('success', $LL.sharelinks.updated());
 			cancelEdit();
-			await invalidateAll();
+			await invalidate('app:sharelinks');
 		} else {
 			notification(result.error);
 		}
@@ -108,22 +109,22 @@
 		const result = await api.update(`/groups/${groupId}/sharelinks/${linkId}`, updateData);
 
 		if (result.success) {
-			notification('success', 'Token rotated successfully. The old link is now invalid.');
-			await invalidateAll();
+			notification('success', $LL.sharelinks.rotated());
+			await invalidate('app:sharelinks');
 		} else {
 			notification(result.error);
 		}
 	}
 
 	async function handleDelete(linkId: number) {
-		const confirmed = confirm('Are you sure you want to delete this share link?');
+		const confirmed = confirm($LL.sharelinks.deleteConfirm());
 		if (!confirmed) return;
 
 		const result = await api.delete(`/groups/${groupId}/sharelinks/${linkId}`);
 
 		if (result.success) {
-			notification('success', 'Share link deleted successfully');
-			await invalidateAll();
+			notification('success', $LL.sharelinks.deleted());
+			await invalidate('app:sharelinks');
 		} else {
 			notification(result.error);
 		}
@@ -133,9 +134,9 @@
 		const link = `${window.location.origin}/sharelink/${token}`;
 		try {
 			await navigator.clipboard.writeText(link);
-			notification('success', 'Link copied to clipboard');
+			notification('success', $LL.sharelinks.linkCopied());
 		} catch {
-			notification('error', 'Failed to copy link');
+			notification('error', $LL.sharelinks.copyFailed());
 		}
 	}
 </script>
@@ -150,7 +151,7 @@
 				class="flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-text transition-all hover:bg-primary/80"
 			>
 				<AddIcon class="h-5 w-5" />
-				<p>Create Link</p>
+				<p>{$LL.sharelinks.createLink()}</p>
 			</button>
 		{/if}
 	</div>
@@ -169,7 +170,7 @@
 
 	<!-- Links List -->
 	{#if shareLinks.data.length === 0}
-		<p class="text-center text-sm text-text/50">No share links yet. Create one to get started.</p>
+		<p class="text-center text-sm text-text/50">{$LL.sharelinks.noLinksYet()}</p>
 	{:else}
 		{#each shareLinks.data as link (link.id)}
 			{#if editingLinkId === link.id}

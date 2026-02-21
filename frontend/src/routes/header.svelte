@@ -101,14 +101,14 @@
 							{#if item === 'account'}
 								<div class="flex w-full items-center gap-2 px-3 py-2 text-sm">
 									<AccountIcon class="h-5 w-5" />
-									<p>Account Settings</p>
+									<p>{$LL.userSettings.title()}</p>
 								</div>
 							{:else if item === 'logout' && !user.is_guest}
 								<div
 									class="flex w-full items-center gap-2 px-3 py-2 text-sm text-red-600 transition-colors dark:text-red-400"
 								>
 									<LogoutIcon class="h-5 w-5" />
-									<p>Logout</p>
+									<p>{$LL.logout()}</p>
 								</div>
 							{/if}
 						{/snippet}

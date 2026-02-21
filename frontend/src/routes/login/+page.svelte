@@ -4,6 +4,7 @@
 	import RegisterForm from '$lib/components/RegisterForm.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { page } from '$app/stores';
+	import LL from '$i18n/i18n-svelte';
 
 	const showResetSuccess = $derived($page.url.searchParams.get('reset') === 'success');
 
@@ -16,13 +17,13 @@
 	<div class="w-full max-w-md overflow-hidden rounded-lg bg-inset shadow-lg">
 		{#if showResetSuccess}
 			<div class="border-b-4 border-b-green-500 bg-green-500/20 p-2 text-text">
-				Password reset successful! You can now log in with your new password.
+				{$LL.passwordReset.resetSuccess()}
 			</div>
 		{/if}
 		<TabContainer
 			tabs={[
-				{ label: 'Login', snippet: Login },
-				{ label: 'Register', snippet: Register }
+				{ label: $LL.loginPage.loginTab(), snippet: Login },
+				{ label: $LL.loginPage.registerTab(), snippet: Register }
 			]}
 		/>
 	</div>

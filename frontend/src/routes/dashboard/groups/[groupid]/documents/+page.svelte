@@ -1,6 +1,7 @@
 <script lang="ts">
 	import InfiniteTable from '$lib/components/infiniteScrollTable.svelte';
 	import type { DocumentRead } from '$api/types';
+	import LL from '$i18n/i18n-svelte';
 	import DocumentIcon from '~icons/material-symbols/description-outline';
 	import AddIcon from '~icons/material-symbols/add-2-rounded';
 	import EditIcon from '~icons/material-symbols/edit-outline';
@@ -8,7 +9,7 @@
 	import type { Paginated } from '$api/pagination';
 	import { sessionStore } from '$lib/runes/session.svelte.js';
 	import { notification } from '$lib/stores/notificationStore';
-	import { goto, invalidateAll } from '$app/navigation';
+	import { goto, invalidate } from '$app/navigation';
 	import { formatDateTime } from '$lib/util/dateFormat';
 	import ConfirmButton from '$lib/components/ConfirmButton.svelte';
 	import DocumentVisibility from '$lib/components/DocumentVisibility.svelte';
@@ -25,13 +26,13 @@
 
 <div class="p-4">
 	<div class="mb-4 flex w-full flex-row items-center justify-between gap-2">
-		{#if sessionStore.validatePermissions(['upload_documents'])}
+		{#if sessionStore.validatePermissions(['administrator'])}
 			<a
 				href="/dashboard/groups/{group.id}/documents/create"
 				class="flex flex-row items-center gap-2 rounded bg-green-500/30 px-3 py-2.5 font-semibold shadow-inner shadow-black/30 transition hover:cursor-pointer hover:bg-green-500/40"
 			>
 				<AddIcon class="h-5 w-5" />
-				Upload Document
+				{$LL.documents.uploadDocument()}
 			</a>
 		{/if}
 	</div>
@@ -40,25 +41,28 @@
 		<InfiniteTable
 			columns={[
 				{
-					label: 'Document Name',
+					label: $LL.documents.documentName(),
 					width: '1fr',
 					snippet: nameSnippet
 				},
+				...(sessionStore.validatePermissions(['administrator'])
+					? [
+							{
+								label: $LL.visibility.label(),
+								width: '1fr',
+								snippet: visibilitySnippet
+							}
+						]
+					: []),
 				{
-					label: 'Visibility',
-					width: '1fr',
-					snippet: visibilitySnippet
-				},
-				{
-					label: 'Created',
+					label: $LL.documents.created(),
 					width: '1fr',
 					snippet: dateSnippet
 				},
-				...(sessionStore.validatePermissions(['delete_documents']) ||
-				sessionStore.validatePermissions(['upload_documents'])
+				...(sessionStore.validatePermissions(['administrator'])
 					? [
 							{
-								label: 'Actions',
+								label: $LL.actions(),
 								width: 'auto',
 								snippet: actionsSnippet
 							}
@@ -104,7 +108,7 @@
 
 {#snippet visibilitySnippet(document: DocumentRead)}
 	<div class="flex w-full items-center justify-start">
-		<DocumentVisibility {document} canEdit={false} />
+		<DocumentVisibility {document} canEdit={sessionStore.validatePermissions(['administrator'])} />
 	</div>
 {/snippet}
 
@@ -112,23 +116,25 @@
 	<div class="flex flex-col gap-0.5">
 		<p class="text-sm text-text/90">{formatDateTime(document.created_at)}</p>
 		{#if document.updated_at && document.updated_at !== document.created_at}
-			<p class="text-xs text-text/60">Updated: {formatDateTime(document.updated_at)}</p>
+			<p class="text-xs text-text/60">
+				{$LL.documents.updated({ date: formatDateTime(document.updated_at) })}
+			</p>
 		{/if}
 	</div>
 {/snippet}
 
 {#snippet actionsSnippet(document: DocumentRead)}
 	<div class="flex w-full flex-row items-center justify-end gap-2">
-		{#if sessionStore.validatePermissions(['upload_documents'])}
+		{#if sessionStore.validatePermissions(['administrator'])}
 			<button
 				onclick={() => goto(`/dashboard/groups/${group.id}/documents/${document.id}/settings`)}
 				class="cursor-pointer text-text/80 transition hover:text-primary"
-				aria-label="Edit document settings"
+				aria-label={$LL.documents.editSettings()}
 			>
 				<EditIcon class="h-5 w-5" />
 			</button>
 		{/if}
-		{#if sessionStore.validatePermissions(['delete_documents'])}
+		{#if sessionStore.validatePermissions(['administrator'])}
 			<ConfirmButton
 				onConfirm={async () => {
 					const result = await api.delete(`/documents/${document.id}`);
@@ -136,15 +142,17 @@
 						notification(result.error);
 						return;
 					}
-					notification('success', 'Document deleted successfully');
-					invalidateAll();
+					notification('success', $LL.documents.deleteSuccess());
+					invalidate('app:documents');
 				}}
 			>
 				{#snippet button()}
 					<DeleteIcon class="h-5 w-5 cursor-pointer text-text/80 hover:text-red-400/80" />
 				{/snippet}
 				{#snippet slideout()}
-					<div class="px-1 py-2 whitespace-nowrap text-red-600 dark:text-red-400">Delete?</div>
+					<div class="px-1 py-2 whitespace-nowrap text-red-600 dark:text-red-400">
+						{$LL.documents.deleteConfirm()}
+					</div>
 				{/snippet}
 			</ConfirmButton>
 		{/if}

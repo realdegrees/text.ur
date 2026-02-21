@@ -38,7 +38,20 @@ from models.group import (
     MembershipRead,
 )
 from models.pagination import PaginatedBase
-from models.reaction import ReactionCreate, ReactionRead
+from models.reaction import (
+    GroupReactionCreate,
+    GroupReactionRead,
+    GroupReactionUpdate,
+    ReactionCreate,
+    ReactionRead,
+)
+from models.score import (
+    ReactionBreakdownItem,
+    ScoreBreakdown,
+    ScoreConfigRead,
+    ScoreConfigUpdate,
+    ScoreRead,
+)
 from models.sharelink import (
     ShareLinkCreate,
     ShareLinkRead,
@@ -47,7 +60,15 @@ from models.sharelink import (
     ShareLinkUpdate,
 )
 from models.sort import Sort
-from models.tables import Comment, Document, Group, Membership, User
+from models.tables import (
+    Comment,
+    Document,
+    Group,
+    GroupReaction,
+    Membership,
+    ScoreConfig,
+    User,
+)
 from models.tag import TagCreate, TagRead, TagUpdate
 from models.user import UserCreate, UserPrivate, UserRead, UserUpdate
 
@@ -83,6 +104,15 @@ Annotation.model_rebuild()
 
 ReactionCreate.model_rebuild()
 ReactionRead.model_rebuild()
+GroupReactionCreate.model_rebuild()
+GroupReactionRead.model_rebuild()
+GroupReactionUpdate.model_rebuild()
+
+ReactionBreakdownItem.model_rebuild()
+ScoreBreakdown.model_rebuild()
+ScoreRead.model_rebuild()
+ScoreConfigRead.model_rebuild()
+ScoreConfigUpdate.model_rebuild()
 
 DocumentCreate.model_rebuild()
 DocumentRead.model_rebuild()

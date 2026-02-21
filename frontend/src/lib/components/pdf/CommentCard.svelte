@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { documentStore } from '$lib/runes/document.svelte.js';
 	import { sessionStore } from '$lib/runes/session.svelte.js';
+	import LL from '$i18n/i18n-svelte';
 	import type { CommentRead, TagRead } from '$api/types';
 	import CommentCard from './CommentCard.svelte';
 	import CommentVisibility from './CommentVisibility.svelte';
@@ -8,6 +9,7 @@
 	import MarkdownTextEditor from './MarkdownTextEditor.svelte';
 	import MarkdownRenderer from '$lib/components/MarkdownRenderer.svelte';
 	import CommentTagSelector from './CommentTagSelector.svelte';
+	import CommentReactions from './CommentReactions.svelte';
 	import ReplyIcon from '~icons/material-symbols/reply';
 	import EditIcon from '~icons/material-symbols/edit-outline';
 	import DeleteIcon from '~icons/material-symbols/delete-outline';
@@ -15,6 +17,7 @@
 	import CloseIcon from '~icons/material-symbols/close';
 	import ExpandIcon from '~icons/material-symbols/expand-more';
 	import TagIcon from '~icons/mdi/tag-search-outline';
+	import AddReactionIcon from '~icons/material-symbols/add-reaction-outline';
 	import { formatDateTime } from '$lib/util/dateFormat';
 	import { env } from '$env/dynamic/public';
 
@@ -61,6 +64,38 @@
 	let isQuoteExpanded = $state(false);
 	let quoteRef: HTMLParagraphElement | null = $state(null);
 	let hasQuoteOverflow = $state(false);
+	let isReactionPickerOpen = $state(false);
+	let isReactionSubmitting = $state(false);
+	let reactionButtonRef = $state<HTMLButtonElement | null>(null);
+	let pickerPos = $derived.by(() => {
+		if (!reactionButtonRef || !isReactionPickerOpen) return { top: 0, left: 0 };
+		const rect = reactionButtonRef.getBoundingClientRect();
+		return { top: rect.top, left: rect.right };
+	});
+
+	// Dynamic group reactions from store (sorted by order)
+	let availableReactions = $derived(
+		[...documentStore.groupReactions].sort((a, b) => a.order - b.order)
+	);
+
+	let myReaction = $derived(
+		comment.reactions?.find((r) => r.user.id === sessionStore.currentUserId)
+	);
+
+	const handlePickerReaction = async (groupReactionId: number) => {
+		if (isReactionSubmitting || isAuthor) return;
+		isReactionSubmitting = true;
+		try {
+			if (myReaction?.group_reaction_id === groupReactionId) {
+				await documentStore.comments.removeReaction(comment.id);
+			} else {
+				await documentStore.comments.addReaction(comment.id, groupReactionId);
+			}
+		} finally {
+			isReactionSubmitting = false;
+			isReactionPickerOpen = false;
+		}
+	};
 
 	let hasUnloadedReplies = $derived(
 		comment?.num_replies > 0 &&
@@ -69,7 +104,7 @@
 	let isAuthor = $derived(sessionStore.currentUserId === comment?.user?.id);
 	let canDeleteComment = $derived.by(() => {
 		if (sessionStore.currentUserId === comment.user?.id) return true;
-		return sessionStore.validatePermissions(['remove_comments']);
+		return sessionStore.validatePermissions(['administrator']);
 	});
 	let canReply = $derived(
 		sessionStore.routeMembership ? sessionStore.validatePermissions(['add_comments']) : false
@@ -198,18 +233,25 @@
 			hasQuoteOverflow = quoteRef.scrollHeight > quoteRef.clientHeight;
 		}
 	});
-
-	// $effect(() => {
-	// 	if (commentState?.replyInputContent !== replyContent)
-	// 		documentStore.comments.setReplyInputContent(comment.id, replyContent);
-	// });
-	// $effect(() => {
-	// 	if (commentState?.editInputContent !== editContent)
-	// 		documentStore.comments.setEditInputContent(comment.id, editContent);
-	// });
 </script>
 
 {#snippet actionButtons()}
+	<!-- Add reaction button (top-level only, hidden when no reactions configured) -->
+	{#if isTopLevel && !isAuthor && availableReactions.length > 0}
+		<button
+			bind:this={reactionButtonRef}
+			class="flex cursor-pointer items-center rounded bg-text/5 p-1 text-text/40 transition-colors hover:bg-text/10 hover:text-text/60"
+			title={$LL.comments.addReaction()}
+			onclick={(e) => {
+				e.stopPropagation();
+				isReactionPickerOpen = !isReactionPickerOpen;
+			}}
+			disabled={isReactionSubmitting}
+		>
+			<AddReactionIcon class="h-3.5 w-3.5" />
+		</button>
+	{/if}
+
 	{#if commentState && canReply && !commentState.isReplying}
 		<button
 			class="flex items-center gap-1 rounded bg-primary/10 px-1.5 py-0.5 text-[11px] font-medium text-primary transition-colors hover:bg-primary/20"
@@ -217,10 +259,10 @@
 				e.stopPropagation();
 				commentState.isReplying = true;
 			}}
-			title="Reply"
+			title={$LL.reply()}
 		>
 			<ReplyIcon class="h-3 w-3" />
-			<span>Reply</span>
+			<span>{$LL.reply()}</span>
 		</button>
 	{/if}
 	{#if commentState && !commentState.isEditing && isAuthor}
@@ -231,7 +273,7 @@
 				editingTags = [...comment.tags];
 				commentState.isEditing = true;
 			}}
-			title="Edit"
+			title={$LL.edit()}
 		>
 			<EditIcon class="h-3.5 w-3.5" />
 		</button>
@@ -242,14 +284,14 @@
 				{#if !isOpen}
 					<div
 						class="flex cursor-pointer items-center rounded bg-orange-500/10 p-1 text-orange-600 transition-colors hover:bg-orange-500/20 hover:text-orange-700"
-						title="Delete"
+						title={$LL.delete()}
 					>
 						<DeleteIcon class="h-3.5 w-3.5" />
 					</div>
 				{:else}
 					<div
 						class="flex cursor-pointer items-center rounded bg-orange-500/20 p-1 text-orange-600 transition-colors hover:bg-orange-500/30"
-						title="Confirm Delete"
+						title={$LL.comments.confirmDelete()}
 					>
 						<CheckIcon class="h-3.5 w-3.5" />
 					</div>
@@ -259,7 +301,7 @@
 			{#snippet slideout()}
 				<!-- Slideout content if needed, though button itself handles confirmation state mostly -->
 				<div class="flex items-center gap-1 rounded bg-orange-500/10 px-2 py-0.5">
-					<span class="text-xs text-orange-600">Delete?</span>
+					<span class="text-xs text-orange-600">{$LL.comments.deleteConfirm()}</span>
 				</div>
 			{/snippet}
 		</ConfirmButton>
@@ -284,11 +326,10 @@
 		>
 			{#if !commentState.repliesExpanded}
 				<ExpandIcon class={sizes.icon} />
-				{comment.num_replies}
-				{comment.num_replies === 1 ? 'reply' : 'replies'}
+				{$LL.comments.nReplies({ count: comment.num_replies })}
 			{:else}
 				<ExpandIcon class="{sizes.icon} rotate-180" />
-				Collapse
+				{$LL.collapse()}
 			{/if}
 		</button>
 	{/if}
@@ -310,7 +351,7 @@
 			<div class="flex items-center gap-2">
 				{#if !isTopLevel}
 					<span class="text-xs font-medium text-text/70"
-						>{comment.user?.username ?? 'Anonymous'}</span
+						>{comment.user?.username ?? $LL.anonymous()}</span
 					>
 				{/if}
 				<span class="text-xs text-text/40">{formatDateTime(comment.created_at)}</span>
@@ -391,7 +432,7 @@
 			<div class={sizes.mb}>
 				<MarkdownTextEditor
 					bind:value={commentState.editInputContent}
-					placeholder="Edit your comment..."
+					placeholder={$LL.comments.editPlaceholder()}
 					rows={3}
 					disabled={isSubmitting}
 					maxCommentLength={env.PUBLIC_MAX_COMMENT_LENGTH
@@ -409,7 +450,8 @@
 						}}
 						disabled={isSubmitting}
 					>
-						<CloseIcon class={sizes.icon} /> Cancel
+						<CloseIcon class={sizes.icon} />
+						{$LL.cancel()}
 					</button>
 					<button
 						class="flex items-center gap-1 rounded bg-primary/20 {sizes.buttonPx} text-xs font-medium text-primary transition-colors hover:bg-primary/30 disabled:opacity-50"
@@ -420,7 +462,7 @@
 						disabled={!hasChanges || isSubmitting}
 					>
 						<CheckIcon class={sizes.icon} />
-						{isSubmitting ? 'Saving...' : 'Save'}
+						{isSubmitting ? $LL.saving() : $LL.save()}
 					</button>
 				</div>
 			</div>
@@ -430,10 +472,15 @@
 			</div>
 		{/if}
 
-		<!-- Action Bar: Expand (Only visible when not replying) -->
-		{#if !commentState?.isReplying && comment.num_replies > 0}
+		<!-- Action Bar: Expand + Reactions -->
+		{#if isTopLevel || (!commentState?.isReplying && comment.num_replies > 0)}
 			<div class="flex items-center gap-3 {isTopLevel ? 'mt-1 mb-1' : 'mt-1'}">
-				{@render expandButton()}
+				{#if !commentState?.isReplying && comment.num_replies > 0}
+					{@render expandButton()}
+				{/if}
+				{#if isTopLevel}
+					<CommentReactions {comment} />
+				{/if}
 			</div>
 		{/if}
 
@@ -442,7 +489,7 @@
 			<div class={isTopLevel ? 'mb-2' : 'mt-2'}>
 				<MarkdownTextEditor
 					bind:value={commentState.replyInputContent}
-					placeholder="Write a reply..."
+					placeholder={$LL.comments.replyPlaceholder()}
 					rows={2}
 					disabled={isSubmitting}
 					autofocus={true}
@@ -468,7 +515,7 @@
 							e.stopPropagation();
 							commentState.isReplying = false;
 							commentState.replyInputContent = '';
-						}}>Cancel</button
+						}}>{$LL.cancel()}</button
 					>
 					<button
 						class="rounded bg-primary/20 {sizes.buttonPx} text-xs font-medium text-primary transition-colors hover:bg-primary/30 disabled:opacity-50"
@@ -478,7 +525,7 @@
 						}}
 						disabled={!commentState.replyInputContent.trim() || isSubmitting}
 					>
-						{isSubmitting ? (isTopLevel ? 'Sending...' : '...') : 'Reply'}
+						{isSubmitting ? $LL.comments.sending() : $LL.reply()}
 					</button>
 				</div>
 			</div>
@@ -506,15 +553,41 @@
 					>
 						<ExpandIcon class={sizes.icon} />
 						{isLoadingReplies
-							? 'Loading...'
-							: `${comment.num_replies - (commentState.replies?.length ?? 0)} more ${
-									comment.num_replies - (commentState.replies?.length ?? 0) === 1
-										? 'reply'
-										: 'replies'
-								}`}
+							? $LL.loading()
+							: $LL.comments.nMoreReplies({
+									count: comment.num_replies - (commentState.replies?.length ?? 0)
+								})}
 					</button>
 				{/if}
 			</div>
 		{/if}
 	</div>
 </div>
+
+<!-- Reaction picker popup (rendered outside card to escape overflow clipping) -->
+{#if isReactionPickerOpen}
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<!-- svelte-ignore a11y_click_events_have_key_events -->
+	<div class="fixed inset-0 z-[100]" onclick={() => (isReactionPickerOpen = false)}>
+		<div
+			class="fixed z-[101] flex items-center gap-0.5 rounded-lg bg-inset p-1 shadow-xl ring-1 ring-text/20"
+			style="top: {pickerPos.top}px; left: {pickerPos.left}px; transform: translate(-100%, -100%) translateY(-4px);"
+			onclick={(e) => e.stopPropagation()}
+		>
+			{#each availableReactions as gr (gr.id)}
+				<button
+					class="cursor-pointer rounded-md p-1 text-base transition-colors hover:bg-text/10
+					{myReaction?.group_reaction_id === gr.id ? 'bg-primary/20 ring-1 ring-primary/50' : ''}"
+					title={$LL.comments.nPoints({ count: gr.points })}
+					onclick={(e) => {
+						e.stopPropagation();
+						handlePickerReaction(gr.id);
+					}}
+					disabled={isReactionSubmitting}
+				>
+					{gr.emoji}
+				</button>
+			{/each}
+		</div>
+	</div>
+{/if}

@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { api } from '$api/client';
-	import { goto, invalidateAll } from '$app/navigation';
+	import { goto, invalidate } from '$app/navigation';
 	import { notification } from '$lib/stores/notificationStore';
+	import LL from '$i18n/i18n-svelte';
 	import { sessionStore } from '$lib/runes/session.svelte.js';
 	import TagManagement from '$lib/components/TagManagement.svelte';
 	import ConfirmButton from '$lib/components/ConfirmButton.svelte';
@@ -9,7 +10,7 @@
 	import BackIcon from '~icons/material-symbols/arrow-back';
 	import SaveIcon from '~icons/material-symbols/save-outline';
 	import DeleteIcon from '~icons/material-symbols/delete-outline';
-	import type { Visibility } from '$api/types';
+	import type { DocumentVisibility } from '$api/types';
 	import { env } from '$env/dynamic/public';
 
 	let { data } = $props();
@@ -18,7 +19,7 @@
 
 	let documentName = $state(document.name);
 	let documentDescription = $state(document.description ?? '');
-	let documentVisibility = $state<Visibility>(document.visibility);
+	let documentVisibility = $state<DocumentVisibility>(document.visibility);
 	let isSaving = $state(false);
 	let isClearing = $state(false);
 
@@ -31,7 +32,7 @@
 
 	async function saveChanges() {
 		if (!documentName.trim()) {
-			notification('error', 'Document name is required');
+			notification('error', $LL.documentSettings.nameRequired());
 			return;
 		}
 
@@ -50,8 +51,9 @@
 			return;
 		}
 
-		notification('success', 'Document updated successfully');
-		await invalidateAll();
+		notification('success', $LL.documentSettings.updateSuccess());
+		await invalidate('app:document');
+		await invalidate('app:documents');
 	}
 
 	function hasChanges() {
@@ -76,8 +78,8 @@
 			return;
 		}
 
-		notification('success', 'All comments cleared successfully');
-		await invalidateAll();
+		notification('success', $LL.documentSettings.danger.clearSuccess());
+		await invalidate('app:document');
 	}
 </script>
 
@@ -87,23 +89,25 @@
 		<button
 			onclick={() => goto(`/dashboard/groups/${group.id}/documents`)}
 			class="rounded p-2 transition hover:bg-text/10"
-			aria-label="Back to documents"
+			aria-label={$LL.documentSettings.backToDocuments()}
 		>
 			<BackIcon class="h-5 w-5" />
 		</button>
-		<h1 class="text-2xl font-bold">Document Settings</h1>
+		<h1 class="text-2xl font-bold">{$LL.documentSettings.title()}</h1>
 	</div>
 
 	<!-- Settings Form -->
 	<div class="flex flex-col gap-6">
 		<!-- Document Name -->
 		<div class="flex flex-col gap-2">
-			<label for="document-name" class="text-sm font-semibold text-text/70">Document Name</label>
+			<label for="document-name" class="text-sm font-semibold text-text/70"
+				>{$LL.documents.documentName()}</label
+			>
 			<input
 				id="document-name"
 				type="text"
 				bind:value={documentName}
-				placeholder="Enter document name"
+				placeholder={$LL.documents.documentNamePlaceholder()}
 				maxlength="255"
 				class="rounded-md border border-text/20 bg-text/5 px-4 py-2 transition-colors focus:border-text/50 focus:outline-none"
 			/>
@@ -112,25 +116,24 @@
 		<!-- Document Description -->
 		<div class="flex flex-col gap-2">
 			<label for="document-description" class="text-sm font-semibold text-text/70">
-				Document Description (Optional)
+				{$LL.documents.documentDescription()}
 			</label>
 			<MarkdownTextEditor
 				bind:value={documentDescription}
-				placeholder="Add a description for this document (supports Markdown formatting)"
+				placeholder={$LL.documents.documentDescriptionPlaceholder()}
 				rows={4}
 				maxCommentLength={env.PUBLIC_DOCUMENT_DESCRIPTION_MAX_LENGTH
 					? parseInt(env.PUBLIC_DOCUMENT_DESCRIPTION_MAX_LENGTH)
 					: 5000}
 			/>
 			<p class="text-xs text-text/50">
-				Describe the purpose of this document, what feedback you're looking for, or any other
-				context.
+				{$LL.documents.documentDescriptionHint()}
 			</p>
 		</div>
 
 		<!-- Document Visibility -->
 		<div class="flex flex-col gap-2">
-			<div class="text-sm font-semibold text-text/70">Visibility</div>
+			<div class="text-sm font-semibold text-text/70">{$LL.visibility.label()}</div>
 			<div class="flex flex-col gap-3">
 				<div class="flex items-start gap-2">
 					<input
@@ -142,31 +145,11 @@
 					/>
 					<div class="flex flex-col gap-0.5">
 						<label for="visibility-public" class="cursor-pointer text-sm font-medium">
-							Public
+							{$LL.visibility.public.label()}
 						</label>
-						<p class="text-xs text-text/50">All group members can view this document</p>
+						<p class="text-xs text-text/50">{$LL.documentSettings.publicDescription()}</p>
 					</div>
 				</div>
-
-				{#if sessionStore.validatePermissions(['view_restricted_documents'])}
-					<div class="flex items-start gap-2">
-						<input
-							type="radio"
-							id="visibility-restricted"
-							value="restricted"
-							bind:group={documentVisibility}
-							class="mt-0.5 cursor-pointer"
-						/>
-						<div class="flex flex-col gap-0.5">
-							<label for="visibility-restricted" class="cursor-pointer text-sm font-medium">
-								Restricted
-							</label>
-							<p class="text-xs text-text/50">
-								Only members with VIEW_RESTRICTED_DOCUMENTS permission can view
-							</p>
-						</div>
-					</div>
-				{/if}
 
 				{#if sessionStore.validatePermissions(['administrator'])}
 					<div class="flex items-start gap-2">
@@ -179,9 +162,9 @@
 						/>
 						<div class="flex flex-col gap-0.5">
 							<label for="visibility-private" class="cursor-pointer text-sm font-medium">
-								Private
+								{$LL.visibility.private.label()}
 							</label>
-							<p class="text-xs text-text/50">Only administrators can view this document</p>
+							<p class="text-xs text-text/50">{$LL.documentSettings.privateDescription()}</p>
 						</div>
 					</div>
 				{/if}
@@ -198,13 +181,13 @@
 					class="flex flex-row items-center gap-2 rounded-md bg-primary px-6 py-2 text-text transition-all hover:bg-primary/80 disabled:cursor-not-allowed disabled:opacity-50"
 				>
 					<SaveIcon class="h-5 w-5" />
-					<span>{isSaving ? 'Saving...' : 'Save Changes'}</span>
+					<span>{isSaving ? $LL.documentSettings.savingButton() : $LL.saveChanges()}</span>
 				</button>
 			</div>
 		{/if}
 
 		<!-- Tag Management -->
-		{#if sessionStore.validatePermissions(['manage_tags'])}
+		{#if sessionStore.validatePermissions(['administrator'])}
 			<div class="flex flex-col gap-2">
 				<TagManagement {document} />
 			</div>
@@ -213,10 +196,9 @@
 		<!-- Danger Zone -->
 		{#if sessionStore.validatePermissions(['administrator'])}
 			<div class="mt-8 flex flex-col gap-4 rounded-md border border-red-500/30 bg-red-500/5 p-4">
-				<h2 class="text-lg font-semibold text-red-500">Danger Zone</h2>
+				<h2 class="text-lg font-semibold text-red-500">{$LL.documentSettings.danger.title()}</h2>
 				<p class="text-sm text-text/70">
-					Permanently delete all comments and annotations from this document. This action cannot be
-					undone.
+					{$LL.documentSettings.danger.description()}
 				</p>
 
 				<ConfirmButton disabled={isClearing} onConfirm={clearDocument}>
@@ -231,11 +213,17 @@
 							disabled={isClearing}
 						>
 							<DeleteIcon class="h-5 w-5" />
-							<span>{isClearing ? 'Clearing...' : 'Clear All Comments'}</span>
+							<span
+								>{isClearing
+									? $LL.documentSettings.danger.clearing()
+									: $LL.documentSettings.danger.clearButton()}</span
+							>
 						</button>
 					{/snippet}
 					{#snippet slideout()}
-						<div class="rounded-md bg-red-500/10 px-3 py-2 text-red-500">Confirm Clear</div>
+						<div class="rounded-md bg-red-500/10 px-3 py-2 text-red-500">
+							{$LL.documentSettings.danger.confirmClear()}
+						</div>
 					{/snippet}
 				</ConfirmButton>
 			</div>

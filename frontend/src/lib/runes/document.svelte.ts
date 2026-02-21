@@ -7,6 +7,9 @@ import {
 	type DocumentRead,
 	type ViewMode,
 	type CommentTagsUpdate,
+	type ReactionCreate,
+	type ReactionRead,
+	type GroupReactionRead,
 	type Filter
 } from '$api/types';
 import type { Paginated } from '$api/pagination';
@@ -14,7 +17,7 @@ import { notification } from '$lib/stores/notificationStore';
 import { type Annotation } from '$api/types';
 import { annotationSchema } from '$api/schemas';
 import { SvelteMap, SvelteSet } from 'svelte/reactivity';
-import { invalidateAll } from '$app/navigation';
+import { invalidate } from '$app/navigation';
 import {
 	loadCommentStates,
 	saveCommentStates,
@@ -56,6 +59,7 @@ const createDocumentStore = () => {
 	let showCursors: boolean = $state<boolean>(true);
 	let shareCursor: boolean = $state<boolean>(true);
 	let loadedDocument: DocumentRead | undefined = $state<DocumentRead | undefined>(undefined);
+	let groupReactions: GroupReactionRead[] = $state<GroupReactionRead[]>([]);
 
 	// Pinning state tracking (for empty states and future comments)
 	const pinnedAuthors = new SvelteSet<number>();
@@ -471,6 +475,66 @@ const createDocumentStore = () => {
 		}
 	};
 
+	const commentsAddReaction = async (commentId: number, groupReactionId: number) => {
+		const result = await api.post<ReactionRead>(`/comments/${commentId}/reactions`, {
+			group_reaction_id: groupReactionId
+		} satisfies ReactionCreate);
+		if (!result.success) {
+			notification(result.error);
+			return;
+		}
+
+		// Optimistically update the comment's reactions
+		const comment = _comments.get(commentId);
+		if (comment && result.data) {
+			const currentUser = sessionStore.currentUser;
+			// Remove existing reaction from this user (if any) then add the new one
+			const filtered = comment.reactions.filter((r) => r.user.id !== currentUser?.id);
+			const updatedComment: CommentRead = {
+				...comment,
+				reactions: [...filtered, result.data]
+			};
+			_comments.set(commentId, updatedComment);
+		}
+	};
+
+	const commentsRemoveReaction = async (commentId: number) => {
+		const result = await api.delete(`/comments/${commentId}/reactions`);
+		if (!result.success) {
+			notification(result.error);
+			return;
+		}
+
+		// Optimistically remove the current user's reaction
+		const comment = _comments.get(commentId);
+		if (comment) {
+			const currentUser = sessionStore.currentUser;
+			const updatedComment: CommentRead = {
+				...comment,
+				reactions: comment.reactions.filter((r) => r.user.id !== currentUser?.id)
+			};
+			_comments.set(commentId, updatedComment);
+		}
+	};
+
+	const commentsRemoveReactionByUser = async (commentId: number, userId: number) => {
+		const result = await api.delete(`/comments/${commentId}/reactions/${userId}`);
+		if (!result.success) {
+			notification(result.error);
+			return;
+		}
+
+		// Optimistically remove the target user's reaction
+		const comment = _comments.get(commentId);
+		if (comment) {
+			const updatedComment: CommentRead = {
+				...comment,
+				reactions: comment.reactions.filter((r) => r.user.id !== userId)
+			};
+			_comments.set(commentId, updatedComment);
+		}
+	};
+
 	const commentsLoadMoreReplies = async (commentId: number) => {
 		const limit = 20;
 		// Offset by the amount of comments that were already received from the api
@@ -540,6 +604,9 @@ const createDocumentStore = () => {
 		create: commentsCreate,
 		delete: commentsDelete,
 		updateTags: commentsUpdateTags,
+		addReaction: commentsAddReaction,
+		removeReaction: commentsRemoveReaction,
+		removeReactionByUser: commentsRemoveReactionByUser,
 		loadMoreReplies: commentsLoadMoreReplies,
 		getState,
 		getComment,
@@ -810,7 +877,7 @@ const createDocumentStore = () => {
 				commentsLocal.delete((event.payload as CommentRead).id);
 				break;
 			case 'view_mode_changed': {
-				invalidateAll();
+				invalidate('app:document-view');
 				break;
 			}
 			default:
@@ -890,6 +957,12 @@ const createDocumentStore = () => {
 		},
 		set loadedDocument(value) {
 			loadedDocument = value;
+		},
+		get groupReactions() {
+			return groupReactions;
+		},
+		set groupReactions(value) {
+			groupReactions = value;
 		},
 		get documentScale() {
 			return documentScale;

@@ -5,6 +5,7 @@
 	import PeopleIcon from '~icons/material-symbols/group-outline';
 	import DocumentIcon from '~icons/material-symbols/description-outline';
 	import ShareIcon from '~icons/material-symbols/link';
+
 	import type { LocalizedString } from 'typesafe-i18n';
 	import { fly } from 'svelte/transition';
 	import { page } from '$app/state';
@@ -46,7 +47,7 @@
 		if (itemPath === '') {
 			return currentPath === basePath;
 		}
-		return currentPath === `${basePath}${itemPath}`;
+		return currentPath.startsWith(`${basePath}${itemPath}`);
 	}
 </script>
 
@@ -57,7 +58,7 @@
 		out:fly={{ y: -60, duration: 200 }}
 	>
 		<!-- Navigation Tabs -->
-		<nav class="flex flex-row gap-2 border-b border-text/20">
+		<nav class="flex flex-row items-center gap-2 border-b border-text/20">
 			{#each menuItems as item (item.path)}
 				{#if item.condition}
 					<a

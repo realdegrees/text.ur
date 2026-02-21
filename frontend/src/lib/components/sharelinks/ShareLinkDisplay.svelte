@@ -23,39 +23,59 @@
 		onCopy: () => void;
 		onRotate: () => void;
 	} = $props();
+
+	let isExpired = $derived(link.expires_at ? new Date(link.expires_at) < new Date() : false);
 </script>
 
 <div class="flex flex-col gap-2 rounded border border-text/20 bg-background/50 p-3">
 	<div class="flex items-start justify-between gap-2">
 		<div class="flex flex-col gap-1">
 			<div class="flex items-center gap-2">
-				{#if link.num_memberships > 0}
+				{#if isExpired}
+					<span class="rounded bg-red-500/20 px-2 py-0.5 text-xs font-semibold text-red-500"
+						>{$LL.sharelinks.expired()}</span
+					>
+				{:else if link.num_memberships > 0}
 					<span
 						class="rounded bg-blue-500/20 px-2 py-0.5 text-xs font-semibold text-blue-600"
-						title="Members using this link: {link.num_memberships}"
-						>{link.num_memberships} User{link.num_memberships === 1 ? '' : 's'}</span
+						title={$LL.sharelinks.usersTitle({ count: link.num_memberships })}
+						>{$LL.sharelinks.users({ count: link.num_memberships })}</span
 					>
 				{/if}
 				{#if link.label}
 					<span class="font-semibold">{link.label}</span>
 				{:else}
-					<span class="font-semibold text-text/50">Untitled Link</span>
+					<span class="font-semibold text-text/50">{$LL.sharelinks.untitledLink()}</span>
 				{/if}
 				{#if link.allow_anonymous_access}
 					<span
 						class="rounded bg-green-500/20 px-2 py-0.5 text-xs font-semibold text-green-600"
-						title="Allows access without an account">Anonymous</span
+						title={$LL.sharelinks.anonymousTitle()}>{$LL.sharelinks.anonymousBadge()}</span
 					>
 				{/if}
 			</div>
 			<p class="text-xs text-text/50">
-				{link.created_at !== link.updated_at ? 'last updated' : 'created'} by {link.author
-					?.username || 'Deleted User'} at {formatDateTime(
-					link.created_at !== link.updated_at ? link.updated_at : link.created_at
-				)}
+				{link.created_at !== link.updated_at
+					? $LL.sharelinks.lastUpdatedBy({
+							username: link.author?.username || $LL.sharelinks.deletedUser(),
+							date: formatDateTime(
+								link.created_at !== link.updated_at ? link.updated_at : link.created_at
+							)
+						})
+					: $LL.sharelinks.createdBy({
+							username: link.author?.username || $LL.sharelinks.deletedUser(),
+							date: formatDateTime(link.created_at)
+						})}
 			</p>
 			<p class="text-xs text-text/50">
-				Expires: {formatDateTime(link.expires_at)}
+				{#if isExpired}
+					<span class="font-semibold text-red-500"
+						>{$LL.sharelinks.expiredDate({ date: formatDateTime(link.expires_at!) })}</span
+					>
+					<span class="ml-1">({$LL.sharelinks.changeExpiryHint()})</span>
+				{:else}
+					{$LL.sharelinks.expires({ date: formatDateTime(link.expires_at!) })}
+				{/if}
 			</p>
 		</div>
 		<div class="flex gap-1">
@@ -63,7 +83,7 @@
 				type="button"
 				onclick={onCopy}
 				class="rounded bg-blue-500/20 p-2 transition hover:bg-blue-500/30"
-				title="Copy Link"
+				title={$LL.sharelinks.copyLink()}
 			>
 				<CopyIcon class="h-4 w-4" />
 			</button>
@@ -72,14 +92,17 @@
 				type="button"
 				onclick={onEdit}
 				class="rounded bg-text/10 p-2 transition hover:bg-text/20"
-				title="Edit"
+				title={$LL.edit()}
 			>
 				<EditIcon class="h-4 w-4" />
 			</button>
 
 			<ConfirmButton onConfirm={onRotate} slideoutDirection="left">
 				{#snippet button(isOpen)}
-					<div class="bg-amber-400/30 p-2 transition hover:bg-amber-400/60" title="Rotate Token">
+					<div
+						class="bg-amber-400/30 p-2 transition hover:bg-amber-400/60"
+						title={$LL.sharelinks.rotateToken()}
+					>
 						{#if !isOpen}
 							<RotateIcon class="h-4 w-4" />
 						{:else}
@@ -90,15 +113,14 @@
 
 				{#snippet slideout()}
 					<p class="flex h-full w-full items-center bg-amber-400/10 px-2 text-xs text-amber-400">
-						This will remove {link.num_memberships} member{link.num_memberships === 1 ? '' : 's'} from
-						the group. Are you sure?
+						{$LL.sharelinks.rotateConfirm({ count: link.num_memberships })}
 					</p>
 				{/snippet}
 			</ConfirmButton>
 
 			<ConfirmButton onConfirm={onDelete} slideoutDirection="left">
 				{#snippet button(isOpen)}
-					<div class="bg-red-500/20 p-2 transition hover:bg-red-500/30" title="Delete">
+					<div class="bg-red-500/20 p-2 transition hover:bg-red-500/30" title={$LL.delete()}>
 						{#if !isOpen}
 							<DeleteIcon class="h-4 w-4" />
 						{:else}
@@ -108,7 +130,9 @@
 				{/snippet}
 
 				{#snippet slideout()}
-					<p class="flex items-center bg-red-500/10 px-2 py-0.5 text-xs text-red-500">Delete?</p>
+					<p class="flex items-center bg-red-500/10 px-2 py-0.5 text-xs text-red-500">
+						{$LL.documents.deleteConfirm()}
+					</p>
 				{/snippet}
 			</ConfirmButton>
 		</div>

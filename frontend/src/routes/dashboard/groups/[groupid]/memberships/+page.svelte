@@ -5,6 +5,7 @@
 		MembershipPermissionUpdate,
 		MembershipRead,
 		Permission,
+		ScoreRead,
 		UserRead
 	} from '$api/types';
 	import OwnerIcon from '~icons/material-symbols/admin-panel-settings-outline';
@@ -21,14 +22,14 @@
 	import PermissionSelector from '$lib/components/permissionSelector.svelte';
 	import { slide } from 'svelte/transition';
 	import AdvancedInput from '$lib/components/advancedInput.svelte';
-	import { invalidateAll } from '$app/navigation';
+	import { invalidate } from '$app/navigation';
 	import ConfirmButton from '$lib/components/ConfirmButton.svelte';
 	import PromoteIcon from '~icons/mdi/chevron-double-up';
 	import KickIcon from '~icons/ic/sharp-person-remove';
 	import LeaveIcon from '~icons/mdi/exit-run';
 	import { formatDateTime } from '$lib/util/dateFormat';
 	import ExpandablePermissionBadge from '$lib/components/expandablePermissionBadge.svelte';
-	import { SvelteSet } from 'svelte/reactivity';
+	import { SvelteMap, SvelteSet } from 'svelte/reactivity';
 
 	let { data } = $props();
 	let memberships = $derived(data.memberships);
@@ -38,10 +39,36 @@
 	let username = $state('');
 	let selectedUser = $state<UserRead | undefined>(undefined);
 
+	const scores = new SvelteMap<number, number>();
+	const scoresFetching = new SvelteSet<number>();
+
+	$effect(() => {
+		const items = memberships.data;
+		const toFetch = items
+			.map((m) => m.user.id)
+			.filter((id) => !scores.has(id) && !scoresFetching.has(id));
+		if (toFetch.length === 0) return;
+
+		toFetch.forEach((id) => scoresFetching.add(id));
+		Promise.all(
+			toFetch.map(async (userId) => {
+				const result = await api.get<ScoreRead>(`/groups/${group.id}/memberships/${userId}/score`);
+				if (result.success) {
+					scores.set(userId, result.data.total);
+				} else {
+					notification(result.error);
+				}
+			})
+		).catch(() => {
+			// Individual errors are already handled above;
+			// this prevents unhandled promise rejections.
+		});
+	});
+
 	const availablePermissions = permissionSchema.options.map((p) => p.value);
 
 	// Calculate permissions that should be excluded from bulk actions
-	const bulkExcludedPermissions = $derived(() => {
+	const bulkExcludedPermissions = $derived.by(() => {
 		const excluded = new SvelteSet<Permission>(group.default_permissions);
 		// Add sharelink permissions from all selected memberships
 		selected.forEach((m) => {
@@ -53,7 +80,7 @@
 	});
 
 	const availableForBulkAdd = $derived(
-		availablePermissions.filter((p) => !bulkExcludedPermissions().includes(p))
+		availablePermissions.filter((p) => !bulkExcludedPermissions.includes(p))
 	);
 
 	function handleSelectionChange(memberships: Omit<MembershipRead, 'group'>[]) {
@@ -139,10 +166,10 @@
 				} satisfies MembershipCreate)
 				.then((result) => {
 					if (result.success) {
-						notification('success', 'User invited successfully!');
+						notification('success', $LL.memberships.inviteSuccess());
 						username = '';
 						selectedUser = undefined;
-						invalidateAll();
+						invalidate('app:group-memberships');
 					} else {
 						notification(result.error);
 					}
@@ -153,7 +180,7 @@
 
 <div class="p-4">
 	<div class="mb-4 flex w-full flex-row items-center justify-between gap-2">
-		{#if sessionStore.validatePermissions(['add_members'])}
+		{#if sessionStore.validatePermissions(['administrator'])}
 			<!--INVITE-->
 			<div class="flex flex-row items-end gap-2">
 				<div class="w-64">
@@ -161,7 +188,7 @@
 						fetchOptions={fetchUserOptions}
 						bind:value={username}
 						bind:selected={selectedUser}
-						config={{ placeholder: 'Search username...' }}
+						config={{ placeholder: $LL.memberships.searchPlaceholder() }}
 						stringify={{
 							option: (user) => `${user.username}`,
 							hint: (s) => ` (${s?.first_name || ''} ${s?.last_name || ''})`
@@ -174,7 +201,7 @@
 					onclick={handleInviteSubmit}
 					disabled={!selectedUser}
 					class:opacity-50={!selectedUser}
-					class:cursor-not-allowed={!selectedUser}>Invite</button
+					class:cursor-not-allowed={!selectedUser}>{$LL.memberships.invite()}</button
 				>
 			</div>
 		{/if}
@@ -186,27 +213,29 @@
 			out:slide={{ axis: 'y' }}
 		>
 			{#if selected.length > 0}
-				<p class="mr-2 font-semibold">{selected.length}/{data.memberships.total} Selected:</p>
+				<p class="mr-2 font-semibold">
+					{$LL.memberships.selected({ count: selected.length, total: data.memberships.total })}
+				</p>
 			{/if}
 			{#if selected.length > 0}
-				{#if sessionStore.validatePermissions(['remove_members'])}
+				{#if sessionStore.validatePermissions(['administrator'])}
 					<button
 						class="rounded bg-inset px-1 py-1.5 font-semibold shadow-inner shadow-black/30 transition hover:cursor-pointer hover:bg-red-500/30"
 						onclick={async () => {
 							await Promise.all(selected.map(({ user: { id } }) => kickMember(id)));
-							await invalidateAll();
+							await invalidate('app:group-memberships');
 						}}
 					>
-						Kick
+						{$LL.memberships.kick()}
 					</button>
 				{/if}
-				{#if sessionStore.validatePermissions(['manage_permissions'])}
+				{#if sessionStore.validatePermissions(['administrator'])}
 					<Dropdown
 						items={availableForBulkAdd}
 						onSelect={(perm) =>
 							selected.forEach(async (membership) => addPermissionToMembership(membership, perm))}
 						position="bottom-left"
-						title="Add Permission to Selected"
+						title={$LL.memberships.addPermission()}
 						showArrow={false}
 						show={false}
 						hideCurrentSelection={true}
@@ -215,7 +244,7 @@
 							<div
 								class="rounded bg-inset px-1 py-1.5 font-semibold shadow-inner shadow-black/30 transition hover:cursor-pointer hover:bg-green-500/30"
 							>
-								Add Permission
+								{$LL.memberships.addPermission()}
 							</div>
 						{/snippet}
 						{#snippet itemSnippet(perm)}
@@ -230,7 +259,7 @@
 								removePermissionFromMembership(membership, perm)
 							)}
 						position="bottom-left"
-						title="Remove Permission from Selected"
+						title={$LL.memberships.removePermission()}
 						showArrow={false}
 						show={false}
 						hideCurrentSelection={true}
@@ -239,7 +268,7 @@
 							<div
 								class="rounded bg-inset px-1 py-1.5 font-semibold shadow-inner shadow-black/30 transition hover:cursor-pointer hover:bg-orange-500/30"
 							>
-								Remove Permission
+								{$LL.memberships.removePermission()}
 							</div>
 						{/snippet}
 						{#snippet itemSnippet(perm)}
@@ -257,6 +286,11 @@
 				label: $LL.user(),
 				width: '2fr',
 				snippet: usernameSnippet
+			},
+			{
+				label: $LL.score(),
+				width: '0.7fr',
+				snippet: scoreSnippet
 			},
 			{
 				label: $LL.status(),
@@ -308,9 +342,21 @@
 	</p>
 {/snippet}
 
+{#snippet scoreSnippet(membership: Omit<MembershipRead, 'group'>)}
+	{@const total = scores.get(membership.user.id)}
+	<span class="text-sm font-medium text-text/70">
+		{total !== undefined ? total : '\u{2014}'}
+	</span>
+{/snippet}
+
 {#snippet usernameSnippet(membership: Omit<MembershipRead, 'group'>)}
 	<div class="flex flex-row items-center text-text">
-		<p class="font-medium">{membership.user.username || 'Unknown User'}</p>
+		<a
+			href="/dashboard/groups/{group.id}/memberships/{membership.user.id}"
+			class="font-medium underline decoration-text/20 underline-offset-2 transition-colors hover:text-primary hover:decoration-primary/50"
+		>
+			{membership.user.username || $LL.memberships.unknownUser()}
+		</a>
 		{#if membership.user.first_name || membership.user.last_name}
 			<p class="ml-1 whitespace-nowrap text-text/70">
 				({membership.user.first_name || ''}
@@ -330,7 +376,7 @@
 					: ''}
 			>
 				<TimeIcon class="mr-1 inline h-4 w-4 align-text-bottom" />
-				Guest
+				{$LL.guest()}
 			</span>
 		{:else}
 			<span
@@ -368,17 +414,15 @@
 		excludedPermissions={groupedPermissions}
 		onAdd={(perm) => addPermissionToMembership(membership, perm)}
 		onRemove={(perm) => removePermissionFromMembership(membership, perm)}
-		showRemove={sessionStore.validatePermissions(['manage_permissions'])}
-		allowSelection={sessionStore.validatePermissions({
-			or: ['manage_permissions', 'remove_members']
-		})}
+		showRemove={sessionStore.validatePermissions(['administrator'])}
+		allowSelection={sessionStore.validatePermissions(['administrator'])}
 	>
 		{#snippet prepend()}
 			<!-- Default Permissions Badge -->
 			{#if defaultPermissions.length > 0}
 				<ExpandablePermissionBadge
 					permissions={defaultPermissions}
-					label="Default"
+					label={$LL.memberships.default()}
 					variant="default"
 				/>
 			{/if}
@@ -387,7 +431,7 @@
 			{#if sharelinkPermissions.length > 0}
 				<ExpandablePermissionBadge
 					permissions={sharelinkPermissions}
-					label="Sharelink"
+					label={$LL.memberships.sharelinkLabel()}
 					variant="sharelink"
 				/>
 			{/if}
@@ -397,12 +441,12 @@
 
 {#snippet actionsSnippet(membership: Omit<MembershipRead, 'group'>)}
 	{@const showRemoveButton =
-		sessionStore.validatePermissions(['remove_members']) &&
+		sessionStore.validatePermissions(['administrator']) &&
 		!membership.is_owner &&
 		!membership.permissions.includes('administrator')}
 
 	{@const showLeaveButton = data.sessionUser.id === membership.user.id && !membership.is_owner}
-	{@const showPromoteButton = sessionStore.validatePermissions(['add_members'])}
+	{@const showPromoteButton = sessionStore.validatePermissions(['administrator'])}
 
 	<div class="flex flex-row items-center justify-end gap-2">
 		{#if membership.share_link && showPromoteButton}
@@ -414,8 +458,8 @@
 					);
 
 					if (result.success) {
-						notification('success', 'Member promoted successfully.');
-						invalidateAll();
+						notification('success', $LL.memberships.promoteSuccess());
+						invalidate('app:group-memberships');
 					} else {
 						notification(result.error);
 					}
@@ -425,7 +469,7 @@
 				{#snippet button()}
 					<div
 						class="h-full w-fit rounded bg-green-400/50 p-1 text-text shadow-black/20 transition hover:cursor-pointer hover:bg-green-500/90 hover:shadow-inner"
-						aria-label="Promote guest {membership.user.username} to a permanent member"
+						aria-label={$LL.memberships.promoteAriaLabel({ username: membership.user.username })}
 					>
 						<PromoteIcon class="h-5 w-5" />
 					</div>
@@ -435,7 +479,7 @@
 					<p
 						class="flex items-center bg-green-500/10 px-2 py-0.5 text-xs whitespace-nowrap text-green-500"
 					>
-						Promote to a permanent member?
+						{$LL.memberships.promoteConfirm()}
 					</p>
 				{/snippet}
 			</ConfirmButton>
@@ -451,10 +495,11 @@
 						notification(
 							'success',
 							showLeaveButton
-								? 'You have left the group.'
-								: `Removed ${membership.user.username} from the group.`
+								? $LL.memberships.leftGroup()
+								: $LL.memberships.removedFromGroup({ username: membership.user.username })
 						);
-						invalidateAll();
+						invalidate('app:group-memberships');
+						if (showLeaveButton) invalidate('app:memberships');
 					}
 				}}
 				slideoutDirection="left"
@@ -463,8 +508,8 @@
 					<div
 						class="h-full w-fit rounded bg-red-400/60 p-1 text-text shadow-black/20 transition hover:cursor-pointer hover:bg-red-500/70 hover:shadow-inner"
 						aria-label={showLeaveButton
-							? `Leave the group`
-							: `Kick {membership.user.username} from the group`}
+							? $LL.memberships.leaveAriaLabel()
+							: $LL.memberships.kickAriaLabel({ username: membership.user.username })}
 					>
 						{#if showLeaveButton}
 							<LeaveIcon class="h-5 w-5" />
@@ -479,8 +524,8 @@
 						class="flex items-center bg-red-500/10 px-2 py-0.5 text-xs whitespace-nowrap text-red-500"
 					>
 						{showLeaveButton
-							? 'Leave the group?'
-							: `Remove ${membership.user.username} from the group?`}
+							? $LL.memberships.leaveConfirm()
+							: $LL.memberships.removeConfirm({ username: membership.user.username })}
 					</p>
 				{/snippet}
 			</ConfirmButton>

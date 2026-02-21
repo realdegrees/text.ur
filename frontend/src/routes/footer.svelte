@@ -42,7 +42,7 @@
 		<button
 			class="flex h-full w-fit clickable flex-col items-center justify-center"
 			onclick={() => (darkMode.enabled = !darkMode.enabled)}
-			title="Enable {darkMode.enabled ? 'Light' : 'Dark'} Mode"
+			title={darkMode.enabled ? $LL.footer.enableLightMode() : $LL.footer.enableDarkMode()}
 		>
 			{#if darkMode.enabled}
 				<div transition:slide={{ easing: quintInOut, duration: 500 }}>
@@ -61,7 +61,7 @@
 			itemTextMap={(locale) => languageNames[locale]}
 			onSelect={changeLanguage}
 			position="top-left"
-			title="Change Language"
+			title={$LL.footer.changeLanguage()}
 		>
 			{#snippet icon()}
 				<Language class="h-full" />
@@ -76,7 +76,8 @@
 	<!-- Links -->
 	<section class="flex flex-row items-center gap-1">
 		<span class="mr-2 flex items-center gap-1 text-xs text-text/60">
-			Built with <SvelteIcon class="h-4 w-4" />
+			{$LL.builtWith()}
+			<SvelteIcon class="h-4 w-4" />
 		</span>
 		<a
 			href="https://github.com/realdegrees/text.ur"

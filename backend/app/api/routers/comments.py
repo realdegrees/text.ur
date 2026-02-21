@@ -135,7 +135,7 @@ async def delete_comment(
     db: Database,
     events: Events,
     comment: Comment = Resource(Comment, param_alias="comment_id"),
-    user: User = Authenticate([Guard.comment_access({Permission.REMOVE_COMMENTS})]),
+    user: User = Authenticate([Guard.comment_access({Permission.ADMINISTRATOR})]),
     x_connection_id: str | None = Header(None, alias="X-Connection-ID"),
 ) -> Response:
     """Delete a comment."""

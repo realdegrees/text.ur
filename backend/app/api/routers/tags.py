@@ -19,7 +19,7 @@ router = APIRouter(
 @router.post("/", response_model=TagRead)
 async def create_tag(
     db: Database,
-    _: User = Authenticate(guards=[Guard.document_access({Permission.MANAGE_TAGS})]),
+    _: User = Authenticate(guards=[Guard.document_access({Permission.ADMINISTRATOR})]),
     tag_create: TagCreate = Body(...),
     document: Document = Resource(Document, param_alias="document_id"),
 ) -> TagRead:
@@ -83,7 +83,7 @@ async def get_tag(
 @router.put("/{tag_id}", response_model=TagRead)
 async def update_tag(
     db: Database,
-    _: User = Authenticate(guards=[Guard.document_access({Permission.MANAGE_TAGS})]),
+    _: User = Authenticate(guards=[Guard.document_access({Permission.ADMINISTRATOR})]),
     tag_update: TagUpdate = Body(...),
     document: Document = Resource(Document, param_alias="document_id"),
     tag: Tag = Resource(Tag, param_alias="tag_id"),
@@ -107,7 +107,7 @@ async def update_tag(
 @router.delete("/{tag_id}")
 async def delete_tag(
     db: Database,
-    _: User = Authenticate(guards=[Guard.document_access({Permission.MANAGE_TAGS})]),
+    _: User = Authenticate(guards=[Guard.document_access({Permission.ADMINISTRATOR})]),
     document: Document = Resource(Document, param_alias="document_id"),
     tag: Tag = Resource(Tag, param_alias="tag_id"),
 ) -> dict[str, bool]:

@@ -2,6 +2,7 @@
 	import type { CommentRead, Visibility } from '$api/types';
 	import { documentStore } from '$lib/runes/document.svelte';
 	import Dropdown from '$lib/components/dropdown.svelte';
+	import LL from '$i18n/i18n-svelte';
 	import LockIcon from '~icons/material-symbols/lock';
 	import GroupIcon from '~icons/material-symbols/group';
 	import PublicIcon from '~icons/material-symbols/public';
@@ -20,18 +21,6 @@
 	let currentVisibility = $derived<Visibility>(visibility);
 
 	const visibilityOptions: Visibility[] = ['private', 'restricted', 'public'];
-
-	const visibilityLabels: Record<Visibility, string> = {
-		private: 'Only you can see this comment',
-		restricted: 'Only you and group managers can see this comment',
-		public: 'All members that can view the document can see this comment'
-	};
-
-	const visibilityShortLabels: Record<Visibility, string> = {
-		private: 'Private - Only you',
-		restricted: 'Restricted - Group Managers',
-		public: 'Public - Everyone'
-	};
 
 	const getIcon = (vis: Visibility) => {
 		if (vis === 'private') return LockIcon;
@@ -64,8 +53,8 @@
 		}}
 		disabled={isUpdating || !canEdit}
 		title={canEdit
-			? 'Select comment visibility'
-			: `Comment Visibility: ${currentVisibility.valueOf()}`}
+			? $LL.comments.visibility.select()
+			: $LL.comments.visibility.current({ level: currentVisibility.valueOf() })}
 	>
 		{#if currentVisibility === 'private'}
 			<LockIcon class={iconSize} />
@@ -92,10 +81,10 @@
 				currentVisibility
 					? 'text-primary'
 					: 'text-text/70'}"
-				title={visibilityLabels[item]}
+				title={$LL.comments.visibility[item].description()}
 			>
 				<ItemIcon class={iconSize} />
-				<span class="whitespace-nowrap">{visibilityShortLabels[item]}</span>
+				<span class="whitespace-nowrap">{$LL.comments.visibility[item].label()}</span>
 			</div>
 		{/snippet}
 	</Dropdown>

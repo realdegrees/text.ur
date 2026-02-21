@@ -1,10 +1,12 @@
 import { api } from '$api/client';
-import type { CommentRead, DocumentRead } from '$api/types';
+import type { CommentRead, DocumentRead, ScoreConfigRead } from '$api/types';
 import { notification } from '$lib/stores/notificationStore';
 import { redirect } from '@sveltejs/kit';
 import type { PageLoad } from './$types';
 import type { Paginated } from '$api/pagination';
 import type { BreadcrumbItem } from '$types/breadcrumb';
+import { get } from 'svelte/store';
+import LL from '$i18n/i18n-svelte';
 
 export const load: PageLoad = async ({ params, parent, fetch, depends }) => {
 	depends('app:document-view');
@@ -18,12 +20,12 @@ export const load: PageLoad = async ({ params, parent, fetch, depends }) => {
 		throw redirect(303, '/dashboard');
 	}
 	if (!documentResult.data) {
-		notification('error', 'Document not found.'); // TODO i18n
+		notification('error', get(LL).documents.notFound());
 		throw redirect(303, '/dashboard');
 	}
 
 	if (!membership) {
-		notification('error', 'You are not a member of the group that owns this document.'); // TODO i18n
+		notification('error', get(LL).memberships.notMemberOfDocumentGroup());
 		throw redirect(303, '/dashboard');
 	}
 
@@ -56,24 +58,30 @@ export const load: PageLoad = async ({ params, parent, fetch, depends }) => {
 		offset += limit;
 	}
 
-	const documentFileResult = await api.download(`/documents/${params.documentid}/file`, { fetch });
+	const [documentFileResult, scoreConfigResult] = await Promise.all([
+		api.download(`/documents/${params.documentid}/file`, { fetch }),
+		api.get<ScoreConfigRead>(`/groups/${documentResult.data.group_id}/score-config`, { fetch })
+	]);
 	if (!documentFileResult.success) {
 		notification(documentFileResult.error);
 		throw redirect(303, '/dashboard');
 	}
+
+	const scoreConfig = scoreConfigResult.success ? scoreConfigResult.data : null;
 
 	return {
 		document: documentResult.data,
 		group: membership.group,
 		rootComments: rootComments,
 		documentFile: documentFileResult.data,
+		scoreConfig,
 		breadcrumbs: [
 			{
 				label: membership.group.name,
 				href: `/dashboard/groups/${membership.group.id}`
 			},
 			{
-				label: 'Documents',
+				label: get(LL).documents.title(),
 				href: `/dashboard/groups/${membership.group.id}/documents`
 			},
 			{

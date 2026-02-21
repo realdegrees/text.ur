@@ -3,41 +3,72 @@ from enum import Enum, StrEnum
 
 # ENUMS
 class ReactionType(StrEnum):
-    """Types of reactions users can give to comments."""
+    """Types of reactions users can give to comments.
 
-    LIKE = "like"
-    DISLIKE = "dislike"
-    LAUGH = "laugh"
-    CONFUSED = "confused"
+    .. deprecated::
+        Kept only for migration compatibility. Use ``Emoji`` and
+        ``GroupReaction`` for new code.
+    """
+
+    THUMBS_UP = "thumbs_up"
+    SMILE = "smile"
+    HEART = "heart"
     FIRE = "fire"
+    PINCH = "pinch"
+    NERD = "nerd"
+
+
+class Emoji(StrEnum):
+    """Available emoji characters that admins can pick from."""
+
+    THUMBS_UP = "\U0001f44d"
+    THUMBS_DOWN = "\U0001f44e"
+    CLAP = "\U0001f44f"
+    WAVE = "\U0001f44b"
+    HEART = "\u2764\ufe0f"
+    FIRE = "\U0001f525"
+    STAR = "\u2b50"
+    SPARKLES = "\u2728"
+    PARTY = "\U0001f389"
+    ROCKET = "\U0001f680"
+    SMILE = "\U0001f60a"
+    LAUGH = "\U0001f602"
+    THINKING = "\U0001f914"
+    NERD = "\U0001f913"
+    COOL = "\U0001f60e"
+    CRY = "\U0001f622"
+    ANGRY = "\U0001f621"
+    SURPRISED = "\U0001f632"
+    MINDBLOWN = "\U0001f92f"
+    EYES = "\U0001f440"
+    HUNDRED = "\U0001f4af"
+    CHECK = "\u2705"
+    CROSS = "\u274c"
+    WARNING = "\u26a0\ufe0f"
+    QUESTION = "\u2753"
+    BULB = "\U0001f4a1"
+    PIN = "\U0001f4cc"
+    BOOKMARK = "\U0001f516"
+    TROPHY = "\U0001f3c6"
+    MEDAL = "\U0001f3c5"
+    CROWN = "\U0001f451"
+    GEM = "\U0001f48e"
+    PINCH = "\U0001faf0"
+    BRAIN = "\U0001f9e0"
 
 
 class Permission(StrEnum):
-    """Available permissions for group members."""
+    """Available permissions for group members.
+
+    Only four granular permissions exist. Every other privileged
+    action (managing members, documents, tags, etc.) requires
+    ADMINISTRATOR.
+    """
 
     ADMINISTRATOR = "administrator"
-    
-    # Comments
     ADD_COMMENTS = "add_comments"
-    REMOVE_COMMENTS = "remove_comments"
     VIEW_RESTRICTED_COMMENTS = "view_restricted_comments"
-    
-    # Members
-    ADD_MEMBERS = "add_members"
-    REMOVE_MEMBERS = "remove_members"
-    MANAGE_PERMISSIONS = "manage_permissions"
-    
-    # Documents
-    ADD_DOCUMENTS = "upload_documents"
-    VIEW_RESTRICTED_DOCUMENTS = "view_restricted_documents"
-    REMOVE_DOCUMENTS = "delete_documents"
-
-    # Reactions
-    REMOVE_REACTIONS = "remove_reactions"
     ADD_REACTIONS = "add_reactions"
-
-    # Tags
-    MANAGE_TAGS = "manage_tags"
 
 class ViewMode(StrEnum):
     """Document view mode settings.
@@ -55,6 +86,13 @@ class Visibility(StrEnum):
 
     PRIVATE = "private"
     RESTRICTED = "restricted"
+    PUBLIC = "public"
+
+
+class DocumentVisibility(StrEnum):
+    """Visibility levels for documents (private or public only)."""
+
+    PRIVATE = "private"
     PUBLIC = "public"
 
 class AppErrorCode(StrEnum):
@@ -83,6 +121,13 @@ class AppErrorCode(StrEnum):
     CANNOT_REMOVE_PERMISSION_REASON_DEFAULT_GROUP = "cannot_remove_permission_reason_default_group"  # use when trying to remove a permission that is included in the group's default permission reason
     CANNOT_REMOVE_PERMISSION_REASON_SHARELINK = "cannot_remove_permission_reason_sharelink"  # use when trying to remove a permission that is included in the related sharelink's permission reason
     
+    # Resource Not Found
+    NOT_FOUND = "not_found"  # use when a requested resource does not exist
+
+    # Reactions
+    SELF_REACTION = "self_reaction"  # use when a user tries to react to their own comment
+    REPLY_REACTION = "reply_reaction"  # use when a user tries to react to a reply (only root comments allowed)
+
     # Rate Limiting
     RATE_LIMITED = "rate_limited"  # use when a client has exceeded the request rate limit
 

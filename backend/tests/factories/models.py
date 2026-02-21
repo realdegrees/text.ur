@@ -4,13 +4,15 @@ from uuid import uuid4
 
 import factory
 from factories.base import BaseFactory
-from models.enums import Permission, ViewMode, Visibility
+from models.enums import Emoji, Permission, ViewMode, Visibility
 from models.tables import (
     Comment,
     Document,
     Group,
+    GroupReaction,
     Membership,
     Reaction,
+    ScoreConfig,
     ShareLink,
     User,
 )
@@ -47,7 +49,7 @@ class MembershipFactory(BaseFactory):
     permissions = factory.LazyFunction(lambda: [])
     is_owner = False
     accepted = True
-    
+
     @factory.post_generation
     def link(self, create: bool, extracted, **kwargs) -> None:  # noqa: ANN001, ANN003
         """Ensure created Membership is visible on the related User and Group objects.
@@ -61,24 +63,24 @@ class MembershipFactory(BaseFactory):
         """
         # Link membership into group membership list if present
         if getattr(self, "group", None) is not None:
-                if getattr(self.group, "memberships", None) is None:
-                    self.group.memberships = []
-                # Avoid duplicate entries
-                if self not in self.group.memberships:
-                    self.group.memberships.append(self)
+            if getattr(self.group, "memberships", None) is None:
+                self.group.memberships = []
+            # Avoid duplicate entries
+            if self not in self.group.memberships:
+                self.group.memberships.append(self)
 
         # Link membership into user membership list if present
         if getattr(self, "user", None) is not None:
-                if getattr(self.user, "memberships", None) is None:
-                    self.user.memberships = []
-                if self not in self.user.memberships:
-                    self.user.memberships.append(self)
-    
+            if getattr(self.user, "memberships", None) is None:
+                self.user.memberships = []
+            if self not in self.user.memberships:
+                self.user.memberships.append(self)
 
 
 class DocumentFactory(BaseFactory):
     class Meta:
         model = Document
+
     name = factory.Sequence(lambda n: f"document_{n}.pdf")
     s3_key = factory.Sequence(lambda n: f"documents/doc_{n}.pdf")
     size_bytes = factory.Faker("random_int", min=1000, max=1000000)
@@ -100,13 +102,35 @@ class CommentFactory(BaseFactory):
     annotation = factory.LazyFunction(dict)
 
 
+class ScoreConfigFactory(BaseFactory):
+    class Meta:
+        model = ScoreConfig
+
+    group = factory.SubFactory(GroupFactory)
+    highlight_points = 1
+    comment_points = 5
+    tag_points = 2
+
+
+class GroupReactionFactory(BaseFactory):
+    class Meta:
+        model = GroupReaction
+
+    group = factory.SubFactory(GroupFactory)
+    emoji = Emoji.THUMBS_UP
+    points = 2
+    admin_points = 4
+    giver_points = 2
+    order = 0
+
+
 class ReactionFactory(BaseFactory):
     class Meta:
         model = Reaction
 
     user = factory.SubFactory(UserFactory)
     comment = factory.SubFactory(CommentFactory)
-    type = "like"
+    group_reaction = factory.SubFactory(GroupReactionFactory)
 
 
 class ShareLinkFactory(BaseFactory):
@@ -117,5 +141,7 @@ class ShareLinkFactory(BaseFactory):
     created_by = factory.SubFactory(UserFactory)
     permissions = factory.LazyFunction(lambda: [])
     token = factory.LazyFunction(lambda: str(uuid4()))
-    expires_at = factory.LazyFunction(lambda: datetime.now(UTC) + timedelta(days=7))
+    expires_at = factory.LazyFunction(
+        lambda: datetime.now(UTC) + timedelta(days=7)
+    )
     label = factory.Faker("sentence")

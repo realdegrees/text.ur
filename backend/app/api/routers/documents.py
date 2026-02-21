@@ -41,7 +41,13 @@ from models.document import (
     MousePositionInput,
     ViewModeChangedEvent,
 )
-from models.enums import AppErrorCode, Permission, ViewMode, Visibility
+from models.enums import (
+    AppErrorCode,
+    DocumentVisibility,
+    Permission,
+    ViewMode,
+    Visibility,
+)
 from models.event import Event
 from models.filter import DocumentFilter
 from models.pagination import Paginated
@@ -272,7 +278,7 @@ async def create_document(
     membership = result.first()
     if not membership:
         raise AppException(status_code=403, error_code=AppErrorCode.NOT_IN_GROUP, detail="User is not a member of the group.")
-    if Permission.ADD_DOCUMENTS not in membership.permissions and membership.is_owner is False and Permission.ADMINISTRATOR not in membership.permissions:
+    if not membership.is_owner and Permission.ADMINISTRATOR not in membership.permissions:
         raise AppException(status_code=403, error_code=AppErrorCode.NOT_AUTHORIZED, detail="User does not have permission to add documents.")
 
     # Generate unique S3 key
@@ -360,7 +366,7 @@ async def list_documents(
 @router.put("/{document_id}/transfer", response_model=DocumentRead)
 async def transfer_document(
     db: Database,
-    session_user: User = Authenticate(guards=[Guard.document_access({Permission.REMOVE_DOCUMENTS})]),
+    session_user: User = Authenticate(guards=[Guard.document_access({Permission.ADMINISTRATOR})]),
     document_update: DocumentTransfer = Body(...),
     document: Document = Resource(Document, param_alias="document_id"),
 ) -> DocumentRead:
@@ -378,7 +384,7 @@ async def transfer_document(
     target_membership = result.first()
     if not target_membership:
         raise HTTPException(status_code=403, detail="Must be a member of the target group.")
-    if Permission.ADD_DOCUMENTS not in target_membership.permissions and target_membership.is_owner is False and Permission.ADMINISTRATOR not in target_membership.permissions:
+    if not target_membership.is_owner and Permission.ADMINISTRATOR not in target_membership.permissions:
         raise HTTPException(status_code=403, detail="Insufficient permissions in target group.")
 
     await db.merge(document)
@@ -390,7 +396,7 @@ async def transfer_document(
 async def update_document(
     db: Database,
     events: Events,
-    user: User = Authenticate(guards=[Guard.document_access({Permission.ADD_DOCUMENTS})]), # ? Users with add permissions can also update
+    user: User = Authenticate(guards=[Guard.document_access({Permission.ADMINISTRATOR})]),
     document_update: DocumentUpdate = Body(...),
     document: Document = Resource(Document, param_alias="document_id"),
 ) -> DocumentRead:
@@ -402,16 +408,11 @@ async def update_document(
 
     if document_update.visibility is not None:
         document.visibility = document_update.visibility
-        # Check if the user can still see the document after the update and raise if not
+        # Check if the user can still see the document after the update
         required_permissions: set[Permission] | None = None
-        if document_update.visibility == Visibility.RESTRICTED:
-            required_permissions = {Permission.VIEW_RESTRICTED_DOCUMENTS}
-        elif document_update.visibility == Visibility.PRIVATE:
-            required_permissions = {Permission.ADMINISTRATOR}  # No one except admins can see private documents
-        else:
-            required_permissions = None  # Public documents can be seen by all group members
+        if document_update.visibility == DocumentVisibility.PRIVATE:
+            required_permissions = {Permission.ADMINISTRATOR}
         guard = Guard.document_access(required_permissions)
-
 
         if not guard.predicate(document, user):
             raise HTTPException(status_code=403, detail="You do not have access to this document after the update.")
@@ -445,7 +446,7 @@ async def update_document(
 async def delete_document(
     db: Database,
     s3: S3,
-    _: User = Authenticate(guards=[Guard.document_access({Permission.REMOVE_DOCUMENTS})]),
+    _: User = Authenticate(guards=[Guard.document_access({Permission.ADMINISTRATOR})]),
     document: Document = Resource(Document, param_alias="document_id"),
 ) -> Response:
     """Delete a document from database and S3."""

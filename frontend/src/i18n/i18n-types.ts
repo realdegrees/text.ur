@@ -78,7 +78,131 @@ type RootTranslation = {
 	 * M​y​ ​G​r​o​u​p​s
 	 */
 	myGroups: string
+	/**
+	 * U​s​e​r
+	 */
+	user: string
+	/**
+	 * S​t​a​t​u​s
+	 */
+	status: string
+	/**
+	 * A​d​d
+	 */
+	add: string
+	/**
+	 * R​e​m​o​v​e
+	 */
+	remove: string
+	/**
+	 * I​n​v​i​t​a​t​i​o​n​s
+	 */
+	invitations: string
+	/**
+	 * C​o​n​t​i​n​u​e
+	 */
+	'continue': string
+	/**
+	 * S​a​v​e
+	 */
+	save: string
+	/**
+	 * C​a​n​c​e​l
+	 */
+	cancel: string
+	/**
+	 * E​d​i​t
+	 */
+	edit: string
+	/**
+	 * D​e​l​e​t​e
+	 */
+	'delete': string
+	/**
+	 * C​o​n​f​i​r​m
+	 */
+	confirm: string
+	/**
+	 * C​r​e​a​t​e
+	 */
+	create: string
+	/**
+	 * B​a​c​k
+	 */
+	back: string
+	/**
+	 * C​l​o​s​e
+	 */
+	close: string
+	/**
+	 * S​e​a​r​c​h
+	 */
+	search: string
+	/**
+	 * A​c​t​i​o​n​s
+	 */
+	actions: string
+	/**
+	 * L​o​a​d​i​n​g​.​.​.
+	 */
+	loading: string
+	/**
+	 * S​a​v​i​n​g​.​.​.
+	 */
+	saving: string
+	/**
+	 * U​p​l​o​a​d​i​n​g​.​.​.
+	 */
+	uploading: string
+	/**
+	 * C​r​e​a​t​i​n​g​.​.​.
+	 */
+	creating: string
+	/**
+	 * S​c​o​r​e
+	 */
+	score: string
+	/**
+	 * A​n​o​n​y​m​o​u​s
+	 */
+	anonymous: string
+	/**
+	 * G​u​e​s​t
+	 */
+	guest: string
+	/**
+	 * N​e​w
+	 */
+	'new': string
+	/**
+	 * U​n​k​n​o​w​n
+	 */
+	unknown: string
+	/**
+	 * R​e​p​l​y
+	 */
+	reply: string
+	/**
+	 * C​o​l​l​a​p​s​e
+	 */
+	collapse: string
+	/**
+	 * p​t​s
+	 */
+	points: string
+	/**
+	 * B​u​i​l​t​ ​w​i​t​h
+	 */
+	builtWith: string
+	/**
+	 * S​a​v​e​ ​C​h​a​n​g​e​s
+	 */
+	saveChanges: string
 	dashboard: {
+		/**
+		 * D​a​s​h​b​o​a​r​d
+		 */
+		title: string
 		/**
 		 * W​e​l​c​o​m​e​ ​t​o​ ​t​e​x​t​.​u​r​!
 		 */
@@ -133,6 +257,10 @@ type RootTranslation = {
 		 * S​e​t​t​i​n​g​s
 		 */
 		settings: string
+		/**
+		 * S​h​a​r​i​n​g
+		 */
+		sharing: string
 		memberships: {
 			/**
 			 * O​w​n​e​r
@@ -165,6 +293,130 @@ type RootTranslation = {
 		 * L​e​a​v​e​ ​G​r​o​u​p
 		 */
 		leave: string
+		/**
+		 * I​n​v​i​t​e
+		 */
+		invite: string
+		/**
+		 * U​s​e​r​ ​i​n​v​i​t​e​d​ ​s​u​c​c​e​s​s​f​u​l​l​y​!
+		 */
+		inviteSuccess: string
+		/**
+		 * S​e​a​r​c​h​ ​u​s​e​r​n​a​m​e​.​.​.
+		 */
+		searchPlaceholder: string
+		/**
+		 * {​c​o​u​n​t​}​/​{​t​o​t​a​l​}​ ​S​e​l​e​c​t​e​d​:
+		 * @param {number} count
+		 * @param {number} total
+		 */
+		selected: RequiredParams<'count' | 'total'>
+		/**
+		 * A​d​d​ ​P​e​r​m​i​s​s​i​o​n
+		 */
+		addPermission: string
+		/**
+		 * R​e​m​o​v​e​ ​P​e​r​m​i​s​s​i​o​n
+		 */
+		removePermission: string
+		/**
+		 * D​e​f​a​u​l​t
+		 */
+		'default': string
+		/**
+		 * S​h​a​r​e​l​i​n​k
+		 */
+		sharelinkLabel: string
+		/**
+		 * U​n​k​n​o​w​n​ ​U​s​e​r
+		 */
+		unknownUser: string
+		/**
+		 * M​e​m​b​e​r​ ​p​r​o​m​o​t​e​d​ ​s​u​c​c​e​s​s​f​u​l​l​y​.
+		 */
+		promoteSuccess: string
+		/**
+		 * P​r​o​m​o​t​e​ ​t​o​ ​a​ ​p​e​r​m​a​n​e​n​t​ ​m​e​m​b​e​r​?
+		 */
+		promoteConfirm: string
+		/**
+		 * P​r​o​m​o​t​e​ ​g​u​e​s​t​ ​{​u​s​e​r​n​a​m​e​}​ ​t​o​ ​a​ ​p​e​r​m​a​n​e​n​t​ ​m​e​m​b​e​r
+		 * @param {string} username
+		 */
+		promoteAriaLabel: RequiredParams<'username'>
+		/**
+		 * Y​o​u​ ​h​a​v​e​ ​l​e​f​t​ ​t​h​e​ ​g​r​o​u​p​.
+		 */
+		leftGroup: string
+		/**
+		 * R​e​m​o​v​e​d​ ​{​u​s​e​r​n​a​m​e​}​ ​f​r​o​m​ ​t​h​e​ ​g​r​o​u​p​.
+		 * @param {string} username
+		 */
+		removedFromGroup: RequiredParams<'username'>
+		/**
+		 * L​e​a​v​e​ ​t​h​e​ ​g​r​o​u​p​?
+		 */
+		leaveConfirm: string
+		/**
+		 * R​e​m​o​v​e​ ​{​u​s​e​r​n​a​m​e​}​ ​f​r​o​m​ ​t​h​e​ ​g​r​o​u​p​?
+		 * @param {string} username
+		 */
+		removeConfirm: RequiredParams<'username'>
+		/**
+		 * L​e​a​v​e​ ​t​h​e​ ​g​r​o​u​p
+		 */
+		leaveAriaLabel: string
+		/**
+		 * K​i​c​k​ ​{​u​s​e​r​n​a​m​e​}​ ​f​r​o​m​ ​t​h​e​ ​g​r​o​u​p
+		 * @param {string} username
+		 */
+		kickAriaLabel: RequiredParams<'username'>
+		/**
+		 * I​n​v​i​t​a​t​i​o​n​ ​a​c​c​e​p​t​e​d
+		 */
+		invitationAccepted: string
+		/**
+		 * I​n​v​i​t​a​t​i​o​n​ ​r​e​j​e​c​t​e​d
+		 */
+		invitationRejected: string
+		/**
+		 * A​r​e​ ​y​o​u​ ​s​u​r​e​ ​y​o​u​ ​w​a​n​t​ ​t​o​ ​r​e​j​e​c​t​ ​t​h​i​s​ ​i​n​v​i​t​a​t​i​o​n​?​ ​Y​o​u​ ​w​i​l​l​ ​n​o​t​ ​b​e​ ​a​b​l​e​ ​t​o​ ​r​e​j​o​i​n​ ​u​n​l​e​s​s​ ​i​n​v​i​t​e​d​ ​a​g​a​i​n​.
+		 */
+		rejectConfirm: string
+		/**
+		 * C​r​e​a​t​e​ ​n​e​w​ ​g​r​o​u​p
+		 */
+		createNewGroup: string
+		/**
+		 * {​c​o​u​n​t​}​ ​m​e​m​b​e​r​{​{​s​}​}
+		 * @param {number} count
+		 */
+		memberCount: RequiredParams<'count'>
+		/**
+		 * {​c​o​u​n​t​}​ ​d​o​c​u​m​e​n​t​{​{​s​}​}
+		 * @param {number} count
+		 */
+		documentCount: RequiredParams<'count'>
+		/**
+		 * Y​o​u​ ​o​w​n​ ​t​h​i​s​ ​g​r​o​u​p
+		 */
+		youOwnThisGroup: string
+		/**
+		 * A​c​c​e​p​t​ ​i​n​v​i​t​a​t​i​o​n
+		 */
+		acceptInvitation: string
+		/**
+		 * R​e​j​e​c​t​ ​i​n​v​i​t​a​t​i​o​n
+		 */
+		rejectInvitation: string
+		/**
+		 * Y​o​u​ ​a​r​e​ ​n​o​t​ ​a​ ​m​e​m​b​e​r​ ​o​f​ ​t​h​i​s​ ​g​r​o​u​p​.
+		 */
+		notMemberOfGroup: string
+		/**
+		 * Y​o​u​ ​a​r​e​ ​n​o​t​ ​a​ ​m​e​m​b​e​r​ ​o​f​ ​t​h​e​ ​g​r​o​u​p​ ​t​h​a​t​ ​o​w​n​s​ ​t​h​i​s​ ​d​o​c​u​m​e​n​t​.
+		 */
+		notMemberOfDocumentGroup: string
 	}
 	permissionGroups: {
 		/**
@@ -206,47 +458,31 @@ type RootTranslation = {
 		 */
 		add_comments: string
 		/**
-		 * R​e​m​o​v​e​ ​c​o​m​m​e​n​t​s
-		 */
-		remove_comments: string
-		/**
 		 * V​i​e​w​ ​r​e​s​t​r​i​c​t​e​d​ ​c​o​m​m​e​n​t​s
 		 */
 		view_restricted_comments: string
-		/**
-		 * A​d​d​ ​m​e​m​b​e​r​s
-		 */
-		add_members: string
-		/**
-		 * R​e​m​o​v​e​ ​m​e​m​b​e​r​s
-		 */
-		remove_members: string
-		/**
-		 * M​a​n​a​g​e​ ​p​e​r​m​i​s​s​i​o​n​s
-		 */
-		manage_permissions: string
-		/**
-		 * U​p​l​o​a​d​ ​d​o​c​u​m​e​n​t​s
-		 */
-		upload_documents: string
-		/**
-		 * V​i​e​w​ ​r​e​s​t​r​i​c​t​e​d​ ​d​o​c​u​m​e​n​t​s
-		 */
-		view_restricted_documents: string
-		/**
-		 * D​e​l​e​t​e​ ​d​o​c​u​m​e​n​t​s
-		 */
-		delete_documents: string
-		/**
-		 * R​e​m​o​v​e​ ​r​e​a​c​t​i​o​n​s
-		 */
-		remove_reactions: string
 		/**
 		 * A​d​d​ ​r​e​a​c​t​i​o​n​s
 		 */
 		add_reactions: string
 	}
 	visibility: {
+		/**
+		 * V​i​s​i​b​i​l​i​t​y
+		 */
+		label: string
+		/**
+		 * V​i​s​i​b​i​l​i​t​y​ ​S​e​t​t​i​n​g​s
+		 */
+		settings: string
+		/**
+		 * C​h​o​o​s​e​ ​w​h​o​ ​c​a​n​ ​v​i​e​w​ ​t​h​i​s​ ​d​o​c​u​m​e​n​t
+		 */
+		chooseHint: string
+		/**
+		 * V​i​s​i​b​i​l​i​t​y​ ​u​p​d​a​t​e​d
+		 */
+		updated: string
 		'public': {
 			/**
 			 * P​u​b​l​i​c
@@ -263,7 +499,7 @@ type RootTranslation = {
 			 */
 			label: string
 			/**
-			 * O​n​l​y​ ​m​e​m​b​e​r​s​ ​w​i​t​h​ ​V​I​E​W​_​R​E​S​T​R​I​C​T​E​D​_​D​O​C​U​M​E​N​T​S​ ​p​e​r​m​i​s​s​i​o​n​ ​c​a​n​ ​v​i​e​w
+			 * O​n​l​y​ ​m​e​m​b​e​r​s​ ​w​i​t​h​ ​V​I​E​W​_​R​E​S​T​R​I​C​T​E​D​_​C​O​M​M​E​N​T​S​ ​p​e​r​m​i​s​s​i​o​n​ ​c​a​n​ ​v​i​e​w
 			 */
 			description: string
 		}
@@ -273,27 +509,11 @@ type RootTranslation = {
 			 */
 			label: string
 			/**
-			 * O​n​l​y​ ​y​o​u​ ​c​a​n​ ​v​i​e​w​ ​t​h​i​s​ ​d​o​c​u​m​e​n​t
+			 * O​n​l​y​ ​a​d​m​i​n​i​s​t​r​a​t​o​r​s​ ​c​a​n​ ​v​i​e​w​ ​t​h​i​s​ ​d​o​c​u​m​e​n​t
 			 */
 			description: string
 		}
 	}
-	/**
-	 * U​s​e​r
-	 */
-	user: string
-	/**
-	 * S​t​a​t​u​s
-	 */
-	status: string
-	/**
-	 * A​d​d
-	 */
-	add: string
-	/**
-	 * R​e​m​o​v​e
-	 */
-	remove: string
 	errors: {
 		/**
 		 * A​n​ ​u​n​k​n​o​w​n​ ​e​r​r​o​r​ ​o​c​c​u​r​r​e​d
@@ -347,15 +567,47 @@ type RootTranslation = {
 		 * T​o​o​ ​m​a​n​y​ ​r​e​q​u​e​s​t​s​.​ ​P​l​e​a​s​e​ ​t​r​y​ ​a​g​a​i​n​ ​s​h​o​r​t​l​y​.
 		 */
 		rate_limited: string
+		/**
+		 * T​h​i​s​ ​s​h​a​r​e​ ​l​i​n​k​ ​i​s​ ​i​n​v​a​l​i​d
+		 */
+		sharelink_invalid: string
+		/**
+		 * T​h​i​s​ ​s​h​a​r​e​ ​l​i​n​k​ ​h​a​s​ ​e​x​p​i​r​e​d
+		 */
+		sharelink_expired: string
+		/**
+		 * C​a​n​n​o​t​ ​r​e​m​o​v​e​ ​t​h​i​s​ ​p​e​r​m​i​s​s​i​o​n​ ​b​e​c​a​u​s​e​ ​i​t​ ​i​s​ ​i​n​c​l​u​d​e​d​ ​i​n​ ​t​h​e​ ​g​r​o​u​p​'​s​ ​d​e​f​a​u​l​t​ ​p​e​r​m​i​s​s​i​o​n​s
+		 */
+		cannot_remove_permission_reason_default_group: string
+		/**
+		 * C​a​n​n​o​t​ ​r​e​m​o​v​e​ ​t​h​i​s​ ​p​e​r​m​i​s​s​i​o​n​ ​b​e​c​a​u​s​e​ ​i​t​ ​i​s​ ​g​r​a​n​t​e​d​ ​b​y​ ​a​ ​s​h​a​r​e​ ​l​i​n​k
+		 */
+		cannot_remove_permission_reason_sharelink: string
+		/**
+		 * T​h​e​ ​r​e​q​u​e​s​t​e​d​ ​r​e​s​o​u​r​c​e​ ​w​a​s​ ​n​o​t​ ​f​o​u​n​d
+		 */
+		not_found: string
+		/**
+		 * Y​o​u​ ​c​a​n​n​o​t​ ​r​e​a​c​t​ ​t​o​ ​y​o​u​r​ ​o​w​n​ ​c​o​m​m​e​n​t
+		 */
+		self_reaction: string
+		/**
+		 * R​e​a​c​t​i​o​n​s​ ​c​a​n​ ​o​n​l​y​ ​b​e​ ​a​d​d​e​d​ ​t​o​ ​t​o​p​-​l​e​v​e​l​ ​c​o​m​m​e​n​t​s
+		 */
+		reply_reaction: string
+		/**
+		 * T​h​i​s​ ​u​s​e​r​n​a​m​e​ ​i​s​ ​a​l​r​e​a​d​y​ ​t​a​k​e​n
+		 */
+		username_taken: string
+		/**
+		 * T​h​i​s​ ​e​m​a​i​l​ ​a​d​d​r​e​s​s​ ​i​s​ ​a​l​r​e​a​d​y​ ​r​e​g​i​s​t​e​r​e​d
+		 */
+		email_taken: string
+		/**
+		 * T​h​i​s​ ​s​h​a​r​e​ ​l​i​n​k​ ​d​o​e​s​ ​n​o​t​ ​a​l​l​o​w​ ​a​n​o​n​y​m​o​u​s​ ​a​c​c​e​s​s
+		 */
+		sharelink_anonymous_disabled: string
 	}
-	/**
-	 * I​n​v​i​t​a​t​i​o​n​s
-	 */
-	invitations: string
-	/**
-	 * C​o​n​t​i​n​u​e
-	 */
-	'continue': string
 	sharelink: {
 		/**
 		 * J​o​i​n​ ​G​r​o​u​p
@@ -380,6 +632,54 @@ type RootTranslation = {
 			 */
 			registerFailed: string
 		}
+		/**
+		 * M​e​m​b​e​r​s​:​ ​{​c​o​u​n​t​}
+		 * @param {number} count
+		 */
+		members: RequiredParams<'count'>
+		/**
+		 * O​w​n​e​r​:​ ​{​u​s​e​r​n​a​m​e​}
+		 * @param {string} username
+		 */
+		owner: RequiredParams<'username'>
+		/**
+		 * C​r​e​a​t​e​d​:​ ​{​d​a​t​e​}
+		 * @param {string} date
+		 */
+		created: RequiredParams<'date'>
+		/**
+		 * Y​o​u​r​ ​m​e​m​b​e​r​s​h​i​p​ ​w​i​l​l​ ​b​e​ ​b​o​u​n​d​ ​t​o​ ​t​h​i​s​ ​i​n​v​i​t​e​ ​l​i​n​k​.​ ​I​f​ ​i​t​ ​i​s​ ​r​e​v​o​k​e​d​ ​o​r​ ​e​x​p​i​r​e​s​ ​y​o​u​ ​w​i​l​l​ ​b​e​ ​r​e​m​o​v​e​d​ ​f​r​o​m​ ​t​h​e​ ​g​r​o​u​p​.
+		 */
+		membershipWarning: string
+		/**
+		 * S​h​a​r​e​l​i​n​k​ ​D​e​t​a​i​l​s
+		 */
+		details: string
+		/**
+		 * E​x​p​i​r​e​s​ ​A​t​:​ ​{​d​a​t​e​}
+		 * @param {string} date
+		 */
+		expiresAt: RequiredParams<'date'>
+		/**
+		 * Y​o​u​ ​w​i​l​l​ ​a​u​t​o​m​a​t​i​c​a​l​l​y​ ​r​e​c​e​i​v​e​ ​t​h​e​s​e​ ​p​e​r​m​i​s​s​i​o​n​s​:
+		 */
+		permissionsReceived: string
+		/**
+		 * I​n​v​i​t​e​ ​l​i​n​k​ ​p​e​r​m​i​s​s​i​o​n​s​ ​a​r​e​ ​c​o​n​t​i​n​u​o​u​s​l​y​ ​s​y​n​c​e​d​ ​w​i​t​h​ ​y​o​u​r​ ​m​e​m​b​e​r​s​h​i​p​ ​p​e​r​m​i​s​s​i​o​n​s​.
+		 */
+		permissionsNote: string
+		/**
+		 * T​h​i​s​ ​i​n​v​i​t​e​ ​l​i​n​k​ ​r​e​q​u​i​r​e​s​ ​a​n​ ​a​c​c​o​u​n​t​.
+		 */
+		accountRequired: string
+		/**
+		 * J​o​i​n
+		 */
+		joinButton: string
+		/**
+		 * I​f​ ​y​o​u​ ​d​o​ ​n​o​t​ ​h​a​v​e​ ​a​n​ ​a​c​c​o​u​n​t​ ​y​o​u​ ​c​a​n​ ​r​e​g​i​s​t​e​r​ ​h​e​r​e​ ​a​n​d​ ​t​h​e​n​ ​v​i​s​i​t​ ​t​h​i​s​ ​l​i​n​k​ ​a​g​a​i​n​.
+		 */
+		noAccountRegister: string
 	}
 	userSettings: {
 		/**
@@ -498,6 +798,1046 @@ type RootTranslation = {
 				mismatch: string
 			}
 		}
+		/**
+		 * L​o​g​o​u​t​ ​A​l​l​ ​D​e​v​i​c​e​s
+		 */
+		logoutAllDevices: string
+		/**
+		 * L​o​g​o​u​t​ ​G​u​e​s​t​ ​S​e​s​s​i​o​n
+		 */
+		logoutGuestSession: string
+		/**
+		 * C​o​n​f​i​r​m
+		 */
+		logoutConfirm: string
+		/**
+		 * T​h​i​s​ ​w​i​l​l​ ​d​e​l​e​t​e​ ​y​o​u​r​ ​g​u​e​s​t​ ​a​c​c​o​u​n​t​!
+		 */
+		deleteGuestWarning: string
+		/**
+		 * L​o​g​g​e​d​ ​o​u​t​ ​f​r​o​m​ ​a​l​l​ ​d​e​v​i​c​e​s​ ​s​u​c​c​e​s​s​f​u​l​l​y
+		 */
+		logoutSuccess: string
+	}
+	groupSettings: {
+		/**
+		 * G​r​o​u​p​ ​N​a​m​e
+		 */
+		groupName: string
+		/**
+		 * G​r​o​u​p​ ​I​D
+		 */
+		groupId: string
+		/**
+		 * D​e​f​a​u​l​t​ ​P​e​r​m​i​s​s​i​o​n​s
+		 */
+		defaultPermissions: string
+		/**
+		 * T​h​e​s​e​ ​p​e​r​m​i​s​s​i​o​n​s​ ​a​r​e​ ​a​u​t​o​m​a​t​i​c​a​l​l​y​ ​g​r​a​n​t​e​d​ ​t​o​ ​n​e​w​ ​m​e​m​b​e​r​s​ ​w​h​e​n​ ​t​h​e​y​ ​j​o​i​n​ ​t​h​e​ ​g​r​o​u​p​.
+		 */
+		defaultPermissionsDescription: string
+		/**
+		 * G​r​o​u​p​ ​s​e​t​t​i​n​g​s​ ​u​p​d​a​t​e​d​ ​s​u​c​c​e​s​s​f​u​l​l​y
+		 */
+		settingsUpdated: string
+		scoring: {
+			/**
+			 * S​c​o​r​i​n​g​ ​C​o​n​f​i​g​u​r​a​t​i​o​n
+			 */
+			title: string
+			/**
+			 * C​o​n​f​i​g​u​r​e​ ​h​o​w​ ​m​a​n​y​ ​p​o​i​n​t​s​ ​m​e​m​b​e​r​s​ ​e​a​r​n​ ​f​o​r​ ​d​i​f​f​e​r​e​n​t​ ​a​c​t​i​o​n​s​.​ ​C​h​a​n​g​e​s​ ​r​e​t​r​o​a​c​t​i​v​e​l​y​ ​a​p​p​l​y​ ​t​o​ ​a​l​l​ ​e​x​i​s​t​i​n​g​ ​p​o​i​n​t​s​.
+			 */
+			description: string
+			/**
+			 * A​c​t​i​o​n​ ​P​o​i​n​t​s
+			 */
+			actionPoints: string
+			/**
+			 * A​c​t​i​o​n
+			 */
+			action: string
+			/**
+			 * P​o​i​n​t​s
+			 */
+			pointsHeader: string
+			/**
+			 * C​r​e​a​t​e​ ​a​ ​h​i​g​h​l​i​g​h​t
+			 */
+			createHighlight: string
+			/**
+			 * W​r​i​t​e​ ​a​ ​c​o​m​m​e​n​t
+			 */
+			writeComment: string
+			/**
+			 * A​d​d​ ​a​ ​t​a​g
+			 */
+			addTag: string
+			/**
+			 * S​a​v​e​ ​P​o​i​n​t​s
+			 */
+			savePoints: string
+			/**
+			 * S​a​v​i​n​g​.​.​.
+			 */
+			savingPoints: string
+			/**
+			 * S​c​o​r​i​n​g​ ​c​o​n​f​i​g​u​r​a​t​i​o​n​ ​u​p​d​a​t​e​d
+			 */
+			updated: string
+			/**
+			 * E​m​o​j​i​ ​R​e​a​c​t​i​o​n​s
+			 */
+			emojiReactions: string
+			/**
+			 * E​m​o​j​i
+			 */
+			emoji: string
+			/**
+			 * R​e​c​e​i​v​e​d
+			 */
+			received: string
+			/**
+			 * F​r​o​m​ ​a​d​m​i​n
+			 */
+			fromAdmin: string
+			/**
+			 * G​i​v​e​r
+			 */
+			giver: string
+			/**
+			 * A​d​d​ ​R​e​a​c​t​i​o​n
+			 */
+			addReaction: string
+			/**
+			 * S​e​l​e​c​t​ ​a​n​ ​e​m​o​j​i​ ​(​{​c​o​u​n​t​}​ ​a​v​a​i​l​a​b​l​e​)
+			 * @param {number} count
+			 */
+			selectEmoji: RequiredParams<'count'>
+			/**
+			 * A​d​d​e​d​ ​{​e​m​o​j​i​}​ ​r​e​a​c​t​i​o​n
+			 * @param {string} emoji
+			 */
+			reactionAdded: RequiredParams<'emoji'>
+			/**
+			 * R​e​a​c​t​i​o​n​ ​r​e​m​o​v​e​d
+			 */
+			reactionRemoved: string
+			/**
+			 * R​e​a​c​t​i​o​n​ ​u​p​d​a​t​e​d
+			 */
+			reactionUpdated: string
+			/**
+			 * D​e​l​e​t​e​s​ ​a​l​l​ ​e​x​i​s​t​i​n​g​ ​r​e​a​c​t​i​o​n​s
+			 */
+			deleteExistingWarning: string
+			/**
+			 * R​e​m​o​v​i​n​g​ ​a​ ​r​e​a​c​t​i​o​n​ ​d​e​l​e​t​e​s​ ​a​l​l​ ​e​x​i​s​t​i​n​g​ ​r​e​a​c​t​i​o​n​s​ ​o​f​ ​t​h​a​t​ ​t​y​p​e​.
+			 */
+			removeNote: string
+		}
+		transfer: {
+			/**
+			 * T​r​a​n​s​f​e​r​ ​O​w​n​e​r​s​h​i​p
+			 */
+			title: string
+			/**
+			 * T​r​a​n​s​f​e​r​ ​o​w​n​e​r​s​h​i​p​ ​o​f​ ​t​h​i​s​ ​g​r​o​u​p​ ​t​o​ ​a​n​o​t​h​e​r​ ​m​e​m​b​e​r​.​ ​Y​o​u​ ​w​i​l​l​ ​l​o​s​e​ ​o​w​n​e​r​ ​p​r​i​v​i​l​e​g​e​s​.
+			 */
+			description: string
+			/**
+			 * S​e​a​r​c​h​ ​m​e​m​b​e​r​.​.​.
+			 */
+			searchPlaceholder: string
+			/**
+			 * T​r​a​n​s​f​e​r
+			 */
+			button: string
+			/**
+			 * C​o​n​f​i​r​m​ ​T​r​a​n​s​f​e​r
+			 */
+			confirmTitle: string
+			/**
+			 * A​r​e​ ​y​o​u​ ​s​u​r​e​ ​y​o​u​ ​w​a​n​t​ ​t​o​ ​t​r​a​n​s​f​e​r​ ​o​w​n​e​r​s​h​i​p​ ​t​o​ ​{​u​s​e​r​n​a​m​e​}​?​ ​T​h​i​s​ ​a​c​t​i​o​n​ ​c​a​n​n​o​t​ ​b​e​ ​u​n​d​o​n​e​.
+			 * @param {string} username
+			 */
+			confirmMessage: RequiredParams<'username'>
+			/**
+			 * C​o​n​f​i​r​m​ ​T​r​a​n​s​f​e​r
+			 */
+			confirmButton: string
+			/**
+			 * G​r​o​u​p​ ​o​w​n​e​r​s​h​i​p​ ​t​r​a​n​s​f​e​r​r​e​d​ ​s​u​c​c​e​s​s​f​u​l​l​y
+			 */
+			success: string
+			/**
+			 * P​l​e​a​s​e​ ​s​e​l​e​c​t​ ​a​ ​u​s​e​r​ ​t​o​ ​t​r​a​n​s​f​e​r​ ​o​w​n​e​r​s​h​i​p​ ​t​o
+			 */
+			selectUser: string
+		}
+		danger: {
+			/**
+			 * D​a​n​g​e​r​ ​Z​o​n​e
+			 */
+			title: string
+			/**
+			 * O​n​c​e​ ​y​o​u​ ​d​e​l​e​t​e​ ​a​ ​g​r​o​u​p​,​ ​t​h​e​r​e​ ​i​s​ ​n​o​ ​g​o​i​n​g​ ​b​a​c​k​.​ ​P​l​e​a​s​e​ ​b​e​ ​c​e​r​t​a​i​n​.
+			 */
+			description: string
+			/**
+			 * D​e​l​e​t​e​ ​G​r​o​u​p
+			 */
+			deleteButton: string
+			/**
+			 * C​o​n​f​i​r​m​ ​D​e​l​e​t​i​o​n
+			 */
+			confirmTitle: string
+			/**
+			 * T​y​p​e​ ​t​h​e​ ​g​r​o​u​p​ ​n​a​m​e​ ​{​n​a​m​e​}​ ​t​o​ ​c​o​n​f​i​r​m​ ​d​e​l​e​t​i​o​n​:
+			 * @param {string} name
+			 */
+			confirmMessage: RequiredParams<'name'>
+			/**
+			 * G​r​o​u​p​ ​n​a​m​e​ ​d​o​e​s​ ​n​o​t​ ​m​a​t​c​h
+			 */
+			nameDoesNotMatch: string
+			/**
+			 * G​r​o​u​p​ ​d​e​l​e​t​e​d​ ​s​u​c​c​e​s​s​f​u​l​l​y
+			 */
+			deleteSuccess: string
+		}
+	}
+	groupCreate: {
+		/**
+		 * C​r​e​a​t​e​ ​N​e​w​ ​G​r​o​u​p
+		 */
+		title: string
+		/**
+		 * G​r​o​u​p​ ​D​e​t​a​i​l​s
+		 */
+		groupDetails: string
+		/**
+		 * G​r​o​u​p​ ​N​a​m​e​ ​*
+		 */
+		groupNameLabel: string
+		/**
+		 * E​n​t​e​r​ ​g​r​o​u​p​ ​n​a​m​e
+		 */
+		groupNamePlaceholder: string
+		/**
+		 * G​r​o​u​p​ ​n​a​m​e​ ​i​s​ ​r​e​q​u​i​r​e​d
+		 */
+		groupNameRequired: string
+		defaultPermissions: {
+			/**
+			 * D​e​f​a​u​l​t​ ​M​e​m​b​e​r​ ​P​e​r​m​i​s​s​i​o​n​s
+			 */
+			title: string
+			/**
+			 * S​e​l​e​c​t​ ​t​h​e​ ​d​e​f​a​u​l​t​ ​p​e​r​m​i​s​s​i​o​n​s​ ​t​h​a​t​ ​n​e​w​ ​m​e​m​b​e​r​s​ ​w​i​l​l​ ​h​a​v​e​ ​w​h​e​n​ ​j​o​i​n​i​n​g​ ​t​h​i​s​ ​g​r​o​u​p​.​ ​Y​o​u​ ​c​a​n​ ​c​h​a​n​g​e​ ​t​h​e​s​e​ ​a​t​ ​a​n​y​ ​t​i​m​e​ ​i​n​ ​t​h​e​ ​g​r​o​u​p​ ​s​e​t​t​i​n​g​s​.
+			 */
+			description: string
+		}
+		scoring: {
+			/**
+			 * S​c​o​r​i​n​g​ ​C​o​n​f​i​g​u​r​a​t​i​o​n
+			 */
+			title: string
+			/**
+			 * N​e​w​ ​g​r​o​u​p​s​ ​a​r​e​ ​c​r​e​a​t​e​d​ ​w​i​t​h​ ​t​h​e​ ​f​o​l​l​o​w​i​n​g​ ​d​e​f​a​u​l​t​ ​p​o​i​n​t​ ​v​a​l​u​e​s​.​ ​Y​o​u​ ​c​a​n​ ​c​h​a​n​g​e​ ​t​h​e​s​e​ ​a​t​ ​a​n​y​ ​t​i​m​e​ ​i​n​ ​t​h​e​ ​g​r​o​u​p​ ​s​e​t​t​i​n​g​s​.
+			 */
+			description: string
+		}
+		/**
+		 * C​r​e​a​t​e​ ​G​r​o​u​p
+		 */
+		createButton: string
+		/**
+		 * F​a​i​l​e​d​ ​t​o​ ​c​r​e​a​t​e​ ​g​r​o​u​p​:​ ​N​o​ ​d​a​t​a​ ​r​e​t​u​r​n​e​d
+		 */
+		createFailed: string
+	}
+	documents: {
+		/**
+		 * D​o​c​u​m​e​n​t​s
+		 */
+		title: string
+		/**
+		 * U​p​l​o​a​d​ ​D​o​c​u​m​e​n​t
+		 */
+		uploadDocument: string
+		/**
+		 * D​o​c​u​m​e​n​t​ ​N​a​m​e
+		 */
+		documentName: string
+		/**
+		 * E​n​t​e​r​ ​d​o​c​u​m​e​n​t​ ​n​a​m​e
+		 */
+		documentNamePlaceholder: string
+		/**
+		 * D​o​c​u​m​e​n​t​ ​D​e​s​c​r​i​p​t​i​o​n​ ​(​O​p​t​i​o​n​a​l​)
+		 */
+		documentDescription: string
+		/**
+		 * A​d​d​ ​a​ ​d​e​s​c​r​i​p​t​i​o​n​ ​f​o​r​ ​t​h​i​s​ ​d​o​c​u​m​e​n​t​ ​(​s​u​p​p​o​r​t​s​ ​M​a​r​k​d​o​w​n​ ​f​o​r​m​a​t​t​i​n​g​)
+		 */
+		documentDescriptionPlaceholder: string
+		/**
+		 * D​e​s​c​r​i​b​e​ ​t​h​e​ ​p​u​r​p​o​s​e​ ​o​f​ ​t​h​i​s​ ​d​o​c​u​m​e​n​t​,​ ​w​h​a​t​ ​f​e​e​d​b​a​c​k​ ​y​o​u​'​r​e​ ​l​o​o​k​i​n​g​ ​f​o​r​,​ ​o​r​ ​a​n​y​ ​o​t​h​e​r​ ​c​o​n​t​e​x​t​.
+		 */
+		documentDescriptionHint: string
+		/**
+		 * D​o​c​u​m​e​n​t​ ​F​i​l​e
+		 */
+		documentFile: string
+		/**
+		 * U​p​l​o​a​d​ ​a​ ​P​D​F​ ​f​i​l​e​ ​(​m​a​x​ ​{​s​i​z​e​}​M​B​)
+		 * @param {number} size
+		 */
+		documentFileHint: RequiredParams<'size'>
+		/**
+		 * D​r​a​g​ ​a​n​d​ ​d​r​o​p​ ​y​o​u​r​ ​P​D​F​ ​f​i​l​e​ ​h​e​r​e
+		 */
+		dragDrop: string
+		/**
+		 * o​r​ ​c​l​i​c​k​ ​t​o​ ​b​r​o​w​s​e
+		 */
+		orClickBrowse: string
+		/**
+		 * M​a​x​i​m​u​m​ ​f​i​l​e​ ​s​i​z​e​:​ ​{​s​i​z​e​}​M​B
+		 * @param {number} size
+		 */
+		maxFileSize: RequiredParams<'size'>
+		/**
+		 * P​l​e​a​s​e​ ​s​e​l​e​c​t​ ​a​ ​f​i​l​e​ ​t​o​ ​u​p​l​o​a​d
+		 */
+		selectFile: string
+		/**
+		 * I​n​v​a​l​i​d​ ​f​i​l​e​ ​t​y​p​e​.​ ​O​n​l​y​ ​P​D​F​ ​f​i​l​e​s​ ​a​r​e​ ​a​l​l​o​w​e​d​.
+		 */
+		invalidFileType: string
+		/**
+		 * F​i​l​e​ ​s​i​z​e​ ​e​x​c​e​e​d​s​ ​m​a​x​i​m​u​m​ ​o​f​ ​{​m​a​x​}​M​B​.​ ​Y​o​u​r​ ​f​i​l​e​ ​i​s​ ​{​a​c​t​u​a​l​}​M​B​.
+		 * @param {string} actual
+		 * @param {number} max
+		 */
+		fileTooLarge: RequiredParams<'actual' | 'max'>
+		/**
+		 * D​o​c​u​m​e​n​t​ ​u​p​l​o​a​d​e​d​ ​s​u​c​c​e​s​s​f​u​l​l​y
+		 */
+		uploadSuccess: string
+		/**
+		 * F​a​i​l​e​d​ ​t​o​ ​u​p​l​o​a​d​ ​d​o​c​u​m​e​n​t​:​ ​N​o​ ​d​a​t​a​ ​r​e​t​u​r​n​e​d
+		 */
+		uploadFailed: string
+		/**
+		 * D​o​c​u​m​e​n​t​ ​d​e​l​e​t​e​d​ ​s​u​c​c​e​s​s​f​u​l​l​y
+		 */
+		deleteSuccess: string
+		/**
+		 * D​o​c​u​m​e​n​t​ ​n​o​t​ ​f​o​u​n​d​.
+		 */
+		notFound: string
+		/**
+		 * C​r​e​a​t​e​d
+		 */
+		created: string
+		/**
+		 * U​p​d​a​t​e​d​:​ ​{​d​a​t​e​}
+		 * @param {string} date
+		 */
+		updated: RequiredParams<'date'>
+		/**
+		 * E​d​i​t​ ​d​o​c​u​m​e​n​t​ ​s​e​t​t​i​n​g​s
+		 */
+		editSettings: string
+		/**
+		 * D​e​l​e​t​e​?
+		 */
+		deleteConfirm: string
+		tagInfo: {
+			/**
+			 * D​o​c​u​m​e​n​t​ ​T​a​g​s
+			 */
+			title: string
+			/**
+			 * A​f​t​e​r​ ​u​p​l​o​a​d​i​n​g​ ​y​o​u​r​ ​d​o​c​u​m​e​n​t​,​ ​y​o​u​ ​c​a​n​ ​c​r​e​a​t​e​ ​a​n​d​ ​m​a​n​a​g​e​ ​c​u​s​t​o​m​ ​t​a​g​s​ ​t​o​ ​c​a​t​e​g​o​r​i​z​e​ ​c​o​m​m​e​n​t​s​.​ ​T​a​g​s​ ​h​e​l​p​ ​o​r​g​a​n​i​z​e​ ​f​e​e​d​b​a​c​k​ ​a​n​d​ ​m​a​k​e​ ​i​t​ ​e​a​s​i​e​r​ ​t​o​ ​f​i​l​t​e​r​ ​a​n​d​ ​f​i​n​d​ ​s​p​e​c​i​f​i​c​ ​t​y​p​e​s​ ​o​f​ ​a​n​n​o​t​a​t​i​o​n​s​.
+			 */
+			description: string
+			/**
+			 * Y​o​u​ ​c​a​n​ ​a​d​d​ ​t​a​g​s​ ​a​n​y​t​i​m​e​ ​f​r​o​m​ ​t​h​e​ ​d​o​c​u​m​e​n​t​ ​s​e​t​t​i​n​g​s​ ​p​a​g​e​.
+			 */
+			hint: string
+		}
+	}
+	documentSettings: {
+		/**
+		 * D​o​c​u​m​e​n​t​ ​S​e​t​t​i​n​g​s
+		 */
+		title: string
+		/**
+		 * B​a​c​k​ ​t​o​ ​d​o​c​u​m​e​n​t​s
+		 */
+		backToDocuments: string
+		/**
+		 * D​o​c​u​m​e​n​t​ ​n​a​m​e​ ​i​s​ ​r​e​q​u​i​r​e​d
+		 */
+		nameRequired: string
+		/**
+		 * D​o​c​u​m​e​n​t​ ​u​p​d​a​t​e​d​ ​s​u​c​c​e​s​s​f​u​l​l​y
+		 */
+		updateSuccess: string
+		/**
+		 * S​a​v​i​n​g​.​.​.
+		 */
+		savingButton: string
+		/**
+		 * A​l​l​ ​g​r​o​u​p​ ​m​e​m​b​e​r​s​ ​c​a​n​ ​v​i​e​w​ ​t​h​i​s​ ​d​o​c​u​m​e​n​t
+		 */
+		publicDescription: string
+		/**
+		 * O​n​l​y​ ​a​d​m​i​n​i​s​t​r​a​t​o​r​s​ ​c​a​n​ ​v​i​e​w​ ​t​h​i​s​ ​d​o​c​u​m​e​n​t
+		 */
+		privateDescription: string
+		danger: {
+			/**
+			 * D​a​n​g​e​r​ ​Z​o​n​e
+			 */
+			title: string
+			/**
+			 * P​e​r​m​a​n​e​n​t​l​y​ ​d​e​l​e​t​e​ ​a​l​l​ ​c​o​m​m​e​n​t​s​ ​a​n​d​ ​a​n​n​o​t​a​t​i​o​n​s​ ​f​r​o​m​ ​t​h​i​s​ ​d​o​c​u​m​e​n​t​.​ ​T​h​i​s​ ​a​c​t​i​o​n​ ​c​a​n​n​o​t​ ​b​e​ ​u​n​d​o​n​e​.
+			 */
+			description: string
+			/**
+			 * C​l​e​a​r​ ​A​l​l​ ​C​o​m​m​e​n​t​s
+			 */
+			clearButton: string
+			/**
+			 * C​l​e​a​r​i​n​g​.​.​.
+			 */
+			clearing: string
+			/**
+			 * C​o​n​f​i​r​m​ ​C​l​e​a​r
+			 */
+			confirmClear: string
+			/**
+			 * A​l​l​ ​c​o​m​m​e​n​t​s​ ​c​l​e​a​r​e​d​ ​s​u​c​c​e​s​s​f​u​l​l​y
+			 */
+			clearSuccess: string
+		}
+	}
+	sharelinks: {
+		/**
+		 * S​h​a​r​i​n​g
+		 */
+		title: string
+		/**
+		 * C​r​e​a​t​e​ ​L​i​n​k
+		 */
+		createLink: string
+		/**
+		 * E​d​i​t​ ​L​i​n​k
+		 */
+		editLink: string
+		/**
+		 * N​e​w​ ​S​h​a​r​e​ ​L​i​n​k
+		 */
+		newShareLink: string
+		/**
+		 * S​h​a​r​e​ ​l​i​n​k​ ​c​r​e​a​t​e​d​ ​s​u​c​c​e​s​s​f​u​l​l​y
+		 */
+		created: string
+		/**
+		 * S​h​a​r​e​ ​l​i​n​k​ ​u​p​d​a​t​e​d​ ​s​u​c​c​e​s​s​f​u​l​l​y
+		 */
+		updated: string
+		/**
+		 * T​o​k​e​n​ ​r​o​t​a​t​e​d​ ​s​u​c​c​e​s​s​f​u​l​l​y​.​ ​T​h​e​ ​o​l​d​ ​l​i​n​k​ ​i​s​ ​n​o​w​ ​i​n​v​a​l​i​d​.
+		 */
+		rotated: string
+		/**
+		 * S​h​a​r​e​ ​l​i​n​k​ ​d​e​l​e​t​e​d​ ​s​u​c​c​e​s​s​f​u​l​l​y
+		 */
+		deleted: string
+		/**
+		 * L​i​n​k​ ​c​o​p​i​e​d​ ​t​o​ ​c​l​i​p​b​o​a​r​d
+		 */
+		linkCopied: string
+		/**
+		 * F​a​i​l​e​d​ ​t​o​ ​c​o​p​y​ ​l​i​n​k
+		 */
+		copyFailed: string
+		/**
+		 * A​r​e​ ​y​o​u​ ​s​u​r​e​ ​y​o​u​ ​w​a​n​t​ ​t​o​ ​d​e​l​e​t​e​ ​t​h​i​s​ ​s​h​a​r​e​ ​l​i​n​k​?
+		 */
+		deleteConfirm: string
+		/**
+		 * N​o​ ​s​h​a​r​e​ ​l​i​n​k​s​ ​y​e​t​.​ ​C​r​e​a​t​e​ ​o​n​e​ ​t​o​ ​g​e​t​ ​s​t​a​r​t​e​d​.
+		 */
+		noLinksYet: string
+		/**
+		 * L​a​b​e​l​ ​(​o​p​t​i​o​n​a​l​)
+		 */
+		labelPlaceholder: string
+		/**
+		 * A​l​l​o​w​ ​a​n​o​n​y​m​o​u​s​ ​a​c​c​e​s​s
+		 */
+		allowAnonymous: string
+		/**
+		 * U​n​t​i​t​l​e​d​ ​L​i​n​k
+		 */
+		untitledLink: string
+		/**
+		 * A​n​o​n​y​m​o​u​s
+		 */
+		anonymousBadge: string
+		/**
+		 * A​l​l​o​w​s​ ​a​c​c​e​s​s​ ​w​i​t​h​o​u​t​ ​a​n​ ​a​c​c​o​u​n​t
+		 */
+		anonymousTitle: string
+		/**
+		 * c​r​e​a​t​e​d​ ​b​y​ ​{​u​s​e​r​n​a​m​e​}​ ​a​t​ ​{​d​a​t​e​}
+		 * @param {string} date
+		 * @param {string} username
+		 */
+		createdBy: RequiredParams<'date' | 'username'>
+		/**
+		 * l​a​s​t​ ​u​p​d​a​t​e​d​ ​b​y​ ​{​u​s​e​r​n​a​m​e​}​ ​a​t​ ​{​d​a​t​e​}
+		 * @param {string} date
+		 * @param {string} username
+		 */
+		lastUpdatedBy: RequiredParams<'date' | 'username'>
+		/**
+		 * D​e​l​e​t​e​d​ ​U​s​e​r
+		 */
+		deletedUser: string
+		/**
+		 * E​x​p​i​r​e​s​:​ ​{​d​a​t​e​}
+		 * @param {string} date
+		 */
+		expires: RequiredParams<'date'>
+		/**
+		 * E​x​p​i​r​e​d
+		 */
+		expired: string
+		/**
+		 * E​x​p​i​r​e​d​:​ ​{​d​a​t​e​}
+		 * @param {string} date
+		 */
+		expiredDate: RequiredParams<'date'>
+		/**
+		 * E​d​i​t​ ​t​o​ ​c​h​a​n​g​e​ ​e​x​p​i​r​y
+		 */
+		changeExpiryHint: string
+		/**
+		 * {​c​o​u​n​t​}​ ​U​s​e​r​{​{​s​}​}
+		 * @param {number} count
+		 */
+		users: RequiredParams<'count'>
+		/**
+		 * M​e​m​b​e​r​s​ ​u​s​i​n​g​ ​t​h​i​s​ ​l​i​n​k​:​ ​{​c​o​u​n​t​}
+		 * @param {number} count
+		 */
+		usersTitle: RequiredParams<'count'>
+		/**
+		 * T​h​i​s​ ​w​i​l​l​ ​r​e​m​o​v​e​ ​{​c​o​u​n​t​}​ ​m​e​m​b​e​r​{​{​s​}​}​ ​f​r​o​m​ ​t​h​e​ ​g​r​o​u​p​.​ ​A​r​e​ ​y​o​u​ ​s​u​r​e​?
+		 * @param {number} count
+		 */
+		rotateConfirm: RequiredParams<'count'>
+		/**
+		 * C​o​p​y​ ​L​i​n​k
+		 */
+		copyLink: string
+		/**
+		 * R​o​t​a​t​e​ ​T​o​k​e​n
+		 */
+		rotateToken: string
+	}
+	tags: {
+		/**
+		 * T​a​g​s
+		 */
+		title: string
+		/**
+		 * A​d​d​ ​T​a​g
+		 */
+		addTag: string
+		/**
+		 * C​r​e​a​t​e​ ​T​a​g
+		 */
+		createTag: string
+		/**
+		 * E​d​i​t​ ​T​a​g
+		 */
+		editTag: string
+		/**
+		 * N​e​w​ ​T​a​g
+		 */
+		newTag: string
+		/**
+		 * L​a​b​e​l​ ​*
+		 */
+		label: string
+		/**
+		 * C​o​l​o​r​ ​*
+		 */
+		color: string
+		/**
+		 * D​e​s​c​r​i​p​t​i​o​n
+		 */
+		description: string
+		/**
+		 * T​a​g​ ​l​a​b​e​l
+		 */
+		tagLabelPlaceholder: string
+		/**
+		 * e​.​g​.​,​ ​B​u​g​,​ ​Q​u​e​s​t​i​o​n
+		 */
+		tagLabelEditPlaceholder: string
+		/**
+		 * O​p​t​i​o​n​a​l​ ​d​e​s​c​r​i​p​t​i​o​n​ ​f​o​r​ ​t​h​i​s​ ​t​a​g
+		 */
+		descriptionPlaceholder: string
+		/**
+		 * T​a​g​ ​l​a​b​e​l​ ​i​s​ ​r​e​q​u​i​r​e​d
+		 */
+		labelRequired: string
+		/**
+		 * T​a​g​ ​c​r​e​a​t​e​d​ ​s​u​c​c​e​s​s​f​u​l​l​y
+		 */
+		createSuccess: string
+		/**
+		 * T​a​g​ ​u​p​d​a​t​e​d​ ​s​u​c​c​e​s​s​f​u​l​l​y
+		 */
+		updateSuccess: string
+		/**
+		 * T​a​g​ ​d​e​l​e​t​e​d​ ​s​u​c​c​e​s​s​f​u​l​l​y
+		 */
+		deleteSuccess: string
+		/**
+		 * N​o​ ​t​a​g​s​ ​c​r​e​a​t​e​d​ ​y​e​t
+		 */
+		noTags: string
+		/**
+		 * E​d​i​t​ ​t​a​g
+		 */
+		editAriaLabel: string
+		/**
+		 * D​e​l​e​t​e​?
+		 */
+		deleteConfirm: string
+		/**
+		 * C​h​o​o​s​e​ ​c​o​l​o​r​ ​f​o​r​ ​t​a​g
+		 */
+		chooseColor: string
+		/**
+		 * C​h​o​o​s​e​ ​c​o​l​o​r​ ​f​o​r​ ​n​e​w​ ​t​a​g
+		 */
+		chooseColorNew: string
+	}
+	passwordReset: {
+		/**
+		 * R​e​s​e​t​ ​P​a​s​s​w​o​r​d
+		 */
+		requestTitle: string
+		/**
+		 * E​n​t​e​r​ ​y​o​u​r​ ​e​m​a​i​l​ ​a​d​d​r​e​s​s​ ​a​n​d​ ​w​e​'​l​l​ ​s​e​n​d​ ​y​o​u​ ​a​ ​l​i​n​k​ ​t​o​ ​r​e​s​e​t​ ​y​o​u​r​ ​p​a​s​s​w​o​r​d​.
+		 */
+		requestDescription: string
+		/**
+		 * E​m​a​i​l
+		 */
+		emailLabel: string
+		/**
+		 * S​e​n​d​ ​R​e​s​e​t​ ​L​i​n​k
+		 */
+		sendResetLink: string
+		/**
+		 * P​a​s​s​w​o​r​d​ ​r​e​s​e​t​ ​e​m​a​i​l​ ​s​e​n​t​!​ ​P​l​e​a​s​e​ ​c​h​e​c​k​ ​y​o​u​r​ ​i​n​b​o​x​ ​f​o​r​ ​f​u​r​t​h​e​r​ ​i​n​s​t​r​u​c​t​i​o​n​s​.
+		 */
+		resetSent: string
+		/**
+		 * F​a​i​l​e​d​ ​t​o​ ​s​e​n​d​ ​r​e​s​e​t​ ​e​m​a​i​l
+		 */
+		resetFailed: string
+		/**
+		 * S​e​t​ ​N​e​w​ ​P​a​s​s​w​o​r​d
+		 */
+		setNewPassword: string
+		/**
+		 * E​n​t​e​r​ ​y​o​u​r​ ​n​e​w​ ​p​a​s​s​w​o​r​d​ ​b​e​l​o​w​.
+		 */
+		setNewPasswordDescription: string
+		/**
+		 * N​e​w​ ​P​a​s​s​w​o​r​d
+		 */
+		newPasswordLabel: string
+		/**
+		 * C​o​n​f​i​r​m​ ​P​a​s​s​w​o​r​d
+		 */
+		confirmPasswordLabel: string
+		/**
+		 * R​e​s​e​t​ ​P​a​s​s​w​o​r​d
+		 */
+		resetButton: string
+		/**
+		 * P​a​s​s​w​o​r​d​s​ ​d​o​ ​n​o​t​ ​m​a​t​c​h
+		 */
+		passwordsDoNotMatch: string
+		/**
+		 * P​a​s​s​w​o​r​d​ ​m​u​s​t​ ​b​e​ ​a​t​ ​l​e​a​s​t​ ​8​ ​c​h​a​r​a​c​t​e​r​s
+		 */
+		passwordMinLength: string
+		/**
+		 * F​a​i​l​e​d​ ​t​o​ ​r​e​s​e​t​ ​p​a​s​s​w​o​r​d​.​ ​T​h​e​ ​l​i​n​k​ ​m​a​y​ ​b​e​ ​e​x​p​i​r​e​d​ ​o​r​ ​i​n​v​a​l​i​d​.
+		 */
+		resetFailedExpired: string
+		/**
+		 * B​a​c​k​ ​t​o​ ​L​o​g​i​n
+		 */
+		backToLogin: string
+		/**
+		 * P​a​s​s​w​o​r​d​ ​r​e​s​e​t​ ​s​u​c​c​e​s​s​f​u​l​!​ ​Y​o​u​ ​c​a​n​ ​n​o​w​ ​l​o​g​ ​i​n​ ​w​i​t​h​ ​y​o​u​r​ ​n​e​w​ ​p​a​s​s​w​o​r​d​.
+		 */
+		resetSuccess: string
+	}
+	loginPage: {
+		/**
+		 * L​o​g​i​n
+		 */
+		loginTab: string
+		/**
+		 * R​e​g​i​s​t​e​r
+		 */
+		registerTab: string
+	}
+	comments: {
+		/**
+		 * S​e​l​e​c​t​ ​t​e​x​t​ ​i​n​ ​t​h​e​ ​P​D​F​ ​t​o​ ​a​d​d​ ​a​ ​c​o​m​m​e​n​t
+		 */
+		selectTextHint: string
+		/**
+		 * E​d​i​t​ ​y​o​u​r​ ​c​o​m​m​e​n​t​.​.​.
+		 */
+		editPlaceholder: string
+		/**
+		 * W​r​i​t​e​ ​a​ ​r​e​p​l​y​.​.​.
+		 */
+		replyPlaceholder: string
+		/**
+		 * S​e​n​d​i​n​g​.​.​.
+		 */
+		sending: string
+		/**
+		 * D​e​l​e​t​e​?
+		 */
+		deleteConfirm: string
+		/**
+		 * C​o​n​f​i​r​m​ ​D​e​l​e​t​e
+		 */
+		confirmDelete: string
+		/**
+		 * A​d​d​ ​r​e​a​c​t​i​o​n
+		 */
+		addReaction: string
+		/**
+		 * R​e​m​o​v​e​ ​r​e​a​c​t​i​o​n
+		 */
+		removeReaction: string
+		/**
+		 * {​c​o​u​n​t​}​ ​r​e​p​l​{​{​y​|​i​e​s​}​}
+		 * @param {number} count
+		 */
+		nReplies: RequiredParams<'count'>
+		/**
+		 * {​c​o​u​n​t​}​ ​m​o​r​e​ ​r​e​p​l​{​{​y​|​i​e​s​}​}
+		 * @param {number} count
+		 */
+		nMoreReplies: RequiredParams<'count'>
+		/**
+		 * {​c​o​u​n​t​}​ ​p​o​i​n​t​{​{​s​}​}
+		 * @param {number} count
+		 */
+		nPoints: RequiredParams<'count'>
+		visibility: {
+			/**
+			 * S​e​l​e​c​t​ ​c​o​m​m​e​n​t​ ​v​i​s​i​b​i​l​i​t​y
+			 */
+			select: string
+			/**
+			 * C​o​m​m​e​n​t​ ​v​i​s​i​b​i​l​i​t​y​:​ ​{​l​e​v​e​l​}
+			 * @param {string} level
+			 */
+			current: RequiredParams<'level'>
+			'public': {
+				/**
+				 * P​u​b​l​i​c​ ​-​ ​E​v​e​r​y​o​n​e
+				 */
+				label: string
+				/**
+				 * A​l​l​ ​m​e​m​b​e​r​s​ ​t​h​a​t​ ​c​a​n​ ​v​i​e​w​ ​t​h​e​ ​d​o​c​u​m​e​n​t​ ​c​a​n​ ​s​e​e​ ​t​h​i​s​ ​c​o​m​m​e​n​t
+				 */
+				description: string
+			}
+			restricted: {
+				/**
+				 * R​e​s​t​r​i​c​t​e​d​ ​-​ ​G​r​o​u​p​ ​M​a​n​a​g​e​r​s
+				 */
+				label: string
+				/**
+				 * O​n​l​y​ ​y​o​u​ ​a​n​d​ ​g​r​o​u​p​ ​m​a​n​a​g​e​r​s​ ​c​a​n​ ​s​e​e​ ​t​h​i​s​ ​c​o​m​m​e​n​t
+				 */
+				description: string
+			}
+			'private': {
+				/**
+				 * P​r​i​v​a​t​e​ ​-​ ​O​n​l​y​ ​y​o​u
+				 */
+				label: string
+				/**
+				 * O​n​l​y​ ​y​o​u​ ​c​a​n​ ​s​e​e​ ​t​h​i​s​ ​c​o​m​m​e​n​t
+				 */
+				description: string
+			}
+		}
+	}
+	pdf: {
+		/**
+		 * Z​o​o​m​ ​I​n
+		 */
+		zoomIn: string
+		/**
+		 * Z​o​o​m​ ​O​u​t
+		 */
+		zoomOut: string
+		/**
+		 * F​i​t​ ​H​e​i​g​h​t
+		 */
+		fitHeight: string
+		/**
+		 * P​r​e​v​i​o​u​s​ ​P​a​g​e
+		 */
+		previousPage: string
+		/**
+		 * N​e​x​t​ ​P​a​g​e
+		 */
+		nextPage: string
+		/**
+		 * E​x​p​a​n​d
+		 */
+		expand: string
+		/**
+		 * S​h​a​r​e​ ​M​y​ ​C​u​r​s​o​r
+		 */
+		shareCursor: string
+		/**
+		 * S​h​o​w​ ​O​t​h​e​r​ ​C​u​r​s​o​r​s
+		 */
+		showOtherCursors: string
+		/**
+		 * F​i​l​t​e​r​s​ ​&​ ​P​i​n​s
+		 */
+		filtersAndPins: string
+		/**
+		 * C​l​e​a​r​ ​A​l​l​ ​F​i​l​t​e​r​s
+		 */
+		clearAllFilters: string
+		/**
+		 * P​i​n​ ​a​l​l​ ​c​o​m​m​e​n​t​s
+		 */
+		pinAllComments: string
+		/**
+		 * U​n​p​i​n​ ​a​l​l​ ​c​o​m​m​e​n​t​s
+		 */
+		unpinAllComments: string
+		/**
+		 * A​c​t​i​v​e​ ​U​s​e​r​s
+		 */
+		activeUsers: string
+		/**
+		 * O​f​f​l​i​n​e​ ​U​s​e​r​s
+		 */
+		offlineUsers: string
+		/**
+		 * N​o​ ​o​t​h​e​r​ ​u​s​e​r​s​ ​v​i​e​w​i​n​g
+		 */
+		noOtherUsers: string
+		/**
+		 * (​Y​o​u​)
+		 */
+		you: string
+		viewMode: {
+			/**
+			 * V​i​e​w​ ​M​o​d​e
+			 */
+			label: string
+			/**
+			 * I​n​ ​R​e​s​t​r​i​c​t​e​d​ ​M​o​d​e​ ​m​e​m​b​e​r​s​ ​w​i​t​h​o​u​t​ ​p​e​r​m​i​s​s​i​o​n​ ​w​i​l​l​ ​n​o​t​ ​s​e​e​ ​o​t​h​e​r​ ​c​o​m​m​e​n​t​s​ ​a​n​d​ ​c​u​r​s​o​r​ ​s​h​a​r​i​n​g​ ​i​s​ ​d​i​s​a​b​l​e​d​.​ ​I​n​ ​P​u​b​l​i​c​ ​M​o​d​e​ ​c​o​m​m​e​n​t​s​ ​a​r​e​ ​v​i​s​i​b​l​e​ ​b​a​s​e​d​ ​o​n​ ​t​h​e​i​r​ ​i​n​d​i​v​i​d​u​a​l​ ​v​i​s​i​b​i​l​i​t​y​ ​s​e​t​t​i​n​g​s​.
+			 */
+			tooltip: string
+			/**
+			 * R​e​s​t​r​i​c​t​e​d
+			 */
+			restricted: string
+			/**
+			 * R​e​s​t​r​i​c​t​e​d​ ​-​ ​O​w​n​e​r​,​ ​a​d​m​i​n​s​ ​&​ ​u​s​e​r​s​ ​w​i​t​h​ ​p​e​r​m​i​s​s​i​o​n​ ​s​e​e​ ​c​o​m​m​e​n​t​s
+			 */
+			restrictedDescription: string
+			/**
+			 * P​u​b​l​i​c
+			 */
+			'public': string
+			/**
+			 * P​u​b​l​i​c​ ​-​ ​C​o​m​m​e​n​t​s​ ​v​i​s​i​b​l​e​ ​b​a​s​e​d​ ​o​n​ ​t​h​e​i​r​ ​v​i​s​i​b​i​l​i​t​y​ ​s​e​t​t​i​n​g​s
+			 */
+			publicDescription: string
+		}
+		/**
+		 * D​o​c​u​m​e​n​t​ ​I​n​f​o​r​m​a​t​i​o​n
+		 */
+		documentInfo: string
+		/**
+		 * P​i​n​n​e​d
+		 */
+		pinned: string
+		/**
+		 * A​l​l
+		 */
+		all: string
+		/**
+		 * N​o​ ​p​i​n​n​e​d​ ​c​o​m​m​e​n​t​s
+		 */
+		noPinnedComments: string
+		/**
+		 * N​o​ ​c​o​m​m​e​n​t​s
+		 */
+		noComments: string
+		/**
+		 * E​x​p​a​n​d​ ​c​o​m​m​e​n​t​s
+		 */
+		expandComments: string
+		/**
+		 * C​o​l​l​a​p​s​e​ ​c​o​m​m​e​n​t​s
+		 */
+		collapseComments: string
+	}
+	memberScore: {
+		/**
+		 * B​a​c​k​ ​t​o​ ​M​e​m​b​e​r​s
+		 */
+		backToMembers: string
+		/**
+		 * O​w​n​e​r
+		 */
+		owner: string
+		/**
+		 * A​d​m​i​n
+		 */
+		admin: string
+		/**
+		 * S​c​o​r​e
+		 */
+		scoreTitle: string
+		/**
+		 * U​p​d​a​t​e​d​ ​{​t​i​m​e​}
+		 * @param {string} time
+		 */
+		updatedAgo: RequiredParams<'time'>
+		/**
+		 * A​l​l​ ​D​o​c​u​m​e​n​t​s
+		 */
+		allDocuments: string
+		/**
+		 * S​h​o​w​ ​p​o​i​n​t​ ​s​y​s​t​e​m
+		 */
+		showPointSystem: string
+		/**
+		 * H​i​d​e​ ​p​o​i​n​t​ ​s​y​s​t​e​m
+		 */
+		hidePointSystem: string
+		/**
+		 * H​o​w​ ​p​o​i​n​t​s​ ​a​r​e​ ​e​a​r​n​e​d
+		 */
+		howPointsEarned: string
+		/**
+		 * T​o​t​a​l​ ​S​c​o​r​e
+		 */
+		totalScore: string
+		/**
+		 * a​c​r​o​s​s​ ​{​c​o​u​n​t​}​ ​d​o​c​u​m​e​n​t​{​{​s​}​}
+		 * @param {number} count
+		 */
+		acrossDocuments: RequiredParams<'count'>
+		/**
+		 * H​i​g​h​l​i​g​h​t​s
+		 */
+		highlights: string
+		/**
+		 * R​e​a​c​t​i​o​n​s
+		 */
+		reactions: string
+		/**
+		 * {​c​o​u​n​t​}​ ​r​e​c​e​i​v​e​d
+		 * @param {number} count
+		 */
+		received: RequiredParams<'count'>
+		/**
+		 * {​c​o​u​n​t​}​ ​g​i​v​e​n
+		 * @param {number} count
+		 */
+		given: RequiredParams<'count'>
+		/**
+		 * j​u​s​t​ ​n​o​w
+		 */
+		justNow: string
+		/**
+		 * 1​ ​m​i​n​ ​a​g​o
+		 */
+		oneMinAgo: string
+		/**
+		 * {​c​o​u​n​t​}​ ​m​i​n​ ​a​g​o
+		 * @param {number} count
+		 */
+		nMinAgo: RequiredParams<'count'>
+	}
+	relativeTime: {
+		/**
+		 * N​e​v​e​r
+		 */
+		never: string
+		/**
+		 * J​u​s​t​ ​n​o​w
+		 */
+		justNow: string
+		/**
+		 * {​c​o​u​n​t​}​ ​m​i​n​u​t​e​{​{​s​}​}​ ​a​g​o
+		 * @param {number} count
+		 */
+		nMinutesAgo: RequiredParams<'count'>
+		/**
+		 * {​c​o​u​n​t​}​ ​h​o​u​r​{​{​s​}​}​ ​a​g​o
+		 * @param {number} count
+		 */
+		nHoursAgo: RequiredParams<'count'>
+		/**
+		 * {​c​o​u​n​t​}​ ​d​a​y​{​{​s​}​}​ ​a​g​o
+		 * @param {number} count
+		 */
+		nDaysAgo: RequiredParams<'count'>
+	}
+	footer: {
+		/**
+		 * E​n​a​b​l​e​ ​D​a​r​k​ ​M​o​d​e
+		 */
+		enableDarkMode: string
+		/**
+		 * E​n​a​b​l​e​ ​L​i​g​h​t​ ​M​o​d​e
+		 */
+		enableLightMode: string
+		/**
+		 * C​h​a​n​g​e​ ​L​a​n​g​u​a​g​e
+		 */
+		changeLanguage: string
 	}
 }
 
@@ -566,7 +1906,131 @@ export type TranslationFunctions = {
 	 * My Groups
 	 */
 	myGroups: () => LocalizedString
+	/**
+	 * User
+	 */
+	user: () => LocalizedString
+	/**
+	 * Status
+	 */
+	status: () => LocalizedString
+	/**
+	 * Add
+	 */
+	add: () => LocalizedString
+	/**
+	 * Remove
+	 */
+	remove: () => LocalizedString
+	/**
+	 * Invitations
+	 */
+	invitations: () => LocalizedString
+	/**
+	 * Continue
+	 */
+	'continue': () => LocalizedString
+	/**
+	 * Save
+	 */
+	save: () => LocalizedString
+	/**
+	 * Cancel
+	 */
+	cancel: () => LocalizedString
+	/**
+	 * Edit
+	 */
+	edit: () => LocalizedString
+	/**
+	 * Delete
+	 */
+	'delete': () => LocalizedString
+	/**
+	 * Confirm
+	 */
+	confirm: () => LocalizedString
+	/**
+	 * Create
+	 */
+	create: () => LocalizedString
+	/**
+	 * Back
+	 */
+	back: () => LocalizedString
+	/**
+	 * Close
+	 */
+	close: () => LocalizedString
+	/**
+	 * Search
+	 */
+	search: () => LocalizedString
+	/**
+	 * Actions
+	 */
+	actions: () => LocalizedString
+	/**
+	 * Loading...
+	 */
+	loading: () => LocalizedString
+	/**
+	 * Saving...
+	 */
+	saving: () => LocalizedString
+	/**
+	 * Uploading...
+	 */
+	uploading: () => LocalizedString
+	/**
+	 * Creating...
+	 */
+	creating: () => LocalizedString
+	/**
+	 * Score
+	 */
+	score: () => LocalizedString
+	/**
+	 * Anonymous
+	 */
+	anonymous: () => LocalizedString
+	/**
+	 * Guest
+	 */
+	guest: () => LocalizedString
+	/**
+	 * New
+	 */
+	'new': () => LocalizedString
+	/**
+	 * Unknown
+	 */
+	unknown: () => LocalizedString
+	/**
+	 * Reply
+	 */
+	reply: () => LocalizedString
+	/**
+	 * Collapse
+	 */
+	collapse: () => LocalizedString
+	/**
+	 * pts
+	 */
+	points: () => LocalizedString
+	/**
+	 * Built with
+	 */
+	builtWith: () => LocalizedString
+	/**
+	 * Save Changes
+	 */
+	saveChanges: () => LocalizedString
 	dashboard: {
+		/**
+		 * Dashboard
+		 */
+		title: () => LocalizedString
 		/**
 		 * Welcome to text.ur!
 		 */
@@ -621,6 +2085,10 @@ export type TranslationFunctions = {
 		 * Settings
 		 */
 		settings: () => LocalizedString
+		/**
+		 * Sharing
+		 */
+		sharing: () => LocalizedString
 		memberships: {
 			/**
 			 * Owner
@@ -653,6 +2121,122 @@ export type TranslationFunctions = {
 		 * Leave Group
 		 */
 		leave: () => LocalizedString
+		/**
+		 * Invite
+		 */
+		invite: () => LocalizedString
+		/**
+		 * User invited successfully!
+		 */
+		inviteSuccess: () => LocalizedString
+		/**
+		 * Search username...
+		 */
+		searchPlaceholder: () => LocalizedString
+		/**
+		 * {count}/{total} Selected:
+		 */
+		selected: (arg: { count: number, total: number }) => LocalizedString
+		/**
+		 * Add Permission
+		 */
+		addPermission: () => LocalizedString
+		/**
+		 * Remove Permission
+		 */
+		removePermission: () => LocalizedString
+		/**
+		 * Default
+		 */
+		'default': () => LocalizedString
+		/**
+		 * Sharelink
+		 */
+		sharelinkLabel: () => LocalizedString
+		/**
+		 * Unknown User
+		 */
+		unknownUser: () => LocalizedString
+		/**
+		 * Member promoted successfully.
+		 */
+		promoteSuccess: () => LocalizedString
+		/**
+		 * Promote to a permanent member?
+		 */
+		promoteConfirm: () => LocalizedString
+		/**
+		 * Promote guest {username} to a permanent member
+		 */
+		promoteAriaLabel: (arg: { username: string }) => LocalizedString
+		/**
+		 * You have left the group.
+		 */
+		leftGroup: () => LocalizedString
+		/**
+		 * Removed {username} from the group.
+		 */
+		removedFromGroup: (arg: { username: string }) => LocalizedString
+		/**
+		 * Leave the group?
+		 */
+		leaveConfirm: () => LocalizedString
+		/**
+		 * Remove {username} from the group?
+		 */
+		removeConfirm: (arg: { username: string }) => LocalizedString
+		/**
+		 * Leave the group
+		 */
+		leaveAriaLabel: () => LocalizedString
+		/**
+		 * Kick {username} from the group
+		 */
+		kickAriaLabel: (arg: { username: string }) => LocalizedString
+		/**
+		 * Invitation accepted
+		 */
+		invitationAccepted: () => LocalizedString
+		/**
+		 * Invitation rejected
+		 */
+		invitationRejected: () => LocalizedString
+		/**
+		 * Are you sure you want to reject this invitation? You will not be able to rejoin unless invited again.
+		 */
+		rejectConfirm: () => LocalizedString
+		/**
+		 * Create new group
+		 */
+		createNewGroup: () => LocalizedString
+		/**
+		 * {count} member{{s}}
+		 */
+		memberCount: (arg: { count: number }) => LocalizedString
+		/**
+		 * {count} document{{s}}
+		 */
+		documentCount: (arg: { count: number }) => LocalizedString
+		/**
+		 * You own this group
+		 */
+		youOwnThisGroup: () => LocalizedString
+		/**
+		 * Accept invitation
+		 */
+		acceptInvitation: () => LocalizedString
+		/**
+		 * Reject invitation
+		 */
+		rejectInvitation: () => LocalizedString
+		/**
+		 * You are not a member of this group.
+		 */
+		notMemberOfGroup: () => LocalizedString
+		/**
+		 * You are not a member of the group that owns this document.
+		 */
+		notMemberOfDocumentGroup: () => LocalizedString
 	}
 	permissionGroups: {
 		/**
@@ -694,47 +2278,31 @@ export type TranslationFunctions = {
 		 */
 		add_comments: () => LocalizedString
 		/**
-		 * Remove comments
-		 */
-		remove_comments: () => LocalizedString
-		/**
 		 * View restricted comments
 		 */
 		view_restricted_comments: () => LocalizedString
-		/**
-		 * Add members
-		 */
-		add_members: () => LocalizedString
-		/**
-		 * Remove members
-		 */
-		remove_members: () => LocalizedString
-		/**
-		 * Manage permissions
-		 */
-		manage_permissions: () => LocalizedString
-		/**
-		 * Upload documents
-		 */
-		upload_documents: () => LocalizedString
-		/**
-		 * View restricted documents
-		 */
-		view_restricted_documents: () => LocalizedString
-		/**
-		 * Delete documents
-		 */
-		delete_documents: () => LocalizedString
-		/**
-		 * Remove reactions
-		 */
-		remove_reactions: () => LocalizedString
 		/**
 		 * Add reactions
 		 */
 		add_reactions: () => LocalizedString
 	}
 	visibility: {
+		/**
+		 * Visibility
+		 */
+		label: () => LocalizedString
+		/**
+		 * Visibility Settings
+		 */
+		settings: () => LocalizedString
+		/**
+		 * Choose who can view this document
+		 */
+		chooseHint: () => LocalizedString
+		/**
+		 * Visibility updated
+		 */
+		updated: () => LocalizedString
 		'public': {
 			/**
 			 * Public
@@ -751,7 +2319,7 @@ export type TranslationFunctions = {
 			 */
 			label: () => LocalizedString
 			/**
-			 * Only members with VIEW_RESTRICTED_DOCUMENTS permission can view
+			 * Only members with VIEW_RESTRICTED_COMMENTS permission can view
 			 */
 			description: () => LocalizedString
 		}
@@ -761,27 +2329,11 @@ export type TranslationFunctions = {
 			 */
 			label: () => LocalizedString
 			/**
-			 * Only you can view this document
+			 * Only administrators can view this document
 			 */
 			description: () => LocalizedString
 		}
 	}
-	/**
-	 * User
-	 */
-	user: () => LocalizedString
-	/**
-	 * Status
-	 */
-	status: () => LocalizedString
-	/**
-	 * Add
-	 */
-	add: () => LocalizedString
-	/**
-	 * Remove
-	 */
-	remove: () => LocalizedString
 	errors: {
 		/**
 		 * An unknown error occurred
@@ -835,15 +2387,47 @@ export type TranslationFunctions = {
 		 * Too many requests. Please try again shortly.
 		 */
 		rate_limited: () => LocalizedString
+		/**
+		 * This share link is invalid
+		 */
+		sharelink_invalid: () => LocalizedString
+		/**
+		 * This share link has expired
+		 */
+		sharelink_expired: () => LocalizedString
+		/**
+		 * Cannot remove this permission because it is included in the group's default permissions
+		 */
+		cannot_remove_permission_reason_default_group: () => LocalizedString
+		/**
+		 * Cannot remove this permission because it is granted by a share link
+		 */
+		cannot_remove_permission_reason_sharelink: () => LocalizedString
+		/**
+		 * The requested resource was not found
+		 */
+		not_found: () => LocalizedString
+		/**
+		 * You cannot react to your own comment
+		 */
+		self_reaction: () => LocalizedString
+		/**
+		 * Reactions can only be added to top-level comments
+		 */
+		reply_reaction: () => LocalizedString
+		/**
+		 * This username is already taken
+		 */
+		username_taken: () => LocalizedString
+		/**
+		 * This email address is already registered
+		 */
+		email_taken: () => LocalizedString
+		/**
+		 * This share link does not allow anonymous access
+		 */
+		sharelink_anonymous_disabled: () => LocalizedString
 	}
-	/**
-	 * Invitations
-	 */
-	invitations: () => LocalizedString
-	/**
-	 * Continue
-	 */
-	'continue': () => LocalizedString
 	sharelink: {
 		/**
 		 * Join Group
@@ -867,6 +2451,50 @@ export type TranslationFunctions = {
 			 */
 			registerFailed: () => LocalizedString
 		}
+		/**
+		 * Members: {count}
+		 */
+		members: (arg: { count: number }) => LocalizedString
+		/**
+		 * Owner: {username}
+		 */
+		owner: (arg: { username: string }) => LocalizedString
+		/**
+		 * Created: {date}
+		 */
+		created: (arg: { date: string }) => LocalizedString
+		/**
+		 * Your membership will be bound to this invite link. If it is revoked or expires you will be removed from the group.
+		 */
+		membershipWarning: () => LocalizedString
+		/**
+		 * Sharelink Details
+		 */
+		details: () => LocalizedString
+		/**
+		 * Expires At: {date}
+		 */
+		expiresAt: (arg: { date: string }) => LocalizedString
+		/**
+		 * You will automatically receive these permissions:
+		 */
+		permissionsReceived: () => LocalizedString
+		/**
+		 * Invite link permissions are continuously synced with your membership permissions.
+		 */
+		permissionsNote: () => LocalizedString
+		/**
+		 * This invite link requires an account.
+		 */
+		accountRequired: () => LocalizedString
+		/**
+		 * Join
+		 */
+		joinButton: () => LocalizedString
+		/**
+		 * If you do not have an account you can register here and then visit this link again.
+		 */
+		noAccountRegister: () => LocalizedString
 	}
 	userSettings: {
 		/**
@@ -985,6 +2613,1016 @@ export type TranslationFunctions = {
 				mismatch: () => LocalizedString
 			}
 		}
+		/**
+		 * Logout All Devices
+		 */
+		logoutAllDevices: () => LocalizedString
+		/**
+		 * Logout Guest Session
+		 */
+		logoutGuestSession: () => LocalizedString
+		/**
+		 * Confirm
+		 */
+		logoutConfirm: () => LocalizedString
+		/**
+		 * This will delete your guest account!
+		 */
+		deleteGuestWarning: () => LocalizedString
+		/**
+		 * Logged out from all devices successfully
+		 */
+		logoutSuccess: () => LocalizedString
+	}
+	groupSettings: {
+		/**
+		 * Group Name
+		 */
+		groupName: () => LocalizedString
+		/**
+		 * Group ID
+		 */
+		groupId: () => LocalizedString
+		/**
+		 * Default Permissions
+		 */
+		defaultPermissions: () => LocalizedString
+		/**
+		 * These permissions are automatically granted to new members when they join the group.
+		 */
+		defaultPermissionsDescription: () => LocalizedString
+		/**
+		 * Group settings updated successfully
+		 */
+		settingsUpdated: () => LocalizedString
+		scoring: {
+			/**
+			 * Scoring Configuration
+			 */
+			title: () => LocalizedString
+			/**
+			 * Configure how many points members earn for different actions. Changes retroactively apply to all existing points.
+			 */
+			description: () => LocalizedString
+			/**
+			 * Action Points
+			 */
+			actionPoints: () => LocalizedString
+			/**
+			 * Action
+			 */
+			action: () => LocalizedString
+			/**
+			 * Points
+			 */
+			pointsHeader: () => LocalizedString
+			/**
+			 * Create a highlight
+			 */
+			createHighlight: () => LocalizedString
+			/**
+			 * Write a comment
+			 */
+			writeComment: () => LocalizedString
+			/**
+			 * Add a tag
+			 */
+			addTag: () => LocalizedString
+			/**
+			 * Save Points
+			 */
+			savePoints: () => LocalizedString
+			/**
+			 * Saving...
+			 */
+			savingPoints: () => LocalizedString
+			/**
+			 * Scoring configuration updated
+			 */
+			updated: () => LocalizedString
+			/**
+			 * Emoji Reactions
+			 */
+			emojiReactions: () => LocalizedString
+			/**
+			 * Emoji
+			 */
+			emoji: () => LocalizedString
+			/**
+			 * Received
+			 */
+			received: () => LocalizedString
+			/**
+			 * From admin
+			 */
+			fromAdmin: () => LocalizedString
+			/**
+			 * Giver
+			 */
+			giver: () => LocalizedString
+			/**
+			 * Add Reaction
+			 */
+			addReaction: () => LocalizedString
+			/**
+			 * Select an emoji ({count} available)
+			 */
+			selectEmoji: (arg: { count: number }) => LocalizedString
+			/**
+			 * Added {emoji} reaction
+			 */
+			reactionAdded: (arg: { emoji: string }) => LocalizedString
+			/**
+			 * Reaction removed
+			 */
+			reactionRemoved: () => LocalizedString
+			/**
+			 * Reaction updated
+			 */
+			reactionUpdated: () => LocalizedString
+			/**
+			 * Deletes all existing reactions
+			 */
+			deleteExistingWarning: () => LocalizedString
+			/**
+			 * Removing a reaction deletes all existing reactions of that type.
+			 */
+			removeNote: () => LocalizedString
+		}
+		transfer: {
+			/**
+			 * Transfer Ownership
+			 */
+			title: () => LocalizedString
+			/**
+			 * Transfer ownership of this group to another member. You will lose owner privileges.
+			 */
+			description: () => LocalizedString
+			/**
+			 * Search member...
+			 */
+			searchPlaceholder: () => LocalizedString
+			/**
+			 * Transfer
+			 */
+			button: () => LocalizedString
+			/**
+			 * Confirm Transfer
+			 */
+			confirmTitle: () => LocalizedString
+			/**
+			 * Are you sure you want to transfer ownership to {username}? This action cannot be undone.
+			 */
+			confirmMessage: (arg: { username: string }) => LocalizedString
+			/**
+			 * Confirm Transfer
+			 */
+			confirmButton: () => LocalizedString
+			/**
+			 * Group ownership transferred successfully
+			 */
+			success: () => LocalizedString
+			/**
+			 * Please select a user to transfer ownership to
+			 */
+			selectUser: () => LocalizedString
+		}
+		danger: {
+			/**
+			 * Danger Zone
+			 */
+			title: () => LocalizedString
+			/**
+			 * Once you delete a group, there is no going back. Please be certain.
+			 */
+			description: () => LocalizedString
+			/**
+			 * Delete Group
+			 */
+			deleteButton: () => LocalizedString
+			/**
+			 * Confirm Deletion
+			 */
+			confirmTitle: () => LocalizedString
+			/**
+			 * Type the group name {name} to confirm deletion:
+			 */
+			confirmMessage: (arg: { name: string }) => LocalizedString
+			/**
+			 * Group name does not match
+			 */
+			nameDoesNotMatch: () => LocalizedString
+			/**
+			 * Group deleted successfully
+			 */
+			deleteSuccess: () => LocalizedString
+		}
+	}
+	groupCreate: {
+		/**
+		 * Create New Group
+		 */
+		title: () => LocalizedString
+		/**
+		 * Group Details
+		 */
+		groupDetails: () => LocalizedString
+		/**
+		 * Group Name *
+		 */
+		groupNameLabel: () => LocalizedString
+		/**
+		 * Enter group name
+		 */
+		groupNamePlaceholder: () => LocalizedString
+		/**
+		 * Group name is required
+		 */
+		groupNameRequired: () => LocalizedString
+		defaultPermissions: {
+			/**
+			 * Default Member Permissions
+			 */
+			title: () => LocalizedString
+			/**
+			 * Select the default permissions that new members will have when joining this group. You can change these at any time in the group settings.
+			 */
+			description: () => LocalizedString
+		}
+		scoring: {
+			/**
+			 * Scoring Configuration
+			 */
+			title: () => LocalizedString
+			/**
+			 * New groups are created with the following default point values. You can change these at any time in the group settings.
+			 */
+			description: () => LocalizedString
+		}
+		/**
+		 * Create Group
+		 */
+		createButton: () => LocalizedString
+		/**
+		 * Failed to create group: No data returned
+		 */
+		createFailed: () => LocalizedString
+	}
+	documents: {
+		/**
+		 * Documents
+		 */
+		title: () => LocalizedString
+		/**
+		 * Upload Document
+		 */
+		uploadDocument: () => LocalizedString
+		/**
+		 * Document Name
+		 */
+		documentName: () => LocalizedString
+		/**
+		 * Enter document name
+		 */
+		documentNamePlaceholder: () => LocalizedString
+		/**
+		 * Document Description (Optional)
+		 */
+		documentDescription: () => LocalizedString
+		/**
+		 * Add a description for this document (supports Markdown formatting)
+		 */
+		documentDescriptionPlaceholder: () => LocalizedString
+		/**
+		 * Describe the purpose of this document, what feedback you're looking for, or any other context.
+		 */
+		documentDescriptionHint: () => LocalizedString
+		/**
+		 * Document File
+		 */
+		documentFile: () => LocalizedString
+		/**
+		 * Upload a PDF file (max {size}MB)
+		 */
+		documentFileHint: (arg: { size: number }) => LocalizedString
+		/**
+		 * Drag and drop your PDF file here
+		 */
+		dragDrop: () => LocalizedString
+		/**
+		 * or click to browse
+		 */
+		orClickBrowse: () => LocalizedString
+		/**
+		 * Maximum file size: {size}MB
+		 */
+		maxFileSize: (arg: { size: number }) => LocalizedString
+		/**
+		 * Please select a file to upload
+		 */
+		selectFile: () => LocalizedString
+		/**
+		 * Invalid file type. Only PDF files are allowed.
+		 */
+		invalidFileType: () => LocalizedString
+		/**
+		 * File size exceeds maximum of {max}MB. Your file is {actual}MB.
+		 */
+		fileTooLarge: (arg: { actual: string, max: number }) => LocalizedString
+		/**
+		 * Document uploaded successfully
+		 */
+		uploadSuccess: () => LocalizedString
+		/**
+		 * Failed to upload document: No data returned
+		 */
+		uploadFailed: () => LocalizedString
+		/**
+		 * Document deleted successfully
+		 */
+		deleteSuccess: () => LocalizedString
+		/**
+		 * Document not found.
+		 */
+		notFound: () => LocalizedString
+		/**
+		 * Created
+		 */
+		created: () => LocalizedString
+		/**
+		 * Updated: {date}
+		 */
+		updated: (arg: { date: string }) => LocalizedString
+		/**
+		 * Edit document settings
+		 */
+		editSettings: () => LocalizedString
+		/**
+		 * Delete?
+		 */
+		deleteConfirm: () => LocalizedString
+		tagInfo: {
+			/**
+			 * Document Tags
+			 */
+			title: () => LocalizedString
+			/**
+			 * After uploading your document, you can create and manage custom tags to categorize comments. Tags help organize feedback and make it easier to filter and find specific types of annotations.
+			 */
+			description: () => LocalizedString
+			/**
+			 * You can add tags anytime from the document settings page.
+			 */
+			hint: () => LocalizedString
+		}
+	}
+	documentSettings: {
+		/**
+		 * Document Settings
+		 */
+		title: () => LocalizedString
+		/**
+		 * Back to documents
+		 */
+		backToDocuments: () => LocalizedString
+		/**
+		 * Document name is required
+		 */
+		nameRequired: () => LocalizedString
+		/**
+		 * Document updated successfully
+		 */
+		updateSuccess: () => LocalizedString
+		/**
+		 * Saving...
+		 */
+		savingButton: () => LocalizedString
+		/**
+		 * All group members can view this document
+		 */
+		publicDescription: () => LocalizedString
+		/**
+		 * Only administrators can view this document
+		 */
+		privateDescription: () => LocalizedString
+		danger: {
+			/**
+			 * Danger Zone
+			 */
+			title: () => LocalizedString
+			/**
+			 * Permanently delete all comments and annotations from this document. This action cannot be undone.
+			 */
+			description: () => LocalizedString
+			/**
+			 * Clear All Comments
+			 */
+			clearButton: () => LocalizedString
+			/**
+			 * Clearing...
+			 */
+			clearing: () => LocalizedString
+			/**
+			 * Confirm Clear
+			 */
+			confirmClear: () => LocalizedString
+			/**
+			 * All comments cleared successfully
+			 */
+			clearSuccess: () => LocalizedString
+		}
+	}
+	sharelinks: {
+		/**
+		 * Sharing
+		 */
+		title: () => LocalizedString
+		/**
+		 * Create Link
+		 */
+		createLink: () => LocalizedString
+		/**
+		 * Edit Link
+		 */
+		editLink: () => LocalizedString
+		/**
+		 * New Share Link
+		 */
+		newShareLink: () => LocalizedString
+		/**
+		 * Share link created successfully
+		 */
+		created: () => LocalizedString
+		/**
+		 * Share link updated successfully
+		 */
+		updated: () => LocalizedString
+		/**
+		 * Token rotated successfully. The old link is now invalid.
+		 */
+		rotated: () => LocalizedString
+		/**
+		 * Share link deleted successfully
+		 */
+		deleted: () => LocalizedString
+		/**
+		 * Link copied to clipboard
+		 */
+		linkCopied: () => LocalizedString
+		/**
+		 * Failed to copy link
+		 */
+		copyFailed: () => LocalizedString
+		/**
+		 * Are you sure you want to delete this share link?
+		 */
+		deleteConfirm: () => LocalizedString
+		/**
+		 * No share links yet. Create one to get started.
+		 */
+		noLinksYet: () => LocalizedString
+		/**
+		 * Label (optional)
+		 */
+		labelPlaceholder: () => LocalizedString
+		/**
+		 * Allow anonymous access
+		 */
+		allowAnonymous: () => LocalizedString
+		/**
+		 * Untitled Link
+		 */
+		untitledLink: () => LocalizedString
+		/**
+		 * Anonymous
+		 */
+		anonymousBadge: () => LocalizedString
+		/**
+		 * Allows access without an account
+		 */
+		anonymousTitle: () => LocalizedString
+		/**
+		 * created by {username} at {date}
+		 */
+		createdBy: (arg: { date: string, username: string }) => LocalizedString
+		/**
+		 * last updated by {username} at {date}
+		 */
+		lastUpdatedBy: (arg: { date: string, username: string }) => LocalizedString
+		/**
+		 * Deleted User
+		 */
+		deletedUser: () => LocalizedString
+		/**
+		 * Expires: {date}
+		 */
+		expires: (arg: { date: string }) => LocalizedString
+		/**
+		 * Expired
+		 */
+		expired: () => LocalizedString
+		/**
+		 * Expired: {date}
+		 */
+		expiredDate: (arg: { date: string }) => LocalizedString
+		/**
+		 * Edit to change expiry
+		 */
+		changeExpiryHint: () => LocalizedString
+		/**
+		 * {count} User{{s}}
+		 */
+		users: (arg: { count: number }) => LocalizedString
+		/**
+		 * Members using this link: {count}
+		 */
+		usersTitle: (arg: { count: number }) => LocalizedString
+		/**
+		 * This will remove {count} member{{s}} from the group. Are you sure?
+		 */
+		rotateConfirm: (arg: { count: number }) => LocalizedString
+		/**
+		 * Copy Link
+		 */
+		copyLink: () => LocalizedString
+		/**
+		 * Rotate Token
+		 */
+		rotateToken: () => LocalizedString
+	}
+	tags: {
+		/**
+		 * Tags
+		 */
+		title: () => LocalizedString
+		/**
+		 * Add Tag
+		 */
+		addTag: () => LocalizedString
+		/**
+		 * Create Tag
+		 */
+		createTag: () => LocalizedString
+		/**
+		 * Edit Tag
+		 */
+		editTag: () => LocalizedString
+		/**
+		 * New Tag
+		 */
+		newTag: () => LocalizedString
+		/**
+		 * Label *
+		 */
+		label: () => LocalizedString
+		/**
+		 * Color *
+		 */
+		color: () => LocalizedString
+		/**
+		 * Description
+		 */
+		description: () => LocalizedString
+		/**
+		 * Tag label
+		 */
+		tagLabelPlaceholder: () => LocalizedString
+		/**
+		 * e.g., Bug, Question
+		 */
+		tagLabelEditPlaceholder: () => LocalizedString
+		/**
+		 * Optional description for this tag
+		 */
+		descriptionPlaceholder: () => LocalizedString
+		/**
+		 * Tag label is required
+		 */
+		labelRequired: () => LocalizedString
+		/**
+		 * Tag created successfully
+		 */
+		createSuccess: () => LocalizedString
+		/**
+		 * Tag updated successfully
+		 */
+		updateSuccess: () => LocalizedString
+		/**
+		 * Tag deleted successfully
+		 */
+		deleteSuccess: () => LocalizedString
+		/**
+		 * No tags created yet
+		 */
+		noTags: () => LocalizedString
+		/**
+		 * Edit tag
+		 */
+		editAriaLabel: () => LocalizedString
+		/**
+		 * Delete?
+		 */
+		deleteConfirm: () => LocalizedString
+		/**
+		 * Choose color for tag
+		 */
+		chooseColor: () => LocalizedString
+		/**
+		 * Choose color for new tag
+		 */
+		chooseColorNew: () => LocalizedString
+	}
+	passwordReset: {
+		/**
+		 * Reset Password
+		 */
+		requestTitle: () => LocalizedString
+		/**
+		 * Enter your email address and we'll send you a link to reset your password.
+		 */
+		requestDescription: () => LocalizedString
+		/**
+		 * Email
+		 */
+		emailLabel: () => LocalizedString
+		/**
+		 * Send Reset Link
+		 */
+		sendResetLink: () => LocalizedString
+		/**
+		 * Password reset email sent! Please check your inbox for further instructions.
+		 */
+		resetSent: () => LocalizedString
+		/**
+		 * Failed to send reset email
+		 */
+		resetFailed: () => LocalizedString
+		/**
+		 * Set New Password
+		 */
+		setNewPassword: () => LocalizedString
+		/**
+		 * Enter your new password below.
+		 */
+		setNewPasswordDescription: () => LocalizedString
+		/**
+		 * New Password
+		 */
+		newPasswordLabel: () => LocalizedString
+		/**
+		 * Confirm Password
+		 */
+		confirmPasswordLabel: () => LocalizedString
+		/**
+		 * Reset Password
+		 */
+		resetButton: () => LocalizedString
+		/**
+		 * Passwords do not match
+		 */
+		passwordsDoNotMatch: () => LocalizedString
+		/**
+		 * Password must be at least 8 characters
+		 */
+		passwordMinLength: () => LocalizedString
+		/**
+		 * Failed to reset password. The link may be expired or invalid.
+		 */
+		resetFailedExpired: () => LocalizedString
+		/**
+		 * Back to Login
+		 */
+		backToLogin: () => LocalizedString
+		/**
+		 * Password reset successful! You can now log in with your new password.
+		 */
+		resetSuccess: () => LocalizedString
+	}
+	loginPage: {
+		/**
+		 * Login
+		 */
+		loginTab: () => LocalizedString
+		/**
+		 * Register
+		 */
+		registerTab: () => LocalizedString
+	}
+	comments: {
+		/**
+		 * Select text in the PDF to add a comment
+		 */
+		selectTextHint: () => LocalizedString
+		/**
+		 * Edit your comment...
+		 */
+		editPlaceholder: () => LocalizedString
+		/**
+		 * Write a reply...
+		 */
+		replyPlaceholder: () => LocalizedString
+		/**
+		 * Sending...
+		 */
+		sending: () => LocalizedString
+		/**
+		 * Delete?
+		 */
+		deleteConfirm: () => LocalizedString
+		/**
+		 * Confirm Delete
+		 */
+		confirmDelete: () => LocalizedString
+		/**
+		 * Add reaction
+		 */
+		addReaction: () => LocalizedString
+		/**
+		 * Remove reaction
+		 */
+		removeReaction: () => LocalizedString
+		/**
+		 * {count} repl{{y|ies}}
+		 */
+		nReplies: (arg: { count: number }) => LocalizedString
+		/**
+		 * {count} more repl{{y|ies}}
+		 */
+		nMoreReplies: (arg: { count: number }) => LocalizedString
+		/**
+		 * {count} point{{s}}
+		 */
+		nPoints: (arg: { count: number }) => LocalizedString
+		visibility: {
+			/**
+			 * Select comment visibility
+			 */
+			select: () => LocalizedString
+			/**
+			 * Comment visibility: {level}
+			 */
+			current: (arg: { level: string }) => LocalizedString
+			'public': {
+				/**
+				 * Public - Everyone
+				 */
+				label: () => LocalizedString
+				/**
+				 * All members that can view the document can see this comment
+				 */
+				description: () => LocalizedString
+			}
+			restricted: {
+				/**
+				 * Restricted - Group Managers
+				 */
+				label: () => LocalizedString
+				/**
+				 * Only you and group managers can see this comment
+				 */
+				description: () => LocalizedString
+			}
+			'private': {
+				/**
+				 * Private - Only you
+				 */
+				label: () => LocalizedString
+				/**
+				 * Only you can see this comment
+				 */
+				description: () => LocalizedString
+			}
+		}
+	}
+	pdf: {
+		/**
+		 * Zoom In
+		 */
+		zoomIn: () => LocalizedString
+		/**
+		 * Zoom Out
+		 */
+		zoomOut: () => LocalizedString
+		/**
+		 * Fit Height
+		 */
+		fitHeight: () => LocalizedString
+		/**
+		 * Previous Page
+		 */
+		previousPage: () => LocalizedString
+		/**
+		 * Next Page
+		 */
+		nextPage: () => LocalizedString
+		/**
+		 * Expand
+		 */
+		expand: () => LocalizedString
+		/**
+		 * Share My Cursor
+		 */
+		shareCursor: () => LocalizedString
+		/**
+		 * Show Other Cursors
+		 */
+		showOtherCursors: () => LocalizedString
+		/**
+		 * Filters & Pins
+		 */
+		filtersAndPins: () => LocalizedString
+		/**
+		 * Clear All Filters
+		 */
+		clearAllFilters: () => LocalizedString
+		/**
+		 * Pin all comments
+		 */
+		pinAllComments: () => LocalizedString
+		/**
+		 * Unpin all comments
+		 */
+		unpinAllComments: () => LocalizedString
+		/**
+		 * Active Users
+		 */
+		activeUsers: () => LocalizedString
+		/**
+		 * Offline Users
+		 */
+		offlineUsers: () => LocalizedString
+		/**
+		 * No other users viewing
+		 */
+		noOtherUsers: () => LocalizedString
+		/**
+		 * (You)
+		 */
+		you: () => LocalizedString
+		viewMode: {
+			/**
+			 * View Mode
+			 */
+			label: () => LocalizedString
+			/**
+			 * In Restricted Mode members without permission will not see other comments and cursor sharing is disabled. In Public Mode comments are visible based on their individual visibility settings.
+			 */
+			tooltip: () => LocalizedString
+			/**
+			 * Restricted
+			 */
+			restricted: () => LocalizedString
+			/**
+			 * Restricted - Owner, admins & users with permission see comments
+			 */
+			restrictedDescription: () => LocalizedString
+			/**
+			 * Public
+			 */
+			'public': () => LocalizedString
+			/**
+			 * Public - Comments visible based on their visibility settings
+			 */
+			publicDescription: () => LocalizedString
+		}
+		/**
+		 * Document Information
+		 */
+		documentInfo: () => LocalizedString
+		/**
+		 * Pinned
+		 */
+		pinned: () => LocalizedString
+		/**
+		 * All
+		 */
+		all: () => LocalizedString
+		/**
+		 * No pinned comments
+		 */
+		noPinnedComments: () => LocalizedString
+		/**
+		 * No comments
+		 */
+		noComments: () => LocalizedString
+		/**
+		 * Expand comments
+		 */
+		expandComments: () => LocalizedString
+		/**
+		 * Collapse comments
+		 */
+		collapseComments: () => LocalizedString
+	}
+	memberScore: {
+		/**
+		 * Back to Members
+		 */
+		backToMembers: () => LocalizedString
+		/**
+		 * Owner
+		 */
+		owner: () => LocalizedString
+		/**
+		 * Admin
+		 */
+		admin: () => LocalizedString
+		/**
+		 * Score
+		 */
+		scoreTitle: () => LocalizedString
+		/**
+		 * Updated {time}
+		 */
+		updatedAgo: (arg: { time: string }) => LocalizedString
+		/**
+		 * All Documents
+		 */
+		allDocuments: () => LocalizedString
+		/**
+		 * Show point system
+		 */
+		showPointSystem: () => LocalizedString
+		/**
+		 * Hide point system
+		 */
+		hidePointSystem: () => LocalizedString
+		/**
+		 * How points are earned
+		 */
+		howPointsEarned: () => LocalizedString
+		/**
+		 * Total Score
+		 */
+		totalScore: () => LocalizedString
+		/**
+		 * across {count} document{{s}}
+		 */
+		acrossDocuments: (arg: { count: number }) => LocalizedString
+		/**
+		 * Highlights
+		 */
+		highlights: () => LocalizedString
+		/**
+		 * Reactions
+		 */
+		reactions: () => LocalizedString
+		/**
+		 * {count} received
+		 */
+		received: (arg: { count: number }) => LocalizedString
+		/**
+		 * {count} given
+		 */
+		given: (arg: { count: number }) => LocalizedString
+		/**
+		 * just now
+		 */
+		justNow: () => LocalizedString
+		/**
+		 * 1 min ago
+		 */
+		oneMinAgo: () => LocalizedString
+		/**
+		 * {count} min ago
+		 */
+		nMinAgo: (arg: { count: number }) => LocalizedString
+	}
+	relativeTime: {
+		/**
+		 * Never
+		 */
+		never: () => LocalizedString
+		/**
+		 * Just now
+		 */
+		justNow: () => LocalizedString
+		/**
+		 * {count} minute{{s}} ago
+		 */
+		nMinutesAgo: (arg: { count: number }) => LocalizedString
+		/**
+		 * {count} hour{{s}} ago
+		 */
+		nHoursAgo: (arg: { count: number }) => LocalizedString
+		/**
+		 * {count} day{{s}} ago
+		 */
+		nDaysAgo: (arg: { count: number }) => LocalizedString
+	}
+	footer: {
+		/**
+		 * Enable Dark Mode
+		 */
+		enableDarkMode: () => LocalizedString
+		/**
+		 * Enable Light Mode
+		 */
+		enableLightMode: () => LocalizedString
+		/**
+		 * Change Language
+		 */
+		changeLanguage: () => LocalizedString
 	}
 }
 
