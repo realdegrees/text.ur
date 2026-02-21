@@ -12,7 +12,7 @@ from sqlalchemy.sql.elements import ColumnElement
 from sqlmodel import Field, Relationship, func, select
 
 from models.base import BaseModel
-from models.enums import Emoji, Permission, ReactionType, ViewMode, Visibility
+from models.enums import Emoji, Permission, ViewMode, Visibility
 
 # TABLES
 
@@ -223,7 +223,7 @@ class GroupReaction(BaseModel, table=True):
 
     id: int = Field(default=None, primary_key=True)
     group_id: str = Field(foreign_key="group.id", ondelete="CASCADE")
-    emoji: Emoji = Field(sa_column=Column(String))
+    emoji: Emoji = Field(sa_column=Column(String, nullable=False))
     points: int = Field(default=2)
     admin_points: int = Field(default=4)
     giver_points: int = Field(default=2)

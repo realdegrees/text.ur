@@ -23,30 +23,14 @@ router = APIRouter(
 )
 
 
-# region ScoreConfig
-
-
-@router.get("/score-config", response_model=ScoreConfigRead)
-async def get_score_config(
+async def _build_score_config_read(
     db: Database,
-    _: User = Authenticate([]),
-    group: Group = Resource(Group, param_alias="group_id"),
+    config: ScoreConfig,
 ) -> ScoreConfigRead:
-    """Get the scoring configuration for a group."""
-    result = await db.exec(
-        select(ScoreConfig).where(ScoreConfig.group_id == group.id)
-    )
-    config = result.first()
-    if config is None:
-        raise AppException(
-            status_code=404,
-            error_code=AppErrorCode.UNKNOWN_ERROR,
-            detail="Score configuration not found",
-        )
-
+    """Build a full ScoreConfigRead including the group's reactions."""
     result = await db.exec(
         select(GroupReaction)
-        .where(GroupReaction.group_id == group.id)
+        .where(GroupReaction.group_id == config.group_id)
         .order_by(GroupReaction.order)
     )
     reactions = result.all()
@@ -58,6 +42,30 @@ async def get_score_config(
         tag_points=config.tag_points,
         reactions=[GroupReactionRead.model_validate(r) for r in reactions],
     )
+
+
+# region ScoreConfig
+
+
+@router.get("/score-config", response_model=ScoreConfigRead)
+async def get_score_config(
+    db: Database,
+    _: User = Authenticate([Guard.group_access()]),
+    group: Group = Resource(Group, param_alias="group_id"),
+) -> ScoreConfigRead:
+    """Get the scoring configuration for a group."""
+    result = await db.exec(
+        select(ScoreConfig).where(ScoreConfig.group_id == group.id)
+    )
+    config = result.first()
+    if config is None:
+        raise AppException(
+            status_code=404,
+            error_code=AppErrorCode.NOT_FOUND,
+            detail="Score configuration not found",
+        )
+
+    return await _build_score_config_read(db, config)
 
 
 @router.patch("/score-config", response_model=ScoreConfigRead)
@@ -80,7 +88,7 @@ async def update_score_config(
     if config is None:
         raise AppException(
             status_code=404,
-            error_code=AppErrorCode.UNKNOWN_ERROR,
+            error_code=AppErrorCode.NOT_FOUND,
             detail="Score configuration not found",
         )
 
@@ -91,21 +99,7 @@ async def update_score_config(
 
     await invalidate_group_scores(group.id)
 
-    # Return full config with reactions
-    result = await db.exec(
-        select(GroupReaction)
-        .where(GroupReaction.group_id == group.id)
-        .order_by(GroupReaction.order)
-    )
-    reactions = result.all()
-
-    return ScoreConfigRead(
-        group_id=config.group_id,
-        highlight_points=config.highlight_points,
-        comment_points=config.comment_points,
-        tag_points=config.tag_points,
-        reactions=[GroupReactionRead.model_validate(r) for r in reactions],
-    )
+    return await _build_score_config_read(db, config)
 
 
 # endregion
@@ -116,7 +110,7 @@ async def update_score_config(
 @router.get("/reactions", response_model=list[GroupReactionRead])
 async def list_group_reactions(
     db: Database,
-    _: User = Authenticate([]),
+    _: User = Authenticate([Guard.group_access()]),
     group: Group = Resource(Group, param_alias="group_id"),
 ) -> list[GroupReactionRead]:
     """List all available reaction emojis for a group."""
@@ -187,7 +181,7 @@ async def update_group_reaction(
     if reaction is None:
         raise AppException(
             status_code=404,
-            error_code=AppErrorCode.UNKNOWN_ERROR,
+            error_code=AppErrorCode.NOT_FOUND,
             detail="Group reaction not found",
         )
 
@@ -226,7 +220,7 @@ async def delete_group_reaction(
     if reaction is None:
         raise AppException(
             status_code=404,
-            error_code=AppErrorCode.UNKNOWN_ERROR,
+            error_code=AppErrorCode.NOT_FOUND,
             detail="Group reaction not found",
         )
 

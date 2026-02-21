@@ -28,14 +28,14 @@
 	let { data } = $props();
 	let group = $derived(data.membership.group);
 	let isOwner = $derived(sessionStore.routeMembership?.is_owner);
-	let defaultPermissions: Permission[] = $derived(group.default_permissions || []);
+	let defaultPermissions: Permission[] = $state(data.membership.group.default_permissions || []);
 
 	let transferUsername: string = $state('');
 	let selectedTransferUser: UserRead | undefined = $state(undefined);
 	let showDeleteConfirm: boolean = $state(false);
 	let showTransferConfirm: boolean = $state(false);
 	let deleteConfirmText: string = $state('');
-	let editableGroupName: string = $derived(group.name);
+	let editableGroupName: string = $state(data.membership.group.name);
 
 	// --- Scoring config state ---
 	let scoreConfig = $state<ScoreConfigRead | null>(data.scoreConfig ?? null);
@@ -53,8 +53,9 @@
 	let showEmojiPicker = $state(false);
 	let addingReaction = $state(false);
 
-	// Editing reaction state
+	// Editing/deleting reaction state
 	let editingReactionId = $state<number | null>(null);
+	let confirmDeleteReactionId = $state<number | null>(null);
 	let editPoints = $state(0);
 	let editAdminPoints = $state(0);
 	let editGiverPoints = $state(0);
@@ -102,21 +103,27 @@
 
 	async function handleSaveScoreConfig(): Promise<void> {
 		scoreSaving = true;
-		const updateData: ScoreConfigUpdate = {
-			highlight_points: highlightPoints,
-			comment_points: commentPoints,
-			tag_points: tagPoints
-		};
+		try {
+			const updateData: ScoreConfigUpdate = {
+				highlight_points: highlightPoints,
+				comment_points: commentPoints,
+				tag_points: tagPoints
+			};
 
-		const result = await api.patch<ScoreConfigRead>(`/groups/${group.id}/score-config`, updateData);
+			const result = await api.patch<ScoreConfigRead>(
+				`/groups/${group.id}/score-config`,
+				updateData
+			);
 
-		if (result.success) {
-			scoreConfig = result.data;
-			notification('success', 'Scoring configuration updated');
-		} else {
-			notification(result.error);
+			if (result.success) {
+				scoreConfig = result.data;
+				notification('success', 'Scoring configuration updated');
+			} else {
+				notification(result.error);
+			}
+		} finally {
+			scoreSaving = false;
 		}
-		scoreSaving = false;
 	}
 
 	async function handleAddReaction(emoji: Emoji): Promise<void> {
@@ -328,6 +335,7 @@
 									<td class="py-2 text-right">
 										<input
 											type="number"
+											min="0"
 											bind:value={highlightPoints}
 											class="w-20 rounded border border-text/20 bg-text/5 px-2 py-1 text-right text-sm transition-colors focus:border-text/50 focus:outline-none"
 										/>
@@ -338,6 +346,7 @@
 									<td class="py-2 text-right">
 										<input
 											type="number"
+											min="0"
 											bind:value={commentPoints}
 											class="w-20 rounded border border-text/20 bg-text/5 px-2 py-1 text-right text-sm transition-colors focus:border-text/50 focus:outline-none"
 										/>
@@ -348,6 +357,7 @@
 									<td class="py-2 text-right">
 										<input
 											type="number"
+											min="0"
 											bind:value={tagPoints}
 											class="w-20 rounded border border-text/20 bg-text/5 px-2 py-1 text-right text-sm transition-colors focus:border-text/50 focus:outline-none"
 										/>
@@ -436,22 +446,47 @@
 												<td class="py-2 text-right text-text/70">{reaction.admin_points}</td>
 												<td class="py-2 text-right text-text/70">{reaction.giver_points}</td>
 												<td class="py-2 text-right">
-													<div class="flex justify-end gap-1">
-														<button
-															type="button"
-															onclick={() => startEditReaction(reaction)}
-															class="rounded px-2 py-1 text-xs text-text/50 transition hover:bg-text/10 hover:text-text/80"
-														>
-															Edit
-														</button>
-														<button
-															type="button"
-															onclick={() => handleDeleteReaction(reaction.id)}
-															class="rounded px-2 py-1 text-xs text-red-400/70 transition hover:bg-red-500/10 hover:text-red-400"
-														>
-															Remove
-														</button>
-													</div>
+													{#if confirmDeleteReactionId === reaction.id}
+														<div class="flex items-center justify-end gap-1">
+															<span class="text-xs text-red-400/80"
+																>Deletes all existing reactions</span
+															>
+															<button
+																type="button"
+																onclick={() => {
+																	handleDeleteReaction(reaction.id);
+																	confirmDeleteReactionId = null;
+																}}
+																class="rounded bg-red-500/20 px-2 py-1 text-xs text-red-400 transition hover:bg-red-500/30"
+															>
+																Confirm
+															</button>
+															<button
+																type="button"
+																onclick={() => (confirmDeleteReactionId = null)}
+																class="rounded bg-text/10 px-2 py-1 text-xs transition hover:bg-text/20"
+															>
+																Cancel
+															</button>
+														</div>
+													{:else}
+														<div class="flex justify-end gap-1">
+															<button
+																type="button"
+																onclick={() => startEditReaction(reaction)}
+																class="rounded px-2 py-1 text-xs text-text/50 transition hover:bg-text/10 hover:text-text/80"
+															>
+																Edit
+															</button>
+															<button
+																type="button"
+																onclick={() => (confirmDeleteReactionId = reaction.id)}
+																class="rounded px-2 py-1 text-xs text-red-400/70 transition hover:bg-red-500/10 hover:text-red-400"
+															>
+																Remove
+															</button>
+														</div>
+													{/if}
 												</td>
 											</tr>
 										{/if}

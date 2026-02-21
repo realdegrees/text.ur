@@ -5,8 +5,6 @@ from typing import TYPE_CHECKING
 
 from sqlmodel import Field, SQLModel
 
-from models.enums import Emoji
-
 if TYPE_CHECKING:
     from models.reaction import GroupReactionRead
 
@@ -61,6 +59,6 @@ class ScoreConfigRead(SQLModel):
 class ScoreConfigUpdate(SQLModel):
     """Update schema for per-group scoring configuration."""
 
-    highlight_points: int | None = None
-    comment_points: int | None = None
-    tag_points: int | None = None
+    highlight_points: int | None = Field(default=None, ge=0)
+    comment_points: int | None = Field(default=None, ge=0)
+    tag_points: int | None = Field(default=None, ge=0)

@@ -3,7 +3,7 @@
 from typing import TYPE_CHECKING, Any
 
 from pydantic import model_validator
-from sqlmodel import SQLModel
+from sqlmodel import Field, SQLModel
 
 from models.enums import Emoji
 
@@ -58,16 +58,6 @@ DEFAULT_REACTIONS: list[dict] = [
     },
 ]
 
-# Mapping from old ReactionType string values to Emoji for migration.
-OLD_TYPE_TO_EMOJI: dict[str, Emoji] = {
-    "thumbs_up": Emoji.THUMBS_UP,
-    "smile": Emoji.SMILE,
-    "heart": Emoji.HEART,
-    "fire": Emoji.FIRE,
-    "pinch": Emoji.PINCH,
-    "nerd": Emoji.NERD,
-}
-
 # =========================
 
 
@@ -116,7 +106,7 @@ class GroupReactionCreate(SQLModel):
     points: int = 2
     admin_points: int = 4
     giver_points: int = 2
-    order: int = 0
+    order: int = Field(default=0, ge=0)
 
 
 class GroupReactionUpdate(SQLModel):
@@ -125,7 +115,7 @@ class GroupReactionUpdate(SQLModel):
     points: int | None = None
     admin_points: int | None = None
     giver_points: int | None = None
-    order: int | None = None
+    order: int | None = Field(default=None, ge=0)
 
 
 class GroupReactionRead(SQLModel):

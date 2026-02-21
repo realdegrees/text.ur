@@ -2,6 +2,7 @@
 	import type { PageData } from './$types';
 	import type { ScoreRead, DocumentRead, ScoreConfigRead } from '$api/types';
 	import { api } from '$api/client';
+	import { notification } from '$lib/stores/notificationStore';
 	import BackIcon from '~icons/material-symbols/arrow-back';
 	import PersonIcon from '~icons/material-symbols/person-outline';
 	import CrownIcon from '~icons/material-symbols/crown-outline';
@@ -63,15 +64,20 @@
 
 	async function fetchScore(documentId: string | null) {
 		loading = true;
-		const url = documentId
-			? `/groups/${$page.params.groupid}/memberships/${$page.params.userid}/score?document_id=${documentId}`
-			: `/groups/${$page.params.groupid}/memberships/${$page.params.userid}/score`;
+		try {
+			const url = documentId
+				? `/groups/${$page.params.groupid}/memberships/${$page.params.userid}/score?document_id=${documentId}`
+				: `/groups/${$page.params.groupid}/memberships/${$page.params.userid}/score`;
 
-		const result = await api.get<ScoreRead>(url);
-		if (result.success) {
-			score = result.data;
+			const result = await api.get<ScoreRead>(url);
+			if (result.success) {
+				score = result.data;
+			} else {
+				notification(result.error);
+			}
+		} finally {
+			loading = false;
 		}
-		loading = false;
 	}
 
 	function handleDocumentChange(event: Event) {

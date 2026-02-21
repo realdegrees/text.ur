@@ -57,6 +57,13 @@
 		});
 	};
 
+	// Cancel any pending rAF when the component is destroyed
+	$effect(() => {
+		return () => {
+			if (closeRafId !== null) cancelAnimationFrame(closeRafId);
+		};
+	});
+
 	// Svelte action wrapper that creates preciseHover params for a badge.
 	// The action receives the DOM node directly from `use:`, so we can
 	// read getBoundingClientRect inside onEnter.

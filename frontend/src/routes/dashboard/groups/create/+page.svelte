@@ -47,6 +47,7 @@
 			return;
 		}
 
+		errorMessage = '';
 		isLoading = true;
 
 		const result = await api.post<GroupRead>('/groups', {

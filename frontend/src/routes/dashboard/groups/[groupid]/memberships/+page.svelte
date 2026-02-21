@@ -55,15 +55,20 @@
 				const result = await api.get<ScoreRead>(`/groups/${group.id}/memberships/${userId}/score`);
 				if (result.success) {
 					scores.set(userId, result.data.total);
+				} else {
+					notification(result.error);
 				}
 			})
-		);
+		).catch(() => {
+			// Individual errors are already handled above;
+			// this prevents unhandled promise rejections.
+		});
 	});
 
 	const availablePermissions = permissionSchema.options.map((p) => p.value);
 
 	// Calculate permissions that should be excluded from bulk actions
-	const bulkExcludedPermissions = $derived(() => {
+	const bulkExcludedPermissions = $derived.by(() => {
 		const excluded = new SvelteSet<Permission>(group.default_permissions);
 		// Add sharelink permissions from all selected memberships
 		selected.forEach((m) => {
@@ -75,7 +80,7 @@
 	});
 
 	const availableForBulkAdd = $derived(
-		availablePermissions.filter((p) => !bulkExcludedPermissions().includes(p))
+		availablePermissions.filter((p) => !bulkExcludedPermissions.includes(p))
 	);
 
 	function handleSelectionChange(memberships: Omit<MembershipRead, 'group'>[]) {

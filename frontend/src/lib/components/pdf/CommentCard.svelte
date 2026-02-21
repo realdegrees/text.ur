@@ -232,15 +232,6 @@
 			hasQuoteOverflow = quoteRef.scrollHeight > quoteRef.clientHeight;
 		}
 	});
-
-	// $effect(() => {
-	// 	if (commentState?.replyInputContent !== replyContent)
-	// 		documentStore.comments.setReplyInputContent(comment.id, replyContent);
-	// });
-	// $effect(() => {
-	// 	if (commentState?.editInputContent !== editContent)
-	// 		documentStore.comments.setEditInputContent(comment.id, editContent);
-	// });
 </script>
 
 {#snippet actionButtons()}

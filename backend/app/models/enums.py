@@ -128,6 +128,9 @@ class AppErrorCode(StrEnum):
     CANNOT_REMOVE_PERMISSION_REASON_DEFAULT_GROUP = "cannot_remove_permission_reason_default_group"  # use when trying to remove a permission that is included in the group's default permission reason
     CANNOT_REMOVE_PERMISSION_REASON_SHARELINK = "cannot_remove_permission_reason_sharelink"  # use when trying to remove a permission that is included in the related sharelink's permission reason
     
+    # Resource Not Found
+    NOT_FOUND = "not_found"  # use when a requested resource does not exist
+
     # Reactions
     SELF_REACTION = "self_reaction"  # use when a user tries to react to their own comment
     REPLY_REACTION = "reply_reaction"  # use when a user tries to react to a reply (only root comments allowed)

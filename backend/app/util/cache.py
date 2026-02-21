@@ -1,7 +1,6 @@
 """Redis-based cache utility for expensive query results."""
 
 import json
-from datetime import UTC, datetime
 from functools import lru_cache
 from typing import Any
 from urllib.parse import quote
