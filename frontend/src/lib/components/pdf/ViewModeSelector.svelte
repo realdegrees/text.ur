@@ -68,9 +68,7 @@
 		<span class="flex flex-row items-center justify-between px-1 text-[10px] text-text/40">
 			{$LL.pdf.viewMode.label()}
 			{#if canChangeViewMode}
-				<div
-					title={$LL.pdf.viewMode.tooltip()}
-				>
+				<div title={$LL.pdf.viewMode.tooltip()}>
 					<QuestionMarkIcon
 						class="ml-1 h-3.5 w-3.5 text-text/40 transition-colors hover:text-text"
 					/>

@@ -58,8 +58,8 @@
 		);
 
 		if (!result.success) {
-		notification(result.error);
-		return undefined;
+			notification(result.error);
+			return undefined;
 		}
 
 		return result.data;
@@ -74,11 +74,11 @@
 		const result = await api.update(`/groups/${groupId}/memberships/accept`, {});
 
 		if (!result.success) {
-		notification(result.error);
-		return;
-	}
+			notification(result.error);
+			return;
+		}
 
-	notification('success', $LL.memberships.invitationAccepted());
+		notification('success', $LL.memberships.invitationAccepted());
 		window.location.reload();
 	}
 
@@ -91,11 +91,11 @@
 		const result = await api.delete(`/groups/${groupId}/memberships/reject`);
 
 		if (!result.success) {
-		notification(result.error);
-		return;
-	}
+			notification(result.error);
+			return;
+		}
 
-	notification('success', $LL.memberships.invitationRejected());
+		notification('success', $LL.memberships.invitationRejected());
 		window.location.reload();
 	}
 
@@ -146,7 +146,7 @@
 						<!-- Member count -->
 						<div
 							class="flex items-center gap-1"
-						title={$LL.memberships.memberCount({ count: membership.group.member_count })}
+							title={$LL.memberships.memberCount({ count: membership.group.member_count })}
 						>
 							<PeopleIcon class="h-4 w-4" />
 							<span>{membership.group.member_count}</span>
@@ -203,9 +203,7 @@
 					</button>
 					<button
 						onclick={(e) => {
-							if (
-							confirm($LL.memberships.rejectConfirm())
-							) {
+							if (confirm($LL.memberships.rejectConfirm())) {
 								rejectInvitation(invitation.group.id, e);
 							}
 						}}

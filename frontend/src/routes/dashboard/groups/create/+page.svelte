@@ -6,7 +6,7 @@
 	import { api } from '$api/client';
 	import { notification } from '$lib/stores/notificationStore';
 	import PermissionSelector from '$lib/components/permissionSelector.svelte';
-	import { goto, invalidateAll } from '$app/navigation';
+	import { goto, invalidate } from '$app/navigation';
 	import LL from '$i18n/i18n-svelte';
 
 	let groupName: string = $state('');
@@ -70,7 +70,7 @@
 
 		isLoading = false;
 
-		await invalidateAll();
+		await invalidate('app:memberships');
 		goto(`/dashboard/groups/${result.data.id}/documents`);
 	}
 </script>
@@ -78,7 +78,9 @@
 <div class="flex h-full w-full flex-col gap-4 p-6">
 	<!-- Header Section -->
 	<div class="flex flex-row items-center gap-3">
-		<a href="/dashboard" class="text-text/70 transition-colors hover:text-text">{$LL.dashboard.title()}</a>
+		<a href="/dashboard" class="text-text/70 transition-colors hover:text-text"
+			>{$LL.dashboard.title()}</a
+		>
 		<span class="text-text/50">/</span>
 		<h1 class="text-2xl font-bold">{$LL.groupCreate.title()}</h1>
 	</div>
@@ -103,7 +105,9 @@
 				<h2 class="text-xl font-semibold">{$LL.groupCreate.groupDetails()}</h2>
 			</div>
 
-			<label for="groupName" class="text-sm font-semibold text-text/70">{$LL.groupCreate.groupNameLabel()}</label>
+			<label for="groupName" class="text-sm font-semibold text-text/70"
+				>{$LL.groupCreate.groupNameLabel()}</label
+			>
 			<input
 				id="groupName"
 				type="text"
@@ -119,10 +123,10 @@
 
 		<!-- Default Permissions -->
 		<div class="flex flex-col gap-3">
-		<h2 class="text-xl font-semibold">{$LL.groupCreate.defaultPermissions.title()}</h2>
-		<p class="text-sm text-text/70">
-			{$LL.groupCreate.defaultPermissions.description()}
-		</p>
+			<h2 class="text-xl font-semibold">{$LL.groupCreate.defaultPermissions.title()}</h2>
+			<p class="text-sm text-text/70">
+				{$LL.groupCreate.defaultPermissions.description()}
+			</p>
 
 			<PermissionSelector
 				bind:selectedPermissions
@@ -136,10 +140,10 @@
 
 		<!-- Scoring Configuration (read-only preview) -->
 		<div class="flex flex-col gap-3">
-		<h2 class="text-xl font-semibold">{$LL.groupCreate.scoring.title()}</h2>
-		<p class="text-sm text-text/70">
-			{$LL.groupCreate.scoring.description()}
-		</p>
+			<h2 class="text-xl font-semibold">{$LL.groupCreate.scoring.title()}</h2>
+			<p class="text-sm text-text/70">
+				{$LL.groupCreate.scoring.description()}
+			</p>
 
 			<!-- Side-by-side tables -->
 			<div class="flex flex-col items-start gap-6 text-sm lg:flex-row">
@@ -148,8 +152,10 @@
 					<table class="w-full">
 						<thead>
 							<tr class="border-b border-text/10 text-left text-xs text-text/50">
-							<th class="pb-2 font-medium">{$LL.groupSettings.scoring.action()}</th>
-							<th class="pb-2 text-right font-medium">{$LL.groupSettings.scoring.pointsHeader()}</th>
+								<th class="pb-2 font-medium">{$LL.groupSettings.scoring.action()}</th>
+								<th class="pb-2 text-right font-medium"
+									>{$LL.groupSettings.scoring.pointsHeader()}</th
+								>
 							</tr>
 						</thead>
 						<tbody>
@@ -168,10 +174,10 @@
 					<table class="w-full">
 						<thead>
 							<tr class="border-b border-text/10 text-left text-xs text-text/50">
-							<th class="pb-2 font-medium">{$LL.groupSettings.scoring.emoji()}</th>
-							<th class="pb-2 text-right font-medium">{$LL.groupSettings.scoring.received()}</th>
-							<th class="pb-2 text-right font-medium">{$LL.groupSettings.scoring.fromAdmin()}</th>
-							<th class="pb-2 text-right font-medium">{$LL.groupSettings.scoring.giver()}</th>
+								<th class="pb-2 font-medium">{$LL.groupSettings.scoring.emoji()}</th>
+								<th class="pb-2 text-right font-medium">{$LL.groupSettings.scoring.received()}</th>
+								<th class="pb-2 text-right font-medium">{$LL.groupSettings.scoring.fromAdmin()}</th>
+								<th class="pb-2 text-right font-medium">{$LL.groupSettings.scoring.giver()}</th>
 							</tr>
 						</thead>
 						<tbody>
@@ -194,8 +200,8 @@
 		<!-- Submit Button -->
 		<div class="flex flex-row justify-end gap-2">
 			<a href="/dashboard" class="rounded-md bg-text/10 px-6 py-2 transition-all hover:bg-text/20">
-			{$LL.cancel()}
-		</a>
+				{$LL.cancel()}
+			</a>
 			<button
 				type="submit"
 				disabled={isLoading || !groupName.trim()}

@@ -2,7 +2,7 @@
 	import AddIcon from '~icons/material-symbols/add-2-rounded';
 	import { api } from '$api/client';
 	import { notification } from '$lib/stores/notificationStore';
-	import { invalidateAll } from '$app/navigation';
+	import { invalidate } from '$app/navigation';
 	import LL from '$i18n/i18n-svelte';
 	import type {
 		ShareLinkCreate as ShareLinkCreateData,
@@ -75,7 +75,7 @@
 		if (result.success) {
 			notification('success', $LL.sharelinks.created());
 			resetCreateForm();
-			await invalidateAll();
+			await invalidate('app:sharelinks');
 		} else {
 			notification(result.error);
 		}
@@ -95,7 +95,7 @@
 		if (result.success) {
 			notification('success', $LL.sharelinks.updated());
 			cancelEdit();
-			await invalidateAll();
+			await invalidate('app:sharelinks');
 		} else {
 			notification(result.error);
 		}
@@ -110,7 +110,7 @@
 
 		if (result.success) {
 			notification('success', $LL.sharelinks.rotated());
-			await invalidateAll();
+			await invalidate('app:sharelinks');
 		} else {
 			notification(result.error);
 		}
@@ -124,7 +124,7 @@
 
 		if (result.success) {
 			notification('success', $LL.sharelinks.deleted());
-			await invalidateAll();
+			await invalidate('app:sharelinks');
 		} else {
 			notification(result.error);
 		}

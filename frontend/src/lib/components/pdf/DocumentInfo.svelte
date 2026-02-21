@@ -25,10 +25,10 @@
 		const diffHours = Math.floor(diffMs / 3600000);
 		const diffDays = Math.floor(diffMs / 86400000);
 
-	if (diffMins < 1) return $LL.relativeTime.justNow();
-	if (diffMins < 60) return $LL.relativeTime.nMinutesAgo({ count: diffMins });
-	if (diffHours < 24) return $LL.relativeTime.nHoursAgo({ count: diffHours });
-	if (diffDays < 7) return $LL.relativeTime.nDaysAgo({ count: diffDays });
+		if (diffMins < 1) return $LL.relativeTime.justNow();
+		if (diffMins < 60) return $LL.relativeTime.nMinutesAgo({ count: diffMins });
+		if (diffHours < 24) return $LL.relativeTime.nHoursAgo({ count: diffHours });
+		if (diffDays < 7) return $LL.relativeTime.nDaysAgo({ count: diffDays });
 
 		return date.toLocaleDateString('en-US', {
 			year: 'numeric',

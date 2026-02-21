@@ -1317,6 +1317,19 @@ type RootTranslation = {
 		 */
 		expires: RequiredParams<'date'>
 		/**
+		 * E​x​p​i​r​e​d
+		 */
+		expired: string
+		/**
+		 * E​x​p​i​r​e​d​:​ ​{​d​a​t​e​}
+		 * @param {string} date
+		 */
+		expiredDate: RequiredParams<'date'>
+		/**
+		 * E​d​i​t​ ​t​o​ ​c​h​a​n​g​e​ ​e​x​p​i​r​y
+		 */
+		changeExpiryHint: string
+		/**
 		 * {​c​o​u​n​t​}​ ​U​s​e​r​{​{​s​}​}
 		 * @param {number} count
 		 */
@@ -3104,6 +3117,18 @@ export type TranslationFunctions = {
 		 * Expires: {date}
 		 */
 		expires: (arg: { date: string }) => LocalizedString
+		/**
+		 * Expired
+		 */
+		expired: () => LocalizedString
+		/**
+		 * Expired: {date}
+		 */
+		expiredDate: (arg: { date: string }) => LocalizedString
+		/**
+		 * Edit to change expiry
+		 */
+		changeExpiryHint: () => LocalizedString
 		/**
 		 * {count} User{{s}}
 		 */

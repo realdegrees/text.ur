@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { api } from '$api/client';
-	import { goto, invalidateAll } from '$app/navigation';
+	import { goto, invalidate } from '$app/navigation';
 	import { notification } from '$lib/stores/notificationStore';
 	import LL from '$i18n/i18n-svelte';
 	import { sessionStore } from '$lib/runes/session.svelte.js';
@@ -52,7 +52,8 @@
 		}
 
 		notification('success', $LL.documentSettings.updateSuccess());
-		await invalidateAll();
+		await invalidate('app:document');
+		await invalidate('app:documents');
 	}
 
 	function hasChanges() {
@@ -78,7 +79,7 @@
 		}
 
 		notification('success', $LL.documentSettings.danger.clearSuccess());
-		await invalidateAll();
+		await invalidate('app:document');
 	}
 </script>
 
@@ -99,7 +100,9 @@
 	<div class="flex flex-col gap-6">
 		<!-- Document Name -->
 		<div class="flex flex-col gap-2">
-			<label for="document-name" class="text-sm font-semibold text-text/70">{$LL.documents.documentName()}</label>
+			<label for="document-name" class="text-sm font-semibold text-text/70"
+				>{$LL.documents.documentName()}</label
+			>
 			<input
 				id="document-name"
 				type="text"
@@ -210,11 +213,17 @@
 							disabled={isClearing}
 						>
 							<DeleteIcon class="h-5 w-5" />
-							<span>{isClearing ? $LL.documentSettings.danger.clearing() : $LL.documentSettings.danger.clearButton()}</span>
+							<span
+								>{isClearing
+									? $LL.documentSettings.danger.clearing()
+									: $LL.documentSettings.danger.clearButton()}</span
+							>
 						</button>
 					{/snippet}
 					{#snippet slideout()}
-						<div class="rounded-md bg-red-500/10 px-3 py-2 text-red-500">{$LL.documentSettings.danger.confirmClear()}</div>
+						<div class="rounded-md bg-red-500/10 px-3 py-2 text-red-500">
+							{$LL.documentSettings.danger.confirmClear()}
+						</div>
 					{/snippet}
 				</ConfirmButton>
 			</div>

@@ -177,7 +177,7 @@ class Guard:
         return EndpointGuard(clause, predicate)
 
     @staticmethod
-    def document_access(
+    def document_access(  # noqa: C901
         require_permissions: set[Permission] | None = None,
         *,
         exclude_fields: list[ColumnElement] | None = None,

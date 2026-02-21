@@ -9,7 +9,7 @@
 	import type { Paginated } from '$api/pagination';
 	import { sessionStore } from '$lib/runes/session.svelte.js';
 	import { notification } from '$lib/stores/notificationStore';
-	import { goto, invalidateAll } from '$app/navigation';
+	import { goto, invalidate } from '$app/navigation';
 	import { formatDateTime } from '$lib/util/dateFormat';
 	import ConfirmButton from '$lib/components/ConfirmButton.svelte';
 	import DocumentVisibility from '$lib/components/DocumentVisibility.svelte';
@@ -116,7 +116,9 @@
 	<div class="flex flex-col gap-0.5">
 		<p class="text-sm text-text/90">{formatDateTime(document.created_at)}</p>
 		{#if document.updated_at && document.updated_at !== document.created_at}
-			<p class="text-xs text-text/60">{$LL.documents.updated({ date: formatDateTime(document.updated_at) })}</p>
+			<p class="text-xs text-text/60">
+				{$LL.documents.updated({ date: formatDateTime(document.updated_at) })}
+			</p>
 		{/if}
 	</div>
 {/snippet}
@@ -141,14 +143,16 @@
 						return;
 					}
 					notification('success', $LL.documents.deleteSuccess());
-					invalidateAll();
+					invalidate('app:documents');
 				}}
 			>
 				{#snippet button()}
 					<DeleteIcon class="h-5 w-5 cursor-pointer text-text/80 hover:text-red-400/80" />
 				{/snippet}
 				{#snippet slideout()}
-					<div class="px-1 py-2 whitespace-nowrap text-red-600 dark:text-red-400">{$LL.documents.deleteConfirm()}</div>
+					<div class="px-1 py-2 whitespace-nowrap text-red-600 dark:text-red-400">
+						{$LL.documents.deleteConfirm()}
+					</div>
 				{/snippet}
 			</ConfirmButton>
 		{/if}

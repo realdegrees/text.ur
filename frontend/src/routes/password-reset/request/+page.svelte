@@ -23,7 +23,7 @@
 				return;
 			}
 
-		successMessage = $LL.passwordReset.resetSent();
+			successMessage = $LL.passwordReset.resetSent();
 			email = ''; // Clear the form
 		} finally {
 			isLoading = false;
@@ -34,7 +34,7 @@
 <div class="mt-20 flex h-fit w-full justify-center">
 	<div class="w-full max-w-md overflow-hidden rounded-lg bg-inset p-8 shadow-lg">
 		<h1 class="mb-2 text-2xl font-bold">{$LL.passwordReset.requestTitle()}</h1>
-	<p class="mb-6 text-sm text-gray-600">{$LL.passwordReset.requestDescription()}</p>
+		<p class="mb-6 text-sm text-gray-600">{$LL.passwordReset.requestDescription()}</p>
 
 		<form onsubmit={handleResetRequest} class="flex flex-col gap-4">
 			{#if errorMessage}

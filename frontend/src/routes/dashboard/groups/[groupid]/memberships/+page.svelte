@@ -22,7 +22,7 @@
 	import PermissionSelector from '$lib/components/permissionSelector.svelte';
 	import { slide } from 'svelte/transition';
 	import AdvancedInput from '$lib/components/advancedInput.svelte';
-	import { invalidateAll } from '$app/navigation';
+	import { invalidate } from '$app/navigation';
 	import ConfirmButton from '$lib/components/ConfirmButton.svelte';
 	import PromoteIcon from '~icons/mdi/chevron-double-up';
 	import KickIcon from '~icons/ic/sharp-person-remove';
@@ -169,7 +169,7 @@
 						notification('success', $LL.memberships.inviteSuccess());
 						username = '';
 						selectedUser = undefined;
-						invalidateAll();
+						invalidate('app:group-memberships');
 					} else {
 						notification(result.error);
 					}
@@ -213,7 +213,9 @@
 			out:slide={{ axis: 'y' }}
 		>
 			{#if selected.length > 0}
-				<p class="mr-2 font-semibold">{$LL.memberships.selected({ count: selected.length, total: data.memberships.total })}</p>
+				<p class="mr-2 font-semibold">
+					{$LL.memberships.selected({ count: selected.length, total: data.memberships.total })}
+				</p>
 			{/if}
 			{#if selected.length > 0}
 				{#if sessionStore.validatePermissions(['administrator'])}
@@ -221,7 +223,7 @@
 						class="rounded bg-inset px-1 py-1.5 font-semibold shadow-inner shadow-black/30 transition hover:cursor-pointer hover:bg-red-500/30"
 						onclick={async () => {
 							await Promise.all(selected.map(({ user: { id } }) => kickMember(id)));
-							await invalidateAll();
+							await invalidate('app:group-memberships');
 						}}
 					>
 						{$LL.memberships.kick()}
@@ -457,7 +459,7 @@
 
 					if (result.success) {
 						notification('success', $LL.memberships.promoteSuccess());
-						invalidateAll();
+						invalidate('app:group-memberships');
 					} else {
 						notification(result.error);
 					}
@@ -496,7 +498,8 @@
 								? $LL.memberships.leftGroup()
 								: $LL.memberships.removedFromGroup({ username: membership.user.username })
 						);
-						invalidateAll();
+						invalidate('app:group-memberships');
+						if (showLeaveButton) invalidate('app:memberships');
 					}
 				}}
 				slideoutDirection="left"
@@ -520,9 +523,9 @@
 					<p
 						class="flex items-center bg-red-500/10 px-2 py-0.5 text-xs whitespace-nowrap text-red-500"
 					>
-					{showLeaveButton
-						? $LL.memberships.leaveConfirm()
-						: $LL.memberships.removeConfirm({ username: membership.user.username })}
+						{showLeaveButton
+							? $LL.memberships.leaveConfirm()
+							: $LL.memberships.removeConfirm({ username: membership.user.username })}
 					</p>
 				{/snippet}
 			</ConfirmButton>

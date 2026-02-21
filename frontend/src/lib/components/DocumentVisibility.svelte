@@ -3,7 +3,7 @@
 	import type { DocumentRead, DocumentVisibility } from '$api/types';
 	import { api } from '$api/client';
 	import { notification } from '$lib/stores/notificationStore';
-	import { invalidateAll } from '$app/navigation';
+	import { invalidate } from '$app/navigation';
 	import LL from '$i18n/i18n-svelte';
 	import LockIcon from '~icons/material-symbols/lock';
 	import PublicIcon from '~icons/material-symbols/public';
@@ -59,7 +59,7 @@
 		} else {
 			notification('success', $LL.visibility.updated());
 			// refresh parent lists/state
-			invalidateAll();
+			invalidate('app:documents');
 		}
 
 		isUpdating = false;

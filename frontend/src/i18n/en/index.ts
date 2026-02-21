@@ -444,6 +444,9 @@ const en = {
 			'last updated by {username:string} at {date:string}',
 		deletedUser: 'Deleted User',
 		expires: 'Expires: {date:string}',
+		expired: 'Expired',
+		expiredDate: 'Expired: {date:string}',
+		changeExpiryHint: 'Edit to change expiry',
 		users: '{count:number} User{{s}}',
 		usersTitle:
 			'Members using this link: {count:number}',

@@ -181,11 +181,11 @@
 				</div>
 			{:else}
 				<div class="py-8 text-center text-sm text-text/40">
-				{#if activeTab === 'pinned'}
-					{$LL.pdf.noPinnedComments()}
-				{:else}
-					{$LL.pdf.noComments()}
-				{/if}
+					{#if activeTab === 'pinned'}
+						{$LL.pdf.noPinnedComments()}
+					{:else}
+						{$LL.pdf.noComments()}
+					{/if}
 				</div>
 			{/if}
 		</div>

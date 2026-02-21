@@ -491,6 +491,9 @@ const de = {
 			'zuletzt aktualisiert von {username} am {date}',
 		deletedUser: 'Gelöschter Benutzer',
 		expires: 'Läuft ab: {date}',
+		expired: 'Abgelaufen',
+		expiredDate: 'Abgelaufen: {date}',
+		changeExpiryHint: 'Bearbeiten, um Ablaufdatum zu ändern',
 		users: '{count} Benutzer',
 		usersTitle:
 			'Mitglieder mit diesem Link: {count}',

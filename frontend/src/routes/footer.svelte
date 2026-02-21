@@ -76,7 +76,8 @@
 	<!-- Links -->
 	<section class="flex flex-row items-center gap-1">
 		<span class="mr-2 flex items-center gap-1 text-xs text-text/60">
-			{$LL.builtWith()} <SvelteIcon class="h-4 w-4" />
+			{$LL.builtWith()}
+			<SvelteIcon class="h-4 w-4" />
 		</span>
 		<a
 			href="https://github.com/realdegrees/text.ur"

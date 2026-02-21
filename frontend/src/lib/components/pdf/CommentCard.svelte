@@ -450,7 +450,8 @@
 						}}
 						disabled={isSubmitting}
 					>
-						<CloseIcon class={sizes.icon} /> {$LL.cancel()}
+						<CloseIcon class={sizes.icon} />
+						{$LL.cancel()}
 					</button>
 					<button
 						class="flex items-center gap-1 rounded bg-primary/20 {sizes.buttonPx} text-xs font-medium text-primary transition-colors hover:bg-primary/30 disabled:opacity-50"
@@ -513,8 +514,8 @@
 						onclick={(e) => {
 							e.stopPropagation();
 							commentState.isReplying = false;
-						commentState.replyInputContent = '';
-					}}>{$LL.cancel()}</button
+							commentState.replyInputContent = '';
+						}}>{$LL.cancel()}</button
 					>
 					<button
 						class="rounded bg-primary/20 {sizes.buttonPx} text-xs font-medium text-primary transition-colors hover:bg-primary/30 disabled:opacity-50"
@@ -551,9 +552,11 @@
 						disabled={isLoadingReplies}
 					>
 						<ExpandIcon class={sizes.icon} />
-					{isLoadingReplies
-						? $LL.loading()
-						: $LL.comments.nMoreReplies({ count: comment.num_replies - (commentState.replies?.length ?? 0) })}
+						{isLoadingReplies
+							? $LL.loading()
+							: $LL.comments.nMoreReplies({
+									count: comment.num_replies - (commentState.replies?.length ?? 0)
+								})}
 					</button>
 				{/if}
 			</div>

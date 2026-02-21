@@ -22,8 +22,8 @@
 		{/if}
 		<TabContainer
 			tabs={[
-			{ label: $LL.loginPage.loginTab(), snippet: Login },
-			{ label: $LL.loginPage.registerTab(), snippet: Register }
+				{ label: $LL.loginPage.loginTab(), snippet: Login },
+				{ label: $LL.loginPage.registerTab(), snippet: Register }
 			]}
 		/>
 	</div>

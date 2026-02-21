@@ -80,10 +80,10 @@ export const load: PageLoad = async ({ params, parent, fetch, depends }) => {
 				label: membership.group.name,
 				href: `/dashboard/groups/${membership.group.id}`
 			},
-		{
-			label: get(LL).documents.title(),
-			href: `/dashboard/groups/${membership.group.id}/documents`
-		},
+			{
+				label: get(LL).documents.title(),
+				href: `/dashboard/groups/${membership.group.id}/documents`
+			},
 			{
 				label: documentResult.data.name
 			}

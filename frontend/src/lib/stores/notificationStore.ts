@@ -59,7 +59,9 @@ export function notification(
 		notificationType = 'error';
 		const errorTranslations = get(LL).errors as Record<string, (() => string) | undefined>;
 		message =
-			errorTranslations[appError.error_code]?.() || appError.detail || get(LL).errors.unknown_error();
+			errorTranslations[appError.error_code]?.() ||
+			appError.detail ||
+			get(LL).errors.unknown_error();
 
 		if (typeof messageOrConfig === 'object') {
 			Object.assign(finalConfig, messageOrConfig);

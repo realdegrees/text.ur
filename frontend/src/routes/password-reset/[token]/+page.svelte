@@ -43,8 +43,7 @@
 			const result = await api.update(`/login/reset/verify/${token}`, { password });
 
 			if (!result.success) {
-			errorMessage =
-				result.error.detail || $LL.passwordReset.resetFailedExpired();
+				errorMessage = result.error.detail || $LL.passwordReset.resetFailedExpired();
 				return;
 			}
 
@@ -66,7 +65,12 @@
 				<div class="error-message">{errorMessage}</div>
 			{/if}
 			<Field bind:value={password} label={$LL.passwordReset.newPasswordLabel()} hidden required />
-			<Field bind:value={confirmPassword} label={$LL.passwordReset.confirmPasswordLabel()} hidden required />
+			<Field
+				bind:value={confirmPassword}
+				label={$LL.passwordReset.confirmPasswordLabel()}
+				hidden
+				required
+			/>
 			<button type="submit" class="submit-button" disabled={isLoading}>
 				{#if isLoading}
 					<Loading />

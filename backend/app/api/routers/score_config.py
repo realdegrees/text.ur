@@ -49,11 +49,14 @@ async def _build_score_config_read(
 
 @router.get("/score-config", response_model=ScoreConfigRead)
 async def get_score_config(
+    response: Response,
     db: Database,
     _: User = Authenticate([Guard.group_access()]),
     group: Group = Resource(Group, param_alias="group_id"),
 ) -> ScoreConfigRead:
     """Get the scoring configuration for a group."""
+    response.headers["Cache-Control"] = "private, max-age=60"
+
     result = await db.exec(
         select(ScoreConfig).where(ScoreConfig.group_id == group.id)
     )

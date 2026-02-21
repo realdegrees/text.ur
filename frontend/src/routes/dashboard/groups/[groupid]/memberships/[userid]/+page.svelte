@@ -110,15 +110,15 @@
 					<span
 						class="flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-xs font-medium text-amber-600"
 					>
-					<CrownIcon class="h-3.5 w-3.5" />
-					{$LL.memberScore.owner()}
+						<CrownIcon class="h-3.5 w-3.5" />
+						{$LL.memberScore.owner()}
 					</span>
 				{:else if isAdmin}
 					<span
 						class="flex items-center gap-1 rounded-full bg-blue-500/15 px-2 py-0.5 text-xs font-medium text-blue-600"
 					>
-					<AdminIcon class="h-3.5 w-3.5" />
-					{$LL.memberScore.admin()}
+						<AdminIcon class="h-3.5 w-3.5" />
+						{$LL.memberScore.admin()}
 					</span>
 				{/if}
 			</div>
@@ -177,8 +177,10 @@
 						<table class="w-full">
 							<thead>
 								<tr class="border-b border-text/10 text-left text-text/50">
-								<th class="pb-1.5 font-medium">{$LL.groupSettings.scoring.action()}</th>
-								<th class="pb-1.5 text-right font-medium">{$LL.groupSettings.scoring.pointsHeader()}</th>
+									<th class="pb-1.5 font-medium">{$LL.groupSettings.scoring.action()}</th>
+									<th class="pb-1.5 text-right font-medium"
+										>{$LL.groupSettings.scoring.pointsHeader()}</th
+									>
 								</tr>
 							</thead>
 							<tbody>
@@ -210,10 +212,16 @@
 							<table class="w-full">
 								<thead>
 									<tr class="border-b border-text/10 text-left text-text/50">
-									<th class="pb-1.5 font-medium">{$LL.groupSettings.scoring.emoji()}</th>
-									<th class="pb-1.5 text-right font-medium">{$LL.groupSettings.scoring.received()}</th>
-									<th class="pb-1.5 text-right font-medium">{$LL.groupSettings.scoring.fromAdmin()}</th>
-									<th class="pb-1.5 text-right font-medium">{$LL.groupSettings.scoring.giver()}</th>
+										<th class="pb-1.5 font-medium">{$LL.groupSettings.scoring.emoji()}</th>
+										<th class="pb-1.5 text-right font-medium"
+											>{$LL.groupSettings.scoring.received()}</th
+										>
+										<th class="pb-1.5 text-right font-medium"
+											>{$LL.groupSettings.scoring.fromAdmin()}</th
+										>
+										<th class="pb-1.5 text-right font-medium"
+											>{$LL.groupSettings.scoring.giver()}</th
+										>
 									</tr>
 								</thead>
 								<tbody>
@@ -235,15 +243,16 @@
 
 		<!-- Total Score Card -->
 		<div class="rounded-lg bg-primary/10 p-4" class:opacity-50={loading}>
-		<p class="text-sm font-medium text-text/60">
-			{$LL.memberScore.totalScore()}{#if selectedDocumentId === null && documents.length > 0}<span
-					class="ml-1 font-normal text-text/40"
-				>
-					{$LL.memberScore.acrossDocuments({ count: documents.length })}</span
-				>{/if}
-		</p>
+			<p class="text-sm font-medium text-text/60">
+				{$LL.memberScore.totalScore()}{#if selectedDocumentId === null && documents.length > 0}<span
+						class="ml-1 font-normal text-text/40"
+					>
+						{$LL.memberScore.acrossDocuments({ count: documents.length })}</span
+					>{/if}
+			</p>
 			<p class="text-4xl font-bold text-primary">
-				{score.total}<span class="ml-1.5 text-base font-medium text-primary/60">{$LL.points()}</span>
+				{score.total}<span class="ml-1.5 text-base font-medium text-primary/60">{$LL.points()}</span
+				>
 			</p>
 		</div>
 
@@ -280,8 +289,8 @@
 							<div class="flex flex-col">
 								<span class="text-2xl font-bold">{totalCount}</span>
 								<div class="flex gap-3 text-[11px] text-text/40">
-								<span>{$LL.memberScore.received({ count: rb.received_count })}</span>
-								<span>{$LL.memberScore.given({ count: rb.given_count })}</span>
+									<span>{$LL.memberScore.received({ count: rb.received_count })}</span>
+									<span>{$LL.memberScore.given({ count: rb.given_count })}</span>
 								</div>
 							</div>
 							<span class="text-sm text-text/40">{totalPoints} {$LL.points()}</span>

@@ -45,7 +45,10 @@
 			return $LL.documents.invalidFileType();
 		}
 		if (file.size > MAX_FILE_SIZE_BYTES) {
-			return $LL.documents.fileTooLarge({ max: MAX_FILE_SIZE_MB, actual: (file.size / (1024 * 1024)).toFixed(2) });
+			return $LL.documents.fileTooLarge({
+				max: MAX_FILE_SIZE_MB,
+				actual: (file.size / (1024 * 1024)).toFixed(2)
+			});
 		}
 		return null;
 	}
@@ -197,7 +200,9 @@
 							<p class="text-lg font-semibold">{$LL.documents.dragDrop()}</p>
 							<p class="text-sm text-text/60">{$LL.documents.orClickBrowse()}</p>
 						</div>
-						<p class="text-xs text-text/50">{$LL.documents.maxFileSize({ size: MAX_FILE_SIZE_MB })}</p>
+						<p class="text-xs text-text/50">
+							{$LL.documents.maxFileSize({ size: MAX_FILE_SIZE_MB })}
+						</p>
 					</div>
 				</div>
 			{:else}
@@ -224,7 +229,9 @@
 
 		<!-- Document Name Field -->
 		<div class="flex flex-col gap-2">
-			<label for="documentName" class="text-sm font-semibold text-text/70">{$LL.documents.documentName()}</label>
+			<label for="documentName" class="text-sm font-semibold text-text/70"
+				>{$LL.documents.documentName()}</label
+			>
 			<input
 				type="text"
 				id="documentName"

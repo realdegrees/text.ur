@@ -33,12 +33,20 @@
 	<div class="flex w-full max-w-2xl flex-col gap-3">
 		<div class="w-full rounded-lg bg-inset p-6 shadow-md">
 			<div class="mb-4">
-				<h1 class="text-3xl font-bold">{$LL.sharelink.description({ name: data.shareLink.group.name })}</h1>
-				<p class="text-muted text-sm">{$LL.sharelink.members({ count: data.shareLink.group.member_count })}</p>
-				<p class="text-muted text-sm">{$LL.sharelink.owner({ username: data.shareLink.group.owner?.username ?? '' })}</p>
-				<p class="text-muted text-sm">{$LL.sharelink.created({ date: formatDateTime(data.shareLink.group.created_at) })}</p>
+				<h1 class="text-3xl font-bold">
+					{$LL.sharelink.description({ name: data.shareLink.group.name })}
+				</h1>
+				<p class="text-muted text-sm">
+					{$LL.sharelink.members({ count: data.shareLink.group.member_count })}
+				</p>
+				<p class="text-muted text-sm">
+					{$LL.sharelink.owner({ username: data.shareLink.group.owner?.username ?? '' })}
+				</p>
+				<p class="text-muted text-sm">
+					{$LL.sharelink.created({ date: formatDateTime(data.shareLink.group.created_at) })}
+				</p>
 
-			<p>{$LL.sharelink.membershipWarning()}</p>
+				<p>{$LL.sharelink.membershipWarning()}</p>
 			</div>
 		</div>
 
@@ -46,7 +54,9 @@
 			<div class="w-full rounded-lg bg-inset p-6 shadow-md">
 				<h2 class="text-xl font-semibold">{$LL.sharelink.details()}</h2>
 				{#if data.shareLink.expires_at}
-					<p class="text-sm">{$LL.sharelink.expiresAt({ date: formatDateTime(data.shareLink.expires_at) })}</p>
+					<p class="text-sm">
+						{$LL.sharelink.expiresAt({ date: formatDateTime(data.shareLink.expires_at) })}
+					</p>
 				{/if}
 				{#if data.shareLink.permissions.length > 0}
 					<p class="mb-2 text-sm">{$LL.sharelink.permissionsReceived()}</p>
@@ -55,7 +65,7 @@
 							<Badge item={perm} label={permissionLabel(perm)} showRemove={false} />
 						{/each}
 					</div>
-				<p class="mt-2 text-xs">{$LL.sharelink.permissionsNote()}</p>
+					<p class="mt-2 text-xs">{$LL.sharelink.permissionsNote()}</p>
 				{/if}
 				{#if !data.shareLink.allow_anonymous_access && !data.sessionUser}
 					<p class="text-sm">{$LL.sharelink.accountRequired()}</p>
@@ -73,14 +83,14 @@
 						{ label: $LL.login(), snippet: Login }
 					]}
 				/>
-			<a href="/login" class="block text-center text-xs text-blue-500/80"
-				>{$LL.sharelink.noAccountRegister()}</a
-			>
+				<a href="/login" class="block text-center text-xs text-blue-500/80"
+					>{$LL.sharelink.noAccountRegister()}</a
+				>
 			</div>
 		{:else}
-		<button class="h-8 w-full cursor-pointer rounded bg-primary" onclick={joinGroup}>
-			{$LL.sharelink.joinButton()}
-		</button>
+			<button class="h-8 w-full cursor-pointer rounded bg-primary" onclick={joinGroup}>
+				{$LL.sharelink.joinButton()}
+			</button>
 		{/if}
 	</div>
 </div>

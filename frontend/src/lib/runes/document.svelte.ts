@@ -17,7 +17,7 @@ import { notification } from '$lib/stores/notificationStore';
 import { type Annotation } from '$api/types';
 import { annotationSchema } from '$api/schemas';
 import { SvelteMap, SvelteSet } from 'svelte/reactivity';
-import { invalidateAll } from '$app/navigation';
+import { invalidate } from '$app/navigation';
 import {
 	loadCommentStates,
 	saveCommentStates,
@@ -877,7 +877,7 @@ const createDocumentStore = () => {
 				commentsLocal.delete((event.payload as CommentRead).id);
 				break;
 			case 'view_mode_changed': {
-				invalidateAll();
+				invalidate('app:document-view');
 				break;
 			}
 			default:

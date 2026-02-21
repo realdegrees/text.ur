@@ -157,22 +157,22 @@
 					class="{buttonClass} {isExpanded ? 'flex-1' : ''}"
 					onclick={onZoomIn}
 					disabled={documentStore.documentScale >= maxScale}
-				title={$LL.pdf.zoomIn()}
-			>
-				<span class="flex items-center gap-2">
-					<ZoomInIcon class={iconSizeClass} />
-					{#if isExpanded}<span class="text-xs">{$LL.pdf.zoomIn()}</span>{/if}
+					title={$LL.pdf.zoomIn()}
+				>
+					<span class="flex items-center gap-2">
+						<ZoomInIcon class={iconSizeClass} />
+						{#if isExpanded}<span class="text-xs">{$LL.pdf.zoomIn()}</span>{/if}
 					</span>
 				</button>
 				<button
 					class="{buttonClass} {isExpanded ? 'flex-1' : ''}"
 					onclick={onZoomOut}
 					disabled={documentStore.documentScale <= minScale}
-				title={$LL.pdf.zoomOut()}
-			>
-				<span class="flex items-center gap-2">
-					<ZoomOutIcon class={iconSizeClass} />
-					{#if isExpanded}<span class="text-xs">{$LL.pdf.zoomOut()}</span>{/if}
+					title={$LL.pdf.zoomOut()}
+				>
+					<span class="flex items-center gap-2">
+						<ZoomOutIcon class={iconSizeClass} />
+						{#if isExpanded}<span class="text-xs">{$LL.pdf.zoomOut()}</span>{/if}
 					</span>
 				</button>
 			</div>
@@ -182,11 +182,11 @@
 			<button
 				class="{buttonClass} {isExpanded ? 'w-full justify-start' : ''}"
 				onclick={onFitHeight}
-			title={$LL.pdf.fitHeight()}
-		>
-			<span class="flex items-center gap-2">
-				<FitPageIcon class={iconSizeClass} />
-				{#if isExpanded}<span class="text-xs">{$LL.pdf.fitHeight()}</span>{/if}
+				title={$LL.pdf.fitHeight()}
+			>
+				<span class="flex items-center gap-2">
+					<FitPageIcon class={iconSizeClass} />
+					{#if isExpanded}<span class="text-xs">{$LL.pdf.fitHeight()}</span>{/if}
 				</span>
 			</button>
 
@@ -331,10 +331,10 @@
 			item={userFilterItem}
 		>
 			{#snippet header(compact)}
-			<div class="flex items-center gap-2" title={isExpanded ? '' : $LL.pdf.activeUsers()}>
-				<ActiveUsersIcon class={iconSizeClass} />
-				{#if !compact}
-					<span>{$LL.pdf.activeUsers()}</span>
+				<div class="flex items-center gap-2" title={isExpanded ? '' : $LL.pdf.activeUsers()}>
+					<ActiveUsersIcon class={iconSizeClass} />
+					{#if !compact}
+						<span>{$LL.pdf.activeUsers()}</span>
 					{/if}
 				</div>
 			{/snippet}
@@ -343,10 +343,10 @@
 		<!--Document Authors-->
 		<FilterList compact={!isExpanded} filters={documentAuthorFilters} item={userFilterItem}>
 			{#snippet header(compact)}
-			<div class="flex items-center gap-2" title={isExpanded ? '' : $LL.pdf.offlineUsers()}>
-				<OfflineIcon class={iconSizeClass} />
-				{#if !compact}
-					<span>{$LL.pdf.offlineUsers()}</span>
+				<div class="flex items-center gap-2" title={isExpanded ? '' : $LL.pdf.offlineUsers()}>
+					<OfflineIcon class={iconSizeClass} />
+					{#if !compact}
+						<span>{$LL.pdf.offlineUsers()}</span>
 					{/if}
 				</div>
 			{/snippet}
@@ -355,10 +355,10 @@
 		<!-- Tag Filters -->
 		<FilterList compact={!isExpanded} filters={tagFilters}>
 			{#snippet header(compact)}
-			<div class="flex items-center gap-2" title={isExpanded ? '' : $LL.tags.title()}>
-				<TagIcon class={iconSizeClass} />
-				{#if !compact}
-					<span>{$LL.tags.title()}</span>
+				<div class="flex items-center gap-2" title={isExpanded ? '' : $LL.tags.title()}>
+					<TagIcon class={iconSizeClass} />
+					{#if !compact}
+						<span>{$LL.tags.title()}</span>
 					{/if}
 				</div>
 			{/snippet}

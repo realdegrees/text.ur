@@ -143,7 +143,9 @@
 							<LogoutIcon class="h-4 w-4" />
 							{#if !isOpen}
 								<p class="whitespace-nowrap">
-									{data.sessionUser.is_guest ? $LL.userSettings.logoutGuestSession() : $LL.userSettings.logoutAllDevices()}
+									{data.sessionUser.is_guest
+										? $LL.userSettings.logoutGuestSession()
+										: $LL.userSettings.logoutAllDevices()}
 								</p>
 							{/if}
 						</div>
@@ -151,7 +153,9 @@
 
 					{#snippet slideout()}
 						<div class="bg-red-500/10 px-3 py-2 whitespace-nowrap text-red-600 dark:text-red-400">
-							{data.sessionUser.is_guest ? $LL.userSettings.deleteGuestWarning() : $LL.userSettings.logoutConfirm()}
+							{data.sessionUser.is_guest
+								? $LL.userSettings.deleteGuestWarning()
+								: $LL.userSettings.logoutConfirm()}
 						</div>
 					{/snippet}
 				</ConfirmButton>

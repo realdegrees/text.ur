@@ -2,7 +2,7 @@
 	import { api } from '$api/client';
 	import type { DocumentRead, TagRead } from '$api/types';
 	import { notification } from '$lib/stores/notificationStore';
-	import { invalidateAll } from '$app/navigation';
+	import { invalidate } from '$app/navigation';
 	import LL from '$i18n/i18n-svelte';
 	import AddIcon from '~icons/material-symbols/add-2-rounded';
 	import EditIcon from '~icons/material-symbols/edit-outline';
@@ -45,11 +45,11 @@
 
 	async function createTag() {
 		if (!newTag.label.trim()) {
-		notification('error', $LL.tags.labelRequired());
-		return;
-	}
+			notification('error', $LL.tags.labelRequired());
+			return;
+		}
 
-	const result = await api.post<TagRead>(`/documents/${document.id}/tags`, {
+		const result = await api.post<TagRead>(`/documents/${document.id}/tags`, {
 			label: newTag.label.trim(),
 			description: newTag.description.trim() || null,
 			color: newTag.color
@@ -62,16 +62,16 @@
 
 		notification('success', $LL.tags.createSuccess());
 		resetNewTagForm();
-		await invalidateAll();
+		await invalidate('app:document');
 	}
 
 	async function updateTag(tagId: number) {
 		if (!editTag.label.trim()) {
-		notification('error', $LL.tags.labelRequired());
-		return;
-	}
+			notification('error', $LL.tags.labelRequired());
+			return;
+		}
 
-	const result = await api.update(`/documents/${document.id}/tags/${tagId}`, {
+		const result = await api.update(`/documents/${document.id}/tags/${tagId}`, {
 			label: editTag.label.trim(),
 			description: editTag.description.trim() || null,
 			color: editTag.color
@@ -84,7 +84,7 @@
 
 		notification('success', $LL.tags.updateSuccess());
 		editingTagId = null;
-		await invalidateAll();
+		await invalidate('app:document');
 	}
 
 	async function deleteTag(tagId: number) {
@@ -96,7 +96,7 @@
 		}
 
 		notification('success', $LL.tags.deleteSuccess());
-		await invalidateAll();
+		await invalidate('app:document');
 	}
 
 	function startEditingTag(tag: TagRead) {
@@ -248,8 +248,8 @@
 			onclick={() => (isAddingTag = !isAddingTag)}
 			class="flex items-center gap-2 rounded-md bg-primary/20 px-3 py-2 text-sm font-semibold transition hover:bg-primary/30"
 		>
-		<AddIcon class="h-4 w-4" />
-		{$LL.tags.addTag()}
+			<AddIcon class="h-4 w-4" />
+			{$LL.tags.addTag()}
 		</button>
 	</div>
 
@@ -263,19 +263,19 @@
 					onclick={createTag}
 					class="flex items-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-semibold transition hover:bg-primary/80"
 				>
-				<SaveIcon class="h-4 w-4" />
-				{$LL.tags.createTag()}
+					<SaveIcon class="h-4 w-4" />
+					{$LL.tags.createTag()}
 				</button>
 				<button
 					onclick={resetNewTagForm}
 					class="flex items-center gap-2 rounded-md bg-text/10 px-3 py-2 text-sm font-semibold transition hover:bg-text/20"
 				>
-				<CancelIcon class="h-4 w-4" />
-				{$LL.cancel()}
-			</button>
+					<CancelIcon class="h-4 w-4" />
+					{$LL.cancel()}
+				</button>
+			</div>
 		</div>
-	</div>
-{/if}
+	{/if}
 
 	<!-- Tags List -->
 	<div class="flex flex-col gap-2">
@@ -293,16 +293,16 @@
 								onclick={() => updateTag(tag.id)}
 								class="flex items-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-semibold transition hover:bg-primary/80"
 							>
-							<SaveIcon class="h-4 w-4" />
-							{$LL.saveChanges()}
+								<SaveIcon class="h-4 w-4" />
+								{$LL.saveChanges()}
 							</button>
 							<button
 								onclick={cancelEdit}
 								class="flex items-center gap-2 rounded-md bg-text/10 px-3 py-2 text-sm font-semibold transition hover:bg-text/20"
 							>
-							<CancelIcon class="h-4 w-4" />
-							{$LL.cancel()}
-						</button>
+								<CancelIcon class="h-4 w-4" />
+								{$LL.cancel()}
+							</button>
 						</div>
 					</div>
 				{:else}
