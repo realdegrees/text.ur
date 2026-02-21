@@ -1,6 +1,6 @@
 <script lang="ts">
-	import type { DocumentCreate, DocumentRead, Visibility } from '$api/types';
-	import { visibilitySchema } from '$api/schemas';
+	import type { DocumentCreate, DocumentRead, DocumentVisibility } from '$api/types';
+	import { documentVisibilitySchema } from '$api/schemas';
 	import { goto } from '$app/navigation';
 	import { api } from '$api/client';
 	import { env } from '$env/dynamic/public';
@@ -25,7 +25,7 @@
 	const groupId = $derived(data.membership.group.id);
 
 	let selectedFile: File | null = $state(null);
-	let selectedVisibility: Visibility = $state('public');
+	let selectedVisibility: DocumentVisibility = $state('public');
 	let isLoading: boolean = $state(false);
 	let errorMessage: string = $state('');
 	let isDragging: boolean = $state(false);
@@ -33,7 +33,7 @@
 	let documentDescription: string = $state('');
 
 	const visibilityOptions = $derived(
-		visibilitySchema.options.map((option) => ({
+		documentVisibilitySchema.options.map((option) => ({
 			value: option.value,
 			label: $LL.visibility[option.value].label(),
 			description: $LL.visibility[option.value].description()
@@ -282,7 +282,7 @@
 		</div>
 
 		<!-- Tag Management Info -->
-		{#if sessionStore.validatePermissions(['manage_tags'])}
+		{#if sessionStore.validatePermissions(['administrator'])}
 			<div class="rounded-lg border border-primary/30 bg-primary/5 p-4">
 				<div class="flex items-start gap-3">
 					<InfoIcon class="h-5 w-5 shrink-0 text-primary" />

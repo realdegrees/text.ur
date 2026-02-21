@@ -25,6 +25,7 @@ export type AppErrorCode =
   | "owner_cannot_leave_group"
   | "cannot_remove_permission_reason_default_group"
   | "cannot_remove_permission_reason_sharelink"
+  | "not_found"
   | "self_reaction"
   | "reply_reaction"
   | "rate_limited"
@@ -74,6 +75,10 @@ export type Emoji =
   | "🫰"
   | "🧠";
 /**
+ * Visibility levels for documents (private or public only).
+ */
+export type DocumentVisibility = "private" | "public";
+/**
  * Document view mode settings.
  *
  * RESTRICTED: Only owner, admins, and users with VIEW_RESTRICTED_COMMENTS can see comments
@@ -82,21 +87,12 @@ export type Emoji =
 export type ViewMode = "restricted" | "public";
 /**
  * Available permissions for group members.
+ *
+ * Only four granular permissions exist. Every other privileged
+ * action (managing members, documents, tags, etc.) requires
+ * ADMINISTRATOR.
  */
-export type Permission =
-  | "administrator"
-  | "add_comments"
-  | "remove_comments"
-  | "view_restricted_comments"
-  | "add_members"
-  | "remove_members"
-  | "manage_permissions"
-  | "upload_documents"
-  | "view_restricted_documents"
-  | "delete_documents"
-  | "remove_reactions"
-  | "add_reactions"
-  | "manage_tags";
+export type Permission = "administrator" | "add_comments" | "view_restricted_comments" | "add_reactions";
 
 export interface Annotation {
   text: string;
@@ -230,13 +226,13 @@ export interface Document {
   description?: string | null;
   s3_key: string;
   size_bytes?: number;
-  visibility?: Visibility;
+  visibility?: DocumentVisibility;
   view_mode?: ViewMode;
   secret?: string;
   group_id: string;
 }
 export interface DocumentCreate {
-  visibility: Visibility;
+  visibility: DocumentVisibility;
   name: string;
   description?: string | null;
   group_id: string;
@@ -252,7 +248,7 @@ export interface DocumentRead {
   s3_key: string;
   name: string;
   group_id: string;
-  visibility: Visibility;
+  visibility: DocumentVisibility;
   description: string | null;
   view_mode: ViewMode;
   tags: TagRead[];

@@ -39,7 +39,7 @@
 	let badgeHovered = $state(false);
 	let popupHovered = $state(false);
 
-	const canRemoveReactions = $derived(sessionStore.validatePermissions(['remove_reactions']));
+	const canRemoveReactions = $derived(sessionStore.validatePermissions(['administrator']));
 
 	// Close popup when neither badge nor popup is hovered.
 	// preciseHover processes all registrations in a single rAF pass, so

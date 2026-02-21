@@ -458,49 +458,13 @@ type RootTranslation = {
 		 */
 		add_comments: string
 		/**
-		 * R​e​m​o​v​e​ ​c​o​m​m​e​n​t​s
-		 */
-		remove_comments: string
-		/**
 		 * V​i​e​w​ ​r​e​s​t​r​i​c​t​e​d​ ​c​o​m​m​e​n​t​s
 		 */
 		view_restricted_comments: string
 		/**
-		 * A​d​d​ ​m​e​m​b​e​r​s
-		 */
-		add_members: string
-		/**
-		 * R​e​m​o​v​e​ ​m​e​m​b​e​r​s
-		 */
-		remove_members: string
-		/**
-		 * M​a​n​a​g​e​ ​p​e​r​m​i​s​s​i​o​n​s
-		 */
-		manage_permissions: string
-		/**
-		 * U​p​l​o​a​d​ ​d​o​c​u​m​e​n​t​s
-		 */
-		upload_documents: string
-		/**
-		 * V​i​e​w​ ​r​e​s​t​r​i​c​t​e​d​ ​d​o​c​u​m​e​n​t​s
-		 */
-		view_restricted_documents: string
-		/**
-		 * D​e​l​e​t​e​ ​d​o​c​u​m​e​n​t​s
-		 */
-		delete_documents: string
-		/**
-		 * R​e​m​o​v​e​ ​r​e​a​c​t​i​o​n​s
-		 */
-		remove_reactions: string
-		/**
 		 * A​d​d​ ​r​e​a​c​t​i​o​n​s
 		 */
 		add_reactions: string
-		/**
-		 * M​a​n​a​g​e​ ​t​a​g​s
-		 */
-		manage_tags: string
 	}
 	visibility: {
 		/**
@@ -535,7 +499,7 @@ type RootTranslation = {
 			 */
 			label: string
 			/**
-			 * O​n​l​y​ ​m​e​m​b​e​r​s​ ​w​i​t​h​ ​V​I​E​W​_​R​E​S​T​R​I​C​T​E​D​_​D​O​C​U​M​E​N​T​S​ ​p​e​r​m​i​s​s​i​o​n​ ​c​a​n​ ​v​i​e​w
+			 * O​n​l​y​ ​m​e​m​b​e​r​s​ ​w​i​t​h​ ​V​I​E​W​_​R​E​S​T​R​I​C​T​E​D​_​C​O​M​M​E​N​T​S​ ​p​e​r​m​i​s​s​i​o​n​ ​c​a​n​ ​v​i​e​w
 			 */
 			description: string
 		}
@@ -545,7 +509,7 @@ type RootTranslation = {
 			 */
 			label: string
 			/**
-			 * O​n​l​y​ ​y​o​u​ ​c​a​n​ ​v​i​e​w​ ​t​h​i​s​ ​d​o​c​u​m​e​n​t
+			 * O​n​l​y​ ​a​d​m​i​n​i​s​t​r​a​t​o​r​s​ ​c​a​n​ ​v​i​e​w​ ​t​h​i​s​ ​d​o​c​u​m​e​n​t
 			 */
 			description: string
 		}
@@ -882,7 +846,7 @@ type RootTranslation = {
 			 */
 			title: string
 			/**
-			 * C​o​n​f​i​g​u​r​e​ ​h​o​w​ ​m​a​n​y​ ​p​o​i​n​t​s​ ​m​e​m​b​e​r​s​ ​e​a​r​n​ ​f​o​r​ ​d​i​f​f​e​r​e​n​t​ ​a​c​t​i​o​n​s​.​ ​C​h​a​n​g​e​s​ ​a​f​f​e​c​t​ ​f​u​t​u​r​e​ ​s​c​o​r​e​ ​c​a​l​c​u​l​a​t​i​o​n​s​ ​a​n​d​ ​i​n​v​a​l​i​d​a​t​e​ ​c​a​c​h​e​d​ ​s​c​o​r​e​s​.
+			 * C​o​n​f​i​g​u​r​e​ ​h​o​w​ ​m​a​n​y​ ​p​o​i​n​t​s​ ​m​e​m​b​e​r​s​ ​e​a​r​n​ ​f​o​r​ ​d​i​f​f​e​r​e​n​t​ ​a​c​t​i​o​n​s​.​ ​C​h​a​n​g​e​s​ ​r​e​t​r​o​a​c​t​i​v​e​l​y​ ​a​p​p​l​y​ ​t​o​ ​a​l​l​ ​e​x​i​s​t​i​n​g​ ​p​o​i​n​t​s​.
 			 */
 			description: string
 			/**
@@ -1231,10 +1195,6 @@ type RootTranslation = {
 		 * A​l​l​ ​g​r​o​u​p​ ​m​e​m​b​e​r​s​ ​c​a​n​ ​v​i​e​w​ ​t​h​i​s​ ​d​o​c​u​m​e​n​t
 		 */
 		publicDescription: string
-		/**
-		 * O​n​l​y​ ​m​e​m​b​e​r​s​ ​w​i​t​h​ ​V​I​E​W​_​R​E​S​T​R​I​C​T​E​D​_​D​O​C​U​M​E​N​T​S​ ​p​e​r​m​i​s​s​i​o​n​ ​c​a​n​ ​v​i​e​w
-		 */
-		restrictedDescription: string
 		/**
 		 * O​n​l​y​ ​a​d​m​i​n​i​s​t​r​a​t​o​r​s​ ​c​a​n​ ​v​i​e​w​ ​t​h​i​s​ ​d​o​c​u​m​e​n​t
 		 */
@@ -2260,49 +2220,13 @@ export type TranslationFunctions = {
 		 */
 		add_comments: () => LocalizedString
 		/**
-		 * Remove comments
-		 */
-		remove_comments: () => LocalizedString
-		/**
 		 * View restricted comments
 		 */
 		view_restricted_comments: () => LocalizedString
 		/**
-		 * Add members
-		 */
-		add_members: () => LocalizedString
-		/**
-		 * Remove members
-		 */
-		remove_members: () => LocalizedString
-		/**
-		 * Manage permissions
-		 */
-		manage_permissions: () => LocalizedString
-		/**
-		 * Upload documents
-		 */
-		upload_documents: () => LocalizedString
-		/**
-		 * View restricted documents
-		 */
-		view_restricted_documents: () => LocalizedString
-		/**
-		 * Delete documents
-		 */
-		delete_documents: () => LocalizedString
-		/**
-		 * Remove reactions
-		 */
-		remove_reactions: () => LocalizedString
-		/**
 		 * Add reactions
 		 */
 		add_reactions: () => LocalizedString
-		/**
-		 * Manage tags
-		 */
-		manage_tags: () => LocalizedString
 	}
 	visibility: {
 		/**
@@ -2337,7 +2261,7 @@ export type TranslationFunctions = {
 			 */
 			label: () => LocalizedString
 			/**
-			 * Only members with VIEW_RESTRICTED_DOCUMENTS permission can view
+			 * Only members with VIEW_RESTRICTED_COMMENTS permission can view
 			 */
 			description: () => LocalizedString
 		}
@@ -2347,7 +2271,7 @@ export type TranslationFunctions = {
 			 */
 			label: () => LocalizedString
 			/**
-			 * Only you can view this document
+			 * Only administrators can view this document
 			 */
 			description: () => LocalizedString
 		}
@@ -2679,7 +2603,7 @@ export type TranslationFunctions = {
 			 */
 			title: () => LocalizedString
 			/**
-			 * Configure how many points members earn for different actions. Changes affect future score calculations and invalidate cached scores.
+			 * Configure how many points members earn for different actions. Changes retroactively apply to all existing points.
 			 */
 			description: () => LocalizedString
 			/**
@@ -3019,10 +2943,6 @@ export type TranslationFunctions = {
 		 * All group members can view this document
 		 */
 		publicDescription: () => LocalizedString
-		/**
-		 * Only members with VIEW_RESTRICTED_DOCUMENTS permission can view
-		 */
-		restrictedDescription: () => LocalizedString
 		/**
 		 * Only administrators can view this document
 		 */

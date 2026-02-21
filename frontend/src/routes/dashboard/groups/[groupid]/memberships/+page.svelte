@@ -180,7 +180,7 @@
 
 <div class="p-4">
 	<div class="mb-4 flex w-full flex-row items-center justify-between gap-2">
-		{#if sessionStore.validatePermissions(['add_members'])}
+		{#if sessionStore.validatePermissions(['administrator'])}
 			<!--INVITE-->
 			<div class="flex flex-row items-end gap-2">
 				<div class="w-64">
@@ -216,7 +216,7 @@
 				<p class="mr-2 font-semibold">{$LL.memberships.selected({ count: selected.length, total: data.memberships.total })}</p>
 			{/if}
 			{#if selected.length > 0}
-				{#if sessionStore.validatePermissions(['remove_members'])}
+				{#if sessionStore.validatePermissions(['administrator'])}
 					<button
 						class="rounded bg-inset px-1 py-1.5 font-semibold shadow-inner shadow-black/30 transition hover:cursor-pointer hover:bg-red-500/30"
 						onclick={async () => {
@@ -227,7 +227,7 @@
 						{$LL.memberships.kick()}
 					</button>
 				{/if}
-				{#if sessionStore.validatePermissions(['manage_permissions'])}
+				{#if sessionStore.validatePermissions(['administrator'])}
 					<Dropdown
 						items={availableForBulkAdd}
 						onSelect={(perm) =>
@@ -412,10 +412,8 @@
 		excludedPermissions={groupedPermissions}
 		onAdd={(perm) => addPermissionToMembership(membership, perm)}
 		onRemove={(perm) => removePermissionFromMembership(membership, perm)}
-		showRemove={sessionStore.validatePermissions(['manage_permissions'])}
-		allowSelection={sessionStore.validatePermissions({
-			or: ['manage_permissions', 'remove_members']
-		})}
+		showRemove={sessionStore.validatePermissions(['administrator'])}
+		allowSelection={sessionStore.validatePermissions(['administrator'])}
 	>
 		{#snippet prepend()}
 			<!-- Default Permissions Badge -->
@@ -441,12 +439,12 @@
 
 {#snippet actionsSnippet(membership: Omit<MembershipRead, 'group'>)}
 	{@const showRemoveButton =
-		sessionStore.validatePermissions(['remove_members']) &&
+		sessionStore.validatePermissions(['administrator']) &&
 		!membership.is_owner &&
 		!membership.permissions.includes('administrator')}
 
 	{@const showLeaveButton = data.sessionUser.id === membership.user.id && !membership.is_owner}
-	{@const showPromoteButton = sessionStore.validatePermissions(['add_members'])}
+	{@const showPromoteButton = sessionStore.validatePermissions(['administrator'])}
 
 	<div class="flex flex-row items-center justify-end gap-2">
 		{#if membership.share_link && showPromoteButton}

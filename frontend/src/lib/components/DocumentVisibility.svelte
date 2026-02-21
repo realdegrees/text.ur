@@ -1,12 +1,11 @@
 <script lang="ts">
 	import Dropdown from '$lib/components/dropdown.svelte';
-	import type { DocumentRead, Visibility } from '$api/types';
+	import type { DocumentRead, DocumentVisibility } from '$api/types';
 	import { api } from '$api/client';
 	import { notification } from '$lib/stores/notificationStore';
 	import { invalidateAll } from '$app/navigation';
 	import LL from '$i18n/i18n-svelte';
 	import LockIcon from '~icons/material-symbols/lock';
-	import GroupIcon from '~icons/material-symbols/group';
 	import PublicIcon from '~icons/material-symbols/public';
 	import ChevronDown from '~icons/material-symbols/keyboard-arrow-down';
 
@@ -21,29 +20,26 @@
 	let isOpen = $state(false);
 	let currentVisibility = $derived(document.visibility);
 
-	const visibilityOptions: Visibility[] = ['private', 'restricted', 'public'];
+	const visibilityOptions: DocumentVisibility[] = ['private', 'public'];
 
-	const visibilityLabels: Record<Visibility, string> = {
+	const visibilityLabels: Record<DocumentVisibility, string> = {
 		private: 'Only Administrators can see this document',
-		restricted: 'Only users with permission can see this document',
 		public: 'All members that can view the group can see this document'
 	};
 
-	const visibilityShortLabels: Record<Visibility, string> = {
+	const visibilityShortLabels: Record<DocumentVisibility, string> = {
 		private: 'Private - Only Administrators',
-		restricted: 'Restricted - Permitted Users',
 		public: 'Public - Everyone'
 	};
 
-	const getIcon = (vis: Visibility) => {
+	const getIcon = (vis: DocumentVisibility) => {
 		if (vis === 'private') return LockIcon;
-		if (vis === 'restricted') return GroupIcon;
 		return PublicIcon;
 	};
 
 	const iconSize = 'h-4 w-4';
 
-	async function handleSelect(newVisibility: Visibility): Promise<void> {
+	async function handleSelect(newVisibility: DocumentVisibility): Promise<void> {
 		if (newVisibility === document.visibility || isUpdating) return;
 		isUpdating = true;
 
@@ -77,7 +73,6 @@
 			? 'hover:cursor-pointer'
 			: ''}"
 		class:bg-green-300={document.visibility === 'public'}
-		class:bg-blue-300={document.visibility === 'restricted'}
 		class:bg-yellow-300={document.visibility === 'private'}
 		onclick={(e) => {
 			e.stopPropagation();
@@ -90,8 +85,6 @@
 	>
 		{#if currentVisibility === 'private'}
 			<LockIcon class={iconSize} />
-		{:else if currentVisibility === 'restricted'}
-			<GroupIcon class={iconSize} />
 		{:else}
 			<PublicIcon class={iconSize} />
 		{/if}

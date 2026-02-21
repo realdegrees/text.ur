@@ -142,19 +142,9 @@ const de = {
 		label: 'Berechtigungen',
 		administrator: 'Voller Administratorzugriff',
 		add_comments: 'Kommentare hinzufügen',
-		remove_comments: 'Kommentare entfernen',
 		view_restricted_comments:
 			'Eingeschränkte Kommentare anzeigen',
-		add_members: 'Mitglieder hinzufügen',
-		remove_members: 'Mitglieder entfernen',
-		manage_permissions: 'Berechtigungen verwalten',
-		upload_documents: 'Dokumente hochladen',
-		view_restricted_documents:
-			'Eingeschränkte Dokumente anzeigen',
-		delete_documents: 'Dokumente löschen',
-		remove_reactions: 'Reaktionen entfernen',
-		add_reactions: 'Reaktionen hinzufügen',
-		manage_tags: 'Tags verwalten'
+		add_reactions: 'Reaktionen hinzufügen'
 	},
 
 	// Visibility levels
@@ -172,12 +162,12 @@ const de = {
 		restricted: {
 			label: 'Eingeschränkt',
 			description:
-				'Nur Mitglieder mit der Berechtigung VIEW_RESTRICTED_DOCUMENTS können es sehen'
+				'Nur Mitglieder mit der Berechtigung VIEW_RESTRICTED_COMMENTS können es sehen'
 		},
 		private: {
 			label: 'Privat',
 			description:
-				'Nur Sie können dieses Dokument sehen'
+				'Nur Administratoren können dieses Dokument sehen'
 		}
 	},
 
@@ -458,8 +448,6 @@ const de = {
 		savingButton: 'Speichern...',
 		publicDescription:
 			'Alle Gruppenmitglieder können dieses Dokument sehen',
-		restrictedDescription:
-			'Nur Mitglieder mit der Berechtigung VIEW_RESTRICTED_DOCUMENTS können es sehen',
 		privateDescription:
 			'Nur Administratoren können dieses Dokument sehen',
 		danger: {

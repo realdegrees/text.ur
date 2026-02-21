@@ -58,31 +58,17 @@ class Emoji(StrEnum):
 
 
 class Permission(StrEnum):
-    """Available permissions for group members."""
+    """Available permissions for group members.
+
+    Only four granular permissions exist. Every other privileged
+    action (managing members, documents, tags, etc.) requires
+    ADMINISTRATOR.
+    """
 
     ADMINISTRATOR = "administrator"
-    
-    # Comments
     ADD_COMMENTS = "add_comments"
-    REMOVE_COMMENTS = "remove_comments"
     VIEW_RESTRICTED_COMMENTS = "view_restricted_comments"
-    
-    # Members
-    ADD_MEMBERS = "add_members"
-    REMOVE_MEMBERS = "remove_members"
-    MANAGE_PERMISSIONS = "manage_permissions"
-    
-    # Documents
-    ADD_DOCUMENTS = "upload_documents"
-    VIEW_RESTRICTED_DOCUMENTS = "view_restricted_documents"
-    REMOVE_DOCUMENTS = "delete_documents"
-
-    # Reactions
-    REMOVE_REACTIONS = "remove_reactions"
     ADD_REACTIONS = "add_reactions"
-
-    # Tags
-    MANAGE_TAGS = "manage_tags"
 
 class ViewMode(StrEnum):
     """Document view mode settings.
@@ -100,6 +86,13 @@ class Visibility(StrEnum):
 
     PRIVATE = "private"
     RESTRICTED = "restricted"
+    PUBLIC = "public"
+
+
+class DocumentVisibility(StrEnum):
+    """Visibility levels for documents (private or public only)."""
+
+    PRIVATE = "private"
     PUBLIC = "public"
 
 class AppErrorCode(StrEnum):

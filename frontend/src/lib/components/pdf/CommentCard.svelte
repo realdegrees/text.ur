@@ -104,7 +104,7 @@
 	let isAuthor = $derived(sessionStore.currentUserId === comment?.user?.id);
 	let canDeleteComment = $derived.by(() => {
 		if (sessionStore.currentUserId === comment.user?.id) return true;
-		return sessionStore.validatePermissions(['remove_comments']);
+		return sessionStore.validatePermissions(['administrator']);
 	});
 	let canReply = $derived(
 		sessionStore.routeMembership ? sessionStore.validatePermissions(['add_comments']) : false

@@ -97,7 +97,7 @@ async def get_membership(
 async def invite_member(
     db: Database,
     group: Group = Resource(Group, param_alias="group_id"),
-    _: User = Authenticate([Guard.group_access({Permission.ADD_MEMBERS})]),
+    _: User = Authenticate([Guard.group_access({Permission.ADMINISTRATOR})]),
     membership_create: MembershipCreate = Body(...),
 ) -> Response:
     """Create a new membership."""
@@ -140,7 +140,7 @@ async def invite_member(
 async def update_member_permissions(
     db: Database,
     session_user: User = Authenticate(
-        [Guard.group_access({Permission.MANAGE_PERMISSIONS})],
+        [Guard.group_access({Permission.ADMINISTRATOR})],
     ),
     membership_update: MembershipPermissionUpdate = Body(...),
     group: Group = Resource(Group, param_alias="group_id"),
@@ -171,40 +171,21 @@ async def update_member_permissions(
     target_permissions = set(
         membership_update.permissions or current_permissions
     )
-    is_owner = session_user_membership.is_owner
-    is_administrator = (
-        Permission.ADMINISTRATOR in session_user_membership.permissions
-    )
 
     added_permissions = target_permissions - current_permissions
     removed_permissions = current_permissions - target_permissions
 
-    if Permission.ADMINISTRATOR in added_permissions and not is_owner:
+    # Only the group owner can grant or revoke ADMINISTRATOR
+    if Permission.ADMINISTRATOR in added_permissions and not session_user_membership.is_owner:
         raise HTTPException(
             status_code=403,
             detail="Only the owner can grant the ADMINISTRATOR permission",
         )
 
-    if Permission.ADMINISTRATOR in removed_permissions and not is_owner:
+    if Permission.ADMINISTRATOR in removed_permissions and not session_user_membership.is_owner:
         raise HTTPException(
             status_code=403,
             detail="Only the owner can revoke the ADMINISTRATOR permission",
-        )
-
-    if Permission.MANAGE_PERMISSIONS in added_permissions and not (
-        is_administrator or is_owner
-    ):
-        raise HTTPException(
-            status_code=403,
-            detail="Only administrators can grant the MANAGE_PERMISSIONS permission",
-        )
-
-    if Permission.MANAGE_PERMISSIONS in removed_permissions and not (
-        is_administrator or is_owner
-    ):
-        raise HTTPException(
-            status_code=403,
-            detail="Only administrators can grant or revoke the MANAGE_PERMISSIONS permission",
         )
 
     if any(p in removed_permissions for p in group.default_permissions):
@@ -301,7 +282,7 @@ async def reject_membership(
 async def remove_member(
     db: Database,
     session_user: User = Authenticate(
-        [Guard.group_access({Permission.REMOVE_MEMBERS})],
+        [Guard.group_access({Permission.ADMINISTRATOR})],
     ),
     group: Group = Resource(Group, param_alias="group_id"),
     member: User = Resource(User, param_alias="user_id"),
@@ -346,7 +327,7 @@ async def remove_member(
 async def promote_guest_to_member(
     db: Database,
     session_user: User = Authenticate(
-        [Guard.group_access({Permission.ADD_MEMBERS})],
+        [Guard.group_access({Permission.ADMINISTRATOR})],
     ),
     group: Group = Resource(Group, param_alias="group_id"),
     member: User = Resource(User, param_alias="user_id"),

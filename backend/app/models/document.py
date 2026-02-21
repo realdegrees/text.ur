@@ -7,14 +7,14 @@ from core.config import (
 from sqlmodel import Field, SQLModel
 
 from models.base import BaseModel
-from models.enums import ViewMode, Visibility
+from models.enums import DocumentVisibility, ViewMode, Visibility
 
 if TYPE_CHECKING:
     from models.tag import TagRead
 
 
 class DocumentCreate(SQLModel):
-    visibility: Visibility
+    visibility: DocumentVisibility
     name: str = Field(max_length=MAX_DOCUMENT_NAME_LENGTH)
     description: str | None = Field(default=None, max_length=MAX_DOCUMENT_DESCRIPTION_LENGTH)
     group_id: str
@@ -24,7 +24,7 @@ class DocumentRead(BaseModel):
     s3_key: str
     name: str
     group_id: str
-    visibility: Visibility
+    visibility: DocumentVisibility
     description: str | None
     view_mode: ViewMode
     tags: list["TagRead"]
@@ -33,7 +33,7 @@ class DocumentTransfer(SQLModel):
     group_id: str
 
 class DocumentUpdate(SQLModel):
-    visibility: Visibility | None = None
+    visibility: DocumentVisibility | None = None
     view_mode: ViewMode | None = None
     description: str | None = Field(default=None, max_length=MAX_DOCUMENT_DESCRIPTION_LENGTH)
     name: str | None = Field(default=None, max_length=MAX_DOCUMENT_NAME_LENGTH)

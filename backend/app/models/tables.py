@@ -12,7 +12,13 @@ from sqlalchemy.sql.elements import ColumnElement
 from sqlmodel import Field, Relationship, func, select
 
 from models.base import BaseModel
-from models.enums import Emoji, Permission, ViewMode, Visibility
+from models.enums import (
+    DocumentVisibility,
+    Emoji,
+    Permission,
+    ViewMode,
+    Visibility,
+)
 
 # TABLES
 
@@ -111,8 +117,8 @@ class Document(BaseModel, table=True):
     description: str | None = Field(nullable=True, default=None)
     s3_key: str = Field(index=True, unique=True)
     size_bytes: int = Field(default=0)
-    visibility: Visibility = Field(default=Visibility.PRIVATE, sa_column=Column(
-        String, server_default=Visibility.PRIVATE.value))
+    visibility: DocumentVisibility = Field(default=DocumentVisibility.PRIVATE, sa_column=Column(
+        String, server_default=DocumentVisibility.PRIVATE.value))
     view_mode: ViewMode = Field(
         default=ViewMode.PUBLIC,
         sa_column=Column(String, server_default=ViewMode.PUBLIC.value)

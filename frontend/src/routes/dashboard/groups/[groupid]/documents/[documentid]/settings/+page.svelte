@@ -10,7 +10,7 @@
 	import BackIcon from '~icons/material-symbols/arrow-back';
 	import SaveIcon from '~icons/material-symbols/save-outline';
 	import DeleteIcon from '~icons/material-symbols/delete-outline';
-	import type { Visibility } from '$api/types';
+	import type { DocumentVisibility } from '$api/types';
 	import { env } from '$env/dynamic/public';
 
 	let { data } = $props();
@@ -19,7 +19,7 @@
 
 	let documentName = $state(document.name);
 	let documentDescription = $state(document.description ?? '');
-	let documentVisibility = $state<Visibility>(document.visibility);
+	let documentVisibility = $state<DocumentVisibility>(document.visibility);
 	let isSaving = $state(false);
 	let isClearing = $state(false);
 
@@ -148,26 +148,6 @@
 					</div>
 				</div>
 
-				{#if sessionStore.validatePermissions(['view_restricted_documents'])}
-					<div class="flex items-start gap-2">
-						<input
-							type="radio"
-							id="visibility-restricted"
-							value="restricted"
-							bind:group={documentVisibility}
-							class="mt-0.5 cursor-pointer"
-						/>
-						<div class="flex flex-col gap-0.5">
-							<label for="visibility-restricted" class="cursor-pointer text-sm font-medium">
-								{$LL.visibility.restricted.label()}
-							</label>
-							<p class="text-xs text-text/50">
-								{$LL.documentSettings.restrictedDescription()}
-							</p>
-						</div>
-					</div>
-				{/if}
-
 				{#if sessionStore.validatePermissions(['administrator'])}
 					<div class="flex items-start gap-2">
 						<input
@@ -204,7 +184,7 @@
 		{/if}
 
 		<!-- Tag Management -->
-		{#if sessionStore.validatePermissions(['manage_tags'])}
+		{#if sessionStore.validatePermissions(['administrator'])}
 			<div class="flex flex-col gap-2">
 				<TagManagement {document} />
 			</div>

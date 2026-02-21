@@ -133,17 +133,8 @@ const en = {
 		label: 'Permissions',
 		administrator: 'Full administrative access',
 		add_comments: 'Add comments',
-		remove_comments: 'Remove comments',
 		view_restricted_comments: 'View restricted comments',
-		add_members: 'Add members',
-		remove_members: 'Remove members',
-		manage_permissions: 'Manage permissions',
-		upload_documents: 'Upload documents',
-		view_restricted_documents: 'View restricted documents',
-		delete_documents: 'Delete documents',
-		remove_reactions: 'Remove reactions',
-		add_reactions: 'Add reactions',
-		manage_tags: 'Manage tags'
+		add_reactions: 'Add reactions'
 	},
 
 	// Visibility levels
@@ -159,11 +150,11 @@ const en = {
 		restricted: {
 			label: 'Restricted',
 			description:
-				'Only members with VIEW_RESTRICTED_DOCUMENTS permission can view'
+				'Only members with VIEW_RESTRICTED_COMMENTS permission can view'
 		},
 		private: {
 			label: 'Private',
-			description: 'Only you can view this document'
+			description: 'Only administrators can view this document'
 		}
 	},
 
@@ -412,8 +403,6 @@ const en = {
 		savingButton: 'Saving...',
 		publicDescription:
 			'All group members can view this document',
-		restrictedDescription:
-			'Only members with VIEW_RESTRICTED_DOCUMENTS permission can view',
 		privateDescription:
 			'Only administrators can view this document',
 		danger: {
