@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { documentStore } from '$lib/runes/document.svelte';
 	import CommentCluster from './CommentCluster.svelte';
+	import LL from '$i18n/i18n-svelte';
 	import IconChevronDown from '~icons/material-symbols/keyboard-arrow-down-rounded';
 	import IconChevronUp from '~icons/material-symbols/keyboard-arrow-up-rounded';
 	import IconPin from '~icons/material-symbols/push-pin-outline';
@@ -118,7 +119,7 @@
 			aria-pressed={activeTab === 'pinned'}
 		>
 			<IconPin class="h-4 w-4" />
-			<span>Pinned</span>
+			<span>{$LL.pdf.pinned()}</span>
 			{#if pinnedComments.length > 0}
 				<span class="rounded-full bg-primary/20 px-2 py-0.5 text-xs">{pinnedComments.length}</span>
 			{/if}
@@ -133,7 +134,7 @@
 			aria-pressed={activeTab === 'all'}
 		>
 			<IconComment class="h-4 w-4" />
-			<span>All</span>
+			<span>{$LL.pdf.all()}</span>
 			<span class="rounded-full bg-primary/20 px-2 py-0.5 text-xs"
 				>{documentStore.comments.topLevelComments.length}</span
 			>
@@ -143,7 +144,7 @@
 		<button
 			class="px-4 py-3 text-text/60 transition-colors hover:text-text"
 			onclick={toggleExpand}
-			aria-label={isExpanded ? 'Collapse comments' : 'Expand comments'}
+			aria-label={isExpanded ? $LL.pdf.collapseComments() : $LL.pdf.expandComments()}
 		>
 			{#if isExpanded}
 				<IconChevronDown class="h-5 w-5" />
@@ -180,11 +181,11 @@
 				</div>
 			{:else}
 				<div class="py-8 text-center text-sm text-text/40">
-					{#if activeTab === 'pinned'}
-						No pinned comments
-					{:else}
-						No comments
-					{/if}
+				{#if activeTab === 'pinned'}
+					{$LL.pdf.noPinnedComments()}
+				{:else}
+					{$LL.pdf.noComments()}
+				{/if}
 				</div>
 			{/if}
 		</div>

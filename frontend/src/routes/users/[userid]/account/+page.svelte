@@ -119,7 +119,7 @@
 			return;
 		}
 
-		notification('success', 'Logged out from all devices successfully');
+		notification('success', $LL.userSettings.logoutSuccess());
 
 		// Redirect to login page after logout
 		invalidateAll();
@@ -143,7 +143,7 @@
 							<LogoutIcon class="h-4 w-4" />
 							{#if !isOpen}
 								<p class="whitespace-nowrap">
-									{data.sessionUser.is_guest ? 'Logout Guest Session' : 'Logout All Devices'}
+									{data.sessionUser.is_guest ? $LL.userSettings.logoutGuestSession() : $LL.userSettings.logoutAllDevices()}
 								</p>
 							{/if}
 						</div>
@@ -151,7 +151,7 @@
 
 					{#snippet slideout()}
 						<div class="bg-red-500/10 px-3 py-2 whitespace-nowrap text-red-600 dark:text-red-400">
-							{data.sessionUser.is_guest ? 'This will delete your guest account!' : 'Confirm'}
+							{data.sessionUser.is_guest ? $LL.userSettings.deleteGuestWarning() : $LL.userSettings.logoutConfirm()}
 						</div>
 					{/snippet}
 				</ConfirmButton>

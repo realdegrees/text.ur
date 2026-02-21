@@ -5,6 +5,8 @@ import { redirect } from '@sveltejs/kit';
 import type { PageLoad } from './$types';
 import type { Paginated } from '$api/pagination';
 import type { BreadcrumbItem } from '$types/breadcrumb';
+import { get } from 'svelte/store';
+import LL from '$i18n/i18n-svelte';
 
 export const load: PageLoad = async ({ params, parent, fetch, depends }) => {
 	depends('app:document-view');
@@ -18,12 +20,12 @@ export const load: PageLoad = async ({ params, parent, fetch, depends }) => {
 		throw redirect(303, '/dashboard');
 	}
 	if (!documentResult.data) {
-		notification('error', 'Document not found.'); // TODO i18n
+		notification('error', get(LL).documents.notFound());
 		throw redirect(303, '/dashboard');
 	}
 
 	if (!membership) {
-		notification('error', 'You are not a member of the group that owns this document.'); // TODO i18n
+		notification('error', get(LL).memberships.notMemberOfDocumentGroup());
 		throw redirect(303, '/dashboard');
 	}
 
@@ -78,10 +80,10 @@ export const load: PageLoad = async ({ params, parent, fetch, depends }) => {
 				label: membership.group.name,
 				href: `/dashboard/groups/${membership.group.id}`
 			},
-			{
-				label: 'Documents',
-				href: `/dashboard/groups/${membership.group.id}/documents`
-			},
+		{
+			label: get(LL).documents.title(),
+			href: `/dashboard/groups/${membership.group.id}/documents`
+		},
 			{
 				label: documentResult.data.name
 			}

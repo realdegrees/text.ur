@@ -4,6 +4,7 @@
 	import PermissionSelector from '$lib/components/permissionSelector.svelte';
 	import DateTimePicker from '$lib/components/DateTimePicker.svelte';
 	import type { Permission } from '$api/types';
+	import LL from '$i18n/i18n-svelte';
 
 	let {
 		permissions = $bindable<Permission[]>([]),
@@ -34,7 +35,7 @@
 
 <div class="flex flex-col gap-3 rounded border border-text/20 bg-background/50 p-4">
 	<div class="flex items-center justify-between">
-		<h3 class="font-semibold">New Share Link</h3>
+		<h3 class="font-semibold">{$LL.sharelinks.newShareLink()}</h3>
 		<button type="button" onclick={onCancel} class="text-text/50 transition hover:text-text">
 			<CancelIcon class="h-5 w-5" />
 		</button>
@@ -44,12 +45,12 @@
 		type="text"
 		bind:value={label}
 		maxlength="30"
-		placeholder="Label (optional)"
+		placeholder={$LL.sharelinks.labelPlaceholder()}
 		class="rounded border border-text/20 bg-background px-3 py-2 text-sm transition-colors focus:border-text/50 focus:outline-none"
 	/>
 
 	<div class="flex flex-col gap-1">
-		<div class="text-xs font-semibold text-text/70">Permissions</div>
+		<div class="text-xs font-semibold text-text/70">{$LL.permissions.label()}</div>
 		<PermissionSelector
 			bind:selectedPermissions={permissions}
 			onAdd={addPermission}
@@ -61,7 +62,7 @@
 
 	<label class="flex items-center gap-2 text-sm">
 		<input type="checkbox" bind:checked={allowAnonymous} class="h-4 w-4 rounded" />
-		<span class="text-text/70">Allow anonymous access</span>
+		<span class="text-text/70">{$LL.sharelinks.allowAnonymous()}</span>
 	</label>
 
 	<button
@@ -70,6 +71,6 @@
 		class="flex items-center justify-center gap-2 rounded bg-primary px-4 py-2 text-text transition hover:bg-primary/80"
 	>
 		<SaveIcon class="h-5 w-5" />
-		<span>Create</span>
+		<span>{$LL.create()}</span>
 	</button>
 </div>

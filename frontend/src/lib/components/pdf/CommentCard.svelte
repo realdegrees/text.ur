@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { documentStore } from '$lib/runes/document.svelte.js';
 	import { sessionStore } from '$lib/runes/session.svelte.js';
+	import LL from '$i18n/i18n-svelte';
 	import type { CommentRead, TagRead } from '$api/types';
 	import CommentCard from './CommentCard.svelte';
 	import CommentVisibility from './CommentVisibility.svelte';
@@ -240,7 +241,7 @@
 		<button
 			bind:this={reactionButtonRef}
 			class="flex cursor-pointer items-center rounded bg-text/5 p-1 text-text/40 transition-colors hover:bg-text/10 hover:text-text/60"
-			title="Add reaction"
+			title={$LL.comments.addReaction()}
 			onclick={(e) => {
 				e.stopPropagation();
 				isReactionPickerOpen = !isReactionPickerOpen;
@@ -258,10 +259,10 @@
 				e.stopPropagation();
 				commentState.isReplying = true;
 			}}
-			title="Reply"
+			title={$LL.reply()}
 		>
 			<ReplyIcon class="h-3 w-3" />
-			<span>Reply</span>
+			<span>{$LL.reply()}</span>
 		</button>
 	{/if}
 	{#if commentState && !commentState.isEditing && isAuthor}
@@ -272,7 +273,7 @@
 				editingTags = [...comment.tags];
 				commentState.isEditing = true;
 			}}
-			title="Edit"
+			title={$LL.edit()}
 		>
 			<EditIcon class="h-3.5 w-3.5" />
 		</button>
@@ -283,14 +284,14 @@
 				{#if !isOpen}
 					<div
 						class="flex cursor-pointer items-center rounded bg-orange-500/10 p-1 text-orange-600 transition-colors hover:bg-orange-500/20 hover:text-orange-700"
-						title="Delete"
+						title={$LL.delete()}
 					>
 						<DeleteIcon class="h-3.5 w-3.5" />
 					</div>
 				{:else}
 					<div
 						class="flex cursor-pointer items-center rounded bg-orange-500/20 p-1 text-orange-600 transition-colors hover:bg-orange-500/30"
-						title="Confirm Delete"
+						title={$LL.comments.confirmDelete()}
 					>
 						<CheckIcon class="h-3.5 w-3.5" />
 					</div>
@@ -300,7 +301,7 @@
 			{#snippet slideout()}
 				<!-- Slideout content if needed, though button itself handles confirmation state mostly -->
 				<div class="flex items-center gap-1 rounded bg-orange-500/10 px-2 py-0.5">
-					<span class="text-xs text-orange-600">Delete?</span>
+					<span class="text-xs text-orange-600">{$LL.comments.deleteConfirm()}</span>
 				</div>
 			{/snippet}
 		</ConfirmButton>
@@ -325,11 +326,10 @@
 		>
 			{#if !commentState.repliesExpanded}
 				<ExpandIcon class={sizes.icon} />
-				{comment.num_replies}
-				{comment.num_replies === 1 ? 'reply' : 'replies'}
+				{$LL.comments.nReplies({ count: comment.num_replies })}
 			{:else}
 				<ExpandIcon class="{sizes.icon} rotate-180" />
-				Collapse
+				{$LL.collapse()}
 			{/if}
 		</button>
 	{/if}
@@ -351,7 +351,7 @@
 			<div class="flex items-center gap-2">
 				{#if !isTopLevel}
 					<span class="text-xs font-medium text-text/70"
-						>{comment.user?.username ?? 'Anonymous'}</span
+						>{comment.user?.username ?? $LL.anonymous()}</span
 					>
 				{/if}
 				<span class="text-xs text-text/40">{formatDateTime(comment.created_at)}</span>
@@ -432,7 +432,7 @@
 			<div class={sizes.mb}>
 				<MarkdownTextEditor
 					bind:value={commentState.editInputContent}
-					placeholder="Edit your comment..."
+					placeholder={$LL.comments.editPlaceholder()}
 					rows={3}
 					disabled={isSubmitting}
 					maxCommentLength={env.PUBLIC_MAX_COMMENT_LENGTH
@@ -450,7 +450,7 @@
 						}}
 						disabled={isSubmitting}
 					>
-						<CloseIcon class={sizes.icon} /> Cancel
+						<CloseIcon class={sizes.icon} /> {$LL.cancel()}
 					</button>
 					<button
 						class="flex items-center gap-1 rounded bg-primary/20 {sizes.buttonPx} text-xs font-medium text-primary transition-colors hover:bg-primary/30 disabled:opacity-50"
@@ -461,7 +461,7 @@
 						disabled={!hasChanges || isSubmitting}
 					>
 						<CheckIcon class={sizes.icon} />
-						{isSubmitting ? 'Saving...' : 'Save'}
+						{isSubmitting ? $LL.saving() : $LL.save()}
 					</button>
 				</div>
 			</div>
@@ -488,7 +488,7 @@
 			<div class={isTopLevel ? 'mb-2' : 'mt-2'}>
 				<MarkdownTextEditor
 					bind:value={commentState.replyInputContent}
-					placeholder="Write a reply..."
+					placeholder={$LL.comments.replyPlaceholder()}
 					rows={2}
 					disabled={isSubmitting}
 					autofocus={true}
@@ -513,8 +513,8 @@
 						onclick={(e) => {
 							e.stopPropagation();
 							commentState.isReplying = false;
-							commentState.replyInputContent = '';
-						}}>Cancel</button
+						commentState.replyInputContent = '';
+					}}>{$LL.cancel()}</button
 					>
 					<button
 						class="rounded bg-primary/20 {sizes.buttonPx} text-xs font-medium text-primary transition-colors hover:bg-primary/30 disabled:opacity-50"
@@ -524,7 +524,7 @@
 						}}
 						disabled={!commentState.replyInputContent.trim() || isSubmitting}
 					>
-						{isSubmitting ? (isTopLevel ? 'Sending...' : '...') : 'Reply'}
+						{isSubmitting ? $LL.comments.sending() : $LL.reply()}
 					</button>
 				</div>
 			</div>
@@ -551,13 +551,9 @@
 						disabled={isLoadingReplies}
 					>
 						<ExpandIcon class={sizes.icon} />
-						{isLoadingReplies
-							? 'Loading...'
-							: `${comment.num_replies - (commentState.replies?.length ?? 0)} more ${
-									comment.num_replies - (commentState.replies?.length ?? 0) === 1
-										? 'reply'
-										: 'replies'
-								}`}
+					{isLoadingReplies
+						? $LL.loading()
+						: $LL.comments.nMoreReplies({ count: comment.num_replies - (commentState.replies?.length ?? 0) })}
 					</button>
 				{/if}
 			</div>
@@ -579,7 +575,7 @@
 				<button
 					class="cursor-pointer rounded-md p-1 text-base transition-colors hover:bg-text/10
 					{myReaction?.group_reaction_id === gr.id ? 'bg-primary/20 ring-1 ring-primary/50' : ''}"
-					title="{gr.points} {gr.points === 1 ? 'point' : 'points'}"
+					title={$LL.comments.nPoints({ count: gr.points })}
 					onclick={(e) => {
 						e.stopPropagation();
 						handlePickerReaction(gr.id);

@@ -61,7 +61,7 @@
 			document.visibility = prev;
 			notification(result.error);
 		} else {
-			notification('success', 'Visibility updated');
+			notification('success', $LL.visibility.updated());
 			// refresh parent lists/state
 			invalidateAll();
 		}

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { documentStore } from '$lib/runes/document.svelte.js';
 	import CommentCluster from './CommentCluster.svelte';
+	import LL from '$i18n/i18n-svelte';
 	import { onMount } from 'svelte';
 	import { BADGE_HEIGHT_PX } from './constants';
 	import type { Annotation, CommentRead } from '$api/types';
@@ -249,7 +250,7 @@
 
 	{#if !repositionedClusters.length}
 		<div class="flex h-full items-center justify-center p-4">
-			<p class="text-center text-sm text-text/40">Select text in the PDF to add a comment</p>
+			<p class="text-center text-sm text-text/40">{$LL.comments.selectTextHint()}</p>
 		</div>
 	{/if}
 </div>

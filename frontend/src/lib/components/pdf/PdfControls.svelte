@@ -1,4 +1,5 @@
 <script lang="ts">
+	import LL from '$i18n/i18n-svelte';
 	import ZoomInIcon from '~icons/material-symbols/zoom-in';
 	import ZoomOutIcon from '~icons/material-symbols/zoom-out';
 	import FitPageIcon from '~icons/material-symbols/fit-page';
@@ -138,11 +139,11 @@
 	<button
 		class="flex items-center justify-center gap-2 border-b border-text/10 p-2 text-text/50 transition-colors hover:bg-text/5 hover:text-text/70"
 		onclick={() => (isExpanded = !isExpanded)}
-		title={isExpanded ? 'Collapse' : 'Expand'}
+		title={isExpanded ? $LL.collapse() : $LL.pdf.expand()}
 	>
 		{#if isExpanded}
 			<CollapseIcon class={iconSizeClass} />
-			<span class="text-xs">Collapse</span>
+			<span class="text-xs">{$LL.collapse()}</span>
 		{:else}
 			<ExpandIcon class={iconSizeClass} />
 		{/if}
@@ -156,22 +157,22 @@
 					class="{buttonClass} {isExpanded ? 'flex-1' : ''}"
 					onclick={onZoomIn}
 					disabled={documentStore.documentScale >= maxScale}
-					title="Zoom In"
-				>
-					<span class="flex items-center gap-2">
-						<ZoomInIcon class={iconSizeClass} />
-						{#if isExpanded}<span class="text-xs">Zoom In</span>{/if}
+				title={$LL.pdf.zoomIn()}
+			>
+				<span class="flex items-center gap-2">
+					<ZoomInIcon class={iconSizeClass} />
+					{#if isExpanded}<span class="text-xs">{$LL.pdf.zoomIn()}</span>{/if}
 					</span>
 				</button>
 				<button
 					class="{buttonClass} {isExpanded ? 'flex-1' : ''}"
 					onclick={onZoomOut}
 					disabled={documentStore.documentScale <= minScale}
-					title="Zoom Out"
-				>
-					<span class="flex items-center gap-2">
-						<ZoomOutIcon class={iconSizeClass} />
-						{#if isExpanded}<span class="text-xs">Zoom Out</span>{/if}
+				title={$LL.pdf.zoomOut()}
+			>
+				<span class="flex items-center gap-2">
+					<ZoomOutIcon class={iconSizeClass} />
+					{#if isExpanded}<span class="text-xs">{$LL.pdf.zoomOut()}</span>{/if}
 					</span>
 				</button>
 			</div>
@@ -181,11 +182,11 @@
 			<button
 				class="{buttonClass} {isExpanded ? 'w-full justify-start' : ''}"
 				onclick={onFitHeight}
-				title="Fit Height"
-			>
-				<span class="flex items-center gap-2">
-					<FitPageIcon class={iconSizeClass} />
-					{#if isExpanded}<span class="text-xs">Fit Height</span>{/if}
+			title={$LL.pdf.fitHeight()}
+		>
+			<span class="flex items-center gap-2">
+				<FitPageIcon class={iconSizeClass} />
+				{#if isExpanded}<span class="text-xs">{$LL.pdf.fitHeight()}</span>{/if}
 				</span>
 			</button>
 
@@ -199,7 +200,7 @@
 					class="{buttonClass} {isExpanded ? '' : ''}"
 					onclick={onPrevPage}
 					disabled={pageNumber <= 1}
-					title="Previous Page"
+					title={$LL.pdf.previousPage()}
 				>
 					<ChevronUpIcon class={iconSizeClass} />
 				</button>
@@ -208,7 +209,7 @@
 					class="{buttonClass} {isExpanded ? '' : ''}"
 					onclick={onNextPage}
 					disabled={pageNumber >= numPages}
-					title="Next Page"
+					title={$LL.pdf.nextPage()}
 				>
 					<ChevronDownIcon class={iconSizeClass} />
 				</button>
@@ -238,7 +239,7 @@
 			>
 				<span class="flex items-center justify-center gap-2">
 					<CursorIcon class={iconSizeClass} />
-					{#if isExpanded}<span class="text-xs">Share My Cursor</span>{/if}
+					{#if isExpanded}<span class="text-xs">{$LL.pdf.shareCursor()}</span>{/if}
 				</span>
 			</button>
 
@@ -255,7 +256,7 @@
 					{:else}
 						<EyeOffIcon class={iconSizeClass} />
 					{/if}
-					{#if isExpanded}<span class="text-xs">Show Other Cursors</span>{/if}
+					{#if isExpanded}<span class="text-xs">{$LL.pdf.showOtherCursors()}</span>{/if}
 				</span>
 			</button>
 		</div>
@@ -278,7 +279,7 @@
 				{/if}
 				{#if !compact}
 					<span class="min-w-0 truncate text-xs text-text/70"
-						>{filter.data.username} {isSessionUser ? '(You)' : ''}</span
+						>{filter.data.username} {isSessionUser ? $LL.pdf.you() : ''}</span
 					>
 				{/if}
 			</div>
@@ -286,14 +287,14 @@
 
 		<div class="flex w-full items-center {isExpanded ? 'justify-between' : 'justify-center'} gap-2">
 			{#if isExpanded}
-				<p class="font-medium text-text/80">Filters & Pins</p>
+				<p class="font-medium text-text/80">{$LL.pdf.filtersAndPins()}</p>
 			{/if}
 			<div class="flex items-center gap-1">
 				<button
 					onclick={() => {
 						documentStore.pinAll(!globalPinStatus.anyPinned);
 					}}
-					title={globalPinStatus.anyPinned ? 'Unpin all comments' : 'Pin all comments'}
+					title={globalPinStatus.anyPinned ? $LL.pdf.unpinAllComments() : $LL.pdf.pinAllComments()}
 					class="cursor-pointer hover:scale-110"
 					in:scale
 					out:scale
@@ -310,7 +311,7 @@
 						onclick={() => {
 							documentStore.filters.clear();
 						}}
-						title="Clear All Filters"
+						title={$LL.pdf.clearAllFilters()}
 						class="cursor-pointer hover:scale-110"
 						in:scale
 						out:scale
@@ -324,16 +325,16 @@
 		<DocumentTutorial {isExpanded} />
 		<!-- Active Users -->
 		<FilterList
-			placeholderLabel="No other users viewing"
+			placeholderLabel={$LL.pdf.noOtherUsers()}
 			compact={!isExpanded}
 			filters={activeUserFilters}
 			item={userFilterItem}
 		>
 			{#snippet header(compact)}
-				<div class="flex items-center gap-2" title={isExpanded ? '' : 'Active Users'}>
-					<ActiveUsersIcon class={iconSizeClass} />
-					{#if !compact}
-						<span>Active Users</span>
+			<div class="flex items-center gap-2" title={isExpanded ? '' : $LL.pdf.activeUsers()}>
+				<ActiveUsersIcon class={iconSizeClass} />
+				{#if !compact}
+					<span>{$LL.pdf.activeUsers()}</span>
 					{/if}
 				</div>
 			{/snippet}
@@ -342,10 +343,10 @@
 		<!--Document Authors-->
 		<FilterList compact={!isExpanded} filters={documentAuthorFilters} item={userFilterItem}>
 			{#snippet header(compact)}
-				<div class="flex items-center gap-2" title={isExpanded ? '' : 'Offline Users'}>
-					<OfflineIcon class={iconSizeClass} />
-					{#if !compact}
-						<span>Offline Users</span>
+			<div class="flex items-center gap-2" title={isExpanded ? '' : $LL.pdf.offlineUsers()}>
+				<OfflineIcon class={iconSizeClass} />
+				{#if !compact}
+					<span>{$LL.pdf.offlineUsers()}</span>
 					{/if}
 				</div>
 			{/snippet}
@@ -354,10 +355,10 @@
 		<!-- Tag Filters -->
 		<FilterList compact={!isExpanded} filters={tagFilters}>
 			{#snippet header(compact)}
-				<div class="flex items-center gap-2" title={isExpanded ? '' : 'Tags'}>
-					<TagIcon class={iconSizeClass} />
-					{#if !compact}
-						<span>Tags</span>
+			<div class="flex items-center gap-2" title={isExpanded ? '' : $LL.tags.title()}>
+				<TagIcon class={iconSizeClass} />
+				{#if !compact}
+					<span>{$LL.tags.title()}</span>
 					{/if}
 				</div>
 			{/snippet}

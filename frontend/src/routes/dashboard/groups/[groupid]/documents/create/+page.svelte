@@ -42,10 +42,10 @@
 
 	function validateFile(file: File): string | null {
 		if (file.type !== ALLOWED_FILE_TYPE) {
-			return `Invalid file type. Only PDF files are allowed.`;
+			return $LL.documents.invalidFileType();
 		}
 		if (file.size > MAX_FILE_SIZE_BYTES) {
-			return `File size exceeds maximum of ${MAX_FILE_SIZE_MB}MB. Your file is ${(file.size / (1024 * 1024)).toFixed(2)}MB.`;
+			return $LL.documents.fileTooLarge({ max: MAX_FILE_SIZE_MB, actual: (file.size / (1024 * 1024)).toFixed(2) });
 		}
 		return null;
 	}
@@ -106,7 +106,7 @@
 		event.preventDefault();
 
 		if (!selectedFile) {
-			errorMessage = 'Please select a file to upload';
+			errorMessage = $LL.documents.selectFile();
 			return;
 		}
 
@@ -141,17 +141,17 @@
 		}
 
 		if (!result.data) {
-			notification('error', 'Failed to upload document: No data returned');
+			notification('error', $LL.documents.uploadFailed());
 			return;
 		}
 
-		notification('success', 'Document uploaded successfully');
+		notification('success', $LL.documents.uploadSuccess());
 		goto(`/dashboard/groups/${groupId}/documents`, { invalidateAll: true });
 	}
 </script>
 
 <div class="flex h-full w-full flex-col gap-6 p-6">
-	<h1 class="text-2xl font-bold">Upload Document</h1>
+	<h1 class="text-2xl font-bold">{$LL.documents.uploadDocument()}</h1>
 
 	<!-- Form Section -->
 	<form onsubmit={handleSubmit} class="flex flex-col gap-6">
@@ -166,9 +166,9 @@
 
 		<!-- File Upload Section -->
 		<div class="flex flex-col gap-2">
-			<div class="text-sm font-semibold text-text/70">Document File</div>
+			<div class="text-sm font-semibold text-text/70">{$LL.documents.documentFile()}</div>
 			<p class="text-xs text-text/50">
-				Upload a PDF file (max {MAX_FILE_SIZE_MB}MB)
+				{$LL.documents.documentFileHint({ size: MAX_FILE_SIZE_MB })}
 			</p>
 
 			{#if !selectedFile}
@@ -194,10 +194,10 @@
 					<div class="flex flex-col items-center gap-4 p-8">
 						<DragDropIcon class="h-16 w-16 text-text/40" />
 						<div class="flex flex-col items-center gap-2">
-							<p class="text-lg font-semibold">Drag and drop your PDF file here</p>
-							<p class="text-sm text-text/60">or click to browse</p>
+							<p class="text-lg font-semibold">{$LL.documents.dragDrop()}</p>
+							<p class="text-sm text-text/60">{$LL.documents.orClickBrowse()}</p>
 						</div>
-						<p class="text-xs text-text/50">Maximum file size: {MAX_FILE_SIZE_MB}MB</p>
+						<p class="text-xs text-text/50">{$LL.documents.maxFileSize({ size: MAX_FILE_SIZE_MB })}</p>
 					</div>
 				</div>
 			{:else}
@@ -224,12 +224,12 @@
 
 		<!-- Document Name Field -->
 		<div class="flex flex-col gap-2">
-			<label for="documentName" class="text-sm font-semibold text-text/70">Document Name</label>
+			<label for="documentName" class="text-sm font-semibold text-text/70">{$LL.documents.documentName()}</label>
 			<input
 				type="text"
 				id="documentName"
 				bind:value={documentName}
-				placeholder="Enter document name"
+				placeholder={$LL.documents.documentNamePlaceholder()}
 				class="rounded-lg border border-text/20 bg-inset p-3 text-sm shadow-inner focus:border-primary focus:ring-1 focus:ring-primary"
 				required
 			/>
@@ -238,24 +238,23 @@
 		<!-- Document Description Field -->
 		<div class="flex flex-col gap-2">
 			<label for="documentDescription" class="text-sm font-semibold text-text/70">
-				Document Description (Optional)
+				{$LL.documents.documentDescription()}
 			</label>
 			<MarkdownTextEditor
 				bind:value={documentDescription}
-				placeholder="Add a description for this document (supports Markdown formatting)"
+				placeholder={$LL.documents.documentDescriptionPlaceholder()}
 				rows={4}
 				maxCommentLength={5000}
 			/>
 			<p class="text-xs text-text/50">
-				Describe the purpose of this document, what feedback you're looking for, or any other
-				context.
+				{$LL.documents.documentDescriptionHint()}
 			</p>
 		</div>
 
 		<!-- Visibility Section -->
 		<div class="flex flex-col gap-2">
-			<div class="text-sm font-semibold text-text/70">Visibility Settings</div>
-			<p class="text-xs text-text/50">Choose who can view this document</p>
+			<div class="text-sm font-semibold text-text/70">{$LL.visibility.settings()}</div>
+			<p class="text-xs text-text/50">{$LL.visibility.chooseHint()}</p>
 
 			<div class="flex flex-col gap-2">
 				{#each visibilityOptions as option (option.value)}
@@ -288,14 +287,12 @@
 				<div class="flex items-start gap-3">
 					<InfoIcon class="h-5 w-5 shrink-0 text-primary" />
 					<div class="flex flex-col gap-1">
-						<p class="font-semibold text-primary">Document Tags</p>
+						<p class="font-semibold text-primary">{$LL.documents.tagInfo.title()}</p>
 						<p class="text-sm text-text/80">
-							After uploading your document, you can create and manage custom tags to categorize
-							comments. Tags help organize feedback and make it easier to filter and find specific
-							types of annotations.
+							{$LL.documents.tagInfo.description()}
 						</p>
 						<p class="text-xs text-text/60">
-							You can add tags anytime from the document settings page.
+							{$LL.documents.tagInfo.hint()}
 						</p>
 					</div>
 				</div>
@@ -308,7 +305,7 @@
 				href="/dashboard/groups/{groupId}/documents"
 				class="rounded-md bg-text/10 px-6 py-2 transition-all hover:bg-text/20"
 			>
-				Cancel
+				{$LL.cancel()}
 			</a>
 			<button
 				type="submit"
@@ -317,10 +314,10 @@
 			>
 				{#if isLoading}
 					<Loading class="h-5 w-5" />
-					<span>Uploading...</span>
+					<span>{$LL.uploading()}</span>
 				{:else}
 					<UploadIcon class="h-5 w-5" />
-					<span>Upload Document</span>
+					<span>{$LL.documents.uploadDocument()}</span>
 				{/if}
 			</button>
 		</div>

@@ -3,6 +3,7 @@
 	import type { DocumentRead, TagRead } from '$api/types';
 	import { notification } from '$lib/stores/notificationStore';
 	import { invalidateAll } from '$app/navigation';
+	import LL from '$i18n/i18n-svelte';
 	import AddIcon from '~icons/material-symbols/add-2-rounded';
 	import EditIcon from '~icons/material-symbols/edit-outline';
 	import DeleteIcon from '~icons/material-symbols/delete-outline';
@@ -44,11 +45,11 @@
 
 	async function createTag() {
 		if (!newTag.label.trim()) {
-			notification('error', 'Tag label is required');
-			return;
-		}
+		notification('error', $LL.tags.labelRequired());
+		return;
+	}
 
-		const result = await api.post<TagRead>(`/documents/${document.id}/tags`, {
+	const result = await api.post<TagRead>(`/documents/${document.id}/tags`, {
 			label: newTag.label.trim(),
 			description: newTag.description.trim() || null,
 			color: newTag.color
@@ -59,18 +60,18 @@
 			return;
 		}
 
-		notification('success', 'Tag created successfully');
+		notification('success', $LL.tags.createSuccess());
 		resetNewTagForm();
 		await invalidateAll();
 	}
 
 	async function updateTag(tagId: number) {
 		if (!editTag.label.trim()) {
-			notification('error', 'Tag label is required');
-			return;
-		}
+		notification('error', $LL.tags.labelRequired());
+		return;
+	}
 
-		const result = await api.update(`/documents/${document.id}/tags/${tagId}`, {
+	const result = await api.update(`/documents/${document.id}/tags/${tagId}`, {
 			label: editTag.label.trim(),
 			description: editTag.description.trim() || null,
 			color: editTag.color
@@ -81,7 +82,7 @@
 			return;
 		}
 
-		notification('success', 'Tag updated successfully');
+		notification('success', $LL.tags.updateSuccess());
 		editingTagId = null;
 		await invalidateAll();
 	}
@@ -94,7 +95,7 @@
 			return;
 		}
 
-		notification('success', 'Tag deleted successfully');
+		notification('success', $LL.tags.deleteSuccess());
 		await invalidateAll();
 	}
 
@@ -170,13 +171,13 @@
 		<div class="flex flex-col gap-1.5">
 			<label
 				for={isEdit ? `edit-tag-label-${tagId}` : 'new-tag-label'}
-				class="text-xs font-semibold text-text/70">Label *</label
+				class="text-xs font-semibold text-text/70">{$LL.tags.label()}</label
 			>
 			<input
 				id={isEdit ? `edit-tag-label-${tagId}` : 'new-tag-label'}
 				type="text"
 				bind:value={formData.label}
-				placeholder={isEdit ? 'e.g., Bug, Question' : 'Tag label'}
+				placeholder={isEdit ? $LL.tags.tagLabelEditPlaceholder() : $LL.tags.tagLabelPlaceholder()}
 				maxlength="50"
 				class="rounded-md border border-text/20 bg-text/5 px-3 py-2 text-sm transition-colors outline-none focus:border-text/50"
 			/>
@@ -184,12 +185,12 @@
 		<div class="flex flex-col gap-1.5">
 			<label
 				for={isEdit ? `edit-tag-color-${tagId}` : 'new-tag-color'}
-				class="text-xs font-semibold text-text/70">Color *</label
+				class="text-xs font-semibold text-text/70">{$LL.tags.color()}</label
 			>
 			<div class="relative" data-color-picker>
 				<button
 					type="button"
-					aria-label={isEdit ? 'Choose color for tag ' + tagId : 'Choose color for new tag'}
+					aria-label={isEdit ? $LL.tags.chooseColor() : $LL.tags.chooseColorNew()}
 					onclick={() =>
 						(activeColorPicker =
 							activeColorPicker === (isEdit ? 'edit' : 'new') ? null : isEdit ? 'edit' : 'new')}
@@ -224,12 +225,12 @@
 		<div class="flex flex-col gap-1.5 md:col-span-2">
 			<label
 				for={isEdit ? `edit-tag-description-${tagId}` : 'new-tag-description'}
-				class="text-xs font-semibold text-text/70">Description</label
+				class="text-xs font-semibold text-text/70">{$LL.tags.description()}</label
 			>
 			<textarea
 				id={isEdit ? `edit-tag-description-${tagId}` : 'new-tag-description'}
 				bind:value={formData.description}
-				placeholder="Optional description for this tag"
+				placeholder={$LL.tags.descriptionPlaceholder()}
 				maxlength="200"
 				rows="2"
 				class="rounded-md border border-text/20 bg-text/5 px-3 py-2 text-sm transition-colors outline-none focus:border-text/50"
@@ -242,66 +243,66 @@
 
 <div class="flex flex-col gap-4">
 	<div class="flex items-center justify-between">
-		<div class="text-sm font-semibold text-text/70">Tags</div>
+		<div class="text-sm font-semibold text-text/70">{$LL.tags.title()}</div>
 		<button
 			onclick={() => (isAddingTag = !isAddingTag)}
 			class="flex items-center gap-2 rounded-md bg-primary/20 px-3 py-2 text-sm font-semibold transition hover:bg-primary/30"
 		>
-			<AddIcon class="h-4 w-4" />
-			Add Tag
+		<AddIcon class="h-4 w-4" />
+		{$LL.tags.addTag()}
 		</button>
 	</div>
 
 	<!-- Add Tag Form -->
 	{#if isAddingTag}
 		<div class="flex flex-col gap-3 rounded-md border border-text/20 bg-text/5 p-4">
-			<div class="text-sm font-semibold">New Tag</div>
+			<div class="text-sm font-semibold">{$LL.tags.newTag()}</div>
 			{@render tagForm(newTag, false)}
 			<div class="flex items-center gap-2">
 				<button
 					onclick={createTag}
 					class="flex items-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-semibold transition hover:bg-primary/80"
 				>
-					<SaveIcon class="h-4 w-4" />
-					Create Tag
+				<SaveIcon class="h-4 w-4" />
+				{$LL.tags.createTag()}
 				</button>
 				<button
 					onclick={resetNewTagForm}
 					class="flex items-center gap-2 rounded-md bg-text/10 px-3 py-2 text-sm font-semibold transition hover:bg-text/20"
 				>
-					<CancelIcon class="h-4 w-4" />
-					Cancel
-				</button>
-			</div>
+				<CancelIcon class="h-4 w-4" />
+				{$LL.cancel()}
+			</button>
 		</div>
-	{/if}
+	</div>
+{/if}
 
 	<!-- Tags List -->
 	<div class="flex flex-col gap-2">
 		{#if tags.length === 0}
-			<p class="text-sm text-text/50">No tags created yet</p>
+			<p class="text-sm text-text/50">{$LL.tags.noTags()}</p>
 		{:else}
 			{#each tags as tag (tag.id)}
 				{#if editingTagId === tag.id}
 					<!-- Edit Form -->
 					<div class="flex flex-col gap-3 rounded-md border border-text/20 bg-text/5 p-4">
-						<div class="text-sm font-semibold">Edit Tag</div>
+						<div class="text-sm font-semibold">{$LL.tags.editTag()}</div>
 						{@render tagForm(editTag, true, tag.id)}
 						<div class="flex items-center gap-2">
 							<button
 								onclick={() => updateTag(tag.id)}
 								class="flex items-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-semibold transition hover:bg-primary/80"
 							>
-								<SaveIcon class="h-4 w-4" />
-								Save Changes
+							<SaveIcon class="h-4 w-4" />
+							{$LL.saveChanges()}
 							</button>
 							<button
 								onclick={cancelEdit}
 								class="flex items-center gap-2 rounded-md bg-text/10 px-3 py-2 text-sm font-semibold transition hover:bg-text/20"
 							>
-								<CancelIcon class="h-4 w-4" />
-								Cancel
-							</button>
+							<CancelIcon class="h-4 w-4" />
+							{$LL.cancel()}
+						</button>
 						</div>
 					</div>
 				{:else}
@@ -323,7 +324,7 @@
 							<button
 								onclick={() => startEditingTag(tag)}
 								class="rounded-md p-1.5 transition hover:bg-text/10"
-								aria-label="Edit tag"
+								aria-label={$LL.tags.editAriaLabel()}
 							>
 								<EditIcon class="h-4 w-4" />
 							</button>
@@ -337,7 +338,7 @@
 									<div
 										class="rounded-md bg-red-500/10 px-3 py-2 whitespace-nowrap text-red-600 dark:text-red-400"
 									>
-										Delete?
+										{$LL.tags.deleteConfirm()}
 									</div>
 								{/snippet}
 							</ConfirmButton>

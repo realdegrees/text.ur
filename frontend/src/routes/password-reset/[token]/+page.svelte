@@ -5,6 +5,7 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { onMount } from 'svelte';
+	import LL from '$i18n/i18n-svelte';
 
 	// Extract token from URL params before clearing it
 	const token = $page.params.token;
@@ -27,13 +28,13 @@
 		errorMessage = null;
 
 		if (password !== confirmPassword) {
-			errorMessage = 'Passwords do not match';
+			errorMessage = $LL.passwordReset.passwordsDoNotMatch();
 			isLoading = false;
 			return;
 		}
 
 		if (password.length < 8) {
-			errorMessage = 'Password must be at least 8 characters';
+			errorMessage = $LL.passwordReset.passwordMinLength();
 			isLoading = false;
 			return;
 		}
@@ -42,8 +43,8 @@
 			const result = await api.update(`/login/reset/verify/${token}`, { password });
 
 			if (!result.success) {
-				errorMessage =
-					result.error.detail || 'Failed to reset password. The link may be expired or invalid.';
+			errorMessage =
+				result.error.detail || $LL.passwordReset.resetFailedExpired();
 				return;
 			}
 
@@ -57,26 +58,26 @@
 
 <div class="mt-20 flex h-fit w-full justify-center">
 	<div class="w-full max-w-md overflow-hidden rounded-lg bg-inset p-8 shadow-lg">
-		<h1 class="mb-2 text-2xl font-bold">Set New Password</h1>
-		<p class="mb-6 text-sm text-gray-600">Enter your new password below.</p>
+		<h1 class="mb-2 text-2xl font-bold">{$LL.passwordReset.setNewPassword()}</h1>
+		<p class="mb-6 text-sm text-gray-600">{$LL.passwordReset.setNewPasswordDescription()}</p>
 
 		<form onsubmit={handlePasswordReset} class="flex flex-col gap-4">
 			{#if errorMessage}
 				<div class="error-message">{errorMessage}</div>
 			{/if}
-			<Field bind:value={password} label="New Password" hidden required />
-			<Field bind:value={confirmPassword} label="Confirm Password" hidden required />
+			<Field bind:value={password} label={$LL.passwordReset.newPasswordLabel()} hidden required />
+			<Field bind:value={confirmPassword} label={$LL.passwordReset.confirmPasswordLabel()} hidden required />
 			<button type="submit" class="submit-button" disabled={isLoading}>
 				{#if isLoading}
 					<Loading />
 				{:else}
-					Reset Password
+					{$LL.passwordReset.resetButton()}
 				{/if}
 			</button>
 		</form>
 
 		<div class="mt-4 text-center text-sm">
-			<a href="/login" class="text-blue-500 hover:underline">Back to Login</a>
+			<a href="/login" class="text-blue-500 hover:underline">{$LL.passwordReset.backToLogin()}</a>
 		</div>
 	</div>
 </div>

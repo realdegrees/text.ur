@@ -1,6 +1,7 @@
 <script lang="ts">
 	import InfiniteTable from '$lib/components/infiniteScrollTable.svelte';
 	import type { DocumentRead } from '$api/types';
+	import LL from '$i18n/i18n-svelte';
 	import DocumentIcon from '~icons/material-symbols/description-outline';
 	import AddIcon from '~icons/material-symbols/add-2-rounded';
 	import EditIcon from '~icons/material-symbols/edit-outline';
@@ -31,7 +32,7 @@
 				class="flex flex-row items-center gap-2 rounded bg-green-500/30 px-3 py-2.5 font-semibold shadow-inner shadow-black/30 transition hover:cursor-pointer hover:bg-green-500/40"
 			>
 				<AddIcon class="h-5 w-5" />
-				Upload Document
+				{$LL.documents.uploadDocument()}
 			</a>
 		{/if}
 	</div>
@@ -40,17 +41,17 @@
 		<InfiniteTable
 			columns={[
 				{
-					label: 'Document Name',
+					label: $LL.documents.documentName(),
 					width: '1fr',
 					snippet: nameSnippet
 				},
 				{
-					label: 'Visibility',
+					label: $LL.visibility.label(),
 					width: '1fr',
 					snippet: visibilitySnippet
 				},
 				{
-					label: 'Created',
+					label: $LL.documents.created(),
 					width: '1fr',
 					snippet: dateSnippet
 				},
@@ -58,7 +59,7 @@
 				sessionStore.validatePermissions(['upload_documents'])
 					? [
 							{
-								label: 'Actions',
+								label: $LL.actions(),
 								width: 'auto',
 								snippet: actionsSnippet
 							}
@@ -112,7 +113,7 @@
 	<div class="flex flex-col gap-0.5">
 		<p class="text-sm text-text/90">{formatDateTime(document.created_at)}</p>
 		{#if document.updated_at && document.updated_at !== document.created_at}
-			<p class="text-xs text-text/60">Updated: {formatDateTime(document.updated_at)}</p>
+			<p class="text-xs text-text/60">{$LL.documents.updated({ date: formatDateTime(document.updated_at) })}</p>
 		{/if}
 	</div>
 {/snippet}
@@ -123,7 +124,7 @@
 			<button
 				onclick={() => goto(`/dashboard/groups/${group.id}/documents/${document.id}/settings`)}
 				class="cursor-pointer text-text/80 transition hover:text-primary"
-				aria-label="Edit document settings"
+				aria-label={$LL.documents.editSettings()}
 			>
 				<EditIcon class="h-5 w-5" />
 			</button>
@@ -136,7 +137,7 @@
 						notification(result.error);
 						return;
 					}
-					notification('success', 'Document deleted successfully');
+					notification('success', $LL.documents.deleteSuccess());
 					invalidateAll();
 				}}
 			>
@@ -144,7 +145,7 @@
 					<DeleteIcon class="h-5 w-5 cursor-pointer text-text/80 hover:text-red-400/80" />
 				{/snippet}
 				{#snippet slideout()}
-					<div class="px-1 py-2 whitespace-nowrap text-red-600 dark:text-red-400">Delete?</div>
+					<div class="px-1 py-2 whitespace-nowrap text-red-600 dark:text-red-400">{$LL.documents.deleteConfirm()}</div>
 				{/snippet}
 			</ConfirmButton>
 		{/if}

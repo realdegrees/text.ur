@@ -4,6 +4,7 @@
 	import ChevronDownIcon from '~icons/material-symbols/keyboard-arrow-down';
 	import ChevronUpIcon from '~icons/material-symbols/keyboard-arrow-up';
 	import CalendarIcon from '~icons/material-symbols/calendar-today-outline';
+	import LL from '$i18n/i18n-svelte';
 	// Tag display removed per request
 
 	interface Props {
@@ -16,7 +17,7 @@
 
 	// Format last updated date
 	function formatDate(dateString: string | undefined): string {
-		if (!dateString) return 'Never';
+		if (!dateString) return $LL.relativeTime.never();
 		const date = new Date(dateString);
 		const now = new Date();
 		const diffMs = now.getTime() - date.getTime();
@@ -24,10 +25,10 @@
 		const diffHours = Math.floor(diffMs / 3600000);
 		const diffDays = Math.floor(diffMs / 86400000);
 
-		if (diffMins < 1) return 'Just now';
-		if (diffMins < 60) return `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`;
-		if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
-		if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+	if (diffMins < 1) return $LL.relativeTime.justNow();
+	if (diffMins < 60) return $LL.relativeTime.nMinutesAgo({ count: diffMins });
+	if (diffHours < 24) return $LL.relativeTime.nHoursAgo({ count: diffHours });
+	if (diffDays < 7) return $LL.relativeTime.nDaysAgo({ count: diffDays });
 
 		return date.toLocaleDateString('en-US', {
 			year: 'numeric',
@@ -48,11 +49,11 @@
 			class="doc-info-header flex w-full items-center justify-between border-b border-text/10 px-3 py-2 transition-colors hover:bg-text/5"
 		>
 			<div class="flex items-center gap-3">
-				<h2 class="text-sm font-semibold text-text/80">Document Information</h2>
+				<h2 class="text-sm font-semibold text-text/80">{$LL.pdf.documentInfo()}</h2>
 				<!-- Last Updated -->
 				<div class="flex items-center gap-1.5 text-xs text-text/50">
 					<CalendarIcon class="h-3.5 w-3.5" />
-					<span>Updated {formatDate(document.updated_at)}</span>
+					<span>{$LL.memberScore.updatedAgo({ time: formatDate(document.updated_at) })}</span>
 				</div>
 			</div>
 			<div class="flex items-center gap-2">

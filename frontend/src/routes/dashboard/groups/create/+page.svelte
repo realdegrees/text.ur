@@ -7,6 +7,7 @@
 	import { notification } from '$lib/stores/notificationStore';
 	import PermissionSelector from '$lib/components/permissionSelector.svelte';
 	import { goto, invalidateAll } from '$app/navigation';
+	import LL from '$i18n/i18n-svelte';
 
 	let groupName: string = $state('');
 	let selectedPermissions: Permission[] = $state(['add_comments', 'add_reactions']);
@@ -14,11 +15,11 @@
 	let errorMessage: string = $state('');
 
 	// Default scoring values (read-only preview, matches backend DEFAULT_REACTIONS)
-	const DEFAULT_ACTION_POINTS = [
-		{ action: 'Create a highlight', points: 1 },
-		{ action: 'Write a comment', points: 5 },
-		{ action: 'Add a tag', points: 2 }
-	];
+	let DEFAULT_ACTION_POINTS = $derived([
+		{ action: $LL.groupSettings.scoring.createHighlight(), points: 1 },
+		{ action: $LL.groupSettings.scoring.writeComment(), points: 5 },
+		{ action: $LL.groupSettings.scoring.addTag(), points: 2 }
+	]);
 
 	const DEFAULT_EMOJI_REACTIONS = [
 		{ emoji: '\u{1F44D}', points: 2, admin_points: 4, giver_points: 2 },
@@ -43,7 +44,7 @@
 		event.preventDefault();
 
 		if (!groupName.trim()) {
-			errorMessage = 'Group name is required';
+			errorMessage = $LL.groupCreate.groupNameRequired();
 			return;
 		}
 
@@ -62,7 +63,7 @@
 		}
 
 		if (!result.data) {
-			notification('error', 'Failed to create group: No data returned');
+			notification('error', $LL.groupCreate.createFailed());
 			isLoading = false;
 			return;
 		}
@@ -77,9 +78,9 @@
 <div class="flex h-full w-full flex-col gap-4 p-6">
 	<!-- Header Section -->
 	<div class="flex flex-row items-center gap-3">
-		<a href="/dashboard" class="text-text/70 transition-colors hover:text-text">Dashboard</a>
+		<a href="/dashboard" class="text-text/70 transition-colors hover:text-text">{$LL.dashboard.title()}</a>
 		<span class="text-text/50">/</span>
-		<h1 class="text-2xl font-bold">Create New Group</h1>
+		<h1 class="text-2xl font-bold">{$LL.groupCreate.title()}</h1>
 	</div>
 
 	<hr class="border-text/20" />
@@ -99,16 +100,16 @@
 		<div class="flex flex-col gap-2">
 			<div class="flex flex-row items-center gap-2">
 				<GroupIcon class="h-6 w-6" />
-				<h2 class="text-xl font-semibold">Group Details</h2>
+				<h2 class="text-xl font-semibold">{$LL.groupCreate.groupDetails()}</h2>
 			</div>
 
-			<label for="groupName" class="text-sm font-semibold text-text/70">Group Name *</label>
+			<label for="groupName" class="text-sm font-semibold text-text/70">{$LL.groupCreate.groupNameLabel()}</label>
 			<input
 				id="groupName"
 				type="text"
 				bind:value={groupName}
 				required
-				placeholder="Enter group name"
+				placeholder={$LL.groupCreate.groupNamePlaceholder()}
 				class="rounded-md border border-text/20 bg-text/5 px-4 py-2 transition-colors focus:border-text/50 focus:outline-none"
 				disabled={isLoading}
 			/>
@@ -118,11 +119,10 @@
 
 		<!-- Default Permissions -->
 		<div class="flex flex-col gap-3">
-			<h2 class="text-xl font-semibold">Default Member Permissions</h2>
-			<p class="text-sm text-text/70">
-				Select the default permissions that new members will have when joining this group. You can
-				change these at any time in the group settings.
-			</p>
+		<h2 class="text-xl font-semibold">{$LL.groupCreate.defaultPermissions.title()}</h2>
+		<p class="text-sm text-text/70">
+			{$LL.groupCreate.defaultPermissions.description()}
+		</p>
 
 			<PermissionSelector
 				bind:selectedPermissions
@@ -136,11 +136,10 @@
 
 		<!-- Scoring Configuration (read-only preview) -->
 		<div class="flex flex-col gap-3">
-			<h2 class="text-xl font-semibold">Scoring Configuration</h2>
-			<p class="text-sm text-text/70">
-				New groups are created with the following default point values. You can change these at any
-				time in the group settings.
-			</p>
+		<h2 class="text-xl font-semibold">{$LL.groupCreate.scoring.title()}</h2>
+		<p class="text-sm text-text/70">
+			{$LL.groupCreate.scoring.description()}
+		</p>
 
 			<!-- Side-by-side tables -->
 			<div class="flex flex-col items-start gap-6 text-sm lg:flex-row">
@@ -149,8 +148,8 @@
 					<table class="w-full">
 						<thead>
 							<tr class="border-b border-text/10 text-left text-xs text-text/50">
-								<th class="pb-2 font-medium">Action</th>
-								<th class="pb-2 text-right font-medium">Points</th>
+							<th class="pb-2 font-medium">{$LL.groupSettings.scoring.action()}</th>
+							<th class="pb-2 text-right font-medium">{$LL.groupSettings.scoring.pointsHeader()}</th>
 							</tr>
 						</thead>
 						<tbody>
@@ -169,10 +168,10 @@
 					<table class="w-full">
 						<thead>
 							<tr class="border-b border-text/10 text-left text-xs text-text/50">
-								<th class="pb-2 font-medium">Emoji</th>
-								<th class="pb-2 text-right font-medium">Received</th>
-								<th class="pb-2 text-right font-medium">From admin</th>
-								<th class="pb-2 text-right font-medium">Giver</th>
+							<th class="pb-2 font-medium">{$LL.groupSettings.scoring.emoji()}</th>
+							<th class="pb-2 text-right font-medium">{$LL.groupSettings.scoring.received()}</th>
+							<th class="pb-2 text-right font-medium">{$LL.groupSettings.scoring.fromAdmin()}</th>
+							<th class="pb-2 text-right font-medium">{$LL.groupSettings.scoring.giver()}</th>
 							</tr>
 						</thead>
 						<tbody>
@@ -195,8 +194,8 @@
 		<!-- Submit Button -->
 		<div class="flex flex-row justify-end gap-2">
 			<a href="/dashboard" class="rounded-md bg-text/10 px-6 py-2 transition-all hover:bg-text/20">
-				Cancel
-			</a>
+			{$LL.cancel()}
+		</a>
 			<button
 				type="submit"
 				disabled={isLoading || !groupName.trim()}
@@ -204,10 +203,10 @@
 			>
 				{#if isLoading}
 					<Loading class="h-5 w-5" />
-					<span>Creating...</span>
+					<span>{$LL.creating()}</span>
 				{:else}
 					<AddIcon class="h-5 w-5" />
-					<span>Create Group</span>
+					<span>{$LL.groupCreate.createButton()}</span>
 				{/if}
 			</button>
 		</div>

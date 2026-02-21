@@ -58,8 +58,8 @@
 		);
 
 		if (!result.success) {
-			notification('error', result.error.detail);
-			return undefined;
+		notification(result.error);
+		return undefined;
 		}
 
 		return result.data;
@@ -74,11 +74,11 @@
 		const result = await api.update(`/groups/${groupId}/memberships/accept`, {});
 
 		if (!result.success) {
-			notification('error', result.error.detail);
-			return;
-		}
+		notification(result.error);
+		return;
+	}
 
-		notification('success', 'Invitation accepted');
+	notification('success', $LL.memberships.invitationAccepted());
 		window.location.reload();
 	}
 
@@ -91,11 +91,11 @@
 		const result = await api.delete(`/groups/${groupId}/memberships/reject`);
 
 		if (!result.success) {
-			notification('error', result.error.detail);
-			return;
-		}
+		notification(result.error);
+		return;
+	}
 
-		notification('success', 'Invitation rejected');
+	notification('success', $LL.memberships.invitationRejected());
 		window.location.reload();
 	}
 
@@ -116,10 +116,10 @@
 			<a
 				href="/dashboard/groups/create"
 				class="flex flex-row items-center gap-1 rounded-md bg-inset px-3 py-1 text-sm shadow-inner shadow-black/30 transition-all hover:bg-green-500/20"
-				title="Create new group"
+				title={$LL.memberships.createNewGroup()}
 			>
 				<AddIcon class="h-4 w-4 text-text" />
-				<p class="text-text">New</p>
+				<p class="text-text">{$LL.new()}</p>
 			</a>
 		</div>
 		<hr class="border-text/50" />
@@ -146,9 +146,7 @@
 						<!-- Member count -->
 						<div
 							class="flex items-center gap-1"
-							title="{membership.group.member_count} member{membership.group.member_count === 1
-								? ''
-								: 's'}"
+						title={$LL.memberships.memberCount({ count: membership.group.member_count })}
 						>
 							<PeopleIcon class="h-4 w-4" />
 							<span>{membership.group.member_count}</span>
@@ -156,7 +154,7 @@
 						<!-- Document count -->
 						<div
 							class="flex items-center gap-1"
-							title="{membership.group.document_count} documents"
+							title={$LL.memberships.documentCount({ count: membership.group.document_count })}
 						>
 							<DocumentIcon class="h-4 w-4" />
 							<span>{membership.group.document_count}</span>
@@ -165,7 +163,7 @@
 
 						<div
 							class="ml-auto flex items-center"
-							title={membership.is_owner ? 'You own this group' : ''}
+							title={membership.is_owner ? $LL.memberships.youOwnThisGroup() : ''}
 						>
 							<CrownIcon
 								class="h-4 w-4 {membership.is_owner ? 'text-yellow-500 hover:scale-110' : ''}"
@@ -199,22 +197,20 @@
 					<button
 						onclick={(e) => acceptInvitation(invitation.group.id, e)}
 						class="rounded bg-green-500/30 p-1.5 shadow-inner shadow-black/30 transition-all hover:cursor-pointer hover:bg-green-500/40"
-						title="Accept invitation"
+						title={$LL.memberships.acceptInvitation()}
 					>
 						<CheckIcon class="h-4 w-4" />
 					</button>
 					<button
 						onclick={(e) => {
 							if (
-								confirm(
-									'Are you sure you want to reject this invitation? You will not be able to rejoin unless invited again.'
-								)
+							confirm($LL.memberships.rejectConfirm())
 							) {
 								rejectInvitation(invitation.group.id, e);
 							}
 						}}
 						class="rounded bg-red-500/30 p-1.5 shadow-inner shadow-black/30 transition-all hover:cursor-pointer hover:bg-red-500/40"
-						title="Reject invitation"
+						title={$LL.memberships.rejectInvitation()}
 					>
 						<CloseIcon class="h-4 w-4" />
 					</button>

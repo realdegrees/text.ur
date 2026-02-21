@@ -4,6 +4,7 @@
 	import { documentStore } from '$lib/runes/document.svelte.js';
 	import { sessionStore } from '$lib/runes/session.svelte.js';
 	import { notification } from '$lib/stores/notificationStore';
+	import LL from '$i18n/i18n-svelte';
 	import LockIcon from '~icons/material-symbols/lock';
 	import PublicIcon from '~icons/material-symbols/public';
 	import QuestionMarkIcon from '~icons/material-symbols/help-outline';
@@ -24,21 +25,20 @@
 	let currentViewMode = $derived(documentStore.loadedDocument?.view_mode ?? 'public');
 	let isUpdating = $state(false);
 
-	const viewModes: { mode: ViewMode; icon: typeof LockIcon; label: string; shortLabel: string }[] =
-		[
-			{
-				mode: 'restricted',
-				icon: LockIcon,
-				label: 'Restricted - Owner, admins & users with permission see comments',
-				shortLabel: 'Restricted'
-			},
-			{
-				mode: 'public',
-				icon: PublicIcon,
-				label: 'Public - Comments visible based on their visibility settings',
-				shortLabel: 'Public'
-			}
-		];
+	const viewModes = $derived([
+		{
+			mode: 'restricted' as ViewMode,
+			icon: LockIcon,
+			label: $LL.pdf.viewMode.restrictedDescription(),
+			shortLabel: $LL.pdf.viewMode.restricted()
+		},
+		{
+			mode: 'public' as ViewMode,
+			icon: PublicIcon,
+			label: $LL.pdf.viewMode.publicDescription(),
+			shortLabel: $LL.pdf.viewMode.public()
+		}
+	]);
 
 	const setViewMode = async (mode: ViewMode) => {
 		if (!canChangeViewMode || isUpdating || mode === currentViewMode) return;
@@ -66,10 +66,10 @@
 <div class="flex {isExpanded ? 'w-full flex-col' : 'flex-col items-center'} gap-0.5">
 	{#if isExpanded}
 		<span class="flex flex-row items-center justify-between px-1 text-[10px] text-text/40">
-			View Mode
+			{$LL.pdf.viewMode.label()}
 			{#if canChangeViewMode}
 				<div
-					title="In Restricted Mode members without permission will not see other comments and cursor sharing is disabled. In Public Mode comments are visible based on their individual visibility settings."
+					title={$LL.pdf.viewMode.tooltip()}
 				>
 					<QuestionMarkIcon
 						class="ml-1 h-3.5 w-3.5 text-text/40 transition-colors hover:text-text"
