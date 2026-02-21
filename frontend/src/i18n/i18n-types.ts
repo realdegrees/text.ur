@@ -1528,6 +1528,10 @@ type RootTranslation = {
 		 */
 		addReaction: string
 		/**
+		 * R​e​m​o​v​e​ ​r​e​a​c​t​i​o​n
+		 */
+		removeReaction: string
+		/**
 		 * {​c​o​u​n​t​}​ ​r​e​p​l​{​{​y​|​i​e​s​}​}
 		 * @param {number} count
 		 */
@@ -1542,6 +1546,47 @@ type RootTranslation = {
 		 * @param {number} count
 		 */
 		nPoints: RequiredParams<'count'>
+		visibility: {
+			/**
+			 * S​e​l​e​c​t​ ​c​o​m​m​e​n​t​ ​v​i​s​i​b​i​l​i​t​y
+			 */
+			select: string
+			/**
+			 * C​o​m​m​e​n​t​ ​v​i​s​i​b​i​l​i​t​y​:​ ​{​l​e​v​e​l​}
+			 * @param {string} level
+			 */
+			current: RequiredParams<'level'>
+			'public': {
+				/**
+				 * P​u​b​l​i​c​ ​-​ ​E​v​e​r​y​o​n​e
+				 */
+				label: string
+				/**
+				 * A​l​l​ ​m​e​m​b​e​r​s​ ​t​h​a​t​ ​c​a​n​ ​v​i​e​w​ ​t​h​e​ ​d​o​c​u​m​e​n​t​ ​c​a​n​ ​s​e​e​ ​t​h​i​s​ ​c​o​m​m​e​n​t
+				 */
+				description: string
+			}
+			restricted: {
+				/**
+				 * R​e​s​t​r​i​c​t​e​d​ ​-​ ​G​r​o​u​p​ ​M​a​n​a​g​e​r​s
+				 */
+				label: string
+				/**
+				 * O​n​l​y​ ​y​o​u​ ​a​n​d​ ​g​r​o​u​p​ ​m​a​n​a​g​e​r​s​ ​c​a​n​ ​s​e​e​ ​t​h​i​s​ ​c​o​m​m​e​n​t
+				 */
+				description: string
+			}
+			'private': {
+				/**
+				 * P​r​i​v​a​t​e​ ​-​ ​O​n​l​y​ ​y​o​u
+				 */
+				label: string
+				/**
+				 * O​n​l​y​ ​y​o​u​ ​c​a​n​ ​s​e​e​ ​t​h​i​s​ ​c​o​m​m​e​n​t
+				 */
+				description: string
+			}
+		}
 	}
 	pdf: {
 		/**
@@ -3268,6 +3313,10 @@ export type TranslationFunctions = {
 		 */
 		addReaction: () => LocalizedString
 		/**
+		 * Remove reaction
+		 */
+		removeReaction: () => LocalizedString
+		/**
 		 * {count} repl{{y|ies}}
 		 */
 		nReplies: (arg: { count: number }) => LocalizedString
@@ -3279,6 +3328,46 @@ export type TranslationFunctions = {
 		 * {count} point{{s}}
 		 */
 		nPoints: (arg: { count: number }) => LocalizedString
+		visibility: {
+			/**
+			 * Select comment visibility
+			 */
+			select: () => LocalizedString
+			/**
+			 * Comment visibility: {level}
+			 */
+			current: (arg: { level: string }) => LocalizedString
+			'public': {
+				/**
+				 * Public - Everyone
+				 */
+				label: () => LocalizedString
+				/**
+				 * All members that can view the document can see this comment
+				 */
+				description: () => LocalizedString
+			}
+			restricted: {
+				/**
+				 * Restricted - Group Managers
+				 */
+				label: () => LocalizedString
+				/**
+				 * Only you and group managers can see this comment
+				 */
+				description: () => LocalizedString
+			}
+			'private': {
+				/**
+				 * Private - Only you
+				 */
+				label: () => LocalizedString
+				/**
+				 * Only you can see this comment
+				 */
+				description: () => LocalizedString
+			}
+		}
 	}
 	pdf: {
 		/**

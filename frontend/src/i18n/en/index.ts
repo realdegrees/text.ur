@@ -519,9 +519,28 @@ const en = {
 		deleteConfirm: 'Delete?',
 		confirmDelete: 'Confirm Delete',
 		addReaction: 'Add reaction',
+		removeReaction: 'Remove reaction',
 		nReplies: '{count:number} repl{{y|ies}}',
 		nMoreReplies: '{count:number} more repl{{y|ies}}',
-		nPoints: '{count:number} point{{s}}'
+		nPoints: '{count:number} point{{s}}',
+		visibility: {
+			select: 'Select comment visibility',
+			current: 'Comment visibility: {level:string}',
+			public: {
+				label: 'Public - Everyone',
+				description:
+					'All members that can view the document can see this comment'
+			},
+			restricted: {
+				label: 'Restricted - Group Managers',
+				description:
+					'Only you and group managers can see this comment'
+			},
+			private: {
+				label: 'Private - Only you',
+				description: 'Only you can see this comment'
+			}
+		}
 	},
 
 	// PDF controls

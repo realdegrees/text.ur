@@ -570,9 +570,29 @@ const de = {
 		deleteConfirm: 'Löschen?',
 		confirmDelete: 'Löschen bestätigen',
 		addReaction: 'Reaktion hinzufügen',
+		removeReaction: 'Reaktion entfernen',
 		nReplies: '{count} Antwort{{en}}',
 		nMoreReplies: '{count} weitere Antwort{{en}}',
-		nPoints: '{count} Punkt{{e}}'
+		nPoints: '{count} Punkt{{e}}',
+		visibility: {
+			select: 'Kommentar-Sichtbarkeit wählen',
+			current: 'Kommentar-Sichtbarkeit: {level}',
+			public: {
+				label: 'Öffentlich - Alle',
+				description:
+					'Alle Mitglieder, die das Dokument sehen können, können diesen Kommentar sehen'
+			},
+			restricted: {
+				label: 'Eingeschränkt - Gruppenmanager',
+				description:
+					'Nur Sie und Gruppenmanager können diesen Kommentar sehen'
+			},
+			private: {
+				label: 'Privat - Nur Sie',
+				description:
+					'Nur Sie können diesen Kommentar sehen'
+			}
+		}
 	},
 
 	// PDF controls

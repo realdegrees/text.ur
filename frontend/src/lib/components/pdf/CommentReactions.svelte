@@ -3,6 +3,7 @@
 	import { preciseHover } from '$lib/actions/preciseHover.js';
 	import { documentStore } from '$lib/runes/document.svelte.js';
 	import { sessionStore } from '$lib/runes/session.svelte.js';
+	import LL from '$i18n/i18n-svelte';
 	import { SvelteMap } from 'svelte/reactivity';
 	import RemoveIcon from '~icons/material-symbols/close-rounded';
 
@@ -170,7 +171,7 @@
 								handleRemoveUserReaction(reaction.user.id);
 							}}
 							disabled={isSubmitting}
-							title="Remove reaction"
+							title={$LL.comments.removeReaction()}
 						>
 							<RemoveIcon class="h-3.5 w-3.5" />
 						</button>
