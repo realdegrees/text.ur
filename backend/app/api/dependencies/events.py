@@ -66,13 +66,14 @@ class EventManager:
         
     async def check_connection(self) -> None:
         """Check Redis connection and reconnect if necessary."""
-        r = redis.from_url(
-            f"redis://{cfg.REDIS_HOST}:{cfg.REDIS_PORT}",
-            decode_responses=True,
-            password=cfg.REDIS_PASSWORD,
-        )
+        if self._redis is None:
+            events_logger.warning(
+                "Redis client is not initialised; "
+                "cannot check connection"
+            )
+            return
 
-        await r.ping()
+        await self._redis.ping()
         events_logger.debug("Redis connection is healthy")
             
     async def disconnect(self) -> None:
@@ -165,9 +166,20 @@ class EventManager:
 
     # ---------------- Publishing ----------------
     async def publish(self, event: dict, channel: str = "default") -> None:
-        """Publish event to Redis channel."""
-        payload: str = json.dumps(event)
-        await self._redis.publish(channel, payload)
+        """Publish event to Redis channel.
+
+        Errors are logged but not re-raised so that a Redis
+        outage does not cause 500s after a successful DB commit.
+        """
+        try:
+            payload: str = json.dumps(event)
+            await self._redis.publish(channel, payload)
+        except Exception as e:
+            events_logger.warning(
+                "Failed to publish event on channel %s: %s",
+                channel,
+                e,
+            )
 
     # ---------------- Subscriber loop ----------------
     async def _subscriber_loop(self) -> None:
@@ -207,8 +219,12 @@ class EventManager:
                 if message:
                     await self._on_message(message)
             except Exception as e:
-                events_logger.warning("Redis pubsub error, reconnecting: %s", e)
+                events_logger.warning(
+                    "Redis pubsub error, reconnecting: %s", e
+                )
                 await asyncio.sleep(1.0)
+                with contextlib.suppress(Exception):
+                    await pubsub.close()
                 pubsub = self._redis.pubsub()
                 subscribed_channels.clear()
 

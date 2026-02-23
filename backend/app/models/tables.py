@@ -127,7 +127,8 @@ class Document(BaseModel, table=True):
                          sa_column=Column(PGUUID(as_uuid=True)))
 
     group_id: str = Field(
-        foreign_key="group.id", nullable=True, ondelete="CASCADE")
+        foreign_key="group.id", nullable=True, ondelete="CASCADE",
+        index=True)
 
     group: "Group" = Relationship(back_populates="documents", sa_relationship_kwargs={"lazy": "selectin"})
 
@@ -228,7 +229,8 @@ class GroupReaction(BaseModel, table=True):
     )
 
     id: int = Field(default=None, primary_key=True)
-    group_id: str = Field(foreign_key="group.id", ondelete="CASCADE")
+    group_id: str = Field(
+        foreign_key="group.id", ondelete="CASCADE", index=True)
     emoji: Emoji = Field(sa_column=Column(String, nullable=False))
     points: int = Field(default=2)
     admin_points: int = Field(default=4)
@@ -253,11 +255,13 @@ class Comment(BaseModel, table=True):
 
     id: int = Field(default=None, primary_key=True)
     visibility: Visibility = Field()
-    document_id: str = Field(foreign_key="document.id", ondelete="CASCADE")
+    document_id: str = Field(
+        foreign_key="document.id", ondelete="CASCADE", index=True)
     user_id: int = Field(
-        foreign_key="user.id")
+        foreign_key="user.id", ondelete="CASCADE", index=True)
     parent_id: int | None = Field(
-        foreign_key="comment.id", nullable=True, default=None, ondelete="CASCADE")
+        foreign_key="comment.id", nullable=True, default=None,
+        ondelete="CASCADE", index=True)
     content: str | None = Field(nullable=True, default=None)
     annotation: dict = Field(default_factory=dict, sa_column=Column(JSONB))
 
@@ -309,11 +313,12 @@ class Reaction(BaseModel, table=True):
     comment_id: int = Field(foreign_key="comment.id",
                             ondelete="CASCADE", primary_key=True)
     group_reaction_id: int = Field(
-        foreign_key="groupreaction.id", ondelete="CASCADE"
+        foreign_key="groupreaction.id", ondelete="CASCADE",
+        index=True,
     )
 
     user: "User" = Relationship(back_populates="reactions", sa_relationship_kwargs={"lazy": "selectin"})
-    comment: "Comment" = Relationship(back_populates="reactions", sa_relationship_kwargs={"lazy": "selectin"})
+    comment: "Comment" = Relationship(back_populates="reactions", sa_relationship_kwargs={"lazy": "noload"})
     group_reaction: "GroupReaction" = Relationship(back_populates="reactions", sa_relationship_kwargs={"lazy": "selectin"})
 
 
@@ -326,7 +331,7 @@ class Tag(BaseModel, table=True):
     description: str | None = Field(nullable=True, default=None, max_length=200)
     color: str = Field(max_length=7)  # Hex color format: #RRGGBB
 
-    document: "Document" = Relationship(back_populates="tags", sa_relationship_kwargs={"lazy": "selectin"})
+    document: "Document" = Relationship(back_populates="tags", sa_relationship_kwargs={"lazy": "noload"})
     comment_tags: list["CommentTag"] = Relationship(
         back_populates="tag",
         sa_relationship_kwargs={

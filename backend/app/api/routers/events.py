@@ -401,16 +401,40 @@ def get_events_router[RelatedResourceModel: BaseModel](  # noqa: C901
             await cleanup_connection()
         except ValidationError as e:
             await cleanup_connection()
-            await websocket.send_json({"error": "Validation error", "details": str(e)}, mode="text")
-            await websocket.close(code=1003)
+            try:
+                await websocket.send_json(
+                    {"error": "Validation error",
+                     "details": str(e)},
+                    mode="text",
+                )
+                await websocket.close(code=1003)
+            except Exception:
+                logger.debug(
+                    "[WS] Could not send validation error "
+                    "— socket already closed "
+                    "(resource_id=%s)",
+                    resource_id,
+                )
         except Exception as e:
             logger.error(
-                f"Error processing WebSocket message for resource {resource_id} "
+                f"Error processing WebSocket message for "
+                f"resource {resource_id} "
                 f"on route {full_path}: {e}"
             )
             await cleanup_connection()
-            await websocket.send_json({"error": "Internal server error", "details": "Unknown error"})
-            await websocket.close(code=1011)
+            try:
+                await websocket.send_json(
+                    {"error": "Internal server error",
+                     "details": "Unknown error"},
+                )
+                await websocket.close(code=1011)
+            except Exception:
+                logger.debug(
+                    "[WS] Could not send error response "
+                    "— socket already closed "
+                    "(resource_id=%s)",
+                    resource_id,
+                )
             
     # ====================================================================
     # ================= WebSocket documentation endpoint =================

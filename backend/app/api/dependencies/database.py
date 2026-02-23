@@ -55,7 +55,12 @@ class DatabaseManager:
             echo=False,
             pool_pre_ping=True,
             pool_recycle=300,
-            connect_args={"timeout": DB_CONNECTION_TIMEOUT},
+            pool_size=cfg.DB_POOL_SIZE,
+            max_overflow=cfg.DB_MAX_OVERFLOW,
+            connect_args={
+                "timeout": DB_CONNECTION_TIMEOUT,
+                "statement_cache_size": 0,
+            },
         )
         _attach_statement_timeout(self.engine)
         self.session_factory = sessionmaker(

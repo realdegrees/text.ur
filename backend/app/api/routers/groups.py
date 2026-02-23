@@ -2,10 +2,12 @@ from api.dependencies.authentication import Authenticate, BasicAuthentication
 from api.dependencies.database import Database
 from api.dependencies.paginated.resources import PaginatedResource
 from api.dependencies.resource import Resource
+from api.dependencies.s3 import S3
 from api.routers.memberships import (
     groupmembership_router as GroupMembershipRouter,
 )
 from api.routers.sharelinks import router as ShareLinkRouter
+from core.logger import get_logger
 from fastapi import Body, HTTPException, Response
 from models.enums import Permission
 from models.filter import GroupFilter
@@ -20,6 +22,7 @@ from models.group import (
 from models.pagination import Paginated
 from models.reaction import DEFAULT_REACTIONS
 from models.tables import (
+    Document,
     Group,
     GroupReaction,
     Membership,
@@ -30,6 +33,8 @@ from sqlmodel import select
 from util.api_router import APIRouter
 from util.queries import Guard
 from util.response import ExcludableFieldsJSONResponse
+
+groups_logger = get_logger("app")
 
 router = APIRouter(
     prefix="/groups",
@@ -197,12 +202,31 @@ async def transfer_ownership(
 @router.delete("/{group_id}")
 async def delete_group(
     db: Database,
+    s3: S3,
     _: User = Authenticate([Guard.group_access(None, only_owner=True)]),
     group: Group = Resource(Group, param_alias="group_id"),
-) -> dict[str, bool]:
-    """Delete a group."""
+) -> Response:
+    """Delete a group and its associated S3 objects."""
+    # Collect S3 keys before cascade-deleting DB records
+    result = await db.exec(
+        select(Document.s3_key).where(
+            Document.group_id == group.id
+        )
+    )
+    s3_keys: list[str] = list(result.all())
+
     await db.delete(group)
     await db.commit()
+
+    # Clean up S3 objects after successful DB commit
+    for key in s3_keys:
+        if not s3.delete(key):
+            groups_logger.warning(
+                "Failed to delete S3 object %s for group %s",
+                key,
+                group.id,
+            )
+
     return Response(status_code=204)
 
 

@@ -46,6 +46,8 @@ DB_CONNECTION_TIMEOUT: int = int(
     os.getenv("DB_CONNECTION_TIMEOUT", 10))  # seconds
 DB_STATEMENT_TIMEOUT: int = int(
     os.getenv("DB_STATEMENT_TIMEOUT", 10000))  # milliseconds
+DB_POOL_SIZE: int = int(os.getenv("DB_POOL_SIZE", "15"))
+DB_MAX_OVERFLOW: int = int(os.getenv("DB_MAX_OVERFLOW", "10"))
 
 IS_TEST_ENV = os.getenv("TESTING", "").lower() == "true"
 if IS_TEST_ENV:

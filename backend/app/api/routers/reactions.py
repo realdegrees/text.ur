@@ -12,6 +12,7 @@ from models.enums import AppErrorCode, Permission
 from models.event import Event
 from models.reaction import ReactionCreate, ReactionRead
 from models.tables import Comment, GroupReaction, Reaction, User
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 from util.api_router import APIRouter
 from util.queries import Guard
@@ -119,7 +120,28 @@ async def add_reaction(
         comment_id=comment.id,
     )
     db.add(reaction)
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError:
+        # Concurrent insert — re-fetch and treat as update
+        await db.rollback()
+        result = await db.exec(
+            select(Reaction).where(
+                Reaction.user_id == user.id,
+                Reaction.comment_id == comment.id,
+            )
+        )
+        existing = result.first()
+        if existing:
+            existing.group_reaction_id = (
+                reaction_create.group_reaction_id
+            )
+            await db.commit()
+            await db.refresh(existing)
+            await _publish_reaction_event(
+                db, events, comment, x_connection_id
+            )
+            return _to_reaction_read(existing)
     await db.refresh(reaction)
     await _publish_reaction_event(db, events, comment, x_connection_id)
     return _to_reaction_read(reaction)

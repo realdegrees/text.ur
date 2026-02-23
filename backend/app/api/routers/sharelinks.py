@@ -8,7 +8,7 @@ from api.dependencies.authentication import Authenticate, BasicAuthentication
 from api.dependencies.database import Database
 from api.dependencies.paginated.resources import PaginatedResource
 from api.dependencies.resource import Resource
-from fastapi import Body, HTTPException, Path, Response
+from fastapi import Body, HTTPException, Response
 from models.enums import Permission
 from models.filter import ShareLinkFilter
 from models.pagination import Paginated
@@ -19,6 +19,7 @@ from models.sharelink import (
     ShareLinkUpdate,
 )
 from models.tables import Group, Membership, ShareLink, User
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 from util.api_router import APIRouter
 from util.queries import Guard
@@ -181,5 +182,9 @@ async def use_sharelink_token(
         share_link=share_link
     )
     db.add(membership)
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError:
+        # Concurrent join — user is already a member
+        await db.rollback()
     return Response(status_code=204)

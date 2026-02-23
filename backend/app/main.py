@@ -71,6 +71,19 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     finally:
         app_logger.info("Shutting down application...")
         await mgrs["event_manager"].disconnect()
+
+        # Close the cache Redis singleton so connections are not
+        # leaked on shutdown.
+        try:
+            from util.cache import _get_redis as _get_cache_redis
+
+            await _get_cache_redis().aclose()
+            app_logger.info("Cache Redis client closed")
+        except Exception as e:
+            app_logger.warning(
+                "Failed to close cache Redis client: %s", e
+            )
+
         app_logger.info("Application shutdown complete")
 
 

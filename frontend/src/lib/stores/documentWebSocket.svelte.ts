@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { WebSocketManager } from '$lib/websocket/manager';
 import type { ConnectionState } from '$types/websocket';
 import { browser } from '$app/environment';
+import { invalidateAll } from '$app/navigation';
 import { api } from '$api/client';
 import { env } from '$env/dynamic/public';
 import { mousePositionEventSchema } from '$api/schemas';
@@ -65,6 +66,7 @@ class DocumentWebSocketStore {
 	private managerStateUnsubscribe: (() => void) | null = null;
 	private managerMessageUnsubscribe: (() => void) | null = null;
 	private currentConnectionId: string | null = null;
+	private _hasConnectedBefore = false;
 
 	// Connection state
 	private _state = $state<ConnectionState>('disconnected');
@@ -186,6 +188,14 @@ class DocumentWebSocketStore {
 				const payload = result.data;
 				this.currentConnectionId = payload.connection_id;
 				this._activeUsers = payload.active_users;
+
+				if (this._hasConnectedBefore) {
+					// Reconnect: refetch all page data to pick up missed events
+					console.log('[WS] Reconnect detected, invalidating page data');
+					invalidateAll();
+				}
+				this._hasConnectedBefore = true;
+
 				console.log('[WS] Handshake received, active users:', payload.active_users.length);
 				break;
 			}
@@ -271,6 +281,7 @@ class DocumentWebSocketStore {
 		this._activeUsers = [];
 		this._userCursors.clear();
 		this.currentConnectionId = null;
+		this._hasConnectedBefore = false;
 		this.commentEventHandlers = [];
 		this.viewModeEventHandlers = [];
 	}

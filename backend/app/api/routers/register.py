@@ -249,9 +249,16 @@ async def _register_anonymous_user(
         is_guest=True,  # Mark as guest user
     )
     db.add(user)
-    await db.flush()  # Get user.id without committing
-
-    await db.commit()
+    try:
+        await db.flush()  # Get user.id without committing
+        await db.commit()
+    except IntegrityError as e:
+        await db.rollback()
+        raise AppException(
+            status_code=400,
+            detail="Username already registered",
+            error_code=AppErrorCode.USERNAME_TAKEN,
+        ) from e
 
     # Generate tokens
     token = Token(

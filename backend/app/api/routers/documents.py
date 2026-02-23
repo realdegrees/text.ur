@@ -15,8 +15,8 @@ from api.routers.events import (
     get_events_router,
 )
 from core.app_exception import AppException
+from core.logger import get_logger
 from fastapi import (
-    BackgroundTasks,
     Body,
     File,
     Form,
@@ -52,12 +52,15 @@ from models.event import Event
 from models.filter import DocumentFilter
 from models.pagination import Paginated
 from models.tables import Comment, Document, Group, Membership, User
+from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 from starlette.responses import StreamingResponse
 from util.api_router import APIRouter
 from util.queries import Guard
 from util.response import ExcludableFieldsJSONResponse
+
+documents_logger = get_logger("app")
 
 router = APIRouter(
     prefix="/documents",
@@ -261,13 +264,32 @@ async def create_document(
             error_code=AppErrorCode.INVALID_INPUT,
             detail="Only PDF files are allowed.",
         )
+    # Validate actual file size by reading in chunks (ignore Content-Length)
     max_size_bytes = cfg.MAX_UPLOAD_SIZE_MB * 1024 * 1024
-    if file.size and file.size > max_size_bytes:
-        raise AppException(
-            status_code=400,
-            error_code=AppErrorCode.INVALID_INPUT,
-            detail=f"File size exceeds maximum of {cfg.MAX_UPLOAD_SIZE_MB}MB.",
-        )
+    chunk_size = 64 * 1024  # 64 KB
+    total_bytes = 0
+    from tempfile import SpooledTemporaryFile
+
+    validated_file = SpooledTemporaryFile(
+        max_size=1024 * 1024, mode="w+b"
+    )
+    while chunk := await file.read(chunk_size):
+        total_bytes += len(chunk)
+        if total_bytes > max_size_bytes:
+            validated_file.close()
+            raise AppException(
+                status_code=400,
+                error_code=AppErrorCode.INVALID_INPUT,
+                detail=(
+                    "File size exceeds maximum of"
+                    f" {cfg.MAX_UPLOAD_SIZE_MB}MB."
+                ),
+            )
+        validated_file.write(chunk)
+    validated_file.seek(0)
+    # Replace the file reference for the S3 upload
+    file.file = validated_file
+    file.size = total_bytes
 
     # Check if user is authorized if they are uploading to a group
     result = await db.exec(select(Membership).where(
@@ -450,12 +472,18 @@ async def delete_document(
     document: Document = Resource(Document, param_alias="document_id"),
 ) -> Response:
     """Delete a document from database and S3."""
-    # Delete from S3
-    s3.delete(document.s3_key)
+    s3_key = document.s3_key
 
-    # Delete from database (cascade delete handles related records)
+    # Delete from database first (cascade handles related records)
     await db.delete(document)
     await db.commit()
+
+    # Clean up S3 after successful DB commit
+    if not s3.delete(s3_key):
+        documents_logger.warning(
+            "Failed to delete S3 object %s after DB deletion",
+            s3_key,
+        )
 
     return Response(status_code=204)
 
@@ -467,15 +495,10 @@ async def clear_document_comments(
     document: Document = Resource(Document, param_alias="document_id"),
 ) -> Response:
     """Clear all comments from a document. Only group owners and administrators can perform this action."""
-    # Delete all comments for this document (cascade will handle replies)
-    result = await db.exec(
-        select(Comment).where(Comment.document_id == document.id)
+    # Bulk delete all comments; FK cascades handle child records
+    await db.exec(
+        delete(Comment).where(Comment.document_id == document.id)
     )
-    comments = result.all()
-
-    for comment in comments:
-        await db.delete(comment)
-
     await db.commit()
 
     return Response(status_code=204)

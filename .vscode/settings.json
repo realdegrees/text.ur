@@ -5,6 +5,14 @@
   "python.analysis.extraPaths": [
     "./backend/app"
   ],
+  "python.analysis.typeCheckingMode": "off",
+  "[python]": {
+    "editor.defaultFormatter": "charliermarsh.ruff",
+    "editor.codeActionsOnSave": {
+      "source.fixAll.ruff": "explicit",
+      "source.organizeImports.ruff": "explicit"
+    }
+  },
   "explorer.fileNesting.enabled": true,
   "explorer.fileNesting.patterns": {
     "tsconfig.json": "tsconfig.*.json, env.d.ts",

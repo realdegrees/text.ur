@@ -140,7 +140,7 @@
 >
 	<div
 		bind:this={clusterRef}
-		class="relative z-50 overflow-hidden rounded bg-background shadow-lg {showCard
+		class="relative z-50 hover:z-[60] overflow-hidden rounded bg-background shadow-lg {showCard
 			? 'ring-[2.5px]'
 			: 'ring-2'} shadow-black/20 transition-shadow"
 		style="--tw-ring-color: {activeTagColor}{firstPinnedComment ? 'b3' : '4d'};"

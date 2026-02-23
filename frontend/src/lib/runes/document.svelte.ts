@@ -888,7 +888,16 @@ const createDocumentStore = () => {
 	// Cleanup expired states on initialization
 	cleanupExpiredCommentStates();
 
+	let _persistenceCleanup: (() => void) | null = null;
+
 	const enablePersistence = () => {
+		// If persistence was already enabled, run old cleanup first
+		// to tear down stale effects before registering new ones.
+		if (_persistenceCleanup) {
+			_persistenceCleanup();
+			_persistenceCleanup = null;
+		}
+
 		let persistTimeout: ReturnType<typeof setTimeout> | null = null;
 		let hasLoadedPersistedStates = false;
 
@@ -942,6 +951,15 @@ const createDocumentStore = () => {
 				}, 500);
 			}
 		});
+
+		// Store cleanup function so re-calls can tear down stale effects
+		_persistenceCleanup = () => {
+			if (persistTimeout) {
+				clearTimeout(persistTimeout);
+				persistTimeout = null;
+			}
+			hasLoadedPersistedStates = false;
+		};
 	};
 
 	return {
