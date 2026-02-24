@@ -3,6 +3,7 @@
 	import type { TagRead } from '$api/types';
 	import Badge from '$lib/components/badge.svelte';
 	import Dropdown from '$lib/components/dropdown.svelte';
+	import LL from '$i18n/i18n-svelte';
 
 	interface Props {
 		selectedTags: TagRead[];
@@ -111,7 +112,7 @@
 			items={availableToAdd}
 			onSelect={(tag) => onAdd?.(tag)}
 			position="bottom-left"
-			title="Add Tag"
+			title={$LL.tags.addTag()}
 			showArrow={false}
 			show={false}
 			hideCurrentSelection={true}

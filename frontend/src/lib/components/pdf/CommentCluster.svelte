@@ -10,6 +10,7 @@
 	import { longPress } from '$lib/actions/longPress';
 	import { hasHoverCapability } from '$lib/util/responsive.svelte';
 	import { DEFAULT_HIGHLIGHT_COLOR } from './constants';
+	import LL from '$i18n/i18n-svelte';
 
 	interface Props {
 		comments: CommentRead[];
@@ -248,7 +249,7 @@
 							e.stopPropagation();
 							unpinAll();
 						}}
-						title="Close"
+						title={$LL.close()}
 					>
 						<CloseIcon class="h-4 w-4" />
 					</button>

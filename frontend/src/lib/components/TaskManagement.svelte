@@ -260,9 +260,8 @@
 
 		<!-- Question -->
 		<div class="flex flex-col gap-1.5">
-			<label
-				for={isEdit ? `edit-task-question-${taskId}` : 'new-task-question'}
-				class="text-xs font-semibold text-text/70">{$LL.tasks.question()}</label
+			<label for={isEdit ? `edit-task-question-${taskId}` : 'new-task-question'} class="form-label"
+				>{$LL.tasks.question()}</label
 			>
 			<textarea
 				id={isEdit ? `edit-task-question-${taskId}` : 'new-task-question'}
@@ -270,15 +269,13 @@
 				placeholder={$LL.tasks.questionPlaceholder()}
 				maxlength="500"
 				rows="2"
-				class="rounded-md border border-text/20 bg-text/5 px-3 py-2 text-sm transition-colors outline-none focus:border-text/50"
+				class="form-input"
 			></textarea>
 		</div>
 
 		<!-- Answer Type -->
 		<div class="flex flex-col gap-1.5">
-			<label for="task-answer-type" class="text-xs font-semibold text-text/70"
-				>{$LL.tasks.answerType()}</label
-			>
+			<label for="task-answer-type" class="form-label">{$LL.tasks.answerType()}</label>
 			<Select id="task-answer-type" bind:value={formData.answer_type}>
 				<option value="multiple_choice">{$LL.tasks.multipleChoice()}</option>
 				<option value="string">{$LL.tasks.textAnswer()}</option>
@@ -289,7 +286,7 @@
 		<!-- MC Options -->
 		{#if formData.answer_type === 'multiple_choice'}
 			<div class="flex flex-col gap-2">
-				<span class="text-xs font-semibold text-text/70">{$LL.tasks.options()}</span>
+				<span class="form-label">{$LL.tasks.options()}</span>
 				{#each formData.options as option, i (i)}
 					<div class="flex items-center gap-2">
 						<input
@@ -303,7 +300,7 @@
 							bind:value={option.label}
 							placeholder="{$LL.tasks.optionLabel()} {i + 1}"
 							maxlength="200"
-							class="flex-1 rounded-md border border-text/20 bg-text/5 px-3 py-1.5 text-sm outline-none focus:border-text/50"
+							class="form-input flex-1"
 						/>
 						{#if formData.options.length > 2}
 							<button
@@ -319,7 +316,7 @@
 				<button
 					type="button"
 					onclick={() => addOption(formData.options)}
-					class="flex w-fit items-center gap-1 rounded-md bg-text/10 px-3 py-1.5 text-xs transition hover:bg-text/20"
+					class="flex w-fit btn-secondary items-center gap-1 text-xs"
 				>
 					<AddIcon class="h-3 w-3" />
 					{$LL.tasks.addOption()}
@@ -330,25 +327,21 @@
 		<!-- String Answer -->
 		{#if formData.answer_type === 'string'}
 			<div class="flex flex-col gap-1.5">
-				<label for="task-correct-string" class="text-xs font-semibold text-text/70"
-					>{$LL.tasks.correctAnswer()}</label
-				>
+				<label for="task-correct-string" class="form-label">{$LL.tasks.correctAnswer()}</label>
 				<input
 					id="task-correct-string"
 					type="text"
 					bind:value={formData.correct_string_answer}
-					class="rounded-md border border-text/20 bg-text/5 px-3 py-2 text-sm outline-none focus:border-text/50"
+					class="form-input"
 				/>
 			</div>
 			<div class="flex flex-col gap-1.5">
-				<label for="task-match-mode" class="text-xs font-semibold text-text/70"
-					>{$LL.tasks.matchMode()}</label
-				>
+				<label for="task-match-mode" class="form-label">{$LL.tasks.matchMode()}</label>
 				<Select id="task-match-mode" bind:value={formData.string_match_mode}>
 					<option value="case_insensitive">{$LL.tasks.caseInsensitive()}</option>
 					<option value="exact">{$LL.tasks.exactMatch()}</option>
 				</Select>
-				<p class="text-xs text-text/50">
+				<p class="form-hint">
 					{formData.string_match_mode === 'exact'
 						? $LL.tasks.exactMatchHint()
 						: $LL.tasks.caseInsensitiveHint()}
@@ -360,21 +353,17 @@
 		{#if formData.answer_type === 'number'}
 			<div class="grid grid-cols-2 gap-3">
 				<div class="flex flex-col gap-1.5">
-					<label for="task-correct-number" class="text-xs font-semibold text-text/70"
-						>{$LL.tasks.correctAnswer()}</label
-					>
+					<label for="task-correct-number" class="form-label">{$LL.tasks.correctAnswer()}</label>
 					<input
 						id="task-correct-number"
 						type="number"
 						step="any"
 						bind:value={formData.correct_number_answer}
-						class="rounded-md border border-text/20 bg-text/5 px-3 py-2 text-sm outline-none focus:border-text/50"
+						class="form-input"
 					/>
 				</div>
 				<div class="flex flex-col gap-1.5">
-					<label for="task-tolerance" class="text-xs font-semibold text-text/70"
-						>{$LL.tasks.tolerance()}</label
-					>
+					<label for="task-tolerance" class="form-label">{$LL.tasks.tolerance()}</label>
 					<input
 						id="task-tolerance"
 						type="number"
@@ -382,7 +371,7 @@
 						min="0"
 						bind:value={formData.number_tolerance}
 						placeholder={$LL.tasks.tolerancePlaceholder()}
-						class="rounded-md border border-text/20 bg-text/5 px-3 py-2 text-sm outline-none focus:border-text/50"
+						class="form-input"
 					/>
 				</div>
 			</div>
@@ -392,15 +381,13 @@
 		<div class="flex flex-col gap-3">
 			<div class="flex items-end gap-3">
 				<div class="flex flex-col gap-1.5">
-					<label for="task-points" class="text-xs font-semibold text-text/70"
-						>{$LL.tasks.points()}</label
-					>
+					<label for="task-points" class="form-label">{$LL.tasks.points()}</label>
 					<input
 						id="task-points"
 						type="number"
 						min="0"
 						bind:value={formData.points}
-						class="w-24 rounded-md border border-text/20 bg-text/5 px-3 py-2 text-sm outline-none focus:border-text/50"
+						class="form-input w-24"
 					/>
 				</div>
 			</div>
@@ -409,15 +396,13 @@
 			{#if useCustomAttempts}
 				<div class="flex items-end gap-3">
 					<div class="flex flex-col gap-1.5">
-						<label for="task-max-attempts" class="text-xs font-semibold text-text/70"
-							>{$LL.tasks.maxAttempts()}</label
-						>
+						<label for="task-max-attempts" class="form-label">{$LL.tasks.maxAttempts()}</label>
 						<input
 							id="task-max-attempts"
 							type="number"
 							min="1"
 							bind:value={formData.max_attempts}
-							class="w-24 rounded-md border border-text/20 bg-text/5 px-3 py-2 text-sm outline-none focus:border-text/50"
+							class="form-input w-24"
 						/>
 					</div>
 					<button
@@ -445,14 +430,14 @@
 
 <div class="flex flex-col gap-4">
 	<div class="flex items-center justify-between">
-		<div class="text-sm font-semibold text-text/70">{$LL.tasks.title()}</div>
+		<div class="form-label">{$LL.tasks.title()}</div>
 		<button
 			onclick={() => {
 				newTask = createEmptyTask();
 				newCustomAttempts = false;
 				isAddingTask = !isAddingTask;
 			}}
-			class="flex items-center gap-2 rounded-md bg-primary/20 px-3 py-2 text-sm font-semibold transition hover:bg-primary/30"
+			class="flex btn-primary items-center gap-2 text-sm"
 		>
 			<AddIcon class="h-4 w-4" />
 			{$LL.tasks.addTask()}
@@ -470,17 +455,11 @@
 				}
 			})}
 			<div class="flex items-center gap-2">
-				<button
-					onclick={createTask}
-					class="flex items-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-semibold transition hover:bg-primary/80"
-				>
+				<button onclick={createTask} class="flex btn-primary items-center gap-2 text-sm">
 					<SaveIcon class="h-4 w-4" />
 					{$LL.create()}
 				</button>
-				<button
-					onclick={resetNewTaskForm}
-					class="flex items-center gap-2 rounded-md bg-text/10 px-3 py-2 text-sm font-semibold transition hover:bg-text/20"
-				>
+				<button onclick={resetNewTaskForm} class="flex btn-secondary items-center gap-2 text-sm">
 					<CancelIcon class="h-4 w-4" />
 					{$LL.cancel()}
 				</button>
@@ -491,9 +470,9 @@
 	<!-- Tasks List -->
 	<div class="flex flex-col gap-2">
 		{#if isLoading}
-			<p class="text-sm text-text/50">{$LL.loading()}</p>
+			<p class="text-muted">{$LL.loading()}</p>
 		{:else if tasks.length === 0}
-			<p class="text-sm text-text/50">{$LL.tasks.noTasks()}</p>
+			<p class="text-muted">{$LL.tasks.noTasks()}</p>
 		{:else}
 			{#each tasks as task, idx (task.id)}
 				{#if editingTaskId === task.id}
@@ -515,15 +494,12 @@
 						<div class="flex items-center gap-2">
 							<button
 								onclick={() => updateTask(task.id)}
-								class="flex items-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-semibold transition hover:bg-primary/80"
+								class="flex btn-primary items-center gap-2 text-sm"
 							>
 								<SaveIcon class="h-4 w-4" />
 								{$LL.saveChanges()}
 							</button>
-							<button
-								onclick={cancelEdit}
-								class="flex items-center gap-2 rounded-md bg-text/10 px-3 py-2 text-sm font-semibold transition hover:bg-text/20"
-							>
+							<button onclick={cancelEdit} class="flex btn-secondary items-center gap-2 text-sm">
 								<CancelIcon class="h-4 w-4" />
 								{$LL.cancel()}
 							</button>
@@ -538,14 +514,14 @@
 							<button
 								onclick={() => moveTask(task.id, -1)}
 								disabled={idx === 0}
-								class="rounded p-0.5 transition hover:bg-text/10 disabled:opacity-30"
+								class="btn-ghost disabled:opacity-30"
 							>
 								<UpIcon class="h-3 w-3" />
 							</button>
 							<button
 								onclick={() => moveTask(task.id, 1)}
 								disabled={idx === tasks.length - 1}
-								class="rounded p-0.5 transition hover:bg-text/10 disabled:opacity-30"
+								class="btn-ghost disabled:opacity-30"
 							>
 								<DownIcon class="h-3 w-3" />
 							</button>
@@ -567,15 +543,12 @@
 							</div>
 						</div>
 						<div class="flex items-center gap-1">
-							<button
-								onclick={() => startEditingTask(task)}
-								class="rounded-md p-1.5 transition hover:bg-text/10"
-							>
+							<button onclick={() => startEditingTask(task)} class="btn-ghost">
 								<EditIcon class="h-4 w-4" />
 							</button>
 							<ConfirmButton onConfirm={() => deleteTask(task.id)}>
 								{#snippet button()}
-									<div class="rounded-md p-1.5 transition hover:bg-text/10">
+									<div class="btn-ghost">
 										<DeleteIcon class="h-4 w-4 text-red-600" />
 									</div>
 								{/snippet}

@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 	import DOMPurify from 'dompurify';
 	import MarkdownRenderer from '$lib/components/MarkdownRenderer.svelte';
-	import HelpIcon from '~icons/material-symbols/help-outline';
+	import HelpTooltip from '$lib/components/HelpTooltip.svelte';
 
 	interface Props {
 		value: string;
@@ -30,8 +30,6 @@
 
 	let textareaRef: HTMLTextAreaElement | null = $state(null);
 	let mode = $state<'write' | 'preview'>('write');
-	let showHelpTooltip = $state(false);
-
 	// Size classes
 	let sizeClasses = $derived({
 		text: 'text-sm',
@@ -118,43 +116,19 @@
 		</div>
 
 		<!-- Help Icon -->
-		<!-- svelte-ignore a11y_no_static_element_interactions -->
-		<div
-			class="relative"
-			onmouseenter={() => (showHelpTooltip = true)}
-			onmouseleave={() => (showHelpTooltip = false)}
-		>
-			<button
-				type="button"
-				class="rounded {sizeClasses.buttonPadding} text-text/40 transition-colors hover:text-text/70"
-				onclick={(e) => e.stopPropagation()}
-				{disabled}
+		<HelpTooltip>
+			<p class="mb-1 text-text/80">
+				This editor supports <span class="font-medium text-text">Markdown formatting</span>.
+			</p>
+			<a
+				href="https://www.markdownguide.org/cheat-sheet/"
+				target="_blank"
+				rel="noopener noreferrer"
+				class="text-primary underline hover:text-primary/80"
 			>
-				<HelpIcon class={sizeClasses.iconSize} />
-			</button>
-
-			{#if showHelpTooltip}
-				<!-- svelte-ignore a11y_no_static_element_interactions -->
-				<div
-					class="absolute top-1/2 right-0 z-50 w-64 -translate-y-1/2 rounded border border-text/20 bg-background p-2 text-xs shadow-lg"
-					onmouseenter={() => (showHelpTooltip = true)}
-					onmouseleave={() => (showHelpTooltip = false)}
-					onmousedown={(e) => e.preventDefault()}
-				>
-					<p class="mb-1 text-text/80">
-						This editor supports <span class="font-medium text-text">Markdown formatting</span>.
-					</p>
-					<a
-						href="https://www.markdownguide.org/cheat-sheet/"
-						target="_blank"
-						rel="noopener noreferrer"
-						class="text-primary underline hover:text-primary/80"
-					>
-						View Markdown cheat sheet →
-					</a>
-				</div>
-			{/if}
-		</div>
+				View Markdown cheat sheet →
+			</a>
+		</HelpTooltip>
 	</div>
 
 	<!-- Content Area -->

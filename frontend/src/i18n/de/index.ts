@@ -49,6 +49,8 @@ const de = {
 	points: 'Pkt.',
 	builtWith: 'Erstellt mit',
 	saveChanges: 'Änderungen speichern',
+	dismiss: 'Verwerfen',
+	confirmDelete: 'Löschen bestätigen',
 
 	// Dashboard
 	dashboard: {
@@ -154,6 +156,7 @@ const de = {
 		chooseHint:
 			'Wählen Sie, wer dieses Dokument sehen kann',
 		updated: 'Sichtbarkeit aktualisiert',
+		changeVisibility: 'Dokumentsichtbarkeit ändern',
 		public: {
 			label: 'Öffentlich',
 			description:
@@ -581,7 +584,7 @@ const de = {
 		matchMode: 'Abgleichmodus',
 		exactMatch: 'Exakte Übereinstimmung',
 		caseInsensitive: 'Groß-/Kleinschreibung ignorieren',
-		exactMatchHint: 'Antwort muss identisch mit der erwarteten Antwort sein',
+		exactMatchHint: 'Text muss identisch mit der erwarteten Antwort sein',
 		caseInsensitiveHint: 'Abgleich ignoriert Groß-/Kleinschreibung und entfernt Leerzeichen',
 		stringMatchInfo: 'Textantworten werden mit dem ausgewählten Abgleichmodus verglichen',
 		tolerance: 'Toleranz (\u{00B1})',
@@ -658,6 +661,7 @@ const de = {
 		sending: 'Senden...',
 		deleteConfirm: 'Löschen?',
 		confirmDelete: 'Löschen bestätigen',
+		markdownHelp: 'Dieser Editor unterstützt Markdown-Formatierung.',
 		addReaction: 'Reaktion hinzufügen',
 		removeReaction: 'Reaktion entfernen',
 		nReplies: '{count} Antwort{{en}}',
@@ -719,7 +723,14 @@ const de = {
 		noPinnedComments: 'Keine angehefteten Kommentare',
 		noComments: 'Keine Kommentare',
 		expandComments: 'Kommentare ausklappen',
-		collapseComments: 'Kommentare einklappen'
+		collapseComments: 'Kommentare einklappen',
+		filters: {
+			hideHighlights: 'Hervorhebungen dieses Benutzers ausblenden',
+			clearFilter: 'Filter löschen',
+			includeHighlights: 'Hervorhebungen dieses Benutzers einblenden',
+			unpinAll: 'Alle lösen',
+			pinAll: 'Alle anheften',
+		},
 	},
 
 	// Score / member detail page
@@ -754,6 +765,22 @@ const de = {
 		nMinutesAgo: 'vor {count} Minute{{n}}',
 		nHoursAgo: 'vor {count} Stunde{{n}}',
 		nDaysAgo: 'vor {count} Tag{{en}}'
+	},
+
+	// Date picker
+	datePicker: {
+		selectDateTime: 'Datum und Uhrzeit auswählen',
+		clearExpiration: 'Ablaufdatum entfernen (läuft nie ab)',
+	},
+
+	// Tutorial
+	tutorial: {
+		title: 'Anleitungen',
+		clickToExpand: 'Klicken zum Vergrößern',
+		previousStep: 'Vorheriger Schritt',
+		nextStep: 'Nächster Schritt',
+		closeTutorial: 'Anleitung schließen',
+		densityDescription: 'Nutzen Sie Sichtbarkeitsfilter und Pins, um hohe Kommentardichten effektiver zu verwalten.',
 	},
 
 	// Footer

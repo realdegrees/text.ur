@@ -48,6 +48,8 @@ const en = {
 	points: 'pts',
 	builtWith: 'Built with',
 	saveChanges: 'Save Changes',
+	dismiss: 'Dismiss',
+	confirmDelete: 'Confirm delete',
 
 	// Dashboard
 	dashboard: {
@@ -143,6 +145,7 @@ const en = {
 		settings: 'Visibility Settings',
 		chooseHint: 'Choose who can view this document',
 		updated: 'Visibility updated',
+		changeVisibility: 'Change document visibility',
 		public: {
 			label: 'Public',
 			description: 'Anyone in the group can view this document'
@@ -532,7 +535,7 @@ const en = {
 		matchMode: 'Match Mode',
 		exactMatch: 'Exact match',
 		caseInsensitive: 'Case-insensitive',
-		exactMatchHint: 'Answer must be identical to the expected answer',
+		exactMatchHint: 'Text must be identical to the expected answer',
 		caseInsensitiveHint: 'Matching ignores case and trims whitespace',
 		stringMatchInfo: 'String answers are compared using the selected match mode',
 		tolerance: 'Tolerance (\u{00B1})',
@@ -607,6 +610,7 @@ const en = {
 		sending: 'Sending...',
 		deleteConfirm: 'Delete?',
 		confirmDelete: 'Confirm Delete',
+		markdownHelp: 'This editor supports Markdown formatting.',
 		addReaction: 'Add reaction',
 		removeReaction: 'Remove reaction',
 		nReplies: '{count:number} repl{{y|ies}}',
@@ -667,7 +671,14 @@ const en = {
 		noPinnedComments: 'No pinned comments',
 		noComments: 'No comments',
 		expandComments: 'Expand comments',
-		collapseComments: 'Collapse comments'
+		collapseComments: 'Collapse comments',
+		filters: {
+			hideHighlights: 'Hide highlights by this user',
+			clearFilter: 'Clear Filter',
+			includeHighlights: 'Include highlights by this user',
+			unpinAll: 'Unpin all',
+			pinAll: 'Pin all',
+		},
 	},
 
 	// Score / member detail page
@@ -702,6 +713,22 @@ const en = {
 		nMinutesAgo: '{count:number} minute{{s}} ago',
 		nHoursAgo: '{count:number} hour{{s}} ago',
 		nDaysAgo: '{count:number} day{{s}} ago'
+	},
+
+	// Date picker
+	datePicker: {
+		selectDateTime: 'Select date and time',
+		clearExpiration: 'Clear expiration (never expires)',
+	},
+
+	// Tutorial
+	tutorial: {
+		title: 'Tutorials',
+		clickToExpand: 'Click to expand',
+		previousStep: 'Previous step',
+		nextStep: 'Next step',
+		closeTutorial: 'Close tutorial',
+		densityDescription: 'Use visibility filters and pins to manage high comment density more effectively.',
 	},
 
 	// Footer

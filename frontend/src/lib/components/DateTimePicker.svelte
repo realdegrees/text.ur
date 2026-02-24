@@ -2,6 +2,7 @@
 	import CalendarIcon from '~icons/material-symbols/calendar-month-outline';
 	import ClearIcon from '~icons/material-symbols/close-rounded';
 	import { formatDateTime, getCurrentDateTimeLocal } from '$lib/util/dateFormat';
+	import LL from '$i18n/i18n-svelte';
 
 	let {
 		value = $bindable<string | null>(null),
@@ -26,7 +27,7 @@
 </script>
 
 <div class="flex flex-col gap-2">
-	<label for={id} class="text-xs font-semibold text-text/70">{label}</label>
+	<label for={id} class="form-label">{label}</label>
 
 	<div class="relative flex items-center gap-2">
 		<!-- Display field (clickable to open picker) -->
@@ -45,7 +46,7 @@
 			type="button"
 			onclick={openPicker}
 			class="flex items-center justify-center rounded border border-text/20 bg-background p-2 text-text/50 transition-colors hover:border-text/30 hover:text-text"
-			title="Select date and time"
+			title={$LL.datePicker.selectDateTime()}
 		>
 			<CalendarIcon class="h-5 w-5" />
 		</button>
@@ -56,7 +57,7 @@
 				type="button"
 				onclick={clearDate}
 				class="flex items-center justify-center rounded border border-text/20 bg-background p-2 text-text/50 transition-colors hover:border-text/30 hover:text-red-500"
-				title="Clear expiration (never expires)"
+				title={$LL.datePicker.clearExpiration()}
 			>
 				<ClearIcon class="h-5 w-5" />
 			</button>

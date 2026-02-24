@@ -521,7 +521,7 @@ async def delete_task(
     response_model=TaskResponseRead,
     status_code=200,
 )
-async def submit_task_response(
+async def submit_task_response( # noqa: C901
     db: Database,
     session_user: User = Authenticate(
         guards=[Guard.document_access()]

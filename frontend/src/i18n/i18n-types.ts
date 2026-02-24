@@ -198,6 +198,14 @@ type RootTranslation = {
 	 * S​a​v​e​ ​C​h​a​n​g​e​s
 	 */
 	saveChanges: string
+	/**
+	 * D​i​s​m​i​s​s
+	 */
+	dismiss: string
+	/**
+	 * C​o​n​f​i​r​m​ ​d​e​l​e​t​e
+	 */
+	confirmDelete: string
 	dashboard: {
 		/**
 		 * D​a​s​h​b​o​a​r​d
@@ -483,6 +491,10 @@ type RootTranslation = {
 		 * V​i​s​i​b​i​l​i​t​y​ ​u​p​d​a​t​e​d
 		 */
 		updated: string
+		/**
+		 * C​h​a​n​g​e​ ​d​o​c​u​m​e​n​t​ ​v​i​s​i​b​i​l​i​t​y
+		 */
+		changeVisibility: string
 		'public': {
 			/**
 			 * P​u​b​l​i​c
@@ -1594,7 +1606,7 @@ type RootTranslation = {
 		 */
 		caseInsensitive: string
 		/**
-		 * A​n​s​w​e​r​ ​m​u​s​t​ ​b​e​ ​i​d​e​n​t​i​c​a​l​ ​t​o​ ​t​h​e​ ​e​x​p​e​c​t​e​d​ ​a​n​s​w​e​r
+		 * T​e​x​t​ ​m​u​s​t​ ​b​e​ ​i​d​e​n​t​i​c​a​l​ ​t​o​ ​t​h​e​ ​e​x​p​e​c​t​e​d​ ​a​n​s​w​e​r
 		 */
 		exactMatchHint: string
 		/**
@@ -1820,6 +1832,10 @@ type RootTranslation = {
 		 */
 		confirmDelete: string
 		/**
+		 * T​h​i​s​ ​e​d​i​t​o​r​ ​s​u​p​p​o​r​t​s​ ​M​a​r​k​d​o​w​n​ ​f​o​r​m​a​t​t​i​n​g​.
+		 */
+		markdownHelp: string
+		/**
 		 * A​d​d​ ​r​e​a​c​t​i​o​n
 		 */
 		addReaction: string
@@ -2003,6 +2019,28 @@ type RootTranslation = {
 		 * C​o​l​l​a​p​s​e​ ​c​o​m​m​e​n​t​s
 		 */
 		collapseComments: string
+		filters: {
+			/**
+			 * H​i​d​e​ ​h​i​g​h​l​i​g​h​t​s​ ​b​y​ ​t​h​i​s​ ​u​s​e​r
+			 */
+			hideHighlights: string
+			/**
+			 * C​l​e​a​r​ ​F​i​l​t​e​r
+			 */
+			clearFilter: string
+			/**
+			 * I​n​c​l​u​d​e​ ​h​i​g​h​l​i​g​h​t​s​ ​b​y​ ​t​h​i​s​ ​u​s​e​r
+			 */
+			includeHighlights: string
+			/**
+			 * U​n​p​i​n​ ​a​l​l
+			 */
+			unpinAll: string
+			/**
+			 * P​i​n​ ​a​l​l
+			 */
+			pinAll: string
+		}
 	}
 	memberScore: {
 		/**
@@ -2117,6 +2155,42 @@ type RootTranslation = {
 		 * @param {number} count
 		 */
 		nDaysAgo: RequiredParams<'count'>
+	}
+	datePicker: {
+		/**
+		 * S​e​l​e​c​t​ ​d​a​t​e​ ​a​n​d​ ​t​i​m​e
+		 */
+		selectDateTime: string
+		/**
+		 * C​l​e​a​r​ ​e​x​p​i​r​a​t​i​o​n​ ​(​n​e​v​e​r​ ​e​x​p​i​r​e​s​)
+		 */
+		clearExpiration: string
+	}
+	tutorial: {
+		/**
+		 * T​u​t​o​r​i​a​l​s
+		 */
+		title: string
+		/**
+		 * C​l​i​c​k​ ​t​o​ ​e​x​p​a​n​d
+		 */
+		clickToExpand: string
+		/**
+		 * P​r​e​v​i​o​u​s​ ​s​t​e​p
+		 */
+		previousStep: string
+		/**
+		 * N​e​x​t​ ​s​t​e​p
+		 */
+		nextStep: string
+		/**
+		 * C​l​o​s​e​ ​t​u​t​o​r​i​a​l
+		 */
+		closeTutorial: string
+		/**
+		 * U​s​e​ ​v​i​s​i​b​i​l​i​t​y​ ​f​i​l​t​e​r​s​ ​a​n​d​ ​p​i​n​s​ ​t​o​ ​m​a​n​a​g​e​ ​h​i​g​h​ ​c​o​m​m​e​n​t​ ​d​e​n​s​i​t​y​ ​m​o​r​e​ ​e​f​f​e​c​t​i​v​e​l​y​.
+		 */
+		densityDescription: string
 	}
 	footer: {
 		/**
@@ -2319,6 +2393,14 @@ export type TranslationFunctions = {
 	 * Save Changes
 	 */
 	saveChanges: () => LocalizedString
+	/**
+	 * Dismiss
+	 */
+	dismiss: () => LocalizedString
+	/**
+	 * Confirm delete
+	 */
+	confirmDelete: () => LocalizedString
 	dashboard: {
 		/**
 		 * Dashboard
@@ -2596,6 +2678,10 @@ export type TranslationFunctions = {
 		 * Visibility updated
 		 */
 		updated: () => LocalizedString
+		/**
+		 * Change document visibility
+		 */
+		changeVisibility: () => LocalizedString
 		'public': {
 			/**
 			 * Public
@@ -3683,7 +3769,7 @@ export type TranslationFunctions = {
 		 */
 		caseInsensitive: () => LocalizedString
 		/**
-		 * Answer must be identical to the expected answer
+		 * Text must be identical to the expected answer
 		 */
 		exactMatchHint: () => LocalizedString
 		/**
@@ -3905,6 +3991,10 @@ export type TranslationFunctions = {
 		 */
 		confirmDelete: () => LocalizedString
 		/**
+		 * This editor supports Markdown formatting.
+		 */
+		markdownHelp: () => LocalizedString
+		/**
 		 * Add reaction
 		 */
 		addReaction: () => LocalizedString
@@ -4084,6 +4174,28 @@ export type TranslationFunctions = {
 		 * Collapse comments
 		 */
 		collapseComments: () => LocalizedString
+		filters: {
+			/**
+			 * Hide highlights by this user
+			 */
+			hideHighlights: () => LocalizedString
+			/**
+			 * Clear Filter
+			 */
+			clearFilter: () => LocalizedString
+			/**
+			 * Include highlights by this user
+			 */
+			includeHighlights: () => LocalizedString
+			/**
+			 * Unpin all
+			 */
+			unpinAll: () => LocalizedString
+			/**
+			 * Pin all
+			 */
+			pinAll: () => LocalizedString
+		}
 	}
 	memberScore: {
 		/**
@@ -4188,6 +4300,42 @@ export type TranslationFunctions = {
 		 * {count} day{{s}} ago
 		 */
 		nDaysAgo: (arg: { count: number }) => LocalizedString
+	}
+	datePicker: {
+		/**
+		 * Select date and time
+		 */
+		selectDateTime: () => LocalizedString
+		/**
+		 * Clear expiration (never expires)
+		 */
+		clearExpiration: () => LocalizedString
+	}
+	tutorial: {
+		/**
+		 * Tutorials
+		 */
+		title: () => LocalizedString
+		/**
+		 * Click to expand
+		 */
+		clickToExpand: () => LocalizedString
+		/**
+		 * Previous step
+		 */
+		previousStep: () => LocalizedString
+		/**
+		 * Next step
+		 */
+		nextStep: () => LocalizedString
+		/**
+		 * Close tutorial
+		 */
+		closeTutorial: () => LocalizedString
+		/**
+		 * Use visibility filters and pins to manage high comment density more effectively.
+		 */
+		densityDescription: () => LocalizedString
 	}
 	footer: {
 		/**

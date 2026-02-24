@@ -53,8 +53,7 @@
 
 	let isExpanded = $state(!isMobile); // Collapsed by default on mobile
 
-	const buttonClass =
-		'rounded p-2 text-text/70 transition-colors hover:bg-text/10 hover:text-text disabled:opacity-30 disabled:hover:bg-transparent';
+	const buttonClass = 'btn-ghost p-2 text-text/70 hover:text-text';
 	const activeButtonClass =
 		'rounded p-2 text-primary bg-primary/10 transition-colors hover:bg-primary/20';
 

@@ -2,6 +2,7 @@
 	import Field from '$lib/components/advancedInput.svelte';
 	import Loading from '~icons/svg-spinners/90-ring-with-bg';
 	import { api } from '$api/client';
+	import InfoBanner from '$lib/components/InfoBanner.svelte';
 
 	let { onSuccess, token }: { onSuccess: () => void; token: string } = $props();
 
@@ -37,7 +38,7 @@
 
 <form onsubmit={handleAnonymousRegister} class="flex flex-col gap-4">
 	{#if errorMessage}
-		<div class="text-sm text-red-500">{errorMessage}</div>
+		<InfoBanner variant="error">{errorMessage}</InfoBanner>
 	{/if}
 	<Field bind:value={username} label="Username" required />
 	<button

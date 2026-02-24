@@ -46,11 +46,11 @@
 		bind:value={label}
 		maxlength="30"
 		placeholder={$LL.sharelinks.labelPlaceholder()}
-		class="rounded border border-text/20 bg-background px-3 py-2 text-sm transition-colors focus:border-text/50 focus:outline-none"
+		class="form-input"
 	/>
 
 	<div class="flex flex-col gap-1">
-		<div class="text-xs font-semibold text-text/70">{$LL.permissions.label()}</div>
+		<div class="form-label">{$LL.permissions.label()}</div>
 		<PermissionSelector
 			bind:selectedPermissions={permissions}
 			onAdd={addPermission}
@@ -68,7 +68,7 @@
 	<button
 		type="button"
 		onclick={onCreate}
-		class="flex items-center justify-center gap-2 rounded bg-primary px-4 py-2 text-text transition hover:bg-primary/80"
+		class="flex btn-primary items-center justify-center gap-2"
 	>
 		<SaveIcon class="h-5 w-5" />
 		<span>{$LL.create()}</span>

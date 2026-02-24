@@ -216,15 +216,15 @@
 					bind:value={textAnswer}
 					disabled={isLocked}
 					placeholder="Type your answer..."
-					class="w-full rounded-md border border-text/20 bg-text/5 px-3 py-2 text-sm transition-colors outline-none focus:border-text/40 disabled:opacity-70"
+					class="form-input w-full"
 				/>
 				{#if task.string_match_mode === 'exact'}
-					<div class="mt-1 flex items-center gap-1 text-xs text-text/40">
+					<div class="mt-1 flex items-center gap-1 form-hint">
 						<InfoIcon class="h-3 w-3" />
 						<span>{$LL.tasks.exactMatchHint()}</span>
 					</div>
 				{:else}
-					<div class="mt-1 flex items-center gap-1 text-xs text-text/40">
+					<div class="mt-1 flex items-center gap-1 form-hint">
 						<InfoIcon class="h-3 w-3" />
 						<span>{$LL.tasks.caseInsensitiveHint()}</span>
 					</div>
@@ -238,7 +238,7 @@
 					bind:value={numberAnswer}
 					disabled={isLocked}
 					placeholder="Enter a number..."
-					class="w-full rounded-md border border-text/20 bg-text/5 px-3 py-2 text-sm transition-colors outline-none focus:border-text/40 disabled:opacity-70"
+					class="form-input w-full"
 				/>
 			</div>
 		{/if}

@@ -7,7 +7,7 @@
 	import LL from '$i18n/i18n-svelte';
 	import LockIcon from '~icons/material-symbols/lock';
 	import PublicIcon from '~icons/material-symbols/public';
-	import QuestionMarkIcon from '~icons/material-symbols/help-outline';
+	import HelpTooltip from '$lib/components/HelpTooltip.svelte';
 
 	interface Props {
 		isExpanded?: boolean;
@@ -68,11 +68,7 @@
 		<span class="flex flex-row items-center justify-between px-1 text-[10px] text-text/40">
 			{$LL.pdf.viewMode.label()}
 			{#if canChangeViewMode}
-				<div title={$LL.pdf.viewMode.tooltip()}>
-					<QuestionMarkIcon
-						class="ml-1 h-3.5 w-3.5 text-text/40 transition-colors hover:text-text"
-					/>
-				</div>
+				<HelpTooltip class="ml-1">{$LL.pdf.viewMode.tooltip()}</HelpTooltip>
 			{/if}
 		</span>
 	{/if}

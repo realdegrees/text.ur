@@ -8,6 +8,7 @@
 	import TaskManagement from '$lib/components/TaskManagement.svelte';
 	import TabContainer from '$lib/components/TabContainer.svelte';
 	import ConfirmButton from '$lib/components/ConfirmButton.svelte';
+	import DangerZone from '$lib/components/DangerZone.svelte';
 	import MarkdownTextEditor from '$lib/components/pdf/MarkdownTextEditor.svelte';
 	import BackIcon from '~icons/material-symbols/arrow-back';
 	import SaveIcon from '~icons/material-symbols/save-outline';
@@ -93,22 +94,20 @@
 	<div class="flex flex-col gap-6">
 		<!-- Document Name -->
 		<div class="flex flex-col gap-2">
-			<label for="document-name" class="text-sm font-semibold text-text/70"
-				>{$LL.documents.documentName()}</label
-			>
+			<label for="document-name" class="form-label">{$LL.documents.documentName()}</label>
 			<input
 				id="document-name"
 				type="text"
 				bind:value={documentName}
 				placeholder={$LL.documents.documentNamePlaceholder()}
 				maxlength="255"
-				class="rounded-md border border-text/20 bg-text/5 px-4 py-2 transition-colors focus:border-text/50 focus:outline-none"
+				class="form-input px-4"
 			/>
 		</div>
 
 		<!-- Document Description -->
 		<div class="flex flex-col gap-2">
-			<label for="document-description" class="text-sm font-semibold text-text/70">
+			<label for="document-description" class="form-label">
 				{$LL.documents.documentDescription()}
 			</label>
 			<MarkdownTextEditor
@@ -119,14 +118,14 @@
 					? parseInt(env.PUBLIC_DOCUMENT_DESCRIPTION_MAX_LENGTH)
 					: 5000}
 			/>
-			<p class="text-xs text-text/50">
+			<p class="form-hint">
 				{$LL.documents.documentDescriptionHint()}
 			</p>
 		</div>
 
 		<!-- Document Visibility -->
 		<div class="flex flex-col gap-2">
-			<div class="text-sm font-semibold text-text/70">{$LL.visibility.label()}</div>
+			<div class="form-label">{$LL.visibility.label()}</div>
 			<div class="flex flex-col gap-3">
 				<div class="flex items-start gap-2">
 					<input
@@ -140,7 +139,7 @@
 						<label for="visibility-public" class="cursor-pointer text-sm font-medium">
 							{$LL.visibility.public.label()}
 						</label>
-						<p class="text-xs text-text/50">{$LL.documentSettings.publicDescription()}</p>
+						<p class="form-hint">{$LL.documentSettings.publicDescription()}</p>
 					</div>
 				</div>
 
@@ -157,7 +156,7 @@
 							<label for="visibility-private" class="cursor-pointer text-sm font-medium">
 								{$LL.visibility.private.label()}
 							</label>
-							<p class="text-xs text-text/50">{$LL.documentSettings.privateDescription()}</p>
+							<p class="form-hint">{$LL.documentSettings.privateDescription()}</p>
 						</div>
 					</div>
 				{/if}
@@ -171,7 +170,7 @@
 					type="button"
 					onclick={saveChanges}
 					disabled={isSaving}
-					class="flex flex-row items-center gap-2 rounded-md bg-primary px-6 py-2 text-text transition-all hover:bg-primary/80 disabled:cursor-not-allowed disabled:opacity-50"
+					class="flex btn-primary flex-row items-center gap-2 px-6"
 				>
 					<SaveIcon class="h-5 w-5" />
 					<span>{isSaving ? $LL.documentSettings.savingButton() : $LL.saveChanges()}</span>
@@ -181,12 +180,11 @@
 
 		<!-- Danger Zone -->
 		{#if sessionStore.validatePermissions(['administrator'])}
-			<div class="mt-8 flex flex-col gap-4 rounded-md border border-red-500/30 bg-red-500/5 p-4">
-				<h2 class="text-lg font-semibold text-red-500">{$LL.documentSettings.danger.title()}</h2>
-				<p class="text-sm text-text/70">
-					{$LL.documentSettings.danger.description()}
-				</p>
-
+			<DangerZone
+				title={$LL.documentSettings.danger.title()}
+				description={$LL.documentSettings.danger.description()}
+				actionLabel={$LL.documentSettings.danger.clearButton()}
+			>
 				<ConfirmButton disabled={isClearing} onConfirm={clearDocument}>
 					{#snippet button(isOpen)}
 						<button
@@ -212,7 +210,7 @@
 						</div>
 					{/snippet}
 				</ConfirmButton>
-			</div>
+			</DangerZone>
 		{/if}
 	</div>
 {/snippet}
@@ -224,7 +222,7 @@
 {#snippet tasksTab()}
 	<!-- Default Max Attempts -->
 	<div class="mb-6 flex flex-col gap-2">
-		<label for="default-max-attempts" class="text-sm font-semibold text-text/70">
+		<label for="default-max-attempts" class="form-label">
 			{$LL.documentSettings.defaultMaxAttempts()}
 		</label>
 		<input
@@ -232,9 +230,9 @@
 			type="number"
 			min="1"
 			bind:value={defaultMaxAttempts}
-			class="w-24 rounded-md border border-text/20 bg-text/5 px-4 py-2 transition-colors focus:border-text/50 focus:outline-none"
+			class="form-input w-24 px-4"
 		/>
-		<p class="text-xs text-text/50">
+		<p class="form-hint">
 			{$LL.documentSettings.defaultMaxAttemptsHint()}
 		</p>
 		{#if hasChanges()}
@@ -243,7 +241,7 @@
 					type="button"
 					onclick={saveChanges}
 					disabled={isSaving}
-					class="flex flex-row items-center gap-2 rounded-md bg-primary px-6 py-2 text-text transition-all hover:bg-primary/80 disabled:cursor-not-allowed disabled:opacity-50"
+					class="flex btn-primary flex-row items-center gap-2 px-6"
 				>
 					<SaveIcon class="h-5 w-5" />
 					<span>{isSaving ? $LL.documentSettings.savingButton() : $LL.saveChanges()}</span>
@@ -259,7 +257,7 @@
 	<div class="flex items-center gap-3">
 		<button
 			onclick={() => goto(`/dashboard/groups/${group.id}/documents`)}
-			class="rounded p-2 transition hover:bg-text/10"
+			class="btn-ghost p-2"
 			aria-label={$LL.documentSettings.backToDocuments()}
 		>
 			<BackIcon class="h-5 w-5" />

@@ -4,6 +4,7 @@
 	import ArrowForwardIcon from '~icons/material-symbols/arrow-forward';
 	import { fade } from 'svelte/transition';
 	import type { TutorialStep } from '$lib/types/tutorial';
+	import LL from '$i18n/i18n-svelte';
 
 	/**
 	 * Tutorial overlay modal for multi-step guides.
@@ -75,7 +76,7 @@
 					class="rounded-full p-2 text-text/60 transition-colors hover:bg-text/10 hover:text-text disabled:opacity-30 disabled:hover:bg-transparent"
 					onclick={prevStep}
 					disabled={currentStepIndex === 0}
-					title="Previous step"
+					title={$LL.tutorial.previousStep()}
 				>
 					<ArrowBackIcon class="h-5 w-5" />
 				</button>
@@ -101,7 +102,7 @@
 					class="rounded-full p-2 text-text/60 transition-colors hover:bg-text/10 hover:text-text disabled:opacity-30 disabled:hover:bg-transparent"
 					onclick={nextStep}
 					disabled={currentStepIndex === steps.length - 1}
-					title="Next step"
+					title={$LL.tutorial.nextStep()}
 				>
 					<ArrowForwardIcon class="h-5 w-5" />
 				</button>
@@ -109,7 +110,7 @@
 				<button
 					class="rounded-full p-2 text-text/60 transition-colors hover:bg-red-500/10 hover:text-red-600"
 					onclick={onClose}
-					title="Close tutorial"
+					title={$LL.tutorial.closeTutorial()}
 				>
 					<CloseIcon class="h-5 w-5" />
 				</button>

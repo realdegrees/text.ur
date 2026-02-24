@@ -3,6 +3,7 @@
 	import AddIcon from '~icons/material-symbols/add-2-rounded';
 	import GroupIcon from '~icons/material-symbols/group-outline';
 	import Loading from '~icons/svg-spinners/90-ring-with-bg';
+	import InfoBanner from '$lib/components/InfoBanner.svelte';
 	import { api } from '$api/client';
 	import { notification } from '$lib/stores/notificationStore';
 	import PermissionSelector from '$lib/components/permissionSelector.svelte';
@@ -91,11 +92,7 @@
 	<form onsubmit={handleSubmit} class="flex flex-col gap-6">
 		<!-- Error Message -->
 		{#if errorMessage}
-			<div
-				class="rounded-md border border-red-300 bg-red-100 p-3 text-red-700 dark:border-red-700 dark:bg-red-900/30 dark:text-red-300"
-			>
-				{errorMessage}
-			</div>
+			<InfoBanner variant="error">{errorMessage}</InfoBanner>
 		{/if}
 
 		<!-- Group Name -->
@@ -105,16 +102,14 @@
 				<h2 class="text-xl font-semibold">{$LL.groupCreate.groupDetails()}</h2>
 			</div>
 
-			<label for="groupName" class="text-sm font-semibold text-text/70"
-				>{$LL.groupCreate.groupNameLabel()}</label
-			>
+			<label for="groupName" class="form-label">{$LL.groupCreate.groupNameLabel()}</label>
 			<input
 				id="groupName"
 				type="text"
 				bind:value={groupName}
 				required
 				placeholder={$LL.groupCreate.groupNamePlaceholder()}
-				class="rounded-md border border-text/20 bg-text/5 px-4 py-2 transition-colors focus:border-text/50 focus:outline-none"
+				class="form-input"
 				disabled={isLoading}
 			/>
 		</div>
@@ -199,13 +194,13 @@
 
 		<!-- Submit Button -->
 		<div class="flex flex-row justify-end gap-2">
-			<a href="/dashboard" class="rounded-md bg-text/10 px-6 py-2 transition-all hover:bg-text/20">
+			<a href="/dashboard" class="btn-secondary">
 				{$LL.cancel()}
 			</a>
 			<button
 				type="submit"
 				disabled={isLoading || !groupName.trim()}
-				class="flex flex-row items-center gap-2 rounded-md bg-primary px-6 py-2 text-text transition-all hover:bg-primary/80 disabled:cursor-not-allowed disabled:bg-text/30"
+				class="flex btn-primary flex-row items-center gap-2"
 			>
 				{#if isLoading}
 					<Loading class="h-5 w-5" />

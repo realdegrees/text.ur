@@ -3,6 +3,7 @@
 	import ExpandIcon from '~icons/material-symbols/open-in-full';
 	import { slide } from 'svelte/transition';
 	import type { TutorialMedia } from '$lib/types/tutorial';
+	import LL from '$i18n/i18n-svelte';
 
 	interface Props {
 		title: string;
@@ -27,7 +28,7 @@
 					e.stopPropagation();
 					onDismiss();
 				}}
-				title="Dismiss"
+				title={$LL.dismiss()}
 			>
 				<CloseIcon class="h-4 w-4" />
 			</button>
@@ -42,7 +43,7 @@
 				<button
 					class="relative block h-full w-full cursor-pointer"
 					onclick={onClick}
-					title="Click to expand"
+					title={$LL.tutorial.clickToExpand()}
 				>
 					<img
 						src={previewMedia.src}

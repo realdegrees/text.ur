@@ -3,6 +3,7 @@
 	import TutorialOverlay from '$lib/components/common/TutorialOverlay.svelte';
 	import DensityTutorialContent from './tutorials/DensityTutorialContent.svelte';
 	import type { TutorialStep } from '$lib/types/tutorial';
+	import LL from '$i18n/i18n-svelte';
 
 	interface Props {
 		isExpanded: boolean;
@@ -33,8 +34,8 @@
 
 {#if shouldShow}
 	<TutorialCard
-		title="Tutorials"
-		description="Use visibility filters and pins to manage high comment density more effectively."
+		title={$LL.tutorial.title()}
+		description={$LL.tutorial.densityDescription()}
 		previewMedia={{
 			src: '/images/density-workflow.gif',
 			alt: 'Workflow'

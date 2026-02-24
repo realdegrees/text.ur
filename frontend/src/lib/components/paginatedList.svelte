@@ -46,12 +46,18 @@
 <!-- Page Controls -->
 <div class="flex w-full flex-row items-stretch justify-start">
 	<div class="flex w-full flex-row items-center justify-center">
-		<button type="button" class:invisible={currentPage === 1} onclick={() => changePage(-1)}
-			><Arrow class="rotate-180" /></button
+		<button
+			type="button"
+			class="btn-ghost"
+			class:invisible={currentPage === 1}
+			onclick={() => changePage(-1)}><Arrow class="rotate-180" /></button
 		>
 		<span>Page {currentPage} of {maxPages}</span>
-		<button type="button" class:invisible={currentPage === maxPages} onclick={() => changePage(+1)}
-			><Arrow /></button
+		<button
+			type="button"
+			class="btn-ghost"
+			class:invisible={currentPage === maxPages}
+			onclick={() => changePage(+1)}><Arrow /></button
 		>
 	</div>
 	<div class="flex flex-row items-center gap-1">
