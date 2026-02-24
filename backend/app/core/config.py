@@ -118,7 +118,7 @@ SMTP_FROM_EMAIL = os.getenv("SMTP_FROM_EMAIL")
 
 # APP
 JINJA_ENV = Environment(
-    loader=FileSystemLoader(os.path.join(os.getcwd(), "templates")),
+    loader=FileSystemLoader(os.path.join(backend_path, "templates")),
     autoescape=select_autoescape(["html"])
 )
 FRONTEND_BASEURL: str | None = os.getenv("ORIGIN")
