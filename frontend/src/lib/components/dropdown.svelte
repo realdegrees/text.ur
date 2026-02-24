@@ -151,7 +151,7 @@
 	{#if show}
 		<div
 			bind:this={menuRef}
-			class="bg-surface fixed z-50 min-w-max rounded-sm border border-text/50 bg-background shadow-lg"
+			class="bg-surface fixed z-9999 min-w-max rounded-sm border border-text/50 bg-background shadow-lg"
 			style={menuStyle}
 			transition:slide={{ duration: 200, easing: quintInOut }}
 		>

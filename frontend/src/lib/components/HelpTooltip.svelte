@@ -19,6 +19,8 @@
 
 	let showTooltip = $state(false);
 	let hideTimeout: ReturnType<typeof setTimeout> | null = null;
+	let triggerRef: HTMLDivElement | null = $state(null);
+	let tooltipStyle = $state('');
 
 	const IconComponent = $derived(icon === 'help' ? HelpIcon : InfoIcon);
 
@@ -26,6 +28,10 @@
 		if (hideTimeout) {
 			clearTimeout(hideTimeout);
 			hideTimeout = null;
+		}
+		if (triggerRef) {
+			const rect = triggerRef.getBoundingClientRect();
+			tooltipStyle = `top: ${rect.top}px; left: ${rect.right + 6}px;`;
 		}
 		showTooltip = true;
 	}
@@ -44,7 +50,7 @@
 <svelte:window onkeydown={handleKeydown} />
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<div class="relative inline-flex" onmouseenter={show} onmouseleave={hide}>
+<div class="relative inline-flex" bind:this={triggerRef} onmouseenter={show} onmouseleave={hide}>
 	<button
 		type="button"
 		class="text-text/40 transition-colors hover:text-text/70 {className}"
@@ -56,7 +62,8 @@
 	{#if showTooltip}
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<div
-			class="absolute top-1/2 left-full z-50 ml-1.5 w-64 -translate-y-1/2 rounded border border-text/20 bg-background p-2 text-xs shadow-lg"
+			class="fixed z-9999 w-64 rounded border border-text/20 bg-background p-2 text-xs shadow-lg"
+			style={tooltipStyle}
 			onmouseenter={show}
 			onmouseleave={hide}
 			onmousedown={(e) => e.preventDefault()}
