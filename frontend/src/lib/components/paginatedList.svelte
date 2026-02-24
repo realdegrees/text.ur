@@ -4,6 +4,7 @@
 	import type { Paginated } from '$api/pagination';
 	import type { Snippet } from 'svelte';
 	import Arrow from '~icons/material-symbols/arrow-forward-ios-rounded';
+	import Select from '$lib/components/Select.svelte';
 
 	let {
 		itemSnippet,
@@ -55,9 +56,9 @@
 	</div>
 	<div class="flex flex-row items-center gap-1">
 		<label for="itemsPerPage" class="whitespace-nowrap">Entries per page:</label>
-		<select
+		<Select
 			id="itemsPerPage"
-			class="rounded bg-background py-0.5"
+			value={limit}
 			onchange={({ currentTarget: { value } }) => {
 				page.url.searchParams.set('limit', `${value}`);
 				page.url.searchParams.set('offset', `${0}`);
@@ -65,8 +66,8 @@
 			}}
 		>
 			{#each [10, 25, 50, 100] as option (option)}
-				<option class="bg-background" value={option} selected={option === limit}>{option}</option>
+				<option value={option}>{option}</option>
 			{/each}
-		</select>
+		</Select>
 	</div>
 </div>

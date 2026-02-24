@@ -57,6 +57,21 @@ class Emoji(StrEnum):
     BRAIN = "\U0001f9e0"
 
 
+class AnswerType(StrEnum):
+    """Supported answer types for document tasks."""
+
+    MULTIPLE_CHOICE = "multiple_choice"
+    STRING = "string"
+    NUMBER = "number"
+
+
+class StringMatchMode(StrEnum):
+    """Matching modes for string-type task answers."""
+
+    EXACT = "exact"
+    CASE_INSENSITIVE = "case_insensitive"
+
+
 class Permission(StrEnum):
     """Available permissions for group members.
 
@@ -120,6 +135,7 @@ class AppErrorCode(StrEnum):
     OWNER_CANNOT_LEAVE_GROUP = "owner_cannot_leave_group"  # use when the owner tries to leave the group instead of deleting it
     CANNOT_REMOVE_PERMISSION_REASON_DEFAULT_GROUP = "cannot_remove_permission_reason_default_group"  # use when trying to remove a permission that is included in the group's default permission reason
     CANNOT_REMOVE_PERMISSION_REASON_SHARELINK = "cannot_remove_permission_reason_sharelink"  # use when trying to remove a permission that is included in the related sharelink's permission reason
+    CANNOT_PROMOTE_SELF = "cannot_promote_self"  # use when a user tries to promote their own guest membership to permanent
     
     # Resource Not Found
     NOT_FOUND = "not_found"  # use when a requested resource does not exist
@@ -148,6 +164,10 @@ class AppErrorCode(StrEnum):
 
     # Mail Errors
     MAIL_SEND_FAILED = "mail_send_failed"  # use when server fails to send an email
+
+    # Task Errors
+    TASK_ALREADY_CORRECT = "task_already_correct"  # use when user already answered the task correctly
+    TASK_NO_ATTEMPTS_LEFT = "task_no_attempts_left"  # use when user has exhausted all attempts for a task
 
     # Account Errors
     ALREADY_VERIFIED = "already_verified"  # use when a user is already verified

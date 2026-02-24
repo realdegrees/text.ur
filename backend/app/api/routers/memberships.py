@@ -30,6 +30,8 @@ from models.tables import (
     Membership,
     Reaction,
     ScoreConfig,
+    Task,
+    TaskResponse,
     User,
 )
 from sqlalchemy import case, func, or_
@@ -356,6 +358,13 @@ async def promote_guest_to_member(
     member: User = Resource(User, param_alias="user_id"),
 ) -> Response:
     """Upgrade a guest membership to a regular membership."""
+    if session_user.id == member.id:
+        raise AppException(
+            status_code=403,
+            error_code=AppErrorCode.CANNOT_PROMOTE_SELF,
+            detail="Cannot promote yourself to a permanent member",
+        )
+
     result = await db.exec(
         select(Membership).where(
             Membership.group_id == group.id,
@@ -633,6 +642,43 @@ async def _compute_score(
     for g_row in per_given.all():
         given_per_emoji[g_row[0]] = (int(g_row[1]), int(g_row[2]))
 
+    # 7. Task scoring — correct responses and total tasks
+    task_doc_filter = (
+        (Task.document_id == document_id)
+        if document_id is not None
+        else Task.document_id.in_(  # type: ignore[union-attr]
+            select(Document.id)
+            .where(Document.group_id == group_id)
+            .scalar_subquery()
+        )
+    )
+
+    task_result = await db.exec(
+        select(
+            func.count(TaskResponse.task_id).label(
+                "tasks_completed"
+            ),
+            func.coalesce(func.sum(Task.points), 0).label(
+                "task_points"
+            ),
+        )
+        .select_from(TaskResponse)
+        .join(Task, TaskResponse.task_id == Task.id)
+        .where(
+            TaskResponse.user_id == user_id,
+            TaskResponse.is_correct == True,  # noqa: E712
+            task_doc_filter,
+        )
+    )
+    task_row = task_result.one()
+    tasks_completed: int = task_row[0]
+    task_points_total: int = int(task_row[1])
+
+    total_tasks_result = await db.exec(
+        select(func.count(Task.id)).where(task_doc_filter)
+    )
+    tasks_total: int = total_tasks_result.one()
+
     # Build per-reaction breakdown for all group reactions
     all_gr_result = await db.exec(
         select(GroupReaction)
@@ -666,6 +712,7 @@ async def _compute_score(
         + tag_points
         + reaction_received_points
         + reaction_given_points
+        + task_points_total
     )
 
     breakdown = ScoreBreakdown(
@@ -681,6 +728,9 @@ async def _compute_score(
         reactions_given=reactions_given,
         reaction_given_points=reaction_given_points,
         reaction_breakdown=reaction_breakdown,
+        tasks_completed=tasks_completed,
+        tasks_total=tasks_total,
+        task_points=task_points_total,
     )
 
     return ScoreRead(

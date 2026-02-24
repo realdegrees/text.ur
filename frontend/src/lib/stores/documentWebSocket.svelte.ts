@@ -84,6 +84,7 @@ class DocumentWebSocketStore {
 	// Internal event handlers
 	private commentEventHandlers: ((event: CommentEvent) => void)[] = [];
 	private viewModeEventHandlers: ((event: ViewModeChangedEventEnvelope) => void)[] = [];
+	private tasksUpdatedHandlers: (() => void)[] = [];
 
 	// Throttle tracking for mouse position sending
 	private lastMouseSendTime = 0;
@@ -277,6 +278,11 @@ class DocumentWebSocketStore {
 				this.viewModeEventHandlers.forEach((handler) => handler(envelope));
 				break;
 			}
+
+			case 'tasks_updated': {
+				this.tasksUpdatedHandlers.forEach((handler) => handler());
+				break;
+			}
 		}
 	}
 
@@ -303,6 +309,7 @@ class DocumentWebSocketStore {
 		this._hasConnectedBefore = false;
 		this.commentEventHandlers = [];
 		this.viewModeEventHandlers = [];
+		this.tasksUpdatedHandlers = [];
 	}
 
 	sendMousePosition(x: number, y: number, page: number, visible: boolean = true): void {
@@ -350,6 +357,13 @@ class DocumentWebSocketStore {
 		this.viewModeEventHandlers.push(handler);
 		return () => {
 			this.viewModeEventHandlers = this.viewModeEventHandlers.filter((h) => h !== handler);
+		};
+	}
+
+	onTasksUpdated(handler: () => void): () => void {
+		this.tasksUpdatedHandlers.push(handler);
+		return () => {
+			this.tasksUpdatedHandlers = this.tasksUpdatedHandlers.filter((h) => h !== handler);
 		};
 	}
 

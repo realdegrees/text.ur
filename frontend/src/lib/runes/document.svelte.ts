@@ -10,7 +10,10 @@ import {
 	type ReactionCreate,
 	type ReactionRead,
 	type GroupReactionRead,
-	type Filter
+	type Filter,
+	type TaskRead,
+	type TaskResponseRead,
+	type TaskResponseCreate
 } from '$api/types';
 import type { Paginated } from '$api/pagination';
 import { notification } from '$lib/stores/notificationStore';
@@ -65,6 +68,11 @@ const createDocumentStore = () => {
 	const pinnedAuthors = new SvelteSet<number>();
 	const pinnedTags = new SvelteSet<number>();
 	let isGlobalPin = $state(false);
+
+	// Task state
+	let _tasks = $state<TaskRead[]>([]);
+	const _taskResponses = new SvelteMap<number, TaskResponseRead>();
+	let activeTab = $state<'comments' | 'tasks' | 'info'>('comments');
 
 	let documentScale: number = $state<number>(1);
 	let numPages: number = $state<number>(0);
@@ -900,6 +908,46 @@ const createDocumentStore = () => {
 		}
 	};
 
+	// --- Task methods ---
+
+	const setTasks = (taskList: TaskRead[]) => {
+		_tasks = taskList.sort((a, b) => a.order - b.order);
+	};
+
+	const setTaskResponses = (responses: TaskResponseRead[]) => {
+		_taskResponses.clear();
+		for (const r of responses) {
+			_taskResponses.set(r.task_id, r);
+		}
+	};
+
+	/** Set tasks and responses atomically to avoid brief mismatched state on doc switch. */
+	const setTaskData = (taskList: TaskRead[], responses: TaskResponseRead[]) => {
+		_tasks = taskList.sort((a, b) => a.order - b.order);
+		_taskResponses.clear();
+		for (const r of responses) {
+			_taskResponses.set(r.task_id, r);
+		}
+	};
+
+	const submitTaskResponse = async (taskId: number, answer: TaskResponseCreate): Promise<void> => {
+		if (!loadedDocument) return;
+		const result = await api.post<TaskResponseRead>(
+			`/documents/${loadedDocument.id}/tasks/${taskId}/responses`,
+			answer
+		);
+		if (!result.success) {
+			notification(result.error);
+			return;
+		}
+		// Update local response
+		_taskResponses.set(taskId, result.data!);
+	};
+
+	const handleTasksUpdatedEvent = () => {
+		invalidate('app:document-tasks');
+	};
+
 	// Cleanup expired states on initialization
 	cleanupExpiredCommentStates();
 
@@ -982,6 +1030,24 @@ const createDocumentStore = () => {
 		get isAnyCommentHovered() {
 			return isAnyCommentHovered;
 		},
+		// Task state
+		get tasks() {
+			return _tasks;
+		},
+		get taskResponses() {
+			return _taskResponses;
+		},
+		get activeTab() {
+			return activeTab;
+		},
+		set activeTab(value) {
+			activeTab = value;
+		},
+		setTasks,
+		setTaskResponses,
+		setTaskData,
+		submitTaskResponse,
+		handleTasksUpdatedEvent,
 		get filters() {
 			return filters;
 		},

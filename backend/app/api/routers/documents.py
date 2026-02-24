@@ -50,6 +50,7 @@ from models.event import Event
 from models.filter import DocumentFilter
 from models.pagination import Paginated
 from models.tables import Comment, Document, Group, Membership, User
+from models.task import TasksUpdatedEvent
 from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
@@ -246,6 +247,9 @@ events_router = get_events_router(
                 model=MousePositionInput,  # Input: validate against MousePositionInput (no user info)
                 response_model=MousePositionEvent,  # Output: documentation shows MousePositionEvent (with user info)
                 handle_incoming=_handle_mouse_position,
+            ),
+            "tasks_updated": EventModelConfig(
+                model=TasksUpdatedEvent,
             ),
         },
         setup_connection=_setup_document_comment_connection,

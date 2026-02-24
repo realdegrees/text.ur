@@ -13,9 +13,11 @@ from sqlmodel import Field, Relationship, func, select
 
 from models.base import BaseModel
 from models.enums import (
+    AnswerType,
     DocumentVisibility,
     Emoji,
     Permission,
+    StringMatchMode,
     ViewMode,
     Visibility,
 )
@@ -126,6 +128,8 @@ class Document(BaseModel, table=True):
     secret: UUID = Field(default_factory=func.gen_random_uuid,
                          sa_column=Column(PGUUID(as_uuid=True)))
 
+    default_max_attempts: int = Field(default=1, ge=1)
+
     group_id: str = Field(
         foreign_key="group.id", nullable=False, ondelete="CASCADE",
         index=True)
@@ -136,6 +140,8 @@ class Document(BaseModel, table=True):
         back_populates="document", sa_relationship_kwargs={"lazy": "noload", "cascade": "all, delete-orphan", "passive_deletes": True})
     tags: list["Tag"] = Relationship(
         back_populates="document", sa_relationship_kwargs={"lazy": "selectin", "cascade": "all, delete-orphan", "passive_deletes": True})
+    tasks: list["Task"] = Relationship(
+        back_populates="document", sa_relationship_kwargs={"lazy": "noload", "cascade": "all, delete-orphan", "passive_deletes": True})
 
 
 class Group(BaseModel, table=True):
@@ -358,6 +364,91 @@ class CommentTag(BaseModel, table=True):
 
     comment: "Comment" = Relationship(back_populates="comment_tags")
     tag: "Tag" = Relationship(back_populates="comment_tags")
+
+
+class Task(BaseModel, table=True):
+    id: int = Field(default=None, primary_key=True)
+    document_id: str = Field(
+        foreign_key="document.id", ondelete="CASCADE", index=True)
+    question: str = Field(max_length=500)
+    answer_type: AnswerType = Field(
+        sa_column=Column(String, nullable=False))
+    correct_string_answer: str | None = Field(
+        nullable=True, default=None, max_length=255)
+    correct_number_answer: float | None = Field(
+        nullable=True, default=None)
+    number_tolerance: float | None = Field(
+        nullable=True, default=None, ge=0)
+    string_match_mode: StringMatchMode = Field(
+        default=StringMatchMode.CASE_INSENSITIVE,
+        sa_column=Column(
+            String,
+            server_default=StringMatchMode.CASE_INSENSITIVE.value,
+            nullable=False,
+        ),
+    )
+    points: int = Field(default=1, ge=0)
+    order: int = Field(default=0, ge=0)
+    max_attempts: int = Field(default=1, ge=1)
+
+    document: "Document" = Relationship(
+        back_populates="tasks",
+        sa_relationship_kwargs={"lazy": "selectin"},
+    )
+    options: list["TaskOption"] = Relationship(
+        back_populates="task",
+        sa_relationship_kwargs={
+            "lazy": "selectin",
+            "cascade": "all, delete-orphan",
+            "passive_deletes": True,
+            "order_by": "TaskOption.order",
+        },
+    )
+    responses: list["TaskResponse"] = Relationship(
+        back_populates="task",
+        sa_relationship_kwargs={
+            "lazy": "noload",
+            "cascade": "all, delete-orphan",
+            "passive_deletes": True,
+        },
+    )
+
+
+class TaskOption(BaseModel, table=True):
+    id: int = Field(default=None, primary_key=True)
+    task_id: int = Field(
+        foreign_key="task.id", ondelete="CASCADE", index=True)
+    label: str = Field(max_length=200)
+    is_correct: bool = Field(default=False)
+    order: int = Field(default=0)
+
+    task: "Task" = Relationship(
+        back_populates="options",
+        sa_relationship_kwargs={"lazy": "noload"},
+    )
+
+
+class TaskResponse(BaseModel, table=True):
+    task_id: int = Field(
+        foreign_key="task.id", ondelete="CASCADE",
+        primary_key=True)
+    user_id: int = Field(
+        foreign_key="user.id", ondelete="CASCADE",
+        primary_key=True, index=True)
+    answer: dict = Field(
+        default_factory=dict,
+        sa_column=Column(JSONB, nullable=False),
+    )
+    is_correct: bool = Field(default=False)
+    attempts: int = Field(default=1)
+
+    task: "Task" = Relationship(
+        back_populates="responses",
+        sa_relationship_kwargs={"lazy": "selectin"},
+    )
+    user: "User" = Relationship(
+        sa_relationship_kwargs={"lazy": "selectin"},
+    )
 
 
 class ShareLink(BaseModel, table=True):

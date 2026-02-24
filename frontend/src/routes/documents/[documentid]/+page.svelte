@@ -31,6 +31,9 @@
 	$effect(() => {
 		documentStore.groupReactions = data.scoreConfig?.reactions ?? [];
 	});
+	$effect(() => {
+		documentStore.setTaskData(data.tasks, data.taskResponses);
+	});
 
 	// Enable auto-persistence of comment states to localStorage
 	documentStore.enablePersistence();
@@ -41,6 +44,7 @@
 		const docId = documentId; // Track only the ID
 		let wsUnsubscribe: (() => void) | null = null;
 		let vmUnsubscribe: (() => void) | null = null;
+		let taskUnsubscribe: (() => void) | null = null;
 
 		// Connect to WebSocket for real-time comment updates
 		documentWebSocket
@@ -52,6 +56,9 @@
 				vmUnsubscribe = documentWebSocket.onViewModeChanged((ev) =>
 					documentStore.handleWebSocketEvent(ev as any)
 				);
+				taskUnsubscribe = documentWebSocket.onTasksUpdated(() => {
+					documentStore.handleTasksUpdatedEvent();
+				});
 			})
 			.catch((err) => {
 				console.error('[WS] Connection failed:', err.message);
@@ -61,6 +68,7 @@
 		return () => {
 			wsUnsubscribe?.();
 			vmUnsubscribe?.();
+			taskUnsubscribe?.();
 			documentWebSocket.disconnect();
 		};
 	});

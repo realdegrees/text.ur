@@ -5,14 +5,19 @@
 	import AnnotationLayer from './AnnotationLayer.svelte';
 	import TextSelectionHandler from './TextSelectionHandler.svelte';
 	import CommentSidebar from './CommentSidebar.svelte';
+	import TasksPanel from './TasksPanel.svelte';
 	import ConnectionLines from './ConnectionLines.svelte';
 	import MobileCommentPanel from './MobileCommentPanel.svelte';
 	import PdfControls from './PdfControls.svelte';
 	import UserCursors from './UserCursors.svelte';
-	import DocumentInfo from './DocumentInfo.svelte';
+	import MarkdownRenderer from '$lib/components/MarkdownRenderer.svelte';
 	import { PDF_ZOOM_STEP, PDF_MIN_SCALE } from './constants';
 	import { documentStore } from '$lib/runes/document.svelte';
 	import { createScreenState } from '$lib/util/responsive.svelte';
+	import LL from '$i18n/i18n-svelte';
+	import IconComment from '~icons/material-symbols/comment-outline';
+	import IconTask from '~icons/material-symbols/task-outline';
+	import IconInfo from '~icons/material-symbols/info-outline';
 
 	interface Props {
 		document: ArrayBuffer;
@@ -24,6 +29,7 @@
 	let pdfAreaWrapper: HTMLDivElement | null = $state(null);
 	let rootContainer: HTMLDivElement | null = $state(null);
 	let sidebarContainer: HTMLDivElement | null = $state(null);
+	let contentAreaRef: HTMLDivElement | null = $state(null);
 	let pdfSlick: PDFSlick | null = $state(null);
 	let unsubscribe: (() => void) | null = $state(null);
 	let mobileCommentPanel: any = $state(null);
@@ -51,19 +57,20 @@
 	};
 
 	const captureMaxAvailableWidth = () => {
-		if (!pdfAreaWrapper) return;
-		const parent = pdfAreaWrapper.parentElement;
-		if (parent) {
-			const available = screen.isMobile ? parent.clientWidth : parent.clientWidth - 48 - 288;
-			if (available > maxAvailableWidth) {
-				maxAvailableWidth = available;
-			}
+		// Desktop: use contentAreaRef (excludes controls column); mobile: use pdfAreaWrapper's parent.
+		const target = contentAreaRef ?? pdfAreaWrapper?.parentElement;
+		if (!target) return;
+		const available = screen.isMobile ? target.clientWidth : target.clientWidth - 288;
+		if (available > maxAvailableWidth) {
+			maxAvailableWidth = available;
 		}
 	};
 
 	let maxScale = $derived(
 		basePageWidth > 0 && maxAvailableWidth > 0 ? (maxAvailableWidth - 16) / basePageWidth : 10
 	);
+
+	let hasDescription = $derived(!!documentStore.loadedDocument?.description?.trim());
 
 	const initialize = async () => {
 		if (!container) return;
@@ -173,20 +180,20 @@
 	const nextPage = () => pdfSlick?.gotoPage(Math.min(pageNumber + 1, documentStore.numPages));
 
 	$effect(() => {
-		if (!pdfAreaWrapper?.parentElement) return;
-		const parent = pdfAreaWrapper.parentElement;
+		// Desktop: observe the two-column content area (controls already excluded).
+		// Mobile: fall back to pdfAreaWrapper's parent.
+		const target = contentAreaRef ?? pdfAreaWrapper?.parentElement;
+		if (!target) return;
 		const resizeObserver = new ResizeObserver(() => {
 			if (screen.isMobile) {
-				// On mobile, the parent is the wrapper which already accounts for layout
-				const available = parent.clientWidth;
-				maxAvailableWidth = available;
+				maxAvailableWidth = target.clientWidth;
 			} else {
-				// On desktop, account for controls (48px) + sidebar (288px)
-				const available = parent.clientWidth - 48 - 288;
-				maxAvailableWidth = available;
+				// contentAreaRef width already excludes the controls column (48px).
+				// Subtract min sidebar width (min-w-72 = 288px).
+				maxAvailableWidth = target.clientWidth - 288;
 			}
 		});
-		resizeObserver.observe(parent);
+		resizeObserver.observe(target);
 		return () => resizeObserver.disconnect();
 	});
 
@@ -196,15 +203,19 @@
 		documentStore.mobileCommentPanelRef = mobileCommentPanel;
 	});
 
+	// Auto-switch to comments tab when the active tab's content disappears
+	$effect(() => {
+		if (documentStore.activeTab === 'tasks' && documentStore.tasks.length === 0) {
+			documentStore.activeTab = 'comments';
+		}
+		if (documentStore.activeTab === 'info' && !hasDescription) {
+			documentStore.activeTab = 'comments';
+		}
+	});
+
 	onMount(initialize);
 	onDestroy(() => unsubscribe?.());
 </script>
-
-{#snippet documentInfo()}
-	{#if documentStore.loadedDocument && documentStore.loadedDocument.description && documentStore.loadedDocument.description.trim().length > 0}
-		<DocumentInfo document={documentStore.loadedDocument} />
-	{/if}
-{/snippet}
 
 <div
 	class="pdf-viewer-container flex h-full w-full bg-background {screen.isMobile
@@ -243,49 +254,96 @@
 				onNextPage={nextPage}
 				isMobile={false}
 			/>
-			<!-- Right content column: Document Info above the PDF+Sidebar -->
-			<div class="flex flex-1 flex-col overflow-y-auto">
-				<!-- Document Info Section (above PDF and Sidebar only, z-40 to stay above connection lines) -->
-				<div class="relative z-40">
-					{@render documentInfo()}
+			<!-- Two-column content area: PDF (left) | Sidebar (right) -->
+			<div class="flex flex-1 overflow-hidden" bind:this={contentAreaRef}>
+				<!-- LEFT column: PDF viewer takes full height -->
+				<div
+					class="relative overflow-hidden bg-text/5 transition-[width] duration-150"
+					style="width: {pdfWidth > 0 ? `${pdfWidth}px` : '100%'}; max-width: 100%;"
+					bind:this={pdfAreaWrapper}
+				>
+					<div
+						id="viewerContainer"
+						class="pdfSlickContainer absolute inset-0 custom-scrollbar overflow-x-hidden overflow-y-scroll"
+						bind:this={container}
+						onscroll={handleScroll}
+						onwheel={handlePdfWheel}
+					>
+						<div id="viewer" class="pdfSlickViewer pdfViewer m-0! p-0!"></div>
+					</div>
+					<!-- Annotation highlights are rendered into the PDF pages -->
+					<AnnotationLayer viewerContainer={container} />
+
+					<!-- Text selection handler for creating new annotations -->
+					<TextSelectionHandler viewerContainer={container} />
+
+					<!-- Other users' cursors -->
+					<UserCursors viewerContainer={container} />
 				</div>
 
-				<!-- PDF Viewer and Sidebar Row -->
-				<div class="flex flex-1 gap-4 overflow-hidden">
-					<!-- PDF Viewer Area - shrinks to fit content when zoomed out -->
-					<div
-						class="relative h-full overflow-hidden bg-text/5 transition-[width] duration-150"
-						style="width: {pdfWidth > 0 ? `${pdfWidth}px` : '100%'}; max-width: 100%;"
-						bind:this={pdfAreaWrapper}
-					>
-						<div
-							id="viewerContainer"
-							class="pdfSlickContainer absolute inset-0 custom-scrollbar overflow-x-hidden overflow-y-scroll"
-							bind:this={container}
-							onscroll={handleScroll}
-							onwheel={handlePdfWheel}
+				<!-- RIGHT column: tab bar + content panel -->
+				<div
+					class="relative flex min-w-72 flex-1 flex-col overflow-hidden bg-background"
+					bind:this={sidebarContainer}
+				>
+					<!-- Tab bar: Info | Tasks | Comments -->
+					<div class="flex border-b border-text/10 bg-inset">
+						{#if hasDescription}
+							<button
+								class="flex flex-1 items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium transition-colors {documentStore.activeTab ===
+								'info'
+									? 'border-b-2 border-primary text-primary'
+									: 'text-text/50 hover:text-text/70'}"
+								onclick={() => (documentStore.activeTab = 'info')}
+							>
+								<IconInfo class="h-3.5 w-3.5" />
+								{$LL.pdf.documentInfo()}
+							</button>
+						{/if}
+						{#if documentStore.tasks.length > 0}
+							<button
+								class="flex flex-1 items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium transition-colors {documentStore.activeTab ===
+								'tasks'
+									? 'border-b-2 border-primary text-primary'
+									: 'text-text/50 hover:text-text/70'}"
+								onclick={() => (documentStore.activeTab = 'tasks')}
+							>
+								<IconTask class="h-3.5 w-3.5" />
+								{$LL.tasks.title()}
+							</button>
+						{/if}
+						<button
+							class="flex flex-1 items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium transition-colors {documentStore.activeTab ===
+							'comments'
+								? 'border-b-2 border-primary text-primary'
+								: 'text-text/50 hover:text-text/70'}"
+							onclick={() => (documentStore.activeTab = 'comments')}
 						>
-							<div id="viewer" class="pdfSlickViewer pdfViewer m-0! p-0!"></div>
+							<IconComment class="h-3.5 w-3.5" />
+							{$LL.tasks.comments()}
+						</button>
+					</div>
+					<!-- Content panel (pl-4 offsets content from PDF edge; tab bar stays flush) -->
+					{#if documentStore.activeTab === 'info'}
+						<div class="flex-1 overflow-y-auto py-2 pr-3 pl-4">
+							<MarkdownRenderer
+								content={documentStore.loadedDocument?.description ?? ''}
+								class="text-sm text-text/80"
+							/>
 						</div>
-						<!-- Annotation highlights are rendered into the PDF pages -->
-						<AnnotationLayer viewerContainer={container} />
-
-						<!-- Text selection handler for creating new annotations -->
-						<TextSelectionHandler viewerContainer={container} />
-
-						<!-- Other users' cursors -->
-						<UserCursors viewerContainer={container} />
-					</div>
-
-					<!-- Right Sidebar - Comments (expands to fill remaining space) -->
-					<div
-						class="relative min-w-72 flex-1 overflow-hidden bg-background"
-						onwheel={handleCommentsWheel}
-						role="complementary"
-						bind:this={sidebarContainer}
-					>
-						<CommentSidebar viewerContainer={container} {scrollTop} />
-					</div>
+					{:else if documentStore.activeTab === 'comments'}
+						<div
+							class="relative flex-1 overflow-hidden pl-4"
+							onwheel={handleCommentsWheel}
+							role="complementary"
+						>
+							<CommentSidebar viewerContainer={container} {scrollTop} />
+						</div>
+					{:else}
+						<div class="flex-1 overflow-hidden pl-4">
+							<TasksPanel />
+						</div>
+					{/if}
 				</div>
 			</div>
 		</div>
@@ -297,7 +355,6 @@
 	<!-- Mobile PDF viewer and bottom comment panel (mobile-only) -->
 	{#if screen.isMobile}
 		<div class="flex w-full flex-1 flex-col overflow-y-auto">
-			{@render documentInfo()}
 			<div
 				class="relative flex-1 overflow-hidden bg-text/5 transition-[width] duration-150"
 				style="width: 100%; max-width: 100%;"
@@ -320,7 +377,11 @@
 			</div>
 		</div>
 
-		<MobileCommentPanel bind:this={mobileCommentPanel} />
+		<MobileCommentPanel
+			bind:this={mobileCommentPanel}
+			activeContentTab={documentStore.activeTab}
+			onTabChange={(tab) => (documentStore.activeTab = tab)}
+		/>
 
 		<!-- Shared connection lines overlay (mobile) -->
 		<ConnectionLines {scrollTop} />

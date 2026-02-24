@@ -18,6 +18,7 @@ class DocumentCreate(SQLModel):
     name: str = Field(max_length=MAX_DOCUMENT_NAME_LENGTH)
     description: str | None = Field(default=None, max_length=MAX_DOCUMENT_DESCRIPTION_LENGTH)
     group_id: str
+    default_max_attempts: int = Field(default=1, ge=1)
 
 class DocumentRead(BaseModel):
     id: str
@@ -27,6 +28,7 @@ class DocumentRead(BaseModel):
     visibility: DocumentVisibility
     description: str | None
     view_mode: ViewMode
+    default_max_attempts: int
     tags: list["TagRead"]
 
 class DocumentUpdate(SQLModel):
@@ -34,6 +36,7 @@ class DocumentUpdate(SQLModel):
     view_mode: ViewMode | None = None
     description: str | None = Field(default=None, max_length=MAX_DOCUMENT_DESCRIPTION_LENGTH)
     name: str | None = Field(default=None, max_length=MAX_DOCUMENT_NAME_LENGTH)
+    default_max_attempts: int | None = Field(default=None, ge=1)
 
 
 class ViewModeChangedEvent(SQLModel):

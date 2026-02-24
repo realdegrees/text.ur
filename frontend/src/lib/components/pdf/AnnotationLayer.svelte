@@ -202,6 +202,7 @@
 
 				// Add click listener
 				const clickListener = () => {
+					documentStore.activeTab = 'comments';
 					if (isTouchDevice) {
 						// Mobile: Set as active comment (will trigger scrolling)
 						documentStore.activeCommentId = comment.id;

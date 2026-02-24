@@ -183,6 +183,8 @@ const en = {
 			"Cannot remove this permission because it is included in the group's default permissions",
 		cannot_remove_permission_reason_sharelink:
 			'Cannot remove this permission because it is granted by a share link',
+		cannot_promote_self:
+			'You cannot promote yourself to a permanent member',
 		not_found: 'The requested resource was not found',
 		self_reaction: 'You cannot react to your own comment',
 		reply_reaction:
@@ -424,6 +426,11 @@ const en = {
 	documentSettings: {
 		title: 'Document Settings',
 		backToDocuments: 'Back to documents',
+		general: 'General',
+		tagsTab: 'Tags',
+		tasksTab: 'Tasks',
+		defaultMaxAttempts: 'Default Max Attempts',
+		defaultMaxAttemptsHint: 'Default number of tries members get per task. Can be overridden per task.',
 		nameRequired: 'Document name is required',
 		updateSuccess: 'Document updated successfully',
 		savingButton: 'Saving...',
@@ -504,6 +511,59 @@ const en = {
 		deleteConfirm: 'Delete?',
 		chooseColor: 'Choose color for tag',
 		chooseColorNew: 'Choose color for new tag'
+	},
+
+	// Tasks
+	tasks: {
+		title: 'Tasks',
+		addTask: 'Add Task',
+		editTask: 'Edit Task',
+		question: 'Question *',
+		questionPlaceholder: 'Enter your question (max 500 characters)',
+		answerType: 'Answer Type',
+		multipleChoice: 'Multiple Choice',
+		textAnswer: 'Text',
+		numberAnswer: 'Number',
+		options: 'Options',
+		addOption: 'Add Option',
+		optionLabel: 'Option text',
+		markCorrect: 'Mark as correct',
+		correctAnswer: 'Correct Answer',
+		matchMode: 'Match Mode',
+		exactMatch: 'Exact match',
+		caseInsensitive: 'Case-insensitive',
+		exactMatchHint: 'Answer must be identical to the expected answer',
+		caseInsensitiveHint: 'Matching ignores case and trims whitespace',
+		stringMatchInfo: 'String answers are compared using the selected match mode',
+		tolerance: 'Tolerance (\u{00B1})',
+		tolerancePlaceholder: 'Optional',
+		points: 'Points',
+		maxAttempts: 'Max Attempts',
+		customRetryCount: 'Set Custom Retry Count',
+		usingDocumentDefault: 'Using document default ({count:number})',
+		order: 'Order',
+		createSuccess: 'Task created successfully',
+		updateSuccess: 'Task updated successfully',
+		deleteSuccess: 'Task deleted successfully',
+		deleteConfirm: 'Delete?',
+		reorderSuccess: 'Tasks reordered successfully',
+		noTasks: 'No tasks created yet',
+		noTasksDescription: 'Tasks can be configured by group administrators in document settings.',
+		// Member-facing
+		completed: '{count:number}/{total:number} completed',
+		triesRemaining: '{count:number} tr{{y|ies}} remaining',
+		lastTry: 'This is your last try!',
+		confirm: 'Confirm',
+		correct: 'Correct!',
+		incorrect: 'Incorrect',
+		noTriesLeft: 'No tries remaining',
+		correctAnswerWas: 'The correct answer was:',
+		answeredCorrectly: 'Answered correctly',
+		taskScore: 'Tasks',
+		submitAnswer: 'Submit Answer',
+		comments: 'Comments',
+		editAnswerWarning:
+			'Changing the answer type, correct answer, or options will reset all existing member responses for this task.'
 	},
 
 	// Password reset
@@ -630,7 +690,9 @@ const en = {
 		given: '{count:number} given',
 		justNow: 'just now',
 		oneMinAgo: '1 min ago',
-		nMinAgo: '{count:number} min ago'
+		nMinAgo: '{count:number} min ago',
+		tasks: 'Tasks',
+		tasksCompleted: '{count:number}/{total:number} tasks'
 	},
 
 	// Relative time
