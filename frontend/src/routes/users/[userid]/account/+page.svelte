@@ -155,7 +155,7 @@
 	}
 </script>
 
-<div class="flex h-full w-full flex-col items-center justify-start">
+<div class="flex h-full w-full flex-col items-center justify-start overflow-y-auto">
 	<div class="flex h-full w-[30%] flex-col items-start justify-start gap-6 p-6">
 		<div class="w-full rounded-lg bg-inset p-6 shadow-inner shadow-black/50">
 			<div class="flex items-center justify-between">
