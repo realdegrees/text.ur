@@ -157,7 +157,7 @@ class EmailManager:
         msg["X-Mailer"] = "text.ur"
         msg["X-Auto-Response-Suppress"] = "OOF, DR, RN, NRN, AutoReply"
 
-        mail_logger.info(f"\n[To: {target_email}]\n[Subject: {subject}]\n[Template: {template}]\n[Vars: {template_vars}]")
+        mail_logger.debug(f"\n[To: {target_email}]\n[Subject: {subject}]\n[Template: {template}]\n[Vars: {template_vars}]")
 
         msg.attach(MIMEText(plain_text_body, "plain", "utf-8"))
         msg.attach(MIMEText(html_body, "html", "utf-8"))

@@ -33,7 +33,7 @@ interface FetchOptions extends Omit<RequestInit, 'body'> {
 class ApiClient {
 	private baseUrl: string = env.PUBLIC_BACKEND_BASEURL;
 	private connectionId: string = browser ? generateConnectionId() : '';
-	private isRefreshing = false;
+	private refreshPromise: Promise<boolean> | null = null;
 	/** ETag cache for download() — maps URL to { etag, data } */
 	private etagCache = new Map<string, { etag: string; data: ArrayBuffer }>();
 
@@ -175,28 +175,32 @@ class ApiClient {
 	}
 
 	/**
-	 * Attempt to refresh the access token using the refresh_token cookie
+	 * Attempt to refresh the access token using the refresh_token cookie.
+	 * Concurrent callers share the same in-flight promise so only one
+	 * refresh request is made at a time.
 	 */
-	private async refreshToken(fetchFn: typeof fetch): Promise<boolean> {
-		if (this.isRefreshing) {
-			return false;
+	private refreshToken(fetchFn: typeof fetch): Promise<boolean> {
+		if (this.refreshPromise) {
+			return this.refreshPromise;
 		}
 
-		this.isRefreshing = true;
+		this.refreshPromise = (async () => {
+			try {
+				const refreshUrl = this.resolveUrl('/login/refresh');
+				const response = await fetchFn(refreshUrl, {
+					method: 'POST',
+					credentials: 'include'
+				});
 
-		try {
-			const refreshUrl = this.resolveUrl('/login/refresh');
-			const response = await fetchFn(refreshUrl, {
-				method: 'POST',
-				credentials: 'include'
-			});
+				return response.ok;
+			} catch {
+				return false;
+			} finally {
+				this.refreshPromise = null;
+			}
+		})();
 
-			return response.ok;
-		} catch {
-			return false;
-		} finally {
-			this.isRefreshing = false;
-		}
+		return this.refreshPromise;
 	}
 
 	/**

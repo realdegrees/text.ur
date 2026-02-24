@@ -15,10 +15,12 @@ from api.dependencies.events import (
     ConnectedUser,
     WebsocketEvents,
 )
+from core.app_exception import AppException
 from core.logger import get_logger
-from fastapi import HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import WebSocket, WebSocketDisconnect
 from jinja2 import Template
 from models.base import BaseModel
+from models.enums import AppErrorCode
 from models.event import Event
 from models.tables import User
 from pydantic import ValidationError
@@ -144,8 +146,18 @@ def get_events_router[RelatedResourceModel: BaseModel](  # noqa: C901
         # Run setup hook to attach any additional state to websocket
         if config.setup_connection:
             # Create on-demand session for setup
-            async with SessionFactory() as db:
-                await config.setup_connection(websocket, related_resource, user, db)
+            try:
+                async with SessionFactory() as db:
+                    await config.setup_connection(websocket, related_resource, user, db)
+            except RuntimeError:
+                # setup_connection closed the WS (e.g. access denied)
+                logger.info(
+                    "[WS] Connection rejected by setup hook for "
+                    "resource_id=%s, user=%s",
+                    resource_id,
+                    user.id if user else None,
+                )
+                return
 
         logger.info(
             f"[WS] Accepting connection for resource_id={resource_id}, connection_id={connection_id}, ip={client_ip}"
@@ -505,8 +517,8 @@ def get_events_router[RelatedResourceModel: BaseModel](  # noqa: C901
     async def websocket_docs() -> Event:
         """WebSocket endpoint documentation."""
         # This is a dummy endpoint for documentation - actual functionality is via WebSocket
-        raise HTTPException(
-            status_code=400, detail="Use WebSocket connection at this endpoint, not HTTP")
+        raise AppException(
+            status_code=400, error_code=AppErrorCode.VALIDATION_ERROR, detail="Use WebSocket connection at this endpoint, not HTTP")
 
     # Attach WebSocket handler and path to the router for main app registration
     router.websocket_config = (full_path, client_endpoint)

@@ -214,7 +214,18 @@ const de = {
 		email_taken:
 			'Diese E-Mail-Adresse ist bereits registriert',
 		sharelink_anonymous_disabled:
-			'Dieser Freigabelink erlaubt keinen anonymen Zugang'
+			'Dieser Freigabelink erlaubt keinen anonymen Zugang',
+		storage_unavailable:
+			'Der Dateispeicher ist derzeit nicht verfügbar. Bitte versuchen Sie es später erneut.',
+		file_not_found: 'Die angeforderte Datei wurde im Speicher nicht gefunden',
+		already_exists: 'Diese Ressource existiert bereits',
+		must_transfer_ownership:
+			'Sie müssen die Gruppenbesitzrechte übertragen, bevor Sie Ihr Konto löschen können',
+		token_already_used:
+			'Dieser Link wurde bereits verwendet',
+		mail_send_failed:
+			'E-Mail konnte nicht gesendet werden. Bitte versuchen Sie es später erneut.',
+		already_verified: 'Dieses Konto ist bereits verifiziert'
 	},
 
 	// Sharelink join page
@@ -302,7 +313,17 @@ const de = {
 		deleteGuestWarning:
 			'Dies wird Ihr Gastkonto löschen!',
 		logoutSuccess:
-			'Erfolgreich von allen Geräten abgemeldet'
+			'Erfolgreich von allen Geräten abgemeldet',
+		danger: {
+			title: 'Gefahrenzone',
+			description:
+				'Löschen Sie Ihr Konto und alle zugehörigen Daten dauerhaft. Gruppen, die Sie besitzen, werden an einen anderen Administrator übertragen oder gelöscht, wenn kein Administrator vorhanden ist.',
+			deleteButton: 'Konto löschen',
+			confirmTitle: 'Kontolöschung bestätigen',
+			confirmMessage: 'Geben Sie Ihren Benutzernamen {name} ein, um die Löschung zu bestätigen:',
+			nameDoesNotMatch: 'Benutzername stimmt nicht überein',
+			deleteSuccess: 'Konto erfolgreich gelöscht'
+		}
 	},
 
 	// Group settings
@@ -436,6 +457,11 @@ const de = {
 				'Nach dem Hochladen Ihres Dokuments können Sie benutzerdefinierte Tags erstellen und verwalten, um Kommentare zu kategorisieren. Tags helfen bei der Organisation von Feedback und erleichtern das Filtern und Finden bestimmter Arten von Anmerkungen.',
 			hint: 'Sie können Tags jederzeit über die Dokumenteinstellungsseite hinzufügen.'
 		}
+	},
+
+	// Document view
+	documentView: {
+		wsDisconnected: 'Echtzeit-Verbindung unterbrochen. Änderungen anderer werden möglicherweise erst nach dem Aktualisieren angezeigt.'
 	},
 
 	// Document settings

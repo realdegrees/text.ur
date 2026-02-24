@@ -29,9 +29,6 @@ class DocumentRead(BaseModel):
     view_mode: ViewMode
     tags: list["TagRead"]
 
-class DocumentTransfer(SQLModel):
-    group_id: str
-
 class DocumentUpdate(SQLModel):
     visibility: DocumentVisibility | None = None
     view_mode: ViewMode | None = None

@@ -13,6 +13,7 @@ from models.reaction import (
 )
 from models.score import ScoreConfigRead, ScoreConfigUpdate
 from models.tables import Group, GroupReaction, ScoreConfig, User
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 from util.api_router import APIRouter
 from util.cache import invalidate_group_scores
@@ -155,7 +156,15 @@ async def create_group_reaction(
 
     reaction = GroupReaction(group_id=group.id, **data.model_dump())
     db.add(reaction)
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise AppException(
+            status_code=409,
+            error_code=AppErrorCode.ALREADY_EXISTS,
+            detail="This emoji is already configured for the group.",
+        ) from None
     await db.refresh(reaction)
     return GroupReactionRead.model_validate(reaction)
 

@@ -190,7 +190,18 @@ const en = {
 		username_taken: 'This username is already taken',
 		email_taken: 'This email address is already registered',
 		sharelink_anonymous_disabled:
-			'This share link does not allow anonymous access'
+			'This share link does not allow anonymous access',
+		storage_unavailable:
+			'File storage is currently unavailable. Please try again later.',
+		file_not_found: 'The requested file could not be found in storage',
+		already_exists: 'This resource already exists',
+		must_transfer_ownership:
+			'You must transfer group ownership before deleting your account',
+		token_already_used:
+			'This link has already been used',
+		mail_send_failed:
+			'Failed to send email. Please try again later.',
+		already_verified: 'This account is already verified'
 	},
 
 	// Sharelink join page
@@ -268,7 +279,17 @@ const en = {
 		logoutGuestSession: 'Logout Guest Session',
 		logoutConfirm: 'Confirm',
 		deleteGuestWarning: 'This will delete your guest account!',
-		logoutSuccess: 'Logged out from all devices successfully'
+		logoutSuccess: 'Logged out from all devices successfully',
+		danger: {
+			title: 'Danger Zone',
+			description:
+				'Permanently delete your account and all associated data. Groups you own will be transferred to another admin, or deleted if no admin exists.',
+			deleteButton: 'Delete Account',
+			confirmTitle: 'Confirm Account Deletion',
+			confirmMessage: 'Type your username {name:string} to confirm deletion:',
+			nameDoesNotMatch: 'Username does not match',
+			deleteSuccess: 'Account deleted successfully'
+		}
 	},
 
 	// Group settings
@@ -392,6 +413,11 @@ const en = {
 				'After uploading your document, you can create and manage custom tags to categorize comments. Tags help organize feedback and make it easier to filter and find specific types of annotations.',
 			hint: 'You can add tags anytime from the document settings page.'
 		}
+	},
+
+	// Document view
+	documentView: {
+		wsDisconnected: 'Real-time connection lost. Changes by others may not appear until you refresh.'
 	},
 
 	// Document settings

@@ -136,3 +136,20 @@ class AppErrorCode(StrEnum):
     EMAIL_TAKEN = "email_taken"  # use when the email is already registered
     SHARELINK_ANONYMOUS_DISABLED = "sharelink_anonymous_disabled"  # use when sharelink does not allow anonymous access
 
+    # Storage Errors
+    STORAGE_UNAVAILABLE = "storage_unavailable"  # use when S3/MinIO is unreachable or returns an error
+    FILE_NOT_FOUND = "file_not_found"  # use when the requested file does not exist in storage
+
+    # Duplicate / Conflict Errors
+    ALREADY_EXISTS = "already_exists"  # use when a resource already exists (e.g. duplicate group name, emoji, membership)
+
+    # Token Errors
+    TOKEN_ALREADY_USED = "token_already_used"  # use when a reset/verification token has already been consumed
+
+    # Mail Errors
+    MAIL_SEND_FAILED = "mail_send_failed"  # use when server fails to send an email
+
+    # Account Errors
+    ALREADY_VERIFIED = "already_verified"  # use when a user is already verified
+    MUST_TRANSFER_OWNERSHIP = "must_transfer_ownership"  # use when user must transfer group ownership before deleting account
+

@@ -14,11 +14,12 @@ from core.auth import (
 )
 from core.logger import get_logger
 from core.rate_limit import limiter
-from fastapi import Body, Depends, HTTPException, Request, Response
+from fastapi import Body, Depends, Request, Response
 from fastapi.security import OAuth2PasswordRequestForm
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 from models.enums import AppErrorCode
 from models.tables import Membership, User
+from models.user import PasswordResetVerify
 from slowapi.util import get_remote_address
 from sqlmodel import or_, select
 from util.api_router import APIRouter
@@ -42,10 +43,10 @@ async def login(
     result = await db.exec(query)
     user = result.first()
     if user is None or not validate_password(user, form_data.password):
-        raise HTTPException(
+        raise AppException(
             status_code=401,
+            error_code=AppErrorCode.INVALID_CREDENTIALS,
             detail="Incorrect username or password",
-            headers={"WWW-Authenticate": "Bearer"},
         )
 
     if not user.verified:
@@ -152,15 +153,16 @@ async def reset_password(request: Request, db: Database, mail: Mail, email: str 
                 reset_link,
             )
             return
-        raise HTTPException(
+        raise AppException(
             status_code=500,
+            error_code=AppErrorCode.MAIL_SEND_FAILED,
             detail="Failed to send reset email",
         ) from e
 
 
 @router.put("/reset/verify/{token}")
 @limiter.limit("5/minute", key_func=get_remote_address)
-async def reset_verify(request: Request, token: str, db: Database, password: str = Body(..., embed=True)) -> None:
+async def reset_verify(request: Request, token: str, db: Database, body: PasswordResetVerify = Body(...)) -> None:
     """Confirm password reset using the presigned URL and update the user's password."""
     try:
         # Deserialize token to get token data (email + password hash for one-time use)
@@ -178,21 +180,21 @@ async def reset_verify(request: Request, token: str, db: Database, password: str
             pwd_hash_check = token_data.get("pwd")
 
     except (BadSignature, SignatureExpired) as e:
-        raise HTTPException(
-            status_code=403, detail="Invalid or expired token") from e
+        raise AppException(
+            status_code=403, error_code=AppErrorCode.INVALID_TOKEN, detail="Invalid or expired token") from e
 
     query = select(User).where(User.email == email)
     result = await db.exec(query)
     user: User | None = result.first()
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise AppException(status_code=404, error_code=AppErrorCode.NOT_FOUND, detail="User not found")
 
     # Check if token has already been used (password changed since token was issued)
     if pwd_hash_check and user.password[:16] != pwd_hash_check:
-        raise HTTPException(status_code=403, detail="Reset link has already been used")
+        raise AppException(status_code=403, error_code=AppErrorCode.TOKEN_ALREADY_USED, detail="Reset link has already been used")
 
     # Update password and rotate user secret to invalidate all sessions
-    user.password = hash_password(password)
+    user.password = hash_password(body.password)
     user.rotate_secret()
     db.add(user)
     await db.commit()

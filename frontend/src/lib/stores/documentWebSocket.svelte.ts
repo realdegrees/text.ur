@@ -66,11 +66,12 @@ class DocumentWebSocketStore {
 	private managerStateUnsubscribe: (() => void) | null = null;
 	private managerMessageUnsubscribe: (() => void) | null = null;
 	private currentConnectionId: string | null = null;
-	private _hasConnectedBefore = false;
+	private _hasConnectedBefore = $state(false);
 
 	// Connection state
 	private _state = $state<ConnectionState>('disconnected');
 	public readonly state = $derived(this._state);
+	public readonly hasConnectedBefore = $derived(this._hasConnectedBefore);
 
 	// Active users in the document
 	private _activeUsers = $state<ConnectedUser[]>([]);
@@ -150,19 +151,37 @@ class DocumentWebSocketStore {
 		// Connect and wait for connected state (or immediate return if already connecting)
 		this.manager.connect();
 
-		await new Promise<void>((resolve) => {
+		await new Promise<void>((resolve, reject) => {
 			const current = this.manager?.getState();
 			if (current === 'connected') {
 				resolve();
 				return;
 			}
 
-			// listen for the first connected state update
-			const unsub = this.manager?.on<ConnectionState>('stateChange', (state) => {
+			const cleanup = () => {
+				unsubState?.();
+				unsubFailed?.();
+				clearTimeout(timeout);
+			};
+
+			// Reject after 30 seconds if connection never establishes
+			const timeout = setTimeout(() => {
+				cleanup();
+				reject(new Error('WebSocket connection timed out'));
+			}, 30_000);
+
+			// Listen for connected state
+			const unsubState = this.manager?.on<ConnectionState>('stateChange', (state) => {
 				if (state === 'connected') {
-					unsub?.();
+					cleanup();
 					resolve();
 				}
+			});
+
+			// Listen for permanent failure (max retries exhausted)
+			const unsubFailed = this.manager?.on('failed', () => {
+				cleanup();
+				reject(new Error('WebSocket connection failed after max retries'));
 			});
 		});
 	}
@@ -244,9 +263,9 @@ class DocumentWebSocketStore {
 
 			case 'create':
 			case 'update':
-			case 'delete': {
+			case 'delete':
+			case 'comments_cleared': {
 				// Forward comment events to registered handlers
-				// make a best-effort cast to CommentEvent
 				const ce = obj as unknown as CommentEvent;
 				this.commentEventHandlers.forEach((handler) => handler(ce));
 				break;

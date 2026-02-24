@@ -1,12 +1,18 @@
 import { api } from '$api/client';
 import type { DocumentRead } from '$api/types';
-import { error } from '@sveltejs/kit';
+import { error, redirect } from '@sveltejs/kit';
 import type { PageLoad } from './$types';
 import type { BreadcrumbItem } from '$types/breadcrumb';
 
 export const load: PageLoad = async ({ params, parent, fetch, depends }) => {
 	depends('app:document');
 	const { membership } = await parent();
+
+	// Check if user is admin or owner
+	const isAdmin = membership.permissions.includes('administrator') || membership.is_owner;
+	if (!isAdmin) {
+		throw redirect(302, `/dashboard/groups/${membership.group.id}/documents`);
+	}
 
 	// Fetch document details
 	const documentResult = await api.get<DocumentRead>(`/documents/${params.documentid}`, { fetch });

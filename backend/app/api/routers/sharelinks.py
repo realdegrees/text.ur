@@ -8,8 +8,9 @@ from api.dependencies.authentication import Authenticate, BasicAuthentication
 from api.dependencies.database import Database
 from api.dependencies.paginated.resources import PaginatedResource
 from api.dependencies.resource import Resource
-from fastapi import Body, HTTPException, Response
-from models.enums import Permission
+from core.app_exception import AppException
+from fastapi import Body, Response
+from models.enums import AppErrorCode, Permission
 from models.filter import ShareLinkFilter
 from models.pagination import Paginated
 from models.sharelink import (
@@ -152,11 +153,11 @@ async def use_sharelink_token(
     share_link: ShareLink | None = result.first()
 
     if not share_link:
-        raise HTTPException(status_code=404, detail="Share link not found")
+        raise AppException(status_code=404, error_code=AppErrorCode.NOT_FOUND, detail="Share link not found")
 
     # Check if expired
     if share_link.is_expired:
-        raise HTTPException(status_code=403, detail="Share link has expired")
+        raise AppException(status_code=403, error_code=AppErrorCode.SHARELINK_EXPIRED, detail="Share link has expired")
 
     # Check if membership already exists
     result = await db.exec(

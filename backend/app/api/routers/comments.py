@@ -8,14 +8,15 @@ from api.dependencies.paginated.resources import PaginatedResource
 from api.dependencies.resource import Resource
 from api.routers.reactions import router as ReactionRouter
 from core import config
-from fastapi import Body, Header, HTTPException, Response
+from core.app_exception import AppException
+from fastapi import Body, Header, Response
 from models.comment import (
     CommentCreate,
     CommentRead,
     CommentTagsUpdate,
     CommentUpdate,
 )
-from models.enums import Permission
+from models.enums import AppErrorCode, Permission
 from models.event import Event
 from models.filter import CommentFilter
 from models.pagination import Paginated
@@ -192,13 +193,14 @@ async def update_comment_tags(
         tags = tag_result.all()
 
         if len(tags) != len(tag_ids):
-            raise HTTPException(status_code=404, detail="One or more tags not found")
+            raise AppException(status_code=404, error_code=AppErrorCode.NOT_FOUND, detail="One or more tags not found")
 
         for tag in tags:
             if tag.document_id != comment.document_id:
-                raise HTTPException(
+                raise AppException(
                     status_code=400,
-                    detail="All tags must belong to the same document as the comment"
+                    error_code=AppErrorCode.VALIDATION_ERROR,
+                    detail="All tags must belong to the same document as the comment",
                 )
 
     # Get existing comment-tag associations

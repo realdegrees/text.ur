@@ -8,16 +8,16 @@ SvelteKit application using Svelte 5, TypeScript (strict), and TailwindCSS 4. Ha
 
 All commands use `pnpm` and are run from `frontend/`.
 
-| Task | Command |
-|---|---|
-| **Dev server** | `pnpm dev` |
-| **Build** | `pnpm build` |
-| **Type check** | `pnpm check` |
-| **Lint** | `pnpm lint` |
-| **Lint fix** | `pnpm lint:fix` |
-| **Run all tests** | `pnpm test` |
+| Task                   | Command              |
+| ---------------------- | -------------------- |
+| **Dev server**         | `pnpm dev`           |
+| **Build**              | `pnpm build`         |
+| **Type check**         | `pnpm check`         |
+| **Lint**               | `pnpm lint`          |
+| **Lint fix**           | `pnpm lint:fix`      |
+| **Run all tests**      | `pnpm test`          |
 | **Test with coverage** | `pnpm test:coverage` |
-| **Regenerate types** | `pnpm typegen` |
+| **Regenerate types**   | `pnpm typegen`       |
 
 ---
 
@@ -40,9 +40,9 @@ The `ApiClient` singleton (`src/api/client.ts`) wraps `fetch` with automatic cre
 const result = await api.get<DocumentRead>('/api/documents/abc');
 
 if (result.success) {
-  console.log(result.data);  // DocumentRead
+	console.log(result.data); // DocumentRead
 } else {
-  console.log(result.error); // AppError
+	console.log(result.error); // AppError
 }
 ```
 
@@ -70,12 +70,12 @@ The PDF viewer uses [PDFSlick](https://pdfslick.dev/) (`@pdfslick/core`). Key co
 
 These files are auto-generated and **must not be edited manually**:
 
-| File | Generator | Source |
-|---|---|---|
-| `src/api/types.ts` | `pydantic2ts` | Backend Pydantic models |
-| `src/api/schemas.ts` | `ts-to-zod` | `types.ts` |
-| `src/api/maps.generated.ts` | `generate_exclusion_maps.py` | Backend filter models |
-| `src/i18n/i18n-types.ts` | `typesafe-i18n` | Translation files |
+| File                        | Generator                    | Source                  |
+| --------------------------- | ---------------------------- | ----------------------- |
+| `src/api/types.ts`          | `pydantic2ts`                | Backend Pydantic models |
+| `src/api/schemas.ts`        | `ts-to-zod`                  | `types.ts`              |
+| `src/api/maps.generated.ts` | `generate_exclusion_maps.py` | Backend filter models   |
+| `src/i18n/i18n-types.ts`    | `typesafe-i18n`              | Translation files       |
 
 After any backend model change:
 

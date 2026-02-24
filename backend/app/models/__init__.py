@@ -13,7 +13,6 @@ from models.comment import (
 from models.document import (
     DocumentCreate,
     DocumentRead,
-    DocumentTransfer,
     MousePositionEvent,
     MousePositionInput,
     ViewModeChangedEvent,
@@ -116,7 +115,6 @@ ScoreConfigUpdate.model_rebuild()
 
 DocumentCreate.model_rebuild()
 DocumentRead.model_rebuild()
-DocumentTransfer.model_rebuild()
 DocumentFilter.model_rebuild()
 
 GroupCreate.model_rebuild()

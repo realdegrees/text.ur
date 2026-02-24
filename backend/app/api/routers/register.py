@@ -12,7 +12,7 @@ from core.auth import (
 )
 from core.logger import get_logger
 from core.rate_limit import limiter
-from fastapi import HTTPException, Request, Response
+from fastapi import Request, Response
 from fastapi.responses import RedirectResponse
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 from models.enums import AppErrorCode
@@ -158,8 +158,8 @@ async def _register_regular_user(
         await db.commit()
         await db.refresh(user)
     except IntegrityError as e:
-        raise HTTPException(
-            status_code=400, detail="Username or email already exists"
+        raise AppException(
+            status_code=409, error_code=AppErrorCode.ALREADY_EXISTS, detail="Username or email already exists"
         ) from e
 
     # Send verification email
@@ -316,9 +316,10 @@ async def register(
 
     # Validate that at least one of email or token is provided
     if not user_create.email and not user_create.token:
-        raise HTTPException(
+        raise AppException(
             status_code=400,
-            detail="Either email or token must be provided"
+            error_code=AppErrorCode.VALIDATION_ERROR,
+            detail="Either email or token must be provided",
         )
 
     # Determine registration mode: use email if both are present
@@ -329,9 +330,10 @@ async def register(
     else:
         # Regular registration requires password
         if not user_create.password:
-            raise HTTPException(
+            raise AppException(
                 status_code=400,
-                detail="Password is required for regular registration"
+                error_code=AppErrorCode.VALIDATION_ERROR,
+                detail="Password is required for regular registration",
             )
         await _register_regular_user(db, mail, user_create)
         return None
@@ -346,16 +348,16 @@ async def verify(request: Request, token: str, db: Database) -> RedirectResponse
             token, max_age=int(cfg.REGISTER_LINK_EXPIRY_DAYS * 24 * 60 * 60), salt="email-verification"
         )
     except (BadSignature, SignatureExpired) as e:
-        raise HTTPException(
-            status_code=403, detail="Invalid or expired token") from e
+        raise AppException(
+            status_code=403, error_code=AppErrorCode.INVALID_TOKEN, detail="Invalid or expired token") from e
 
     query = select(User).filter(User.email == email)
     result = await db.exec(query)
     user: User | None = result.first()
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise AppException(status_code=404, error_code=AppErrorCode.NOT_FOUND, detail="User not found")
     if user.verified:
-        raise HTTPException(status_code=400, detail="User is already verified")
+        raise AppException(status_code=400, error_code=AppErrorCode.ALREADY_VERIFIED, detail="User is already verified")
 
     user.verified = True
 

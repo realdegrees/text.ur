@@ -70,6 +70,8 @@ export class WebSocketManager implements IWebSocketManager {
 				// Attempt reconnection if not a normal closure
 				if (event.code !== 1000 && this.reconnectAttempts < this.config.maxReconnectAttempts) {
 					this.scheduleReconnect();
+				} else if (event.code !== 1000) {
+					this.emit('failed', { code: event.code, reason: event.reason });
 				}
 			};
 		} catch (error) {

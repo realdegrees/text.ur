@@ -7,9 +7,10 @@ from api.routers.memberships import (
     groupmembership_router as GroupMembershipRouter,
 )
 from api.routers.sharelinks import router as ShareLinkRouter
+from core.app_exception import AppException
 from core.logger import get_logger
-from fastapi import Body, HTTPException, Response
-from models.enums import Permission
+from fastapi import Body, Response
+from models.enums import AppErrorCode, Permission
 from models.filter import GroupFilter
 from models.group import (
     GroupCreate,
@@ -22,15 +23,16 @@ from models.group import (
 from models.pagination import Paginated
 from models.reaction import DEFAULT_REACTIONS
 from models.tables import (
-    Document,
     Group,
     GroupReaction,
     Membership,
     ScoreConfig,
     User,
 )
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 from util.api_router import APIRouter
+from util.group_cleanup import cleanup_s3_keys, prepare_group_deletion
 from util.queries import Guard
 from util.response import ExcludableFieldsJSONResponse
 
@@ -66,28 +68,18 @@ async def create_group(
     group_create: GroupCreate = Body(...),
 ) -> Group:
     """Create a new group."""
-    result = await db.exec(select(Group).where(Group.name == group_create.name))
-    existing_group = result.first()
-    if existing_group:
-        raise HTTPException(
-            status_code=400, detail="Group with this name already exists"
-        )
-
     group = Group(**group_create.model_dump())
     db.add(group)
-    await db.commit()
-    await db.refresh(group)
+    await db.flush()
 
-    groupMembership = Membership(
+    membership = Membership(
         user_id=user.id,
         group_id=group.id,
         permissions=[Permission.ADMINISTRATOR],
         is_owner=True,
         accepted=True,
     )
-    db.add(groupMembership)
-    await db.commit()
-    await db.refresh(groupMembership)
+    db.add(membership)
 
     # Seed default score config and group reactions
     score_config = ScoreConfig(group_id=group.id)
@@ -96,8 +88,17 @@ async def create_group(
     for r in DEFAULT_REACTIONS:
         db.add(GroupReaction(group_id=group.id, **r))
 
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise AppException(
+            status_code=409,
+            error_code=AppErrorCode.INVALID_INPUT,
+            detail="Group with this name already exists.",
+        ) from None
 
+    await db.refresh(group)
     return group
 
 
@@ -165,7 +166,7 @@ async def transfer_ownership(
     transfer_user = result.first()
 
     if not transfer_user:
-        raise HTTPException(status_code=404, detail="Target user not found")
+        raise AppException(status_code=404, error_code=AppErrorCode.NOT_FOUND, detail="Target user not found")
 
     # Check if the new owner is a member of the group
     result = await db.exec(
@@ -178,8 +179,10 @@ async def transfer_ownership(
     transfer_membership = result.first()
 
     if not transfer_membership:
-        raise HTTPException(
-            status_code=404, detail="Target user is not a member of the group"
+        raise AppException(
+            status_code=404,
+            error_code=AppErrorCode.NOT_FOUND,
+            detail="Target user is not a member of the group",
         )
 
     result = await db.exec(
@@ -207,25 +210,10 @@ async def delete_group(
     group: Group = Resource(Group, param_alias="group_id"),
 ) -> Response:
     """Delete a group and its associated S3 objects."""
-    # Collect S3 keys before cascade-deleting DB records
-    result = await db.exec(
-        select(Document.s3_key).where(
-            Document.group_id == group.id
-        )
-    )
-    s3_keys: list[str] = list(result.all())
-
-    await db.delete(group)
+    s3_keys = await prepare_group_deletion(db, group.id)
     await db.commit()
 
-    # Clean up S3 objects after successful DB commit
-    for key in s3_keys:
-        if not s3.delete(key):
-            groups_logger.warning(
-                "Failed to delete S3 object %s for group %s",
-                key,
-                group.id,
-            )
+    cleanup_s3_keys(s3, s3_keys, groups_logger, f"group {group.id}")
 
     return Response(status_code=204)
 

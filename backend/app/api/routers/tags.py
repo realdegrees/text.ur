@@ -2,8 +2,9 @@ from api.dependencies.authentication import Authenticate
 from api.dependencies.database import Database
 from api.dependencies.resource import Resource
 from core import config
-from fastapi import Body, HTTPException
-from models.enums import Permission
+from core.app_exception import AppException
+from fastapi import Body
+from models.enums import AppErrorCode, Permission
 from models.tables import Document, Tag, User
 from models.tag import TagCreate, TagRead, TagUpdate
 from sqlmodel import func, select
@@ -33,9 +34,10 @@ async def create_tag(
     )
     tag_count = result.one()
     if tag_count >= config.MAX_TAGS_PER_DOCUMENT:
-        raise HTTPException(
+        raise AppException(
             status_code=400,
-            detail=f"Document has reached the maximum number of tags ({config.MAX_TAGS_PER_DOCUMENT})"
+            error_code=AppErrorCode.VALIDATION_ERROR,
+            detail=f"Document has reached the maximum number of tags ({config.MAX_TAGS_PER_DOCUMENT})",
         )
 
     tag = Tag(**tag_create.model_dump(), document_id=document.id)
@@ -75,8 +77,7 @@ async def get_tag(
     """
     # Verify tag belongs to the document
     if tag.document_id != document.id:
-        from fastapi import HTTPException
-        raise HTTPException(status_code=404, detail="Tag not found in this document")
+        raise AppException(status_code=404, error_code=AppErrorCode.NOT_FOUND, detail="Tag not found in this document")
     return tag
 
 
@@ -94,8 +95,7 @@ async def update_tag(
     """
     # Verify tag belongs to the document
     if tag.document_id != document.id:
-        from fastapi import HTTPException
-        raise HTTPException(status_code=404, detail="Tag not found in this document")
+        raise AppException(status_code=404, error_code=AppErrorCode.NOT_FOUND, detail="Tag not found in this document")
 
     tag = await db.merge(tag)
     tag.sqlmodel_update(tag_update.model_dump(exclude_unset=True))
@@ -118,8 +118,7 @@ async def delete_tag(
     """
     # Verify tag belongs to the document
     if tag.document_id != document.id:
-        from fastapi import HTTPException
-        raise HTTPException(status_code=404, detail="Tag not found in this document")
+        raise AppException(status_code=404, error_code=AppErrorCode.NOT_FOUND, detail="Tag not found in this document")
 
     await db.delete(tag)
     await db.commit()

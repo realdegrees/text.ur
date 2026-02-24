@@ -7,7 +7,7 @@ from api.dependencies.paginated.resources import (
 )
 from api.dependencies.resource import Resource
 from core.app_exception import AppException
-from fastapi import Body, HTTPException, Query, Response
+from fastapi import Body, Query, Response
 from models.enums import AppErrorCode, Permission
 from models.filter import MembershipFilter
 from models.group import (
@@ -33,6 +33,7 @@ from models.tables import (
     User,
 )
 from sqlalchemy import case, func, or_
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 from util.api_router import APIRouter
 from util.cache import get_cached, score_cache_key, set_cached
@@ -86,8 +87,10 @@ async def get_membership(
     membership: Membership | None = result.first()
 
     if not membership:
-        raise HTTPException(
-            status_code=404, detail="Target user is not a member of this group"
+        raise AppException(
+            status_code=404,
+            error_code=AppErrorCode.NOT_FOUND,
+            detail="Target user is not a member of this group",
         )
 
     return membership
@@ -113,26 +116,39 @@ async def invite_member(
     user, membership = result.first() or (None, None)
 
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise AppException(
+            status_code=404,
+            error_code=AppErrorCode.NOT_FOUND,
+            detail="User not found",
+        )
 
     if membership:
-        raise HTTPException(
-            status_code=400, detail="User is already a member of this group"
+        raise AppException(
+            status_code=409,
+            error_code=AppErrorCode.ALREADY_EXISTS,
+            detail="User is already a member of this group",
         )
 
     # TODO: Send an email notification to the user about the invite (just link to the frontend dashboard group page and accept on load if the query param accept is present)
 
     # Create new membership
-    membership_create = Membership(
+    new_membership = Membership(
         user_id=membership_create.user_id,
         group_id=group.id,
         permissions=group.default_permissions,
         is_owner=False,
         accepted=False,
     )
-    db.add(membership_create)
-    await db.commit()
-    await db.refresh(membership_create)
+    db.add(new_membership)
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise AppException(
+            status_code=409,
+            error_code=AppErrorCode.ALREADY_EXISTS,
+            detail="User is already a member of this group.",
+        ) from None
     return Response(status_code=201)
 
 
@@ -163,8 +179,10 @@ async def update_member_permissions(
     session_user_membership: Membership = result.first()
 
     if not membership:
-        raise HTTPException(
-            status_code=404, detail="Target user is not a member of this group"
+        raise AppException(
+            status_code=404,
+            error_code=AppErrorCode.NOT_FOUND,
+            detail="Target user is not a member of this group",
         )
 
     current_permissions = set(membership.permissions)
@@ -177,14 +195,16 @@ async def update_member_permissions(
 
     # Only the group owner can grant or revoke ADMINISTRATOR
     if Permission.ADMINISTRATOR in added_permissions and not session_user_membership.is_owner:
-        raise HTTPException(
+        raise AppException(
             status_code=403,
+            error_code=AppErrorCode.NOT_AUTHORIZED,
             detail="Only the owner can grant the ADMINISTRATOR permission",
         )
 
     if Permission.ADMINISTRATOR in removed_permissions and not session_user_membership.is_owner:
-        raise HTTPException(
+        raise AppException(
             status_code=403,
+            error_code=AppErrorCode.NOT_AUTHORIZED,
             detail="Only the owner can revoke the ADMINISTRATOR permission",
         )
 
@@ -304,8 +324,10 @@ async def remove_member(
     session_user_membership: Membership = result.first()
 
     if not membership:
-        raise HTTPException(
-            status_code=404, detail="Target user is not a member of this group"
+        raise AppException(
+            status_code=404,
+            error_code=AppErrorCode.NOT_FOUND,
+            detail="Target user is not a member of this group",
         )
 
     # users with ADMINISTRATOR and the owner cannot be removed
@@ -313,8 +335,9 @@ async def remove_member(
         Permission.ADMINISTRATOR in membership.permissions
         and not session_user_membership.is_owner
     ):
-        raise HTTPException(
+        raise AppException(
             status_code=403,
+            error_code=AppErrorCode.NOT_AUTHORIZED,
             detail="The owner and administrators cannot be removed from the group",
         )
 
@@ -342,8 +365,10 @@ async def promote_guest_to_member(
     membership: Membership | None = result.first()
 
     if not membership:
-        raise HTTPException(
-            status_code=404, detail="Target user is not a member of this group"
+        raise AppException(
+            status_code=404,
+            error_code=AppErrorCode.NOT_FOUND,
+            detail="Target user is not a member of this group",
         )
 
     db.add(membership)

@@ -2,8 +2,14 @@
 	import Pdf from '$lib/components/pdf/Pdf.svelte';
 	import { documentStore } from '$lib/runes/document.svelte.js';
 	import { documentWebSocket } from '$lib/stores/documentWebSocket.svelte.js';
+	import { LL } from '$i18n/i18n-svelte';
 
 	let { data } = $props();
+
+	let wsDisconnected = $derived(
+		documentWebSocket.hasConnectedBefore &&
+			(documentWebSocket.state === 'disconnected' || documentWebSocket.state === 'error')
+	);
 
 	let prevRootComments = $state<typeof data.rootComments | null>(null);
 
@@ -37,14 +43,19 @@
 		let vmUnsubscribe: (() => void) | null = null;
 
 		// Connect to WebSocket for real-time comment updates
-		documentWebSocket.connect(docId.toString()).then(() => {
-			wsUnsubscribe = documentWebSocket.onCommentEvent((event) => {
-				documentStore.handleWebSocketEvent(event);
+		documentWebSocket
+			.connect(docId.toString())
+			.then(() => {
+				wsUnsubscribe = documentWebSocket.onCommentEvent((event) => {
+					documentStore.handleWebSocketEvent(event);
+				});
+				vmUnsubscribe = documentWebSocket.onViewModeChanged((ev) =>
+					documentStore.handleWebSocketEvent(ev as any)
+				);
+			})
+			.catch((err) => {
+				console.error('[WS] Connection failed:', err.message);
 			});
-			vmUnsubscribe = documentWebSocket.onViewModeChanged((ev) =>
-				documentStore.handleWebSocketEvent(ev as any)
-			);
-		});
 
 		// Cleanup when effect re-runs or component unmounts
 		return () => {
@@ -55,6 +66,13 @@
 	});
 </script>
 
-<div class="h-full w-full">
+<div class="relative h-full w-full">
+	{#if wsDisconnected}
+		<div
+			class="absolute top-0 right-0 left-0 z-50 bg-yellow-500/90 px-4 py-2 text-center text-sm font-medium text-black"
+		>
+			{$LL.documentView.wsDisconnected()}
+		</div>
+	{/if}
 	<Pdf document={data.documentFile} />
 </div>

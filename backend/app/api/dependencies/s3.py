@@ -6,6 +6,7 @@ from typing import Annotated, Any, BinaryIO
 import boto3
 from botocore.client import Config
 from botocore.exceptions import ClientError
+from core.app_exception import AppException
 from core.config import (
     AWS_ACCESS_KEY,
     AWS_ENDPOINT_URL,
@@ -15,6 +16,7 @@ from core.config import (
 )
 from core.logger import get_logger
 from fastapi import Depends
+from models.enums import AppErrorCode
 
 s3_logger = get_logger("s3")
 
@@ -79,12 +81,43 @@ class S3Manager:
 
     def upload(self, key: str, data: BinaryIO, content_type: str) -> None:
         """Upload an object to S3."""
-        self._client.put_object(Bucket=S3_BUCKET, Key=key, Body=data, ContentType=content_type)
-        s3_logger.info("Uploaded object: %s (content_type=%s)", key, content_type)
+        try:
+            self._client.put_object(
+                Bucket=S3_BUCKET, Key=key,
+                Body=data, ContentType=content_type,
+            )
+        except ClientError as e:
+            s3_logger.error("Upload failed for %s: %s", key, e)
+            raise AppException(
+                status_code=502,
+                error_code=AppErrorCode.STORAGE_UNAVAILABLE,
+                detail="File storage is temporarily unavailable.",
+            ) from e
+        s3_logger.info(
+            "Uploaded object: %s (content_type=%s)", key, content_type,
+        )
 
     def download(self, key: str) -> Any:  # noqa: ANN401 # this trash library is so poorly typed I cba to find the right type
         """Download an object from S3."""
-        response = self._client.get_object(Bucket=S3_BUCKET, Key=key)
+        try:
+            response = self._client.get_object(
+                Bucket=S3_BUCKET, Key=key,
+            )
+        except ClientError as e:
+            error_code = e.response["Error"]["Code"]
+            if error_code in ("NoSuchKey", "404"):
+                s3_logger.warning("Object not found: %s", key)
+                raise AppException(
+                    status_code=404,
+                    error_code=AppErrorCode.FILE_NOT_FOUND,
+                    detail="The requested file was not found.",
+                ) from e
+            s3_logger.error("Download failed for %s: %s", key, e)
+            raise AppException(
+                status_code=502,
+                error_code=AppErrorCode.STORAGE_UNAVAILABLE,
+                detail="File storage is temporarily unavailable.",
+            ) from e
         s3_logger.debug("Downloaded object: %s", key)
         return response["Body"]
 
@@ -95,7 +128,27 @@ class S3Manager:
         while remaining framework-agnostic. Callers can forward the iterator
         directly to `starlette.responses.StreamingResponse`.
         """
-        response = self._client.get_object(Bucket=S3_BUCKET, Key=key)
+        try:
+            response = self._client.get_object(
+                Bucket=S3_BUCKET, Key=key,
+            )
+        except ClientError as e:
+            error_code = e.response["Error"]["Code"]
+            if error_code in ("NoSuchKey", "404"):
+                s3_logger.warning("Object not found: %s", key)
+                raise AppException(
+                    status_code=404,
+                    error_code=AppErrorCode.FILE_NOT_FOUND,
+                    detail="The requested file was not found.",
+                ) from e
+            s3_logger.error(
+                "Download stream failed for %s: %s", key, e,
+            )
+            raise AppException(
+                status_code=502,
+                error_code=AppErrorCode.STORAGE_UNAVAILABLE,
+                detail="File storage is temporarily unavailable.",
+            ) from e
         body = response["Body"]
 
         # boto3 "StreamingBody" exposes an `iter_chunks` method that yields

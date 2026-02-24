@@ -20,7 +20,6 @@ from fastapi import (
     Body,
     File,
     Form,
-    HTTPException,
     Request,
     Response,
     UploadFile,
@@ -35,7 +34,6 @@ from models.comment import (
 from models.document import (
     DocumentCreate,
     DocumentRead,
-    DocumentTransfer,
     DocumentUpdate,
     MousePositionEvent,
     MousePositionInput,
@@ -103,9 +101,11 @@ def can_user_see_comment(
 async def _setup_document_comment_connection(websocket: WebSocket, related_resource: Document, user: User, session: AsyncSession) -> None:
     """Set up connection state for document comment channel.
 
-    Attaches document and membership to websocket.state for use in other hooks.
+    Verifies the user has access to the document, then attaches
+    document and membership to websocket.state for use in other hooks.
+    Closes the WebSocket with 1008 (Policy Violation) if access is denied.
     """
-    # Fetch and store user's membership for this document's group (for permission checks)
+    # Fetch the user's membership for this document's group
     membership: Membership | None = None
     if related_resource.group_id:
         result = await session.exec(
@@ -116,6 +116,24 @@ async def _setup_document_comment_connection(websocket: WebSocket, related_resou
             )
         )
         membership = result.first()
+
+    # Enforce document access: reuse the same visibility logic as
+    # Guard.document_access().  Private docs require owner/admin;
+    # public docs require an accepted membership.
+    has_access = False
+    if membership is not None:
+        if related_resource.visibility == DocumentVisibility.PRIVATE:
+            has_access = (
+                membership.is_owner
+                or Permission.ADMINISTRATOR in membership.permissions
+            )
+        else:
+            has_access = True  # public doc + accepted member
+
+    if not has_access:
+        await websocket.close(code=1008)
+        raise RuntimeError("WS access denied")
+
     websocket.state.membership = membership
 
 
@@ -287,6 +305,18 @@ async def create_document(
             )
         validated_file.write(chunk)
     validated_file.seek(0)
+
+    # Validate PDF magic bytes
+    magic = validated_file.read(5)
+    if magic != b"%PDF-":
+        validated_file.close()
+        raise AppException(
+            status_code=400,
+            error_code=AppErrorCode.INVALID_INPUT,
+            detail="File is not a valid PDF.",
+        )
+    validated_file.seek(0)
+
     # Replace the file reference for the S3 upload
     file.file = validated_file
     file.size = total_bytes
@@ -385,35 +415,6 @@ async def list_documents(
     return documents
 
 
-@router.put("/{document_id}/transfer", response_model=DocumentRead)
-async def transfer_document(
-    db: Database,
-    session_user: User = Authenticate(guards=[Guard.document_access({Permission.ADMINISTRATOR})]),
-    document_update: DocumentTransfer = Body(...),
-    document: Document = Resource(Document, param_alias="document_id"),
-) -> DocumentRead:
-    """Transfer a document and return the updated document."""
-    # Handle group_id transfer
-    if document.group_id == document_update.group_id:
-        raise HTTPException(status_code=403, detail="Document is already owned by this group.")
-    result = await db.exec(
-        select(Membership).where(
-            Membership.user_id == session_user.id,
-            Membership.group_id == document_update.group_id,
-            Membership.accepted == True,  # noqa: E712
-        )
-    )
-    target_membership = result.first()
-    if not target_membership:
-        raise HTTPException(status_code=403, detail="Must be a member of the target group.")
-    if not target_membership.is_owner and Permission.ADMINISTRATOR not in target_membership.permissions:
-        raise HTTPException(status_code=403, detail="Insufficient permissions in target group.")
-
-    await db.merge(document)
-    document.sqlmodel_update(document_update.model_dump(exclude_unset=True))
-    await db.commit()
-    return document
-
 @router.put("/{document_id}", response_model=DocumentRead)
 async def update_document(
     db: Database,
@@ -437,7 +438,7 @@ async def update_document(
         guard = Guard.document_access(required_permissions)
 
         if not guard.predicate(document, user):
-            raise HTTPException(status_code=403, detail="You do not have access to this document after the update.")
+            raise AppException(status_code=403, error_code=AppErrorCode.NOT_AUTHORIZED, detail="You do not have access to this document after the update.")
 
 
     document.sqlmodel_update(document_update.model_dump(exclude_unset=True))
@@ -491,6 +492,7 @@ async def delete_document(
 @router.delete("/{document_id}/clear")
 async def clear_document_comments(
     db: Database,
+    events: Events,
     user: User = Authenticate(guards=[Guard.document_access(require_permissions={Permission.ADMINISTRATOR})]),
     document: Document = Resource(Document, param_alias="document_id"),
 ) -> Response:
@@ -500,6 +502,20 @@ async def clear_document_comments(
         delete(Comment).where(Comment.document_id == document.id)
     )
     await db.commit()
+
+    # Notify connected clients to clear their local comment cache
+    clear_event = Event(
+        event_id=uuid4(),
+        published_at=datetime.now(UTC),
+        payload=None,
+        resource_id=document.id,
+        resource="document",
+        type="comments_cleared",
+    )
+    await events.publish(
+        clear_event.model_dump(mode="json"),
+        channel=f"documents:{document.id}:comments",
+    )
 
     return Response(status_code=204)
 

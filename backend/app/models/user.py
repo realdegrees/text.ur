@@ -39,3 +39,12 @@ class UserUpdate(SQLModel):
     first_name: str | None = Field(default=None, max_length=MAX_FIRST_NAME_LENGTH)
     last_name: str | None = Field(default=None, max_length=MAX_LAST_NAME_LENGTH)
 
+
+class PasswordResetVerify(SQLModel):
+    """Schema for password reset verification."""
+
+    password: str = Field(
+        min_length=MIN_PASSWORD_LENGTH,
+        max_length=MAX_PASSWORD_LENGTH,
+    )
+

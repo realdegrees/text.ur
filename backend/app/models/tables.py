@@ -127,7 +127,7 @@ class Document(BaseModel, table=True):
                          sa_column=Column(PGUUID(as_uuid=True)))
 
     group_id: str = Field(
-        foreign_key="group.id", nullable=True, ondelete="CASCADE",
+        foreign_key="group.id", nullable=False, ondelete="CASCADE",
         index=True)
 
     group: "Group" = Relationship(back_populates="documents", sa_relationship_kwargs={"lazy": "selectin"})

@@ -399,6 +399,15 @@ const createDocumentStore = () => {
 			if (deleteState) {
 				commentStates.delete(commentId);
 			}
+		},
+		clearAll: () => {
+			/** Remove all comments and their states from the local store. */
+			_comments.clear();
+			commentStates.clear();
+			pinnedAuthors.clear();
+			pinnedTags.clear();
+			isGlobalPin = false;
+			activeCommentId = null;
 		}
 	});
 
@@ -846,7 +855,13 @@ const createDocumentStore = () => {
 		event:
 			| CommentEvent
 			| { type: 'view_mode_changed'; payload: { document_id?: string; view_mode?: ViewMode } }
+			| { type: 'comments_cleared'; payload: null }
 	): void => {
+		if (event.type === 'comments_cleared') {
+			commentsLocal.clearAll();
+			return;
+		}
+
 		if (!event.payload) {
 			console.warn('Received WebSocket event with no payload', event);
 			return;

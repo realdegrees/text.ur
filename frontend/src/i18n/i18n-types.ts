@@ -607,6 +607,34 @@ type RootTranslation = {
 		 * T​h​i​s​ ​s​h​a​r​e​ ​l​i​n​k​ ​d​o​e​s​ ​n​o​t​ ​a​l​l​o​w​ ​a​n​o​n​y​m​o​u​s​ ​a​c​c​e​s​s
 		 */
 		sharelink_anonymous_disabled: string
+		/**
+		 * F​i​l​e​ ​s​t​o​r​a​g​e​ ​i​s​ ​c​u​r​r​e​n​t​l​y​ ​u​n​a​v​a​i​l​a​b​l​e​.​ ​P​l​e​a​s​e​ ​t​r​y​ ​a​g​a​i​n​ ​l​a​t​e​r​.
+		 */
+		storage_unavailable: string
+		/**
+		 * T​h​e​ ​r​e​q​u​e​s​t​e​d​ ​f​i​l​e​ ​c​o​u​l​d​ ​n​o​t​ ​b​e​ ​f​o​u​n​d​ ​i​n​ ​s​t​o​r​a​g​e
+		 */
+		file_not_found: string
+		/**
+		 * T​h​i​s​ ​r​e​s​o​u​r​c​e​ ​a​l​r​e​a​d​y​ ​e​x​i​s​t​s
+		 */
+		already_exists: string
+		/**
+		 * Y​o​u​ ​m​u​s​t​ ​t​r​a​n​s​f​e​r​ ​g​r​o​u​p​ ​o​w​n​e​r​s​h​i​p​ ​b​e​f​o​r​e​ ​d​e​l​e​t​i​n​g​ ​y​o​u​r​ ​a​c​c​o​u​n​t
+		 */
+		must_transfer_ownership: string
+		/**
+		 * T​h​i​s​ ​l​i​n​k​ ​h​a​s​ ​a​l​r​e​a​d​y​ ​b​e​e​n​ ​u​s​e​d
+		 */
+		token_already_used: string
+		/**
+		 * F​a​i​l​e​d​ ​t​o​ ​s​e​n​d​ ​e​m​a​i​l​.​ ​P​l​e​a​s​e​ ​t​r​y​ ​a​g​a​i​n​ ​l​a​t​e​r​.
+		 */
+		mail_send_failed: string
+		/**
+		 * T​h​i​s​ ​a​c​c​o​u​n​t​ ​i​s​ ​a​l​r​e​a​d​y​ ​v​e​r​i​f​i​e​d
+		 */
+		already_verified: string
 	}
 	sharelink: {
 		/**
@@ -818,6 +846,37 @@ type RootTranslation = {
 		 * L​o​g​g​e​d​ ​o​u​t​ ​f​r​o​m​ ​a​l​l​ ​d​e​v​i​c​e​s​ ​s​u​c​c​e​s​s​f​u​l​l​y
 		 */
 		logoutSuccess: string
+		danger: {
+			/**
+			 * D​a​n​g​e​r​ ​Z​o​n​e
+			 */
+			title: string
+			/**
+			 * P​e​r​m​a​n​e​n​t​l​y​ ​d​e​l​e​t​e​ ​y​o​u​r​ ​a​c​c​o​u​n​t​ ​a​n​d​ ​a​l​l​ ​a​s​s​o​c​i​a​t​e​d​ ​d​a​t​a​.​ ​G​r​o​u​p​s​ ​y​o​u​ ​o​w​n​ ​w​i​l​l​ ​b​e​ ​t​r​a​n​s​f​e​r​r​e​d​ ​t​o​ ​a​n​o​t​h​e​r​ ​a​d​m​i​n​,​ ​o​r​ ​d​e​l​e​t​e​d​ ​i​f​ ​n​o​ ​a​d​m​i​n​ ​e​x​i​s​t​s​.
+			 */
+			description: string
+			/**
+			 * D​e​l​e​t​e​ ​A​c​c​o​u​n​t
+			 */
+			deleteButton: string
+			/**
+			 * C​o​n​f​i​r​m​ ​A​c​c​o​u​n​t​ ​D​e​l​e​t​i​o​n
+			 */
+			confirmTitle: string
+			/**
+			 * T​y​p​e​ ​y​o​u​r​ ​u​s​e​r​n​a​m​e​ ​{​n​a​m​e​}​ ​t​o​ ​c​o​n​f​i​r​m​ ​d​e​l​e​t​i​o​n​:
+			 * @param {string} name
+			 */
+			confirmMessage: RequiredParams<'name'>
+			/**
+			 * U​s​e​r​n​a​m​e​ ​d​o​e​s​ ​n​o​t​ ​m​a​t​c​h
+			 */
+			nameDoesNotMatch: string
+			/**
+			 * A​c​c​o​u​n​t​ ​d​e​l​e​t​e​d​ ​s​u​c​c​e​s​s​f​u​l​l​y
+			 */
+			deleteSuccess: string
+		}
 	}
 	groupSettings: {
 		/**
@@ -1169,6 +1228,12 @@ type RootTranslation = {
 			 */
 			hint: string
 		}
+	}
+	documentView: {
+		/**
+		 * R​e​a​l​-​t​i​m​e​ ​c​o​n​n​e​c​t​i​o​n​ ​l​o​s​t​.​ ​C​h​a​n​g​e​s​ ​b​y​ ​o​t​h​e​r​s​ ​m​a​y​ ​n​o​t​ ​a​p​p​e​a​r​ ​u​n​t​i​l​ ​y​o​u​ ​r​e​f​r​e​s​h​.
+		 */
+		wsDisconnected: string
 	}
 	documentSettings: {
 		/**
@@ -2427,6 +2492,34 @@ export type TranslationFunctions = {
 		 * This share link does not allow anonymous access
 		 */
 		sharelink_anonymous_disabled: () => LocalizedString
+		/**
+		 * File storage is currently unavailable. Please try again later.
+		 */
+		storage_unavailable: () => LocalizedString
+		/**
+		 * The requested file could not be found in storage
+		 */
+		file_not_found: () => LocalizedString
+		/**
+		 * This resource already exists
+		 */
+		already_exists: () => LocalizedString
+		/**
+		 * You must transfer group ownership before deleting your account
+		 */
+		must_transfer_ownership: () => LocalizedString
+		/**
+		 * This link has already been used
+		 */
+		token_already_used: () => LocalizedString
+		/**
+		 * Failed to send email. Please try again later.
+		 */
+		mail_send_failed: () => LocalizedString
+		/**
+		 * This account is already verified
+		 */
+		already_verified: () => LocalizedString
 	}
 	sharelink: {
 		/**
@@ -2633,6 +2726,36 @@ export type TranslationFunctions = {
 		 * Logged out from all devices successfully
 		 */
 		logoutSuccess: () => LocalizedString
+		danger: {
+			/**
+			 * Danger Zone
+			 */
+			title: () => LocalizedString
+			/**
+			 * Permanently delete your account and all associated data. Groups you own will be transferred to another admin, or deleted if no admin exists.
+			 */
+			description: () => LocalizedString
+			/**
+			 * Delete Account
+			 */
+			deleteButton: () => LocalizedString
+			/**
+			 * Confirm Account Deletion
+			 */
+			confirmTitle: () => LocalizedString
+			/**
+			 * Type your username {name} to confirm deletion:
+			 */
+			confirmMessage: (arg: { name: string }) => LocalizedString
+			/**
+			 * Username does not match
+			 */
+			nameDoesNotMatch: () => LocalizedString
+			/**
+			 * Account deleted successfully
+			 */
+			deleteSuccess: () => LocalizedString
+		}
 	}
 	groupSettings: {
 		/**
@@ -2975,6 +3098,12 @@ export type TranslationFunctions = {
 			 */
 			hint: () => LocalizedString
 		}
+	}
+	documentView: {
+		/**
+		 * Real-time connection lost. Changes by others may not appear until you refresh.
+		 */
+		wsDisconnected: () => LocalizedString
 	}
 	documentSettings: {
 		/**
