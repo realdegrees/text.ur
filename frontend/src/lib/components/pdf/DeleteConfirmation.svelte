@@ -1,6 +1,7 @@
 <script lang="ts">
 	import CheckIcon from '~icons/material-symbols/check';
 	import DeleteIcon from '~icons/material-symbols/delete-outline';
+	import LL from '$i18n/i18n-svelte';
 
 	interface Props {
 		isOpen: boolean;
@@ -52,7 +53,7 @@
 					e.stopPropagation();
 					onConfirm?.();
 				}}
-				title="Confirm delete"
+				title={$LL.confirmDelete()}
 				{disabled}
 			>
 				<CheckIcon class={iconSize} />
@@ -65,7 +66,7 @@
 				e.stopPropagation();
 				onOpen?.();
 			}}
-			title="Delete"
+			title={$LL.delete()}
 			{disabled}
 		>
 			<DeleteIcon class={iconSize} />

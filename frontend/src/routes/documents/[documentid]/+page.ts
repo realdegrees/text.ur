@@ -1,5 +1,11 @@
 import { api } from '$api/client';
-import type { CommentRead, DocumentRead, ScoreConfigRead } from '$api/types';
+import type {
+	CommentRead,
+	DocumentRead,
+	ScoreConfigRead,
+	TaskRead,
+	TaskResponseRead
+} from '$api/types';
 import { notification } from '$lib/stores/notificationStore';
 import { redirect } from '@sveltejs/kit';
 import type { PageLoad } from './$types';
@@ -10,6 +16,7 @@ import LL from '$i18n/i18n-svelte';
 
 export const load: PageLoad = async ({ params, parent, fetch, depends }) => {
 	depends('app:document-view');
+	depends('app:document-tasks');
 	const { routeMembership: membership } = await parent();
 	// Fetch document by param
 	const documentResult = await api.get<DocumentRead>(`/documents/${params.documentid}`, {
@@ -58,16 +65,23 @@ export const load: PageLoad = async ({ params, parent, fetch, depends }) => {
 		offset += limit;
 	}
 
-	const [documentFileResult, scoreConfigResult] = await Promise.all([
-		api.download(`/documents/${params.documentid}/file`, { fetch }),
-		api.get<ScoreConfigRead>(`/groups/${documentResult.data.group_id}/score-config`, { fetch })
-	]);
+	const [documentFileResult, scoreConfigResult, tasksResult, taskResponsesResult] =
+		await Promise.all([
+			api.download(`/documents/${params.documentid}/file`, { fetch }),
+			api.get<ScoreConfigRead>(`/groups/${documentResult.data.group_id}/score-config`, { fetch }),
+			api.get<TaskRead[]>(`/documents/${params.documentid}/tasks`, { fetch }),
+			api.get<TaskResponseRead[]>(`/documents/${params.documentid}/tasks/responses`, {
+				fetch
+			})
+		]);
 	if (!documentFileResult.success) {
 		notification(documentFileResult.error);
 		throw redirect(303, '/dashboard');
 	}
 
 	const scoreConfig = scoreConfigResult.success ? scoreConfigResult.data : null;
+	const tasks = tasksResult.success ? tasksResult.data : [];
+	const taskResponses = taskResponsesResult.success ? taskResponsesResult.data : [];
 
 	return {
 		document: documentResult.data,
@@ -75,6 +89,8 @@ export const load: PageLoad = async ({ params, parent, fetch, depends }) => {
 		rootComments: rootComments,
 		documentFile: documentFileResult.data,
 		scoreConfig,
+		tasks,
+		taskResponses,
 		breadcrumbs: [
 			{
 				label: membership.group.name,

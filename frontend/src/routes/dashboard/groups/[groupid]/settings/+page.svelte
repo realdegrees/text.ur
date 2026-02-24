@@ -1,6 +1,5 @@
 <script lang="ts">
 	import SaveIcon from '~icons/material-symbols/save-outline';
-	import DeleteIcon from '~icons/material-symbols/delete-outline';
 	import TransferIcon from '~icons/material-symbols/swap-horiz';
 	import AddIcon from '~icons/material-symbols/add';
 	import LL from '$i18n/i18n-svelte';
@@ -24,6 +23,7 @@
 	import type { Paginated } from '$api/pagination';
 	import AdvancedInput from '$lib/components/advancedInput.svelte';
 	import PermissionSelector from '$lib/components/permissionSelector.svelte';
+	import DangerZone from '$lib/components/DangerZone.svelte';
 	import { emojiSchema } from '$api/schemas';
 
 	let { data } = $props();
@@ -33,9 +33,7 @@
 
 	let transferUsername: string = $state('');
 	let selectedTransferUser: UserRead | undefined = $state(undefined);
-	let showDeleteConfirm: boolean = $state(false);
 	let showTransferConfirm: boolean = $state(false);
-	let deleteConfirmText: string = $state('');
 	let editableGroupName: string = $state(data.membership.group.name);
 
 	// --- Scoring config state ---
@@ -194,11 +192,6 @@
 	}
 
 	async function handleDelete(): Promise<void> {
-		if (deleteConfirmText !== group.name) {
-			notification('error', $LL.groupSettings.danger.nameDoesNotMatch());
-			return;
-		}
-
 		const result = await api.delete(`/groups/${group.id}`);
 
 		if (result.success) {
@@ -271,22 +264,13 @@
 	<div class="flex flex-col gap-6">
 		<!-- Group Name -->
 		<div class="flex flex-col gap-2">
-			<label for="groupName" class="text-sm font-semibold text-text/70"
-				>{$LL.groupSettings.groupName()}</label
-			>
-			<input
-				id="groupName"
-				type="text"
-				bind:value={editableGroupName}
-				class="rounded-md border border-text/20 bg-text/5 px-4 py-2 transition-colors focus:border-text/50 focus:outline-none"
-			/>
+			<label for="groupName" class="form-label">{$LL.groupSettings.groupName()}</label>
+			<input id="groupName" type="text" bind:value={editableGroupName} class="form-input px-4" />
 		</div>
 
 		<!-- Group ID (Read-only) -->
 		<div class="flex flex-col gap-2">
-			<label for="groupId" class="text-sm font-semibold text-text/70"
-				>{$LL.groupSettings.groupId()}</label
-			>
+			<label for="groupId" class="form-label">{$LL.groupSettings.groupId()}</label>
 			<input
 				id="groupId"
 				type="text"
@@ -299,10 +283,10 @@
 		<!-- Default Permissions -->
 		{#if sessionStore.validatePermissions(['administrator'])}
 			<div class="flex flex-col gap-2">
-				<div class="text-sm font-semibold text-text/70">
+				<div class="form-label">
 					{$LL.groupSettings.defaultPermissions()}
 				</div>
-				<p class="text-xs text-text/50">
+				<p class="form-hint">
 					{$LL.groupSettings.defaultPermissionsDescription()}
 				</p>
 				<PermissionSelector
@@ -318,7 +302,7 @@
 			<button
 				type="button"
 				onclick={handleSave}
-				class="flex flex-row items-center gap-2 rounded-md bg-primary px-6 py-2 text-text transition-all hover:bg-primary/80 disabled:cursor-not-allowed disabled:opacity-50"
+				class="flex btn-primary flex-row items-center gap-2 px-6"
 				disabled={!hasChanges}
 			>
 				<SaveIcon class="h-5 w-5" />
@@ -330,7 +314,7 @@
 		{#if sessionStore.validatePermissions(['administrator'])}
 			<div class="mt-4 flex flex-col gap-4 rounded-md border border-text/20 bg-text/5 p-4">
 				<h2 class="text-lg font-semibold text-text/90">{$LL.groupSettings.scoring.title()}</h2>
-				<p class="text-xs text-text/50">
+				<p class="form-hint">
 					{$LL.groupSettings.scoring.description()}
 				</p>
 
@@ -358,7 +342,7 @@
 											type="number"
 											min="0"
 											bind:value={highlightPoints}
-											class="w-20 rounded border border-text/20 bg-text/5 px-2 py-1 text-right text-sm transition-colors focus:border-text/50 focus:outline-none"
+											class="w-20 form-input-compact"
 										/>
 									</td>
 								</tr>
@@ -369,7 +353,7 @@
 											type="number"
 											min="0"
 											bind:value={commentPoints}
-											class="w-20 rounded border border-text/20 bg-text/5 px-2 py-1 text-right text-sm transition-colors focus:border-text/50 focus:outline-none"
+											class="w-20 form-input-compact"
 										/>
 									</td>
 								</tr>
@@ -380,7 +364,7 @@
 											type="number"
 											min="0"
 											bind:value={tagPoints}
-											class="w-20 rounded border border-text/20 bg-text/5 px-2 py-1 text-right text-sm transition-colors focus:border-text/50 focus:outline-none"
+											class="w-20 form-input-compact"
 										/>
 									</td>
 								</tr>
@@ -391,7 +375,7 @@
 							<button
 								type="button"
 								onclick={handleSaveScoreConfig}
-								class="flex flex-row items-center gap-2 rounded-md bg-primary px-4 py-1.5 text-sm text-text transition-all hover:bg-primary/80 disabled:cursor-not-allowed disabled:opacity-50"
+								class="flex btn-primary flex-row items-center gap-2 text-sm"
 								disabled={!hasScoreChanges || scoreSaving}
 							>
 								<SaveIcon class="h-4 w-4" />
@@ -434,21 +418,21 @@
 													<input
 														type="number"
 														bind:value={editPoints}
-														class="w-16 rounded border border-text/20 bg-text/5 px-1.5 py-1 text-right text-xs focus:border-text/50 focus:outline-none"
+														class="w-16 form-input-compact text-xs"
 													/>
 												</td>
 												<td class="py-2 text-right">
 													<input
 														type="number"
 														bind:value={editAdminPoints}
-														class="w-16 rounded border border-text/20 bg-text/5 px-1.5 py-1 text-right text-xs focus:border-text/50 focus:outline-none"
+														class="w-16 form-input-compact text-xs"
 													/>
 												</td>
 												<td class="py-2 text-right">
 													<input
 														type="number"
 														bind:value={editGiverPoints}
-														class="w-16 rounded border border-text/20 bg-text/5 px-1.5 py-1 text-right text-xs focus:border-text/50 focus:outline-none"
+														class="w-16 form-input-compact text-xs"
 													/>
 												</td>
 												<td class="py-2 text-right">
@@ -638,7 +622,7 @@
 									transferUsername = '';
 									selectedTransferUser = undefined;
 								}}
-								class="rounded bg-text/10 px-4 py-2 font-semibold transition hover:bg-text/20"
+								class="btn-secondary"
 							>
 								{$LL.cancel()}
 							</button>
@@ -650,56 +634,16 @@
 
 		<!-- Danger Zone (Owner only) -->
 		{#if isOwner}
-			<div class="mt-8 flex flex-col gap-4 rounded-md border border-red-500/30 bg-red-500/5 p-4">
-				<h2 class="text-lg font-semibold text-red-500">{$LL.groupSettings.danger.title()}</h2>
-				<p class="text-sm text-text/70">
-					{$LL.groupSettings.danger.description()}
-				</p>
-
-				{#if !showDeleteConfirm}
-					<button
-						type="button"
-						onclick={() => (showDeleteConfirm = true)}
-						class="flex w-fit flex-row items-center gap-2 rounded-md bg-red-500/20 px-4 py-2 transition-all hover:bg-red-500/30"
-					>
-						<DeleteIcon class="h-5 w-5" />
-						<span>{$LL.groupSettings.danger.deleteButton()}</span>
-					</button>
-				{:else}
-					<div class="flex flex-col gap-3 rounded-md bg-red-500/10 p-4">
-						<p class="font-semibold text-red-500">{$LL.groupSettings.danger.confirmTitle()}</p>
-						<p class="text-sm text-text/70">
-							{$LL.groupSettings.danger.confirmMessage({ name: group.name })}
-						</p>
-						<input
-							type="text"
-							bind:value={deleteConfirmText}
-							placeholder={group.name}
-							class="rounded-md border border-red-500/30 bg-text/5 px-4 py-2 transition-colors focus:border-red-500/50 focus:outline-none"
-						/>
-						<div class="flex flex-row gap-2">
-							<button
-								type="button"
-								onclick={handleDelete}
-								disabled={deleteConfirmText !== group.name}
-								class="rounded bg-red-500/30 px-4 py-2 font-semibold transition hover:bg-red-500/40 disabled:cursor-not-allowed disabled:opacity-50"
-							>
-								{$LL.groupSettings.danger.deleteButton()}
-							</button>
-							<button
-								type="button"
-								onclick={() => {
-									showDeleteConfirm = false;
-									deleteConfirmText = '';
-								}}
-								class="rounded bg-text/10 px-4 py-2 font-semibold transition hover:bg-text/20"
-							>
-								{$LL.cancel()}
-							</button>
-						</div>
-					</div>
-				{/if}
-			</div>
+			<DangerZone
+				class="mt-8"
+				title={$LL.groupSettings.danger.title()}
+				description={$LL.groupSettings.danger.description()}
+				actionLabel={$LL.groupSettings.danger.deleteButton()}
+				confirmText={group.name}
+				confirmTitle={$LL.groupSettings.danger.confirmTitle()}
+				confirmPrompt={$LL.groupSettings.danger.confirmMessage({ name: group.name })}
+				onConfirm={handleDelete}
+			/>
 		{/if}
 	</div>
 </div>

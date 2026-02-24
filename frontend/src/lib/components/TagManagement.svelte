@@ -169,9 +169,8 @@
 )}
 	<div class="grid grid-cols-1 gap-3 md:grid-cols-2">
 		<div class="flex flex-col gap-1.5">
-			<label
-				for={isEdit ? `edit-tag-label-${tagId}` : 'new-tag-label'}
-				class="text-xs font-semibold text-text/70">{$LL.tags.label()}</label
+			<label for={isEdit ? `edit-tag-label-${tagId}` : 'new-tag-label'} class="form-label"
+				>{$LL.tags.label()}</label
 			>
 			<input
 				id={isEdit ? `edit-tag-label-${tagId}` : 'new-tag-label'}
@@ -179,13 +178,12 @@
 				bind:value={formData.label}
 				placeholder={isEdit ? $LL.tags.tagLabelEditPlaceholder() : $LL.tags.tagLabelPlaceholder()}
 				maxlength="50"
-				class="rounded-md border border-text/20 bg-text/5 px-3 py-2 text-sm transition-colors outline-none focus:border-text/50"
+				class="form-input"
 			/>
 		</div>
 		<div class="flex flex-col gap-1.5">
-			<label
-				for={isEdit ? `edit-tag-color-${tagId}` : 'new-tag-color'}
-				class="text-xs font-semibold text-text/70">{$LL.tags.color()}</label
+			<label for={isEdit ? `edit-tag-color-${tagId}` : 'new-tag-color'} class="form-label"
+				>{$LL.tags.color()}</label
 			>
 			<div class="relative" data-color-picker>
 				<button
@@ -225,7 +223,7 @@
 		<div class="flex flex-col gap-1.5 md:col-span-2">
 			<label
 				for={isEdit ? `edit-tag-description-${tagId}` : 'new-tag-description'}
-				class="text-xs font-semibold text-text/70">{$LL.tags.description()}</label
+				class="form-label">{$LL.tags.description()}</label
 			>
 			<textarea
 				id={isEdit ? `edit-tag-description-${tagId}` : 'new-tag-description'}
@@ -233,7 +231,7 @@
 				placeholder={$LL.tags.descriptionPlaceholder()}
 				maxlength="200"
 				rows="2"
-				class="rounded-md border border-text/20 bg-text/5 px-3 py-2 text-sm transition-colors outline-none focus:border-text/50"
+				class="form-input"
 			></textarea>
 		</div>
 	</div>
@@ -243,10 +241,10 @@
 
 <div class="flex flex-col gap-4">
 	<div class="flex items-center justify-between">
-		<div class="text-sm font-semibold text-text/70">{$LL.tags.title()}</div>
+		<div class="form-label">{$LL.tags.title()}</div>
 		<button
 			onclick={() => (isAddingTag = !isAddingTag)}
-			class="flex items-center gap-2 rounded-md bg-primary/20 px-3 py-2 text-sm font-semibold transition hover:bg-primary/30"
+			class="flex btn-primary items-center gap-2 text-sm"
 		>
 			<AddIcon class="h-4 w-4" />
 			{$LL.tags.addTag()}
@@ -259,17 +257,11 @@
 			<div class="text-sm font-semibold">{$LL.tags.newTag()}</div>
 			{@render tagForm(newTag, false)}
 			<div class="flex items-center gap-2">
-				<button
-					onclick={createTag}
-					class="flex items-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-semibold transition hover:bg-primary/80"
-				>
+				<button onclick={createTag} class="flex btn-primary items-center gap-2 text-sm">
 					<SaveIcon class="h-4 w-4" />
 					{$LL.tags.createTag()}
 				</button>
-				<button
-					onclick={resetNewTagForm}
-					class="flex items-center gap-2 rounded-md bg-text/10 px-3 py-2 text-sm font-semibold transition hover:bg-text/20"
-				>
+				<button onclick={resetNewTagForm} class="flex btn-secondary items-center gap-2 text-sm">
 					<CancelIcon class="h-4 w-4" />
 					{$LL.cancel()}
 				</button>
@@ -280,7 +272,7 @@
 	<!-- Tags List -->
 	<div class="flex flex-col gap-2">
 		{#if tags.length === 0}
-			<p class="text-sm text-text/50">{$LL.tags.noTags()}</p>
+			<p class="text-muted">{$LL.tags.noTags()}</p>
 		{:else}
 			{#each tags as tag (tag.id)}
 				{#if editingTagId === tag.id}
@@ -291,15 +283,12 @@
 						<div class="flex items-center gap-2">
 							<button
 								onclick={() => updateTag(tag.id)}
-								class="flex items-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-semibold transition hover:bg-primary/80"
+								class="flex btn-primary items-center gap-2 text-sm"
 							>
 								<SaveIcon class="h-4 w-4" />
 								{$LL.saveChanges()}
 							</button>
-							<button
-								onclick={cancelEdit}
-								class="flex items-center gap-2 rounded-md bg-text/10 px-3 py-2 text-sm font-semibold transition hover:bg-text/20"
-							>
+							<button onclick={cancelEdit} class="flex btn-secondary items-center gap-2 text-sm">
 								<CancelIcon class="h-4 w-4" />
 								{$LL.cancel()}
 							</button>
@@ -317,20 +306,20 @@
 						<div class="flex-1">
 							<p class="text-sm font-semibold">{tag.label}</p>
 							{#if tag.description}
-								<p class="text-xs text-text/50">{tag.description}</p>
+								<p class="form-hint">{tag.description}</p>
 							{/if}
 						</div>
 						<div class="flex items-center gap-1">
 							<button
 								onclick={() => startEditingTag(tag)}
-								class="rounded-md p-1.5 transition hover:bg-text/10"
+								class="btn-ghost"
 								aria-label={$LL.tags.editAriaLabel()}
 							>
 								<EditIcon class="h-4 w-4" />
 							</button>
 							<ConfirmButton onConfirm={() => deleteTag(tag.id)}>
 								{#snippet button()}
-									<div class="rounded-md p-1.5 transition hover:bg-text/10">
+									<div class="btn-ghost">
 										<DeleteIcon class="h-4 w-4 text-red-600" />
 									</div>
 								{/snippet}

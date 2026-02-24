@@ -2,7 +2,6 @@
 	import type { Snippet } from 'svelte';
 	import type { MouseEventHandler } from 'svelte/elements';
 	import { fly } from 'svelte/transition';
-	// import Missing from '~icons/material-symbols/indeterminate-question-box-rounded';
 
 	let {
 		onclick,

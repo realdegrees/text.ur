@@ -5,7 +5,10 @@
 	import LL from '$i18n/i18n-svelte';
 	import { sessionStore } from '$lib/runes/session.svelte.js';
 	import TagManagement from '$lib/components/TagManagement.svelte';
+	import TaskManagement from '$lib/components/TaskManagement.svelte';
+	import TabContainer from '$lib/components/TabContainer.svelte';
 	import ConfirmButton from '$lib/components/ConfirmButton.svelte';
+	import DangerZone from '$lib/components/DangerZone.svelte';
 	import MarkdownTextEditor from '$lib/components/pdf/MarkdownTextEditor.svelte';
 	import BackIcon from '~icons/material-symbols/arrow-back';
 	import SaveIcon from '~icons/material-symbols/save-outline';
@@ -17,9 +20,10 @@
 	let document = $derived(data.document);
 	let group = $derived(data.membership.group);
 
-	let documentName = $state(document.name);
-	let documentDescription = $state(document.description ?? '');
-	let documentVisibility = $state<DocumentVisibility>(document.visibility);
+	let documentName = $state(data.document.name);
+	let documentDescription = $state(data.document.description ?? '');
+	let documentVisibility = $state<DocumentVisibility>(data.document.visibility);
+	let defaultMaxAttempts = $state(data.document.default_max_attempts);
 	let isSaving = $state(false);
 	let isClearing = $state(false);
 
@@ -28,6 +32,7 @@
 		documentName = document.name;
 		documentDescription = document.description ?? '';
 		documentVisibility = document.visibility;
+		defaultMaxAttempts = document.default_max_attempts;
 	});
 
 	async function saveChanges() {
@@ -41,7 +46,8 @@
 		const result = await api.update(`/documents/${document.id}`, {
 			name: documentName.trim(),
 			description: documentDescription.trim() || null,
-			visibility: documentVisibility
+			visibility: documentVisibility,
+			default_max_attempts: defaultMaxAttempts
 		});
 
 		isSaving = false;
@@ -62,6 +68,7 @@
 		return (
 			documentName.trim() !== document.name ||
 			documentVisibility !== document.visibility ||
+			defaultMaxAttempts !== document.default_max_attempts ||
 			descriptionChanged
 		);
 	}
@@ -83,39 +90,24 @@
 	}
 </script>
 
-<div class="flex h-full w-full flex-col gap-6 p-6">
-	<!-- Header -->
-	<div class="flex items-center gap-3">
-		<button
-			onclick={() => goto(`/dashboard/groups/${group.id}/documents`)}
-			class="rounded p-2 transition hover:bg-text/10"
-			aria-label={$LL.documentSettings.backToDocuments()}
-		>
-			<BackIcon class="h-5 w-5" />
-		</button>
-		<h1 class="text-2xl font-bold">{$LL.documentSettings.title()}</h1>
-	</div>
-
-	<!-- Settings Form -->
+{#snippet generalTab()}
 	<div class="flex flex-col gap-6">
 		<!-- Document Name -->
 		<div class="flex flex-col gap-2">
-			<label for="document-name" class="text-sm font-semibold text-text/70"
-				>{$LL.documents.documentName()}</label
-			>
+			<label for="document-name" class="form-label">{$LL.documents.documentName()}</label>
 			<input
 				id="document-name"
 				type="text"
 				bind:value={documentName}
 				placeholder={$LL.documents.documentNamePlaceholder()}
 				maxlength="255"
-				class="rounded-md border border-text/20 bg-text/5 px-4 py-2 transition-colors focus:border-text/50 focus:outline-none"
+				class="form-input px-4"
 			/>
 		</div>
 
 		<!-- Document Description -->
 		<div class="flex flex-col gap-2">
-			<label for="document-description" class="text-sm font-semibold text-text/70">
+			<label for="document-description" class="form-label">
 				{$LL.documents.documentDescription()}
 			</label>
 			<MarkdownTextEditor
@@ -126,14 +118,14 @@
 					? parseInt(env.PUBLIC_DOCUMENT_DESCRIPTION_MAX_LENGTH)
 					: 5000}
 			/>
-			<p class="text-xs text-text/50">
+			<p class="form-hint">
 				{$LL.documents.documentDescriptionHint()}
 			</p>
 		</div>
 
 		<!-- Document Visibility -->
 		<div class="flex flex-col gap-2">
-			<div class="text-sm font-semibold text-text/70">{$LL.visibility.label()}</div>
+			<div class="form-label">{$LL.visibility.label()}</div>
 			<div class="flex flex-col gap-3">
 				<div class="flex items-start gap-2">
 					<input
@@ -147,7 +139,7 @@
 						<label for="visibility-public" class="cursor-pointer text-sm font-medium">
 							{$LL.visibility.public.label()}
 						</label>
-						<p class="text-xs text-text/50">{$LL.documentSettings.publicDescription()}</p>
+						<p class="form-hint">{$LL.documentSettings.publicDescription()}</p>
 					</div>
 				</div>
 
@@ -164,7 +156,7 @@
 							<label for="visibility-private" class="cursor-pointer text-sm font-medium">
 								{$LL.visibility.private.label()}
 							</label>
-							<p class="text-xs text-text/50">{$LL.documentSettings.privateDescription()}</p>
+							<p class="form-hint">{$LL.documentSettings.privateDescription()}</p>
 						</div>
 					</div>
 				{/if}
@@ -178,7 +170,7 @@
 					type="button"
 					onclick={saveChanges}
 					disabled={isSaving}
-					class="flex flex-row items-center gap-2 rounded-md bg-primary px-6 py-2 text-text transition-all hover:bg-primary/80 disabled:cursor-not-allowed disabled:opacity-50"
+					class="flex btn-primary flex-row items-center gap-2 px-6"
 				>
 					<SaveIcon class="h-5 w-5" />
 					<span>{isSaving ? $LL.documentSettings.savingButton() : $LL.saveChanges()}</span>
@@ -186,21 +178,13 @@
 			</div>
 		{/if}
 
-		<!-- Tag Management -->
-		{#if sessionStore.validatePermissions(['administrator'])}
-			<div class="flex flex-col gap-2">
-				<TagManagement {document} />
-			</div>
-		{/if}
-
 		<!-- Danger Zone -->
 		{#if sessionStore.validatePermissions(['administrator'])}
-			<div class="mt-8 flex flex-col gap-4 rounded-md border border-red-500/30 bg-red-500/5 p-4">
-				<h2 class="text-lg font-semibold text-red-500">{$LL.documentSettings.danger.title()}</h2>
-				<p class="text-sm text-text/70">
-					{$LL.documentSettings.danger.description()}
-				</p>
-
+			<DangerZone
+				title={$LL.documentSettings.danger.title()}
+				description={$LL.documentSettings.danger.description()}
+				actionLabel={$LL.documentSettings.danger.clearButton()}
+			>
 				<ConfirmButton disabled={isClearing} onConfirm={clearDocument}>
 					{#snippet button(isOpen)}
 						<button
@@ -226,7 +210,71 @@
 						</div>
 					{/snippet}
 				</ConfirmButton>
+			</DangerZone>
+		{/if}
+	</div>
+{/snippet}
+
+{#snippet tagsTab()}
+	<TagManagement {document} />
+{/snippet}
+
+{#snippet tasksTab()}
+	<!-- Default Max Attempts -->
+	<div class="mb-6 flex flex-col gap-2">
+		<label for="default-max-attempts" class="form-label">
+			{$LL.documentSettings.defaultMaxAttempts()}
+		</label>
+		<input
+			id="default-max-attempts"
+			type="number"
+			min="1"
+			bind:value={defaultMaxAttempts}
+			class="form-input w-24 px-4"
+		/>
+		<p class="form-hint">
+			{$LL.documentSettings.defaultMaxAttemptsHint()}
+		</p>
+		{#if hasChanges()}
+			<div class="flex flex-row justify-end gap-2">
+				<button
+					type="button"
+					onclick={saveChanges}
+					disabled={isSaving}
+					class="flex btn-primary flex-row items-center gap-2 px-6"
+				>
+					<SaveIcon class="h-5 w-5" />
+					<span>{isSaving ? $LL.documentSettings.savingButton() : $LL.saveChanges()}</span>
+				</button>
 			</div>
 		{/if}
 	</div>
+	<TaskManagement {document} />
+{/snippet}
+
+<div class="flex h-full w-full flex-col gap-6 p-6">
+	<!-- Header -->
+	<div class="flex items-center gap-3">
+		<button
+			onclick={() => goto(`/dashboard/groups/${group.id}/documents`)}
+			class="btn-ghost p-2"
+			aria-label={$LL.documentSettings.backToDocuments()}
+		>
+			<BackIcon class="h-5 w-5" />
+		</button>
+		<h1 class="text-2xl font-bold">{$LL.documentSettings.title()}</h1>
+	</div>
+
+	<!-- Tabbed Content -->
+	{#if sessionStore.validatePermissions(['administrator'])}
+		<TabContainer
+			tabs={[
+				{ label: $LL.documentSettings.general(), snippet: generalTab },
+				{ label: $LL.documentSettings.tagsTab(), snippet: tagsTab },
+				{ label: $LL.documentSettings.tasksTab(), snippet: tasksTab }
+			]}
+		/>
+	{:else}
+		{@render generalTab()}
+	{/if}
 </div>

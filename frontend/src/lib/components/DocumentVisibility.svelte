@@ -80,7 +80,7 @@
 		}}
 		disabled={!canEdit || isUpdating}
 		title={canEdit
-			? 'Change document visibility'
+			? $LL.visibility.changeVisibility()
 			: `Document visibility: ${currentVisibility.valueOf()}`}
 	>
 		{#if currentVisibility === 'private'}

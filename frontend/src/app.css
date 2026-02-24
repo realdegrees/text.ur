@@ -68,6 +68,96 @@
 	box-shadow: var(--tw-shadow);
 }
 
+/* --- Form inputs --- */
+
+@utility form-input {
+	@apply rounded-md border border-text/20 bg-text/5 px-3 py-2 text-sm text-text transition-colors outline-none;
+	&:focus {
+		@apply border-text/50;
+	}
+	&:disabled {
+		@apply cursor-not-allowed opacity-50;
+	}
+}
+
+@utility form-input-compact {
+	@apply rounded border border-text/20 bg-text/5 px-2 py-1 text-right text-sm text-text transition-colors outline-none;
+	&:focus {
+		@apply border-text/50;
+	}
+	&:disabled {
+		@apply cursor-not-allowed opacity-50;
+	}
+}
+
+@utility form-input-danger {
+	@apply rounded-md border border-red-500/30 bg-text/5 px-4 py-2 text-sm text-text transition-colors outline-none;
+	&:focus {
+		@apply border-red-500/50;
+	}
+	&:disabled {
+		@apply cursor-not-allowed opacity-50;
+	}
+}
+
+/* --- Form labels and hints --- */
+
+@utility form-label {
+	@apply text-sm font-semibold text-text/70;
+}
+
+@utility form-hint {
+	@apply text-xs text-text/50;
+}
+
+/* --- Buttons --- */
+
+@utility btn-primary {
+	@apply rounded-md bg-primary px-4 py-2 font-semibold text-text transition-colors;
+	&:hover:not(:disabled) {
+		@apply bg-primary/80;
+	}
+	&:disabled {
+		@apply cursor-not-allowed opacity-50;
+	}
+}
+
+@utility btn-secondary {
+	@apply rounded-md bg-text/10 px-4 py-2 font-semibold transition-colors;
+	&:hover:not(:disabled) {
+		@apply bg-text/20;
+	}
+	&:disabled {
+		@apply cursor-not-allowed opacity-50;
+	}
+}
+
+@utility btn-danger {
+	@apply rounded-md bg-red-500/20 px-4 py-2 font-semibold transition-colors;
+	&:hover:not(:disabled) {
+		@apply bg-red-500/30;
+	}
+	&:disabled {
+		@apply cursor-not-allowed opacity-50;
+	}
+}
+
+@utility btn-ghost {
+	@apply rounded-md p-1.5 transition-colors;
+	&:hover:not(:disabled) {
+		@apply bg-text/10;
+	}
+	&:disabled {
+		@apply opacity-30;
+	}
+}
+
+/* --- Text --- */
+
+@utility text-muted {
+	@apply text-sm text-text/50;
+}
+
 @theme {
 	--animate-fadeIn: fadeIn 0.2s ease;
 }

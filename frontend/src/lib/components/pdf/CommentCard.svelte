@@ -240,7 +240,7 @@
 	{#if isTopLevel && !isAuthor && availableReactions.length > 0}
 		<button
 			bind:this={reactionButtonRef}
-			class="flex cursor-pointer items-center rounded bg-text/5 p-1 text-text/40 transition-colors hover:bg-text/10 hover:text-text/60"
+			class="flex items-center btn-ghost bg-text/5 p-1 text-text/40 hover:text-text/60"
 			title={$LL.comments.addReaction()}
 			onclick={(e) => {
 				e.stopPropagation();
@@ -267,7 +267,7 @@
 	{/if}
 	{#if commentState && !commentState.isEditing && isAuthor}
 		<button
-			class="flex items-center rounded bg-text/5 p-1 text-text/60 transition-colors hover:bg-text/10 hover:text-text/80"
+			class="flex items-center btn-ghost bg-text/5 p-1 text-text/60 hover:text-text/80"
 			onclick={(e) => {
 				e.stopPropagation();
 				editingTags = [...comment.tags];
@@ -576,7 +576,7 @@
 		>
 			{#each availableReactions as gr (gr.id)}
 				<button
-					class="cursor-pointer rounded-md p-1 text-base transition-colors hover:bg-text/10
+					class="rounded-md p-1 text-base transition-colors hover:bg-text/10
 					{myReaction?.group_reaction_id === gr.id ? 'bg-primary/20 ring-1 ring-primary/50' : ''}"
 					title={$LL.comments.nPoints({ count: gr.points })}
 					onclick={(e) => {

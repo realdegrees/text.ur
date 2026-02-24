@@ -56,7 +56,7 @@
 			items={availableToAdd}
 			onSelect={(perm) => onAdd?.(perm)}
 			position="bottom-left"
-			title="Add Permission"
+			title={$LL.memberships.addPermission()}
 			showArrow={false}
 			show={false}
 			hideCurrentSelection={true}

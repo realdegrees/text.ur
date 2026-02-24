@@ -198,6 +198,14 @@ type RootTranslation = {
 	 * S​a​v​e​ ​C​h​a​n​g​e​s
 	 */
 	saveChanges: string
+	/**
+	 * D​i​s​m​i​s​s
+	 */
+	dismiss: string
+	/**
+	 * C​o​n​f​i​r​m​ ​d​e​l​e​t​e
+	 */
+	confirmDelete: string
 	dashboard: {
 		/**
 		 * D​a​s​h​b​o​a​r​d
@@ -483,6 +491,10 @@ type RootTranslation = {
 		 * V​i​s​i​b​i​l​i​t​y​ ​u​p​d​a​t​e​d
 		 */
 		updated: string
+		/**
+		 * C​h​a​n​g​e​ ​d​o​c​u​m​e​n​t​ ​v​i​s​i​b​i​l​i​t​y
+		 */
+		changeVisibility: string
 		'public': {
 			/**
 			 * P​u​b​l​i​c
@@ -583,6 +595,10 @@ type RootTranslation = {
 		 * C​a​n​n​o​t​ ​r​e​m​o​v​e​ ​t​h​i​s​ ​p​e​r​m​i​s​s​i​o​n​ ​b​e​c​a​u​s​e​ ​i​t​ ​i​s​ ​g​r​a​n​t​e​d​ ​b​y​ ​a​ ​s​h​a​r​e​ ​l​i​n​k
 		 */
 		cannot_remove_permission_reason_sharelink: string
+		/**
+		 * Y​o​u​ ​c​a​n​n​o​t​ ​p​r​o​m​o​t​e​ ​y​o​u​r​s​e​l​f​ ​t​o​ ​a​ ​p​e​r​m​a​n​e​n​t​ ​m​e​m​b​e​r
+		 */
+		cannot_promote_self: string
 		/**
 		 * T​h​e​ ​r​e​q​u​e​s​t​e​d​ ​r​e​s​o​u​r​c​e​ ​w​a​s​ ​n​o​t​ ​f​o​u​n​d
 		 */
@@ -1245,6 +1261,26 @@ type RootTranslation = {
 		 */
 		backToDocuments: string
 		/**
+		 * G​e​n​e​r​a​l
+		 */
+		general: string
+		/**
+		 * T​a​g​s
+		 */
+		tagsTab: string
+		/**
+		 * T​a​s​k​s
+		 */
+		tasksTab: string
+		/**
+		 * D​e​f​a​u​l​t​ ​M​a​x​ ​A​t​t​e​m​p​t​s
+		 */
+		defaultMaxAttempts: string
+		/**
+		 * D​e​f​a​u​l​t​ ​n​u​m​b​e​r​ ​o​f​ ​t​r​i​e​s​ ​m​e​m​b​e​r​s​ ​g​e​t​ ​p​e​r​ ​t​a​s​k​.​ ​C​a​n​ ​b​e​ ​o​v​e​r​r​i​d​d​e​n​ ​p​e​r​ ​t​a​s​k​.
+		 */
+		defaultMaxAttemptsHint: string
+		/**
 		 * D​o​c​u​m​e​n​t​ ​n​a​m​e​ ​i​s​ ​r​e​q​u​i​r​e​d
 		 */
 		nameRequired: string
@@ -1500,6 +1536,200 @@ type RootTranslation = {
 		 */
 		chooseColorNew: string
 	}
+	tasks: {
+		/**
+		 * T​a​s​k​s
+		 */
+		title: string
+		/**
+		 * A​d​d​ ​T​a​s​k
+		 */
+		addTask: string
+		/**
+		 * E​d​i​t​ ​T​a​s​k
+		 */
+		editTask: string
+		/**
+		 * Q​u​e​s​t​i​o​n​ ​*
+		 */
+		question: string
+		/**
+		 * E​n​t​e​r​ ​y​o​u​r​ ​q​u​e​s​t​i​o​n​ ​(​m​a​x​ ​5​0​0​ ​c​h​a​r​a​c​t​e​r​s​)
+		 */
+		questionPlaceholder: string
+		/**
+		 * A​n​s​w​e​r​ ​T​y​p​e
+		 */
+		answerType: string
+		/**
+		 * M​u​l​t​i​p​l​e​ ​C​h​o​i​c​e
+		 */
+		multipleChoice: string
+		/**
+		 * T​e​x​t
+		 */
+		textAnswer: string
+		/**
+		 * N​u​m​b​e​r
+		 */
+		numberAnswer: string
+		/**
+		 * O​p​t​i​o​n​s
+		 */
+		options: string
+		/**
+		 * A​d​d​ ​O​p​t​i​o​n
+		 */
+		addOption: string
+		/**
+		 * O​p​t​i​o​n​ ​t​e​x​t
+		 */
+		optionLabel: string
+		/**
+		 * M​a​r​k​ ​a​s​ ​c​o​r​r​e​c​t
+		 */
+		markCorrect: string
+		/**
+		 * C​o​r​r​e​c​t​ ​A​n​s​w​e​r
+		 */
+		correctAnswer: string
+		/**
+		 * M​a​t​c​h​ ​M​o​d​e
+		 */
+		matchMode: string
+		/**
+		 * E​x​a​c​t​ ​m​a​t​c​h
+		 */
+		exactMatch: string
+		/**
+		 * C​a​s​e​-​i​n​s​e​n​s​i​t​i​v​e
+		 */
+		caseInsensitive: string
+		/**
+		 * T​e​x​t​ ​m​u​s​t​ ​b​e​ ​i​d​e​n​t​i​c​a​l​ ​t​o​ ​t​h​e​ ​e​x​p​e​c​t​e​d​ ​a​n​s​w​e​r
+		 */
+		exactMatchHint: string
+		/**
+		 * M​a​t​c​h​i​n​g​ ​i​g​n​o​r​e​s​ ​c​a​s​e​ ​a​n​d​ ​t​r​i​m​s​ ​w​h​i​t​e​s​p​a​c​e
+		 */
+		caseInsensitiveHint: string
+		/**
+		 * S​t​r​i​n​g​ ​a​n​s​w​e​r​s​ ​a​r​e​ ​c​o​m​p​a​r​e​d​ ​u​s​i​n​g​ ​t​h​e​ ​s​e​l​e​c​t​e​d​ ​m​a​t​c​h​ ​m​o​d​e
+		 */
+		stringMatchInfo: string
+		/**
+		 * T​o​l​e​r​a​n​c​e​ ​(​±​)
+		 */
+		tolerance: string
+		/**
+		 * O​p​t​i​o​n​a​l
+		 */
+		tolerancePlaceholder: string
+		/**
+		 * P​o​i​n​t​s
+		 */
+		points: string
+		/**
+		 * M​a​x​ ​A​t​t​e​m​p​t​s
+		 */
+		maxAttempts: string
+		/**
+		 * S​e​t​ ​C​u​s​t​o​m​ ​R​e​t​r​y​ ​C​o​u​n​t
+		 */
+		customRetryCount: string
+		/**
+		 * U​s​i​n​g​ ​d​o​c​u​m​e​n​t​ ​d​e​f​a​u​l​t​ ​(​{​c​o​u​n​t​}​)
+		 * @param {number} count
+		 */
+		usingDocumentDefault: RequiredParams<'count'>
+		/**
+		 * O​r​d​e​r
+		 */
+		order: string
+		/**
+		 * T​a​s​k​ ​c​r​e​a​t​e​d​ ​s​u​c​c​e​s​s​f​u​l​l​y
+		 */
+		createSuccess: string
+		/**
+		 * T​a​s​k​ ​u​p​d​a​t​e​d​ ​s​u​c​c​e​s​s​f​u​l​l​y
+		 */
+		updateSuccess: string
+		/**
+		 * T​a​s​k​ ​d​e​l​e​t​e​d​ ​s​u​c​c​e​s​s​f​u​l​l​y
+		 */
+		deleteSuccess: string
+		/**
+		 * D​e​l​e​t​e​?
+		 */
+		deleteConfirm: string
+		/**
+		 * T​a​s​k​s​ ​r​e​o​r​d​e​r​e​d​ ​s​u​c​c​e​s​s​f​u​l​l​y
+		 */
+		reorderSuccess: string
+		/**
+		 * N​o​ ​t​a​s​k​s​ ​c​r​e​a​t​e​d​ ​y​e​t
+		 */
+		noTasks: string
+		/**
+		 * T​a​s​k​s​ ​c​a​n​ ​b​e​ ​c​o​n​f​i​g​u​r​e​d​ ​b​y​ ​g​r​o​u​p​ ​a​d​m​i​n​i​s​t​r​a​t​o​r​s​ ​i​n​ ​d​o​c​u​m​e​n​t​ ​s​e​t​t​i​n​g​s​.
+		 */
+		noTasksDescription: string
+		/**
+		 * {​c​o​u​n​t​}​/​{​t​o​t​a​l​}​ ​c​o​m​p​l​e​t​e​d
+		 * @param {number} count
+		 * @param {number} total
+		 */
+		completed: RequiredParams<'count' | 'total'>
+		/**
+		 * {​c​o​u​n​t​}​ ​t​r​{​{​y​|​i​e​s​}​}​ ​r​e​m​a​i​n​i​n​g
+		 * @param {number} count
+		 */
+		triesRemaining: RequiredParams<'count'>
+		/**
+		 * T​h​i​s​ ​i​s​ ​y​o​u​r​ ​l​a​s​t​ ​t​r​y​!
+		 */
+		lastTry: string
+		/**
+		 * C​o​n​f​i​r​m
+		 */
+		confirm: string
+		/**
+		 * C​o​r​r​e​c​t​!
+		 */
+		correct: string
+		/**
+		 * I​n​c​o​r​r​e​c​t
+		 */
+		incorrect: string
+		/**
+		 * N​o​ ​t​r​i​e​s​ ​r​e​m​a​i​n​i​n​g
+		 */
+		noTriesLeft: string
+		/**
+		 * T​h​e​ ​c​o​r​r​e​c​t​ ​a​n​s​w​e​r​ ​w​a​s​:
+		 */
+		correctAnswerWas: string
+		/**
+		 * A​n​s​w​e​r​e​d​ ​c​o​r​r​e​c​t​l​y
+		 */
+		answeredCorrectly: string
+		/**
+		 * T​a​s​k​s
+		 */
+		taskScore: string
+		/**
+		 * S​u​b​m​i​t​ ​A​n​s​w​e​r
+		 */
+		submitAnswer: string
+		/**
+		 * C​o​m​m​e​n​t​s
+		 */
+		comments: string
+		/**
+		 * C​h​a​n​g​i​n​g​ ​t​h​e​ ​a​n​s​w​e​r​ ​t​y​p​e​,​ ​c​o​r​r​e​c​t​ ​a​n​s​w​e​r​,​ ​o​r​ ​o​p​t​i​o​n​s​ ​w​i​l​l​ ​r​e​s​e​t​ ​a​l​l​ ​e​x​i​s​t​i​n​g​ ​m​e​m​b​e​r​ ​r​e​s​p​o​n​s​e​s​ ​f​o​r​ ​t​h​i​s​ ​t​a​s​k​.
+		 */
+		editAnswerWarning: string
+	}
 	passwordReset: {
 		/**
 		 * R​e​s​e​t​ ​P​a​s​s​w​o​r​d
@@ -1601,6 +1831,10 @@ type RootTranslation = {
 		 * C​o​n​f​i​r​m​ ​D​e​l​e​t​e
 		 */
 		confirmDelete: string
+		/**
+		 * T​h​i​s​ ​e​d​i​t​o​r​ ​s​u​p​p​o​r​t​s​ ​M​a​r​k​d​o​w​n​ ​f​o​r​m​a​t​t​i​n​g​.
+		 */
+		markdownHelp: string
 		/**
 		 * A​d​d​ ​r​e​a​c​t​i​o​n
 		 */
@@ -1785,6 +2019,28 @@ type RootTranslation = {
 		 * C​o​l​l​a​p​s​e​ ​c​o​m​m​e​n​t​s
 		 */
 		collapseComments: string
+		filters: {
+			/**
+			 * H​i​d​e​ ​h​i​g​h​l​i​g​h​t​s​ ​b​y​ ​t​h​i​s​ ​u​s​e​r
+			 */
+			hideHighlights: string
+			/**
+			 * C​l​e​a​r​ ​F​i​l​t​e​r
+			 */
+			clearFilter: string
+			/**
+			 * I​n​c​l​u​d​e​ ​h​i​g​h​l​i​g​h​t​s​ ​b​y​ ​t​h​i​s​ ​u​s​e​r
+			 */
+			includeHighlights: string
+			/**
+			 * U​n​p​i​n​ ​a​l​l
+			 */
+			unpinAll: string
+			/**
+			 * P​i​n​ ​a​l​l
+			 */
+			pinAll: string
+		}
 	}
 	memberScore: {
 		/**
@@ -1864,6 +2120,16 @@ type RootTranslation = {
 		 * @param {number} count
 		 */
 		nMinAgo: RequiredParams<'count'>
+		/**
+		 * T​a​s​k​s
+		 */
+		tasks: string
+		/**
+		 * {​c​o​u​n​t​}​/​{​t​o​t​a​l​}​ ​t​a​s​k​s
+		 * @param {number} count
+		 * @param {number} total
+		 */
+		tasksCompleted: RequiredParams<'count' | 'total'>
 	}
 	relativeTime: {
 		/**
@@ -1889,6 +2155,42 @@ type RootTranslation = {
 		 * @param {number} count
 		 */
 		nDaysAgo: RequiredParams<'count'>
+	}
+	datePicker: {
+		/**
+		 * S​e​l​e​c​t​ ​d​a​t​e​ ​a​n​d​ ​t​i​m​e
+		 */
+		selectDateTime: string
+		/**
+		 * C​l​e​a​r​ ​e​x​p​i​r​a​t​i​o​n​ ​(​n​e​v​e​r​ ​e​x​p​i​r​e​s​)
+		 */
+		clearExpiration: string
+	}
+	tutorial: {
+		/**
+		 * T​u​t​o​r​i​a​l​s
+		 */
+		title: string
+		/**
+		 * C​l​i​c​k​ ​t​o​ ​e​x​p​a​n​d
+		 */
+		clickToExpand: string
+		/**
+		 * P​r​e​v​i​o​u​s​ ​s​t​e​p
+		 */
+		previousStep: string
+		/**
+		 * N​e​x​t​ ​s​t​e​p
+		 */
+		nextStep: string
+		/**
+		 * C​l​o​s​e​ ​t​u​t​o​r​i​a​l
+		 */
+		closeTutorial: string
+		/**
+		 * U​s​e​ ​v​i​s​i​b​i​l​i​t​y​ ​f​i​l​t​e​r​s​ ​a​n​d​ ​p​i​n​s​ ​t​o​ ​m​a​n​a​g​e​ ​h​i​g​h​ ​c​o​m​m​e​n​t​ ​d​e​n​s​i​t​y​ ​m​o​r​e​ ​e​f​f​e​c​t​i​v​e​l​y​.
+		 */
+		densityDescription: string
 	}
 	footer: {
 		/**
@@ -2091,6 +2393,14 @@ export type TranslationFunctions = {
 	 * Save Changes
 	 */
 	saveChanges: () => LocalizedString
+	/**
+	 * Dismiss
+	 */
+	dismiss: () => LocalizedString
+	/**
+	 * Confirm delete
+	 */
+	confirmDelete: () => LocalizedString
 	dashboard: {
 		/**
 		 * Dashboard
@@ -2368,6 +2678,10 @@ export type TranslationFunctions = {
 		 * Visibility updated
 		 */
 		updated: () => LocalizedString
+		/**
+		 * Change document visibility
+		 */
+		changeVisibility: () => LocalizedString
 		'public': {
 			/**
 			 * Public
@@ -2468,6 +2782,10 @@ export type TranslationFunctions = {
 		 * Cannot remove this permission because it is granted by a share link
 		 */
 		cannot_remove_permission_reason_sharelink: () => LocalizedString
+		/**
+		 * You cannot promote yourself to a permanent member
+		 */
+		cannot_promote_self: () => LocalizedString
 		/**
 		 * The requested resource was not found
 		 */
@@ -3115,6 +3433,26 @@ export type TranslationFunctions = {
 		 */
 		backToDocuments: () => LocalizedString
 		/**
+		 * General
+		 */
+		general: () => LocalizedString
+		/**
+		 * Tags
+		 */
+		tagsTab: () => LocalizedString
+		/**
+		 * Tasks
+		 */
+		tasksTab: () => LocalizedString
+		/**
+		 * Default Max Attempts
+		 */
+		defaultMaxAttempts: () => LocalizedString
+		/**
+		 * Default number of tries members get per task. Can be overridden per task.
+		 */
+		defaultMaxAttemptsHint: () => LocalizedString
+		/**
 		 * Document name is required
 		 */
 		nameRequired: () => LocalizedString
@@ -3361,6 +3699,196 @@ export type TranslationFunctions = {
 		 */
 		chooseColorNew: () => LocalizedString
 	}
+	tasks: {
+		/**
+		 * Tasks
+		 */
+		title: () => LocalizedString
+		/**
+		 * Add Task
+		 */
+		addTask: () => LocalizedString
+		/**
+		 * Edit Task
+		 */
+		editTask: () => LocalizedString
+		/**
+		 * Question *
+		 */
+		question: () => LocalizedString
+		/**
+		 * Enter your question (max 500 characters)
+		 */
+		questionPlaceholder: () => LocalizedString
+		/**
+		 * Answer Type
+		 */
+		answerType: () => LocalizedString
+		/**
+		 * Multiple Choice
+		 */
+		multipleChoice: () => LocalizedString
+		/**
+		 * Text
+		 */
+		textAnswer: () => LocalizedString
+		/**
+		 * Number
+		 */
+		numberAnswer: () => LocalizedString
+		/**
+		 * Options
+		 */
+		options: () => LocalizedString
+		/**
+		 * Add Option
+		 */
+		addOption: () => LocalizedString
+		/**
+		 * Option text
+		 */
+		optionLabel: () => LocalizedString
+		/**
+		 * Mark as correct
+		 */
+		markCorrect: () => LocalizedString
+		/**
+		 * Correct Answer
+		 */
+		correctAnswer: () => LocalizedString
+		/**
+		 * Match Mode
+		 */
+		matchMode: () => LocalizedString
+		/**
+		 * Exact match
+		 */
+		exactMatch: () => LocalizedString
+		/**
+		 * Case-insensitive
+		 */
+		caseInsensitive: () => LocalizedString
+		/**
+		 * Text must be identical to the expected answer
+		 */
+		exactMatchHint: () => LocalizedString
+		/**
+		 * Matching ignores case and trims whitespace
+		 */
+		caseInsensitiveHint: () => LocalizedString
+		/**
+		 * String answers are compared using the selected match mode
+		 */
+		stringMatchInfo: () => LocalizedString
+		/**
+		 * Tolerance (±)
+		 */
+		tolerance: () => LocalizedString
+		/**
+		 * Optional
+		 */
+		tolerancePlaceholder: () => LocalizedString
+		/**
+		 * Points
+		 */
+		points: () => LocalizedString
+		/**
+		 * Max Attempts
+		 */
+		maxAttempts: () => LocalizedString
+		/**
+		 * Set Custom Retry Count
+		 */
+		customRetryCount: () => LocalizedString
+		/**
+		 * Using document default ({count})
+		 */
+		usingDocumentDefault: (arg: { count: number }) => LocalizedString
+		/**
+		 * Order
+		 */
+		order: () => LocalizedString
+		/**
+		 * Task created successfully
+		 */
+		createSuccess: () => LocalizedString
+		/**
+		 * Task updated successfully
+		 */
+		updateSuccess: () => LocalizedString
+		/**
+		 * Task deleted successfully
+		 */
+		deleteSuccess: () => LocalizedString
+		/**
+		 * Delete?
+		 */
+		deleteConfirm: () => LocalizedString
+		/**
+		 * Tasks reordered successfully
+		 */
+		reorderSuccess: () => LocalizedString
+		/**
+		 * No tasks created yet
+		 */
+		noTasks: () => LocalizedString
+		/**
+		 * Tasks can be configured by group administrators in document settings.
+		 */
+		noTasksDescription: () => LocalizedString
+		/**
+		 * {count}/{total} completed
+		 */
+		completed: (arg: { count: number, total: number }) => LocalizedString
+		/**
+		 * {count} tr{{y|ies}} remaining
+		 */
+		triesRemaining: (arg: { count: number }) => LocalizedString
+		/**
+		 * This is your last try!
+		 */
+		lastTry: () => LocalizedString
+		/**
+		 * Confirm
+		 */
+		confirm: () => LocalizedString
+		/**
+		 * Correct!
+		 */
+		correct: () => LocalizedString
+		/**
+		 * Incorrect
+		 */
+		incorrect: () => LocalizedString
+		/**
+		 * No tries remaining
+		 */
+		noTriesLeft: () => LocalizedString
+		/**
+		 * The correct answer was:
+		 */
+		correctAnswerWas: () => LocalizedString
+		/**
+		 * Answered correctly
+		 */
+		answeredCorrectly: () => LocalizedString
+		/**
+		 * Tasks
+		 */
+		taskScore: () => LocalizedString
+		/**
+		 * Submit Answer
+		 */
+		submitAnswer: () => LocalizedString
+		/**
+		 * Comments
+		 */
+		comments: () => LocalizedString
+		/**
+		 * Changing the answer type, correct answer, or options will reset all existing member responses for this task.
+		 */
+		editAnswerWarning: () => LocalizedString
+	}
 	passwordReset: {
 		/**
 		 * Reset Password
@@ -3462,6 +3990,10 @@ export type TranslationFunctions = {
 		 * Confirm Delete
 		 */
 		confirmDelete: () => LocalizedString
+		/**
+		 * This editor supports Markdown formatting.
+		 */
+		markdownHelp: () => LocalizedString
 		/**
 		 * Add reaction
 		 */
@@ -3642,6 +4174,28 @@ export type TranslationFunctions = {
 		 * Collapse comments
 		 */
 		collapseComments: () => LocalizedString
+		filters: {
+			/**
+			 * Hide highlights by this user
+			 */
+			hideHighlights: () => LocalizedString
+			/**
+			 * Clear Filter
+			 */
+			clearFilter: () => LocalizedString
+			/**
+			 * Include highlights by this user
+			 */
+			includeHighlights: () => LocalizedString
+			/**
+			 * Unpin all
+			 */
+			unpinAll: () => LocalizedString
+			/**
+			 * Pin all
+			 */
+			pinAll: () => LocalizedString
+		}
 	}
 	memberScore: {
 		/**
@@ -3716,6 +4270,14 @@ export type TranslationFunctions = {
 		 * {count} min ago
 		 */
 		nMinAgo: (arg: { count: number }) => LocalizedString
+		/**
+		 * Tasks
+		 */
+		tasks: () => LocalizedString
+		/**
+		 * {count}/{total} tasks
+		 */
+		tasksCompleted: (arg: { count: number, total: number }) => LocalizedString
 	}
 	relativeTime: {
 		/**
@@ -3738,6 +4300,42 @@ export type TranslationFunctions = {
 		 * {count} day{{s}} ago
 		 */
 		nDaysAgo: (arg: { count: number }) => LocalizedString
+	}
+	datePicker: {
+		/**
+		 * Select date and time
+		 */
+		selectDateTime: () => LocalizedString
+		/**
+		 * Clear expiration (never expires)
+		 */
+		clearExpiration: () => LocalizedString
+	}
+	tutorial: {
+		/**
+		 * Tutorials
+		 */
+		title: () => LocalizedString
+		/**
+		 * Click to expand
+		 */
+		clickToExpand: () => LocalizedString
+		/**
+		 * Previous step
+		 */
+		previousStep: () => LocalizedString
+		/**
+		 * Next step
+		 */
+		nextStep: () => LocalizedString
+		/**
+		 * Close tutorial
+		 */
+		closeTutorial: () => LocalizedString
+		/**
+		 * Use visibility filters and pins to manage high comment density more effectively.
+		 */
+		densityDescription: () => LocalizedString
 	}
 	footer: {
 		/**

@@ -36,6 +36,9 @@ class ScoreBreakdown(SQLModel):
     reactions_given: int
     reaction_given_points: int
     reaction_breakdown: list[ReactionBreakdownItem] = []
+    tasks_completed: int = 0
+    tasks_total: int = 0
+    task_points: int = 0
 
 
 class ScoreRead(SQLModel):

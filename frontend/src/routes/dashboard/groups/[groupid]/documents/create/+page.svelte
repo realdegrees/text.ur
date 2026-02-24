@@ -10,7 +10,7 @@
 	import Loading from '~icons/svg-spinners/90-ring-with-bg';
 	import DeleteIcon from '~icons/material-symbols/delete-outline';
 	import DragDropIcon from '~icons/material-symbols/upload-file';
-	import InfoIcon from '~icons/material-symbols/info-outline';
+	import InfoBanner from '$lib/components/InfoBanner.svelte';
 	import { notification } from '$lib/stores/notificationStore.js';
 	import { sessionStore } from '$lib/runes/session.svelte.js';
 	import MarkdownTextEditor from '$lib/components/pdf/MarkdownTextEditor.svelte';
@@ -160,17 +160,13 @@
 	<form onsubmit={handleSubmit} class="flex flex-col gap-6">
 		<!-- Error Message -->
 		{#if errorMessage}
-			<div
-				class="rounded-md border border-red-300 bg-red-100 p-3 text-red-700 dark:border-red-700 dark:bg-red-900/30 dark:text-red-300"
-			>
-				{errorMessage}
-			</div>
+			<InfoBanner variant="error">{errorMessage}</InfoBanner>
 		{/if}
 
 		<!-- File Upload Section -->
 		<div class="flex flex-col gap-2">
-			<div class="text-sm font-semibold text-text/70">{$LL.documents.documentFile()}</div>
-			<p class="text-xs text-text/50">
+			<div class="form-label">{$LL.documents.documentFile()}</div>
+			<p class="form-hint">
 				{$LL.documents.documentFileHint({ size: MAX_FILE_SIZE_MB })}
 			</p>
 
@@ -229,22 +225,20 @@
 
 		<!-- Document Name Field -->
 		<div class="flex flex-col gap-2">
-			<label for="documentName" class="text-sm font-semibold text-text/70"
-				>{$LL.documents.documentName()}</label
-			>
+			<label for="documentName" class="form-label">{$LL.documents.documentName()}</label>
 			<input
 				type="text"
 				id="documentName"
 				bind:value={documentName}
 				placeholder={$LL.documents.documentNamePlaceholder()}
-				class="rounded-lg border border-text/20 bg-inset p-3 text-sm shadow-inner focus:border-primary focus:ring-1 focus:ring-primary"
+				class="form-input"
 				required
 			/>
 		</div>
 
 		<!-- Document Description Field -->
 		<div class="flex flex-col gap-2">
-			<label for="documentDescription" class="text-sm font-semibold text-text/70">
+			<label for="documentDescription" class="form-label">
 				{$LL.documents.documentDescription()}
 			</label>
 			<MarkdownTextEditor
@@ -253,15 +247,15 @@
 				rows={4}
 				maxCommentLength={5000}
 			/>
-			<p class="text-xs text-text/50">
+			<p class="form-hint">
 				{$LL.documents.documentDescriptionHint()}
 			</p>
 		</div>
 
 		<!-- Visibility Section -->
 		<div class="flex flex-col gap-2">
-			<div class="text-sm font-semibold text-text/70">{$LL.visibility.settings()}</div>
-			<p class="text-xs text-text/50">{$LL.visibility.chooseHint()}</p>
+			<div class="form-label">{$LL.visibility.settings()}</div>
+			<p class="form-hint">{$LL.visibility.chooseHint()}</p>
 
 			<div class="flex flex-col gap-2">
 				{#each visibilityOptions as option (option.value)}
@@ -290,34 +284,25 @@
 
 		<!-- Tag Management Info -->
 		{#if sessionStore.validatePermissions(['administrator'])}
-			<div class="rounded-lg border border-primary/30 bg-primary/5 p-4">
-				<div class="flex items-start gap-3">
-					<InfoIcon class="h-5 w-5 shrink-0 text-primary" />
-					<div class="flex flex-col gap-1">
-						<p class="font-semibold text-primary">{$LL.documents.tagInfo.title()}</p>
-						<p class="text-sm text-text/80">
-							{$LL.documents.tagInfo.description()}
-						</p>
-						<p class="text-xs text-text/60">
-							{$LL.documents.tagInfo.hint()}
-						</p>
-					</div>
-				</div>
-			</div>
+			<InfoBanner variant="info" title={$LL.documents.tagInfo.title()}>
+				<p class="text-sm text-text/80">
+					{$LL.documents.tagInfo.description()}
+				</p>
+				<p class="form-hint">
+					{$LL.documents.tagInfo.hint()}
+				</p>
+			</InfoBanner>
 		{/if}
 
 		<!-- Submit Button -->
 		<div class="flex flex-row justify-end gap-2">
-			<a
-				href="/dashboard/groups/{groupId}/documents"
-				class="rounded-md bg-text/10 px-6 py-2 transition-all hover:bg-text/20"
-			>
+			<a href="/dashboard/groups/{groupId}/documents" class="btn-secondary">
 				{$LL.cancel()}
 			</a>
 			<button
 				type="submit"
 				disabled={isLoading || !selectedFile}
-				class="flex flex-row items-center gap-2 rounded-md bg-primary px-6 py-2 text-text transition-all hover:bg-primary/80 disabled:cursor-not-allowed disabled:bg-text/30"
+				class="flex btn-primary flex-row items-center gap-2"
 			>
 				{#if isLoading}
 					<Loading class="h-5 w-5" />

@@ -11,6 +11,7 @@
 	import { formatDateTime } from '$lib/util/dateFormat';
 	import { page } from '$app/stores';
 	import LL from '$i18n/i18n-svelte';
+	import Select from '$lib/components/Select.svelte';
 
 	let { data }: { data: PageData } = $props();
 
@@ -145,16 +146,12 @@
 		<!-- Document Filter + Legend Row -->
 		<div class="flex flex-wrap items-center gap-3">
 			{#if documents.length > 0}
-				<select
-					class="rounded border border-text/15 bg-inset px-3 py-1.5 text-sm text-text transition outline-none focus:border-primary/50"
-					onchange={handleDocumentChange}
-					value={selectedDocumentId ?? ''}
-				>
+				<Select onchange={handleDocumentChange} value={selectedDocumentId ?? ''}>
 					<option value="">{$LL.memberScore.allDocuments()}</option>
 					{#each documents as doc (doc.id)}
 						<option value={doc.id}>{doc.name}</option>
 					{/each}
-				</select>
+				</Select>
 			{/if}
 
 			<button
@@ -196,11 +193,15 @@
 										>{scoreConfig?.comment_points ?? 5}</td
 									>
 								</tr>
-								<tr>
+								<tr class="border-b border-text/5">
 									<td class="py-1.5">{$LL.groupSettings.scoring.addTag()}</td>
 									<td class="py-1.5 text-right font-medium text-text/80"
 										>{scoreConfig?.tag_points ?? 2}</td
 									>
+								</tr>
+								<tr>
+									<td class="py-1.5">{$LL.memberScore.tasks()}</td>
+									<td class="py-1.5 text-right text-text/50 italic">variable</td>
 								</tr>
 							</tbody>
 						</table>
@@ -273,6 +274,32 @@
 				</div>
 			{/each}
 		</div>
+
+		<!-- Tasks Breakdown -->
+		{#if score.breakdown.tasks_total && score.breakdown.tasks_total > 0}
+			<div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3" class:opacity-50={loading}>
+				<div class="rounded-lg border border-text/10 bg-text/[0.02] p-3">
+					<div class="flex items-center gap-2">
+						<span class="text-lg">{'\u{1F4CB}'}</span>
+						<span class="text-sm font-medium text-text/70">{$LL.memberScore.tasks()}</span>
+					</div>
+					<div class="mt-2 flex items-baseline justify-between">
+						<div class="flex flex-col">
+							<span class="text-2xl font-bold">{score.breakdown.tasks_completed ?? 0}</span>
+							<span class="text-[11px] text-text/40">
+								{$LL.memberScore.tasksCompleted({
+									count: score.breakdown.tasks_completed ?? 0,
+									total: score.breakdown.tasks_total
+								})}
+							</span>
+						</div>
+						<span class="text-sm text-text/40"
+							>{score.breakdown.task_points ?? 0} {$LL.points()}</span
+						>
+					</div>
+				</div>
+			</div>
+		{/if}
 
 		<!-- Per-Reaction Breakdown -->
 		{#if reactionBreakdown.length > 0}

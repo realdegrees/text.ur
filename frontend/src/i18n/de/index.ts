@@ -49,6 +49,8 @@ const de = {
 	points: 'Pkt.',
 	builtWith: 'Erstellt mit',
 	saveChanges: 'Änderungen speichern',
+	dismiss: 'Verwerfen',
+	confirmDelete: 'Löschen bestätigen',
 
 	// Dashboard
 	dashboard: {
@@ -154,6 +156,7 @@ const de = {
 		chooseHint:
 			'Wählen Sie, wer dieses Dokument sehen kann',
 		updated: 'Sichtbarkeit aktualisiert',
+		changeVisibility: 'Dokumentsichtbarkeit ändern',
 		public: {
 			label: 'Öffentlich',
 			description:
@@ -203,6 +206,8 @@ const de = {
 			'Diese Berechtigung kann nicht entfernt werden, da sie in den Standardberechtigungen der Gruppe enthalten ist',
 		cannot_remove_permission_reason_sharelink:
 			'Diese Berechtigung kann nicht entfernt werden, da sie durch einen Freigabelink gewährt wird',
+		cannot_promote_self:
+			'Sie können sich nicht selbst zu einem dauerhaften Mitglied befördern',
 		not_found:
 			'Die angeforderte Ressource wurde nicht gefunden',
 		self_reaction:
@@ -468,6 +473,11 @@ const de = {
 	documentSettings: {
 		title: 'Dokumenteinstellungen',
 		backToDocuments: 'Zurück zu Dokumenten',
+		general: 'Allgemein',
+		tagsTab: 'Tags',
+		tasksTab: 'Aufgaben',
+		defaultMaxAttempts: 'Standard Max. Versuche',
+		defaultMaxAttemptsHint: 'Standardanzahl der Versuche pro Aufgabe. Kann pro Aufgabe überschrieben werden.',
 		nameRequired: 'Dokumentname ist erforderlich',
 		updateSuccess:
 			'Dokument erfolgreich aktualisiert',
@@ -555,6 +565,59 @@ const de = {
 		chooseColorNew: 'Farbe für neuen Tag auswählen'
 	},
 
+	// Tasks
+	tasks: {
+		title: 'Aufgaben',
+		addTask: 'Aufgabe hinzufügen',
+		editTask: 'Aufgabe bearbeiten',
+		question: 'Frage *',
+		questionPlaceholder: 'Geben Sie Ihre Frage ein (max. 500 Zeichen)',
+		answerType: 'Antworttyp',
+		multipleChoice: 'Mehrfachauswahl',
+		textAnswer: 'Text',
+		numberAnswer: 'Zahl',
+		options: 'Optionen',
+		addOption: 'Option hinzufügen',
+		optionLabel: 'Optionstext',
+		markCorrect: 'Als richtig markieren',
+		correctAnswer: 'Richtige Antwort',
+		matchMode: 'Abgleichmodus',
+		exactMatch: 'Exakte Übereinstimmung',
+		caseInsensitive: 'Groß-/Kleinschreibung ignorieren',
+		exactMatchHint: 'Text muss identisch mit der erwarteten Antwort sein',
+		caseInsensitiveHint: 'Abgleich ignoriert Groß-/Kleinschreibung und entfernt Leerzeichen',
+		stringMatchInfo: 'Textantworten werden mit dem ausgewählten Abgleichmodus verglichen',
+		tolerance: 'Toleranz (\u{00B1})',
+		tolerancePlaceholder: 'Optional',
+		points: 'Punkte',
+		maxAttempts: 'Max. Versuche',
+		customRetryCount: 'Eigene Versuchsanzahl festlegen',
+		usingDocumentDefault: 'Verwendet Dokument-Standard ({count})',
+		order: 'Reihenfolge',
+		createSuccess: 'Aufgabe erfolgreich erstellt',
+		updateSuccess: 'Aufgabe erfolgreich aktualisiert',
+		deleteSuccess: 'Aufgabe erfolgreich gelöscht',
+		deleteConfirm: 'Löschen?',
+		reorderSuccess: 'Aufgaben erfolgreich neu geordnet',
+		noTasks: 'Noch keine Aufgaben erstellt',
+		noTasksDescription: 'Aufgaben können von Gruppenadministratoren in den Dokumenteinstellungen konfiguriert werden.',
+		// Member-facing
+		completed: '{count}/{total} abgeschlossen',
+		triesRemaining: '{count} Versuch{{e}} übrig',
+		lastTry: 'Dies ist Ihr letzter Versuch!',
+		confirm: 'Bestätigen',
+		correct: 'Richtig!',
+		incorrect: 'Falsch',
+		noTriesLeft: 'Keine Versuche übrig',
+		correctAnswerWas: 'Die richtige Antwort war:',
+		answeredCorrectly: 'Richtig beantwortet',
+		taskScore: 'Aufgaben',
+		submitAnswer: 'Antwort abgeben',
+		comments: 'Kommentare',
+		editAnswerWarning:
+			'Das Ändern des Antworttyps, der richtigen Antwort oder der Optionen setzt alle bestehenden Antworten der Mitglieder für diese Aufgabe zurück.'
+	},
+
 	// Password reset
 	passwordReset: {
 		requestTitle: 'Passwort zurücksetzen',
@@ -598,6 +661,7 @@ const de = {
 		sending: 'Senden...',
 		deleteConfirm: 'Löschen?',
 		confirmDelete: 'Löschen bestätigen',
+		markdownHelp: 'Dieser Editor unterstützt Markdown-Formatierung.',
 		addReaction: 'Reaktion hinzufügen',
 		removeReaction: 'Reaktion entfernen',
 		nReplies: '{count} Antwort{{en}}',
@@ -659,7 +723,14 @@ const de = {
 		noPinnedComments: 'Keine angehefteten Kommentare',
 		noComments: 'Keine Kommentare',
 		expandComments: 'Kommentare ausklappen',
-		collapseComments: 'Kommentare einklappen'
+		collapseComments: 'Kommentare einklappen',
+		filters: {
+			hideHighlights: 'Hervorhebungen dieses Benutzers ausblenden',
+			clearFilter: 'Filter löschen',
+			includeHighlights: 'Hervorhebungen dieses Benutzers einblenden',
+			unpinAll: 'Alle lösen',
+			pinAll: 'Alle anheften',
+		},
 	},
 
 	// Score / member detail page
@@ -682,7 +753,9 @@ const de = {
 		given: '{count} gegeben',
 		justNow: 'gerade eben',
 		oneMinAgo: 'vor 1 Min.',
-		nMinAgo: 'vor {count} Min.'
+		nMinAgo: 'vor {count} Min.',
+		tasks: 'Aufgaben',
+		tasksCompleted: '{count}/{total} Aufgaben'
 	},
 
 	// Relative time
@@ -692,6 +765,22 @@ const de = {
 		nMinutesAgo: 'vor {count} Minute{{n}}',
 		nHoursAgo: 'vor {count} Stunde{{n}}',
 		nDaysAgo: 'vor {count} Tag{{en}}'
+	},
+
+	// Date picker
+	datePicker: {
+		selectDateTime: 'Datum und Uhrzeit auswählen',
+		clearExpiration: 'Ablaufdatum entfernen (läuft nie ab)',
+	},
+
+	// Tutorial
+	tutorial: {
+		title: 'Anleitungen',
+		clickToExpand: 'Klicken zum Vergrößern',
+		previousStep: 'Vorheriger Schritt',
+		nextStep: 'Nächster Schritt',
+		closeTutorial: 'Anleitung schließen',
+		densityDescription: 'Nutzen Sie Sichtbarkeitsfilter und Pins, um hohe Kommentardichten effektiver zu verwalten.',
 	},
 
 	// Footer

@@ -48,6 +48,8 @@ const en = {
 	points: 'pts',
 	builtWith: 'Built with',
 	saveChanges: 'Save Changes',
+	dismiss: 'Dismiss',
+	confirmDelete: 'Confirm delete',
 
 	// Dashboard
 	dashboard: {
@@ -143,6 +145,7 @@ const en = {
 		settings: 'Visibility Settings',
 		chooseHint: 'Choose who can view this document',
 		updated: 'Visibility updated',
+		changeVisibility: 'Change document visibility',
 		public: {
 			label: 'Public',
 			description: 'Anyone in the group can view this document'
@@ -183,6 +186,8 @@ const en = {
 			"Cannot remove this permission because it is included in the group's default permissions",
 		cannot_remove_permission_reason_sharelink:
 			'Cannot remove this permission because it is granted by a share link',
+		cannot_promote_self:
+			'You cannot promote yourself to a permanent member',
 		not_found: 'The requested resource was not found',
 		self_reaction: 'You cannot react to your own comment',
 		reply_reaction:
@@ -424,6 +429,11 @@ const en = {
 	documentSettings: {
 		title: 'Document Settings',
 		backToDocuments: 'Back to documents',
+		general: 'General',
+		tagsTab: 'Tags',
+		tasksTab: 'Tasks',
+		defaultMaxAttempts: 'Default Max Attempts',
+		defaultMaxAttemptsHint: 'Default number of tries members get per task. Can be overridden per task.',
 		nameRequired: 'Document name is required',
 		updateSuccess: 'Document updated successfully',
 		savingButton: 'Saving...',
@@ -506,6 +516,59 @@ const en = {
 		chooseColorNew: 'Choose color for new tag'
 	},
 
+	// Tasks
+	tasks: {
+		title: 'Tasks',
+		addTask: 'Add Task',
+		editTask: 'Edit Task',
+		question: 'Question *',
+		questionPlaceholder: 'Enter your question (max 500 characters)',
+		answerType: 'Answer Type',
+		multipleChoice: 'Multiple Choice',
+		textAnswer: 'Text',
+		numberAnswer: 'Number',
+		options: 'Options',
+		addOption: 'Add Option',
+		optionLabel: 'Option text',
+		markCorrect: 'Mark as correct',
+		correctAnswer: 'Correct Answer',
+		matchMode: 'Match Mode',
+		exactMatch: 'Exact match',
+		caseInsensitive: 'Case-insensitive',
+		exactMatchHint: 'Text must be identical to the expected answer',
+		caseInsensitiveHint: 'Matching ignores case and trims whitespace',
+		stringMatchInfo: 'String answers are compared using the selected match mode',
+		tolerance: 'Tolerance (\u{00B1})',
+		tolerancePlaceholder: 'Optional',
+		points: 'Points',
+		maxAttempts: 'Max Attempts',
+		customRetryCount: 'Set Custom Retry Count',
+		usingDocumentDefault: 'Using document default ({count:number})',
+		order: 'Order',
+		createSuccess: 'Task created successfully',
+		updateSuccess: 'Task updated successfully',
+		deleteSuccess: 'Task deleted successfully',
+		deleteConfirm: 'Delete?',
+		reorderSuccess: 'Tasks reordered successfully',
+		noTasks: 'No tasks created yet',
+		noTasksDescription: 'Tasks can be configured by group administrators in document settings.',
+		// Member-facing
+		completed: '{count:number}/{total:number} completed',
+		triesRemaining: '{count:number} tr{{y|ies}} remaining',
+		lastTry: 'This is your last try!',
+		confirm: 'Confirm',
+		correct: 'Correct!',
+		incorrect: 'Incorrect',
+		noTriesLeft: 'No tries remaining',
+		correctAnswerWas: 'The correct answer was:',
+		answeredCorrectly: 'Answered correctly',
+		taskScore: 'Tasks',
+		submitAnswer: 'Submit Answer',
+		comments: 'Comments',
+		editAnswerWarning:
+			'Changing the answer type, correct answer, or options will reset all existing member responses for this task.'
+	},
+
 	// Password reset
 	passwordReset: {
 		requestTitle: 'Reset Password',
@@ -547,6 +610,7 @@ const en = {
 		sending: 'Sending...',
 		deleteConfirm: 'Delete?',
 		confirmDelete: 'Confirm Delete',
+		markdownHelp: 'This editor supports Markdown formatting.',
 		addReaction: 'Add reaction',
 		removeReaction: 'Remove reaction',
 		nReplies: '{count:number} repl{{y|ies}}',
@@ -607,7 +671,14 @@ const en = {
 		noPinnedComments: 'No pinned comments',
 		noComments: 'No comments',
 		expandComments: 'Expand comments',
-		collapseComments: 'Collapse comments'
+		collapseComments: 'Collapse comments',
+		filters: {
+			hideHighlights: 'Hide highlights by this user',
+			clearFilter: 'Clear Filter',
+			includeHighlights: 'Include highlights by this user',
+			unpinAll: 'Unpin all',
+			pinAll: 'Pin all',
+		},
 	},
 
 	// Score / member detail page
@@ -630,7 +701,9 @@ const en = {
 		given: '{count:number} given',
 		justNow: 'just now',
 		oneMinAgo: '1 min ago',
-		nMinAgo: '{count:number} min ago'
+		nMinAgo: '{count:number} min ago',
+		tasks: 'Tasks',
+		tasksCompleted: '{count:number}/{total:number} tasks'
 	},
 
 	// Relative time
@@ -640,6 +713,22 @@ const en = {
 		nMinutesAgo: '{count:number} minute{{s}} ago',
 		nHoursAgo: '{count:number} hour{{s}} ago',
 		nDaysAgo: '{count:number} day{{s}} ago'
+	},
+
+	// Date picker
+	datePicker: {
+		selectDateTime: 'Select date and time',
+		clearExpiration: 'Clear expiration (never expires)',
+	},
+
+	// Tutorial
+	tutorial: {
+		title: 'Tutorials',
+		clickToExpand: 'Click to expand',
+		previousStep: 'Previous step',
+		nextStep: 'Next step',
+		closeTutorial: 'Close tutorial',
+		densityDescription: 'Use visibility filters and pins to manage high comment density more effectively.',
 	},
 
 	// Footer

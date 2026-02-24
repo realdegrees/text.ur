@@ -7,6 +7,7 @@
 	import ClearFilterIcon from '~icons/mdi/filter-remove-outline';
 	import PinIcon from '~icons/mdi/pin';
 	import PinOutlineIcon from '~icons/mdi/pin-outline';
+	import LL from '$i18n/i18n-svelte';
 
 	type FilterData = TFilterState extends FilterState<infer U> ? U : never;
 
@@ -46,7 +47,7 @@
 {#snippet filterStateElement(hovered: boolean, filterState: FilterState<FilterData>)}
 	{#if filterState?.value === 'include'}
 		{#if hovered}
-			<div title="Hide highlights by this user" class="opacity-70">
+			<div title={$LL.pdf.filters.hideHighlights()} class="opacity-70">
 				<EyeClosed />
 			</div>
 		{:else}
@@ -56,7 +57,7 @@
 		{/if}
 	{:else if filterState?.value === 'exclude'}
 		{#if hovered}
-			<div title="Clear Filter" class="opacity-70">
+			<div title={$LL.pdf.filters.clearFilter()} class="opacity-70">
 				<ClearFilterIcon />
 			</div>
 		{:else}
@@ -65,7 +66,7 @@
 			</div>
 		{/if}
 	{:else if hovered}
-		<div title="Include highlights by this user" class="opacity-70">
+		<div title={$LL.pdf.filters.includeHighlights()} class="opacity-70">
 			<EyeOpen />
 		</div>
 	{/if}
@@ -146,7 +147,9 @@
 								<div class="flex items-center gap-1">
 									<button
 										class="cursor-pointer rounded p-1 transition-colors hover:bg-text/10 hover:text-text"
-										title={pinStatus.anyPinned ? 'Unpin all' : 'Pin all'}
+										title={pinStatus.anyPinned
+											? $LL.pdf.filters.unpinAll()
+											: $LL.pdf.filters.pinAll()}
 										onclick={(e) =>
 											handlePinClick(e, filter as unknown as FilterState, !pinStatus.anyPinned)}
 									>

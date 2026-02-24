@@ -5,9 +5,9 @@
 	import { LL } from '$i18n/i18n-svelte';
 	import Field from '$lib/components/advancedInput.svelte';
 	import ConfirmButton from '$lib/components/ConfirmButton.svelte';
+	import DangerZone from '$lib/components/DangerZone.svelte';
 	import Loading from '~icons/svg-spinners/90-ring-with-bg';
 	import LogoutIcon from '~icons/mdi/exit-run';
-	import DeleteIcon from '~icons/material-symbols/delete-outline';
 	import type { UserUpdate, UserPrivate } from '$api/types';
 
 	let { data } = $props();
@@ -33,16 +33,9 @@
 	let isUpgrading = $state(false);
 
 	// Delete account state
-	let showDeleteConfirm = $state(false);
-	let deleteConfirmText = $state('');
 	let isDeleting = $state(false);
 
 	async function handleDeleteAccount(): Promise<void> {
-		if (deleteConfirmText !== data.sessionUser.username) {
-			notification('error', $LL.userSettings.danger.nameDoesNotMatch());
-			return;
-		}
-
 		isDeleting = true;
 
 		try {
@@ -222,7 +215,7 @@
 				<h2 class="mb-4 text-xl font-semibold text-text">
 					{$LL.userSettings.upgradeAccount.title()}
 				</h2>
-				<p class="text-muted mb-4 text-sm">
+				<p class="mb-4 text-muted text-sm">
 					{$LL.userSettings.upgradeAccount.description()}
 				</p>
 
@@ -254,11 +247,7 @@
 						required
 					/>
 
-					<button
-						type="submit"
-						disabled={isUpgrading}
-						class="w-full rounded bg-primary px-4 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:bg-gray-400 dark:disabled:bg-gray-600"
-					>
+					<button type="submit" disabled={isUpgrading} class="w-full btn-primary py-3">
 						{#if isUpgrading}
 							<Loading class="m-auto" />
 						{:else}
@@ -345,11 +334,7 @@
 			{/if}
 
 			<!-- Save Button (outside cards) -->
-			<button
-				type="submit"
-				disabled={isUpdating}
-				class="w-full rounded bg-primary px-4 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:bg-gray-400 dark:disabled:bg-gray-600"
-			>
+			<button type="submit" disabled={isUpdating} class="w-full btn-primary py-3">
 				{#if isUpdating}
 					<Loading class="m-auto" />
 				{:else}
@@ -360,68 +345,17 @@
 
 		<!-- Danger Zone (non-guest users only) -->
 		{#if !data.sessionUser.is_guest}
-			<div
-				class="mt-2 flex w-full flex-col gap-4 rounded-lg border border-red-500/30 bg-red-500/5 p-6"
-			>
-				<h2 class="text-lg font-semibold text-red-500">
-					{$LL.userSettings.danger.title()}
-				</h2>
-				<p class="text-sm text-text/70">
-					{$LL.userSettings.danger.description()}
-				</p>
-
-				{#if !showDeleteConfirm}
-					<button
-						type="button"
-						onclick={() => (showDeleteConfirm = true)}
-						class="flex w-fit flex-row items-center gap-2 rounded-md bg-red-500/20 px-4 py-2 transition-all hover:bg-red-500/30"
-					>
-						<DeleteIcon class="h-5 w-5" />
-						<span>{$LL.userSettings.danger.deleteButton()}</span>
-					</button>
-				{:else}
-					<div class="flex flex-col gap-3 rounded-md bg-red-500/10 p-4">
-						<p class="font-semibold text-red-500">
-							{$LL.userSettings.danger.confirmTitle()}
-						</p>
-						<p class="text-sm text-text/70">
-							{$LL.userSettings.danger.confirmMessage({
-								name: data.sessionUser.username
-							})}
-						</p>
-						<input
-							type="text"
-							bind:value={deleteConfirmText}
-							placeholder={data.sessionUser.username}
-							class="rounded-md border border-red-500/30 bg-text/5 px-4 py-2 transition-colors focus:border-red-500/50 focus:outline-none"
-						/>
-						<div class="flex flex-row gap-2">
-							<button
-								type="button"
-								onclick={handleDeleteAccount}
-								disabled={deleteConfirmText !== data.sessionUser.username || isDeleting}
-								class="rounded bg-red-500/30 px-4 py-2 font-semibold transition hover:bg-red-500/40 disabled:cursor-not-allowed disabled:opacity-50"
-							>
-								{#if isDeleting}
-									<Loading class="m-auto" />
-								{:else}
-									{$LL.userSettings.danger.deleteButton()}
-								{/if}
-							</button>
-							<button
-								type="button"
-								onclick={() => {
-									showDeleteConfirm = false;
-									deleteConfirmText = '';
-								}}
-								class="rounded bg-text/10 px-4 py-2 font-semibold transition hover:bg-text/20"
-							>
-								{$LL.cancel()}
-							</button>
-						</div>
-					</div>
-				{/if}
-			</div>
+			<DangerZone
+				title={$LL.userSettings.danger.title()}
+				description={$LL.userSettings.danger.description()}
+				actionLabel={$LL.userSettings.danger.deleteButton()}
+				confirmText={data.sessionUser.username}
+				confirmTitle={$LL.userSettings.danger.confirmTitle()}
+				confirmPrompt={$LL.userSettings.danger.confirmMessage({ name: data.sessionUser.username })}
+				onConfirm={handleDeleteAccount}
+				loading={isDeleting}
+				class="mt-2 w-full"
+			/>
 		{/if}
 	</div>
 </div>

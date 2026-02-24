@@ -25,13 +25,23 @@ export type AppErrorCode =
   | "owner_cannot_leave_group"
   | "cannot_remove_permission_reason_default_group"
   | "cannot_remove_permission_reason_sharelink"
+  | "cannot_promote_self"
   | "not_found"
   | "self_reaction"
   | "reply_reaction"
   | "rate_limited"
   | "username_taken"
   | "email_taken"
-  | "sharelink_anonymous_disabled";
+  | "sharelink_anonymous_disabled"
+  | "storage_unavailable"
+  | "file_not_found"
+  | "already_exists"
+  | "token_already_used"
+  | "mail_send_failed"
+  | "task_already_correct"
+  | "task_no_attempts_left"
+  | "already_verified"
+  | "must_transfer_ownership";
 /**
  * Visibility levels for comments.
  */
@@ -93,6 +103,14 @@ export type ViewMode = "restricted" | "public";
  * ADMINISTRATOR.
  */
 export type Permission = "administrator" | "add_comments" | "view_restricted_comments" | "add_reactions";
+/**
+ * Supported answer types for document tasks.
+ */
+export type AnswerType = "multiple_choice" | "string" | "number";
+/**
+ * Matching modes for string-type task answers.
+ */
+export type StringMatchMode = "exact" | "case_insensitive";
 
 export interface Annotation {
   text: string;
@@ -229,6 +247,7 @@ export interface Document {
   visibility?: DocumentVisibility;
   view_mode?: ViewMode;
   secret?: string;
+  default_max_attempts?: number;
   group_id: string;
 }
 export interface DocumentCreate {
@@ -236,6 +255,7 @@ export interface DocumentCreate {
   name: string;
   description?: string | null;
   group_id: string;
+  default_max_attempts?: number;
 }
 export interface DocumentFilter {
   size_bytes: number;
@@ -251,10 +271,8 @@ export interface DocumentRead {
   visibility: DocumentVisibility;
   description: string | null;
   view_mode: ViewMode;
+  default_max_attempts: number;
   tags: TagRead[];
-}
-export interface DocumentTransfer {
-  group_id: string;
 }
 /**
  * The payload of a client facing JWT, signed with the global secret.
@@ -462,6 +480,9 @@ export interface ScoreBreakdown {
   reactions_given: number;
   reaction_given_points: number;
   reaction_breakdown?: ReactionBreakdownItem[];
+  tasks_completed?: number;
+  tasks_total?: number;
+  task_points?: number;
 }
 /**
  * Per-group scoring configuration for highlights, comments, and tags.
@@ -569,6 +590,168 @@ export interface TagUpdate {
   label?: string | null;
   description?: string | null;
   color?: string | null;
+}
+export interface Task {
+  created_at?: string;
+  updated_at?: string;
+  id?: number;
+  document_id: string;
+  question: string;
+  answer_type: AnswerType;
+  correct_string_answer?: string | null;
+  correct_number_answer?: number | null;
+  number_tolerance?: number | null;
+  string_match_mode?: StringMatchMode;
+  points?: number;
+  order?: number;
+  max_attempts?: number;
+}
+/**
+ * Admin read schema for a task (includes correct answers).
+ */
+export interface TaskAdminRead {
+  created_at?: string;
+  updated_at?: string;
+  id: number;
+  document_id: string;
+  question: string;
+  answer_type: AnswerType;
+  correct_string_answer: string | null;
+  correct_number_answer: number | null;
+  number_tolerance: number | null;
+  string_match_mode: StringMatchMode;
+  points: number;
+  order: number;
+  max_attempts: number;
+  options: TaskOptionRead[];
+}
+/**
+ * Admin read schema for a task option (includes correctness).
+ */
+export interface TaskOptionRead {
+  created_at?: string;
+  updated_at?: string;
+  id: number;
+  label: string;
+  is_correct: boolean;
+  order: number;
+}
+/**
+ * Create schema for a document task.
+ */
+export interface TaskCreate {
+  question: string;
+  answer_type: AnswerType;
+  correct_string_answer?: string | null;
+  correct_number_answer?: number | null;
+  number_tolerance?: number | null;
+  string_match_mode?: StringMatchMode;
+  points?: number;
+  order?: number;
+  max_attempts?: number;
+  options?: TaskOptionCreate[];
+}
+/**
+ * Create schema for a multiple-choice option.
+ */
+export interface TaskOptionCreate {
+  label: string;
+  is_correct?: boolean;
+  order?: number;
+}
+export interface TaskOption {
+  created_at?: string;
+  updated_at?: string;
+  id?: number;
+  task_id: number;
+  label: string;
+  is_correct?: boolean;
+  order?: number;
+}
+/**
+ * Member read schema for a task option (no correctness info).
+ */
+export interface TaskOptionMemberRead {
+  id: number;
+  label: string;
+  order: number;
+}
+/**
+ * Member read schema for a task (no correct answers).
+ */
+export interface TaskRead {
+  created_at?: string;
+  updated_at?: string;
+  id: number;
+  document_id: string;
+  question: string;
+  answer_type: AnswerType;
+  string_match_mode: StringMatchMode;
+  points: number;
+  order: number;
+  max_attempts: number;
+  options: TaskOptionMemberRead[];
+}
+/**
+ * Schema for bulk reordering tasks.
+ */
+export interface TaskReorder {
+  task_ids: number[];
+}
+export interface TaskResponse {
+  created_at?: string;
+  updated_at?: string;
+  task_id: number;
+  user_id: number;
+  answer?: {
+    [k: string]: unknown;
+  };
+  is_correct?: boolean;
+  attempts?: number;
+}
+/**
+ * Create/update schema for a user's task response.
+ */
+export interface TaskResponseCreate {
+  selected_option_ids?: number[] | null;
+  text?: string | null;
+  value?: number | null;
+}
+/**
+ * Read schema for a user's task response.
+ */
+export interface TaskResponseRead {
+  task_id: number;
+  user_id: number;
+  answer: {
+    [k: string]: unknown;
+  };
+  is_correct: boolean;
+  attempts: number;
+  correct_answer?: {
+    [k: string]: unknown;
+  } | null;
+}
+/**
+ * Update schema for a document task (all fields optional).
+ */
+export interface TaskUpdate {
+  question?: string | null;
+  answer_type?: AnswerType | null;
+  correct_string_answer?: string | null;
+  correct_number_answer?: number | null;
+  number_tolerance?: number | null;
+  string_match_mode?: StringMatchMode | null;
+  points?: number | null;
+  order?: number | null;
+  max_attempts?: number | null;
+  options?: TaskOptionCreate[] | null;
+}
+/**
+ * Event payload for task configuration changes.
+ */
+export interface TasksUpdatedEvent {
+  document_id: string;
 }
 /**
  * A token object that contains the access and refresh tokens.

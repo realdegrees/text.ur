@@ -4,6 +4,7 @@
 	import { SvelteSet } from 'svelte/reactivity';
 	import ChevronDown from '~icons/material-symbols/keyboard-arrow-down';
 	import { infiniteScroll } from '$lib/util/infiniteScroll.svelte';
+	import LL from '$i18n/i18n-svelte';
 
 	type ColumnConfig<T> = {
 		label: string;
@@ -86,7 +87,7 @@
 	<!-- Fixed Table Header -->
 	<div class="sticky top-0 z-10 shadow-sm {headerBgClass}">
 		<div
-			class="grid items-center gap-3 border-b border-gray-300 px-4 py-2 text-xs font-semibold tracking-wide text-gray-600 uppercase"
+			class="grid items-center gap-3 border-b border-text/20 px-4 py-2 text-xs font-semibold tracking-wide text-text/60 uppercase"
 			style="grid-template-columns: {selectable ? '30px ' : ''}{columnConfigs
 				.map((c) => c.width)
 				.join(' ')};"
@@ -159,7 +160,7 @@
 
 		{#if scroll.loadingMore}
 			<div class="flex w-full items-center justify-center py-4">
-				<div class="text-sm text-gray-500">Loading...</div>
+				<div class="text-sm text-text/50">{$LL.loading()}</div>
 			</div>
 		{/if}
 	</div>

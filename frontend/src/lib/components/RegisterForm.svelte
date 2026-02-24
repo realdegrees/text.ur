@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Field from '$lib/components/advancedInput.svelte';
+	import InfoBanner from '$lib/components/InfoBanner.svelte';
 	import Loading from '~icons/svg-spinners/90-ring-with-bg';
 	import { api } from '$api/client';
 
@@ -51,10 +52,10 @@
 
 <form onsubmit={handleRegister} class="flex flex-col gap-4">
 	{#if errorMessage}
-		<div class="error-message">{errorMessage}</div>
+		<InfoBanner variant="error">{errorMessage}</InfoBanner>
 	{/if}
 	{#if successMessage}
-		<div class="success-message">{successMessage}</div>
+		<InfoBanner variant="info">{successMessage}</InfoBanner>
 	{/if}
 	<Field bind:value={username} label="Username" required />
 	<Field bind:value={email} label="Email" required />
@@ -65,7 +66,7 @@
 
 	<Field bind:value={password} label="Password" hidden required />
 	<Field bind:value={confirmPassword} label="Confirm Password" hidden required />
-	<button type="submit" class="submit-button" disabled={isLoading}>
+	<button type="submit" class="w-full btn-primary py-3" disabled={isLoading}>
 		{#if isLoading}
 			<Loading />
 		{:else}
@@ -73,26 +74,3 @@
 		{/if}
 	</button>
 </form>
-
-<style>
-	.error-message {
-		color: red;
-		font-size: 0.875rem;
-	}
-	.success-message {
-		color: green;
-		font-size: 0.875rem;
-	}
-	.submit-button {
-		background-color: var(--color-primary);
-		color: white;
-		padding: 0.75rem;
-		border-radius: 0.375rem;
-		font-weight: bold;
-		cursor: pointer;
-	}
-	.submit-button:disabled {
-		background-color: gray;
-		cursor: not-allowed;
-	}
-</style>

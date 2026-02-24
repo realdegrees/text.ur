@@ -22,6 +22,7 @@ from api.routers.memberships import membership_router as MembershipRouter
 from api.routers.register import router as RegisterRouter
 from api.routers.sharelinks import root_router as ShareLinkRouter
 from api.routers.tags import router as TagRouter
+from api.routers.tasks import router as TaskRouter
 from api.routers.users import router as UserRouter
 from core import config
 from core.app_exception import AppException
@@ -45,7 +46,7 @@ from util.api_router import APIRouter
 from util.ip import get_client_ip
 from util.openapi import custom_openapi
 
-routers = [RegisterRouter, LoginRouter, LogoutRouter, UserRouter, MembershipRouter, GroupRouter, ShareLinkRouter, DocumentsRouter, CommentRouter, TagRouter]
+routers = [RegisterRouter, LoginRouter, LogoutRouter, UserRouter, MembershipRouter, GroupRouter, ShareLinkRouter, DocumentsRouter, CommentRouter, TagRouter, TaskRouter]
 
 logger = get_logger("requests")
 app_logger = get_logger("app")

@@ -341,6 +341,7 @@
 			pendingSelection = null;
 
 			if (!id) return;
+			documentStore.activeTab = 'comments';
 			documentStore.activeCommentId = id;
 			const state = documentStore.comments.getState(id);
 

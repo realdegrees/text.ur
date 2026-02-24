@@ -122,7 +122,7 @@
 				<p class="text-text">{$LL.new()}</p>
 			</a>
 		</div>
-		<hr class="border-text/50" />
+		<hr class="border-text/20" />
 	{/if}
 	<InfiniteScrollList {data} {loadMore} step={2} onSelect={handleSelect}>
 		{#snippet itemSnippet(membership: Omit<MembershipRead, 'user'>)}
@@ -181,7 +181,7 @@
 	<div class="flex flex-row items-center justify-between">
 		<h2 class="w-full text-left text-xl">{$LL.invitations()}</h2>
 	</div>
-	<hr class="border-text/50" />
+	<hr class="border-text/20" />
 	<InfiniteScrollList {data} {loadMore} step={50}>
 		{#snippet itemSnippet(invitation: Omit<MembershipRead, 'user'>)}
 			<div

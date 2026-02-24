@@ -66,9 +66,25 @@ from models.tables import (
     GroupReaction,
     Membership,
     ScoreConfig,
+    Task,
+    TaskOption,
+    TaskResponse,
     User,
 )
 from models.tag import TagCreate, TagRead, TagUpdate
+from models.task import (
+    TaskAdminRead,
+    TaskCreate,
+    TaskOptionCreate,
+    TaskOptionMemberRead,
+    TaskOptionRead,
+    TaskRead,
+    TaskReorder,
+    TaskResponseCreate,
+    TaskResponseRead,
+    TasksUpdatedEvent,
+    TaskUpdate,
+)
 from models.user import UserCreate, UserPrivate, UserRead, UserUpdate
 
 # ! Models that use TYPE_CHECKING for string type hints need to be imported and rebuilt here to avoid runtime errors
@@ -139,5 +155,17 @@ UserRead.model_rebuild()
 UserUpdate.model_rebuild()
 UserFilter.model_rebuild()
 UserPrivate.model_rebuild()
+
+TaskCreate.model_rebuild()
+TaskUpdate.model_rebuild()
+TaskAdminRead.model_rebuild()
+TaskRead.model_rebuild()
+TaskOptionCreate.model_rebuild()
+TaskOptionRead.model_rebuild()
+TaskOptionMemberRead.model_rebuild()
+TaskReorder.model_rebuild()
+TaskResponseCreate.model_rebuild()
+TaskResponseRead.model_rebuild()
+TasksUpdatedEvent.model_rebuild()
 
 Sort.model_rebuild()

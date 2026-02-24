@@ -277,7 +277,7 @@
 		{#if hidden}
 			<button
 				type="button"
-				class="text-muted flex items-center justify-center transition hover:cursor-pointer hover:text-text"
+				class="flex items-center justify-center text-muted transition hover:cursor-pointer hover:text-text"
 				onclick={() => {
 					showPassword = !showPassword;
 					// focus the input

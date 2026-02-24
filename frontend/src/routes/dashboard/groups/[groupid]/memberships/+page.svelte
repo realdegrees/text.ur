@@ -446,7 +446,9 @@
 		!membership.permissions.includes('administrator')}
 
 	{@const showLeaveButton = data.sessionUser.id === membership.user.id && !membership.is_owner}
-	{@const showPromoteButton = sessionStore.validatePermissions(['administrator'])}
+	{@const showPromoteButton =
+		sessionStore.validatePermissions(['administrator']) &&
+		membership.user.id !== data.sessionUser.id}
 
 	<div class="flex flex-row items-center justify-end gap-2">
 		{#if membership.share_link && showPromoteButton}
