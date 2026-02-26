@@ -134,9 +134,7 @@ async def periodic_cleanup_loop(
 
             removed_logs = _cleanup_old_logs()
             if removed_logs:
-                logger.info(
-                    "[Cleanup] Removed %d old log file(s)", removed_logs
-                )
+                logger.info("[Cleanup] Removed %d old log file(s)", removed_logs)
 
             removed_guests = await _cleanup_abandoned_guests()
             if removed_guests:

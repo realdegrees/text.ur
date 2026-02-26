@@ -27,9 +27,8 @@ def get_current_user() -> str | None:
     """Get the current user from logging context."""
     return current_user_context.get()
 
-default_log_dir = log_dir = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), "..", "..", "logs")
-)
+
+default_log_dir = log_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "logs"))
 
 
 class LoggerExtra(dict):
@@ -89,9 +88,7 @@ def setup_queue_listener() -> None:
 
     # Console handler (always enabled)
     console_handler = logging.StreamHandler()
-    console_handler.setFormatter(
-        logging.Formatter("[%(asctime)s][%(name)s][%(levelname)s] %(message)s")
-    )
+    console_handler.setFormatter(logging.Formatter("[%(asctime)s][%(name)s][%(levelname)s] %(message)s"))
     handlers.append(console_handler)
 
     # File handlers (one per logger name)
@@ -152,9 +149,7 @@ def get_logger(name: Literal["requests", "database", "app", "mails", "events", "
         file_handler.setFormatter(JSONFormatter())
 
         console_handler = logging.StreamHandler()
-        console_handler.setFormatter(
-            logging.Formatter("[%(asctime)s][%(name)s][%(levelname)s] %(message)s")
-        )
+        console_handler.setFormatter(logging.Formatter("[%(asctime)s][%(name)s][%(levelname)s] %(message)s"))
 
         logger.addHandler(file_handler)
         logger.addHandler(console_handler)

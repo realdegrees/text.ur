@@ -107,9 +107,7 @@ class CommentUpdate(SQLModel):
 class CommentTagsUpdate(SQLModel):
     """Model for bulk updating comment tags with explicit ordering."""
 
-    tag_ids: list[int] = Field(
-        description="Ordered list of tag IDs to associate with the comment"
-    )
+    tag_ids: list[int] = Field(description="Ordered list of tag IDs to associate with the comment")
 
 
 class CommentDelete(SQLModel):

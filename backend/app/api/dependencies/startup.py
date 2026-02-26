@@ -14,7 +14,7 @@ app_logger = get_logger("app")
 
 def verify_all_dependencies_sync() -> None:
     """Verify critical dependencies using synchronous operations.
-    
+
     This function is designed to run in the Gunicorn master process before
     forking workers. It performs lightweight checks to ensure critical services
     are reachable without creating async event loops that would conflict with
@@ -71,12 +71,8 @@ def verify_all_dependencies_sync() -> None:
         mail_manager = get_mail_manager()
         app_logger.info("Mail configuration validated")
     except Exception as e:
-        app_logger.error(
-            "Mail configuration validation failed: %s", e
-        )
-        raise RuntimeError(
-            f"Mail configuration invalid: {e}"
-        ) from e
+        app_logger.error("Mail configuration validation failed: %s", e)
+        raise RuntimeError(f"Mail configuration invalid: {e}") from e
 
     if not mail_manager.verify_connection():
         app_logger.warning(

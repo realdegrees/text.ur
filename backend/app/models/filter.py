@@ -34,7 +34,7 @@ OperatorMap = {
 
 class BaseFilterModel(SQLModel):
     """Base class for filter models that provides filter metadata without serialization issues."""
-    
+
     @classmethod
     def get_filter_metadata(cls) -> dict[str, "FilterMeta"]:
         """Return a mapping of field names to FilterMeta objects. Subclasses should override this method to define their filter metadata."""
@@ -97,16 +97,16 @@ class FilterMeta:
     def from_filter(filter_model: SQLModel) -> list[FilterableField]:
         """Collect filterable fields from a filter model."""
         fields: list[FilterableField] = []
-        
+
         # Get filter metadata from the model's get_filter_metadata method if available
         filter_metadata_map: dict[str, FilterMeta] = {}
         if hasattr(filter_model, "get_filter_metadata"):
             filter_metadata_map = filter_model.get_filter_metadata()
-        
+
         for field_name, model_field in filter_model.model_fields.items():
             # Try to get filter metadata from the classmethod
             filter_meta = filter_metadata_map.get(field_name)
-            
+
             if not filter_meta:
                 continue
 
@@ -257,7 +257,9 @@ class FilterMeta:
             return ~self.field.in_(value)
         raise ValueError(f"Unknown operator: {operator}")
 
-    def _build_clause(self, operator: Operator, value: Any, filter_type: str, inferred_type: type, user: User | None = None) -> ColumnElement[bool]:  # noqa: ANN401
+    def _build_clause(
+        self, operator: Operator, value: object, filter_type: str, inferred_type: type, user: User | None = None
+    ) -> ColumnElement[bool]:
         """Return a SQLAlchemy clause based on the filter type and value."""
         converted_value = self._convert_value(value, inferred_type, operator)
         base_where_clause = self._get_base_where_clause(operator, converted_value)
@@ -268,10 +270,10 @@ class FilterMeta:
             parent_col = rel_attr.property.primaryjoin.left
 
             where_clause = base_where_clause
-            
+
             if self.condition is not None:
                 where_clause = and_(where_clause, self.condition)
-            
+
             if self.user_condition and user:
                 user_clause = self.user_condition(user)
                 where_clause = and_(where_clause, user_clause)
@@ -289,6 +291,7 @@ class FilterMeta:
                 user_clause = self.user_condition(user)
                 return and_(base_where_clause, user_clause)
             return base_where_clause
+
 
 # ================================================================
 # ========================= GROUP FILTER =========================
@@ -320,6 +323,7 @@ class GroupFilter(BaseFilterModel):
 # ================================================================
 # ========================= DOCUMENT FILTER ======================
 # ================================================================
+
 
 class DocumentFilter(BaseFilterModel):
     size_bytes: int = Field()
@@ -361,14 +365,14 @@ class MembershipFilter(BaseFilterModel):
 # ================================================================
 
 
-class CommentFilter(BaseFilterModel):    
+class CommentFilter(BaseFilterModel):
     visibility: Visibility = Field()
     user_id: int = Field()
     document_id: str = Field()
     parent_id: int = Field()
     annotation: dict = Field()
     id: int = Field()
-    
+
     @classmethod
     def get_filter_metadata(cls) -> dict[str, FilterMeta]:
         """Return filter metadata for Comment fields."""
@@ -383,6 +387,7 @@ class CommentFilter(BaseFilterModel):
             ),
             "id": FilterMeta(field=Comment.id),
         }
+
 
 # ================================================================
 # ========================= USER FILTER ==========================
@@ -408,9 +413,11 @@ class UserFilter(BaseFilterModel):
             ),
         }
 
+
 # ================================================================
 # ========================= SHARELINK FILTER =====================
 # ================================================================
+
 
 class ShareLinkFilter(BaseFilterModel):
     label: str = Field()

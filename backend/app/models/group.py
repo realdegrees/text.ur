@@ -36,6 +36,7 @@ class GroupUpdate(SQLModel):
 class GroupTransfer(SQLModel):
     user_id: int
 
+
 # =========================
 
 
@@ -48,6 +49,7 @@ class MembershipPermissionUpdate(SQLModel):
 
 
 # =========================
+
 
 class MembershipRead(SQLModel):
     permissions: list[Permission]

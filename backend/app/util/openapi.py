@@ -32,8 +32,10 @@ def custom_openapi(app: FastAPI) -> None:  # noqa: C901
         openapi_schema["tags"] = [{"name": name} for name in tag_names]
 
     # Sorts tags: Login first, Register second, WebSocket Events last, then alphabetically
-    openapi_schema["tags"].sort(key=lambda x: (x["name"] != "Register", x["name"] != "Login", x["name"] != "Logout", x["name"] == "WebSocket Events", x["name"]))
-    
+    openapi_schema["tags"].sort(
+        key=lambda x: (x["name"] != "Register", x["name"] != "Login", x["name"] != "Logout", x["name"] == "WebSocket Events", x["name"])
+    )
+
     # Inject the websocket testing route into the OpenAPI schema dynamically
     for route in app.routes:
         if hasattr(route, "path") and "/events" in route.path:
@@ -41,9 +43,13 @@ def custom_openapi(app: FastAPI) -> None:  # noqa: C901
                 if path == route.path:
                     for _, details in methods.items():
                         if "description" in details:
-                            details["description"] += "\n\n<iframe src='/docs/websocket' style='width: 100%; height: 600px; border: none;'></iframe>"
+                            details["description"] += (
+                                "\n\n<iframe src='/docs/websocket' style='width: 100%; height: 600px; border: none;'></iframe>"
+                            )
                         else:
-                            details["description"] = "<iframe src='/docs/websocket' style='width: 100%; height: 600px; border: none;'></iframe>"
+                            details["description"] = (
+                                "<iframe src='/docs/websocket' style='width: 100%; height: 600px; border: none;'></iframe>"
+                            )
 
     # Add deepObject style to filter and sort params
     for path, methods in openapi_schema["paths"].items():
@@ -62,7 +68,7 @@ def custom_openapi(app: FastAPI) -> None:  # noqa: C901
                     param["explode"] = True
                     param["schema"] = {"type": "object", "properties": {}}
                     param["example"] = {"[field1]": "asc", "[field2]": "desc"}
-            
+
             # Auto-inject guard exclusion descriptions
             if "description" in method:
                 # Find the corresponding route to extract guards
@@ -78,7 +84,7 @@ def custom_openapi(app: FastAPI) -> None:  # noqa: C901
                                         excluded = guard.get_excluded_fields()
                                         if excluded:
                                             guard_exclusions.extend(excluded)
-                                
+
                                 if guard_exclusions:
                                     excluded_fields = "', '".join(sorted(set(guard_exclusions)))
                                     exclusion_notice = (
@@ -91,13 +97,13 @@ def custom_openapi(app: FastAPI) -> None:  # noqa: C901
     return openapi_schema
 
 
-def _extract_guards_from_route(route: object) -> list: # noqa: C901
+def _extract_guards_from_route(route: object) -> list:  # noqa: C901
     """Extract guards from a route's PaginatedResource dependency."""
     guards = []
-    
+
     if not hasattr(route, "dependant"):
         return guards
-    
+
     # Recursively search through dependencies
     def search_dependencies(dependant: object) -> None:
         if hasattr(dependant, "call"):
@@ -112,11 +118,11 @@ def _extract_guards_from_route(route: object) -> list: # noqa: C901
                                     guards.append(item)
                     except (AttributeError, ValueError):
                         pass
-        
+
         # Recursively check dependencies
         if hasattr(dependant, "dependencies"):
             for dep in dependant.dependencies:
                 search_dependencies(dep)
-    
+
     search_dependencies(route.dependant)
     return guards

@@ -39,9 +39,7 @@ root_router = APIRouter(
 @router.get("/", response_model=Paginated[ShareLinkRead], response_class=ExcludableFieldsJSONResponse)
 async def list_share_links(
     _: BasicAuthentication,
-    share_links: Paginated[ShareLink] = PaginatedResource(
-        ShareLink, ShareLinkFilter, guards=[Guard.sharelink_access()]
-    )
+    share_links: Paginated[ShareLink] = PaginatedResource(ShareLink, ShareLinkFilter, guards=[Guard.sharelink_access()]),
 ) -> Paginated[ShareLinkRead]:
     """Get all share links for the group."""
     return share_links
@@ -59,9 +57,8 @@ async def get_share_link_from_token(
 async def create_share_link(
     db: Database,
     group: Group = Resource(Group, param_alias="group_id"),
-    user: User = Authenticate(
-        [Guard.group_access({Permission.ADMINISTRATOR})]),
-    share_link_create: ShareLinkCreate = Body(...)
+    user: User = Authenticate([Guard.group_access({Permission.ADMINISTRATOR})]),
+    share_link_create: ShareLinkCreate = Body(...),
 ) -> ShareLinkRead:
     """Create a new share link for a group."""
     share_link = ShareLink(**share_link_create.model_dump())
@@ -84,17 +81,18 @@ async def update_share_link(
     """Update a share link."""
     permissions_changed = share_link_update.permissions is not None and set(share_link_update.permissions) != set(share_link.permissions)
     await db.merge(share_link)
-    share_link.sqlmodel_update(share_link_update.model_dump(
-        exclude_unset=True, exclude={"rotate_token"}))
+    share_link.sqlmodel_update(share_link_update.model_dump(exclude_unset=True, exclude={"rotate_token"}))
 
-    share_link.author = user # Update author to the user making the change
+    share_link.author = user  # Update author to the user making the change
 
     result = await db.exec(
-            select(Membership).join(ShareLink, Membership.share_link).where(
-                ShareLink.token == share_link.token,
-                Membership.group_id == group.id,
-            )
+        select(Membership)
+        .join(ShareLink, Membership.share_link)
+        .where(
+            ShareLink.token == share_link.token,
+            Membership.group_id == group.id,
         )
+    )
     memberships: list[Membership] = result.all()
 
     if permissions_changed:
@@ -147,9 +145,7 @@ async def use_sharelink_token(
     use the /login/anonymous endpoint directly.
     """
     # Find the sharelink by token
-    result = await db.exec(
-        select(ShareLink).where(ShareLink.token == token)
-    )
+    result = await db.exec(select(ShareLink).where(ShareLink.token == token))
     share_link: ShareLink | None = result.first()
 
     if not share_link:
@@ -160,12 +156,7 @@ async def use_sharelink_token(
         raise AppException(status_code=403, error_code=AppErrorCode.SHARELINK_EXPIRED, detail="Share link has expired")
 
     # Check if membership already exists
-    result = await db.exec(
-        select(Membership).where(
-            Membership.user_id == user.id,
-            Membership.group_id == share_link.group_id
-        )
-    )
+    result = await db.exec(select(Membership).where(Membership.user_id == user.id, Membership.group_id == share_link.group_id))
     existing_membership: Membership | None = result.first()
 
     if existing_membership:
@@ -176,11 +167,10 @@ async def use_sharelink_token(
     membership = Membership(
         user_id=user.id,
         group_id=share_link.group_id,
-        permissions=set(share_link.permissions) | set(
-            share_link.group.default_permissions),
+        permissions=set(share_link.permissions) | set(share_link.group.default_permissions),
         is_owner=False,
         accepted=True,  # Auto-accept for sharelink memberships
-        share_link=share_link
+        share_link=share_link,
     )
     db.add(membership)
     try:

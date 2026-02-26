@@ -45,15 +45,9 @@ class EmailManager:
         }
         missing = [k for k, v in required.items() if not v]
         if missing and not DEBUG:
-            raise RuntimeError(
-                "Missing SMTP configuration: "
-                + ", ".join(missing)
-            )
+            raise RuntimeError("Missing SMTP configuration: " + ", ".join(missing))
         if SMTP_FROM_EMAIL and "@" not in SMTP_FROM_EMAIL:
-            raise RuntimeError(
-                f"Invalid SMTP_FROM_EMAIL:"
-                f" '{SMTP_FROM_EMAIL}' is missing '@'"
-            )
+            raise RuntimeError(f"Invalid SMTP_FROM_EMAIL: '{SMTP_FROM_EMAIL}' is missing '@'")
 
         self._smtp_available = False
         mail_logger.info(
@@ -62,9 +56,7 @@ class EmailManager:
             SMTP_PORT,
         )
 
-    def _smtp_connection(
-        self, timeout: int = 10
-    ) -> smtplib.SMTP:
+    def _smtp_connection(self, timeout: int = 10) -> smtplib.SMTP:
         """Return the appropriate SMTP connection.
 
         Uses SMTP_SSL (implicit TLS, typically port 465) when
@@ -72,12 +64,8 @@ class EmailManager:
         STARTTLS upgrade via SMTP_TLS, typically port 587).
         """
         if SMTP_SSL:
-            return smtplib.SMTP_SSL(
-                SMTP_SERVER, SMTP_PORT, timeout=timeout
-            )
-        return smtplib.SMTP(
-            SMTP_SERVER, SMTP_PORT, timeout=timeout
-        )
+            return smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT, timeout=timeout)
+        return smtplib.SMTP(SMTP_SERVER, SMTP_PORT, timeout=timeout)
 
     def verify_connection(self) -> bool:
         """Verify SMTP connection at startup.
@@ -90,8 +78,7 @@ class EmailManager:
         """
         try:
             mail_logger.debug(
-                "Attempting SMTP connection: server=%s,"
-                " port=%s, tls=%s, ssl=%s, user=%s",
+                "Attempting SMTP connection: server=%s, port=%s, tls=%s, ssl=%s, user=%s",
                 SMTP_SERVER,
                 SMTP_PORT,
                 SMTP_TLS,
@@ -102,32 +89,25 @@ class EmailManager:
                 if SMTP_TLS and not SMTP_SSL:
                     server.starttls()
                 server.login(SMTP_USER, SMTP_PASSWORD)
-            mail_logger.info(
-                "SMTP connection verified successfully"
-            )
+            mail_logger.info("SMTP connection verified successfully")
             self._smtp_available = True
             return True
         except smtplib.SMTPAuthenticationError as e:
-            raise RuntimeError(
-                "SMTP authentication failed for user"
-                f" '{SMTP_USER}': {e}"
-            ) from e
+            raise RuntimeError(f"SMTP authentication failed for user '{SMTP_USER}': {e}") from e
         except Exception as e:
             mail_logger.warning(
-                "SMTP connection failed: %s. Email sending"
-                " will be unavailable — email content will"
-                " be logged on send attempts.",
+                "SMTP connection failed: %s. Email sending will be unavailable — email content will be logged on send attempts.",
                 e,
             )
             self._smtp_available = False
             return False
 
     def generate_verification_link(self, email: str, router: APIRouter, *, salt: str, confirm_route: str) -> str:
-            """Generate a signed verification link."""
-            serializer = URLSafeTimedSerializer(EMAIL_PRESIGN_SECRET)
-            token = serializer.dumps(email, salt=salt)
-            return f"{BACKEND_BASEURL}/api{router.url_path_for(confirm_route, token=token)}"
-        
+        """Generate a signed verification link."""
+        serializer = URLSafeTimedSerializer(EMAIL_PRESIGN_SECRET)
+        token = serializer.dumps(email, salt=salt)
+        return f"{BACKEND_BASEURL}/api{router.url_path_for(confirm_route, token=token)}"
+
     def send_email(self, target_email: str, subject: str, template: str, template_vars: dict[str, Any]) -> None:
         """Send an email with templated HTML and plain text bodies."""
         # Render HTML email body
@@ -139,7 +119,7 @@ class EmailManager:
 
         # Render plain text email body
         # Try to load .txt version, fall back to stripping HTML if not found
-        text_template_name = template.replace('.jinja', '.txt').replace('.html', '.txt')
+        text_template_name = template.replace(".jinja", ".txt").replace(".html", ".txt")
         try:
             plain_text_body = JINJA_ENV.get_template(text_template_name).render(**template_vars)
         except TemplateNotFound:
@@ -181,10 +161,7 @@ class EmailManager:
                 e,
             )
             mail_logger.warning(
-                "Email delivery failed. Content logged"
-                " below for manual recovery.\n"
-                "[To: %s]\n[Subject: %s]\n"
-                "[Body]\n%s",
+                "Email delivery failed. Content logged below for manual recovery.\n[To: %s]\n[Subject: %s]\n[Body]\n%s",
                 target_email,
                 subject,
                 plain_text_body,
@@ -202,6 +179,3 @@ def get_mail_manager() -> EmailManager:
 
 
 Mail = Annotated[EmailManager, Depends(get_mail_manager)]
-
-
- 

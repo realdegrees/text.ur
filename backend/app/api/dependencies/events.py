@@ -32,11 +32,11 @@ class ConnectedUser(BaseModel):
 
 class EventManager:
     """Redis-backed event manager for broadcasting events to WebSocket clients."""
-    
+
     _redis: redis.Redis | None = None
     _subscriber_task: asyncio.Task | None = None
     _clients: dict[str, set[WebSocket]] = {}  # noqa: RUF012
-        
+
     def __init__(self) -> None:
         """Initialize the EventManager with Redis connection details."""
         if not all([cfg.REDIS_HOST, cfg.REDIS_PORT]):
@@ -54,28 +54,25 @@ class EventManager:
             )
             events_logger.info("Connected to Redis")
             await self._redis.ping()
-            
+
         # Clear all active_users: keys on startup to avoid stale data
         keys = await self._redis.keys("active_users:*")
         if keys:
             await self._redis.delete(*keys)
             events_logger.info("Cleared %d stale active user keys", len(keys))
-        
+
         self._subscriber_task = asyncio.create_task(self._subscriber_loop())
         events_logger.info("Started subscriber loop")
-        
+
     async def check_connection(self) -> None:
         """Check Redis connection and reconnect if necessary."""
         if self._redis is None:
-            events_logger.warning(
-                "Redis client is not initialised; "
-                "cannot check connection"
-            )
+            events_logger.warning("Redis client is not initialised; cannot check connection")
             return
 
         await self._redis.ping()
         events_logger.debug("Redis connection is healthy")
-            
+
     async def disconnect(self) -> None:
         """Cleanup Redis connection."""
         self._subscriber_task.cancel()
@@ -97,9 +94,7 @@ class EventManager:
         # names and make keys easily identifiable in Redis.
         return f"active_users:{channel_key}"
 
-    async def add_active_user(
-        self, channel_key: str, user_id: int, username: str, connection_id: str
-    ) -> list[ConnectedUser]:
+    async def add_active_user(self, channel_key: str, user_id: int, username: str, connection_id: str) -> list[ConnectedUser]:
         """Add a user to the active users list for the given channel and return all active users.
 
         channel_key should be the same string used for EventManager.publish/subscribe
@@ -108,12 +103,9 @@ class EventManager:
         """
         key = self._active_users_key(channel_key)
         user_data = ConnectedUser(
-            user_id=user_id,
-            username=username,
-            connection_id=connection_id,
-            connected_at=datetime.now(UTC).isoformat()
+            user_id=user_id, username=username, connection_id=connection_id, connected_at=datetime.now(UTC).isoformat()
         )
-        
+
         # Cache and merge to avoid race condition
         current_active_users = await self.get_active_users(channel_key)
         new_active_users = [user_data, *current_active_users]
@@ -219,9 +211,7 @@ class EventManager:
                 if message:
                     await self._on_message(message)
             except Exception as e:
-                events_logger.warning(
-                    "Redis pubsub error, reconnecting: %s", e
-                )
+                events_logger.warning("Redis pubsub error, reconnecting: %s", e)
                 await asyncio.sleep(1.0)
                 with contextlib.suppress(Exception):
                     await pubsub.close()
@@ -249,9 +239,7 @@ class EventManager:
             except RuntimeError as e:
                 # Sending to a closed websocket is expected during
                 # disconnect race conditions — log at debug and clean up.
-                events_logger.debug(
-                    "WebSocket send failed (likely disconnected): %s", e
-                )
+                events_logger.debug("WebSocket send failed (likely disconnected): %s", e)
                 to_remove.add(ws)
             except Exception as e:
                 events_logger.error("Error in on_event callback: %s", e, exc_info=True)
@@ -267,6 +255,7 @@ class EventManager:
 def get_event_manager() -> EventManager:
     """Return the appropriate Depends for a Request or WebSocket."""
     return EventManager()
+
 
 # Actual Dependency to use in endpoints for normal HTTP handlers
 Events = Annotated[EventManager, Depends(get_event_manager)]

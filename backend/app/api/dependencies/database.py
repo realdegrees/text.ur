@@ -34,17 +34,20 @@ if cfg.DEBUG:
 
     logging.getLogger("sqlalchemy.engine").setLevel(logging.INFO)
 
+
 def _attach_statement_timeout(engine: AsyncEngine) -> None:
     """Attach a statement timeout listener to a SQLAlchemy async engine.
 
     This is registered after the engine is created to avoid module import
     side-effects.
     """
+
     @event.listens_for(engine.sync_engine, "connect")
     def _set_statement_timeout(dbapi_conn, connection_record) -> None:  # noqa: ANN001
         cursor = dbapi_conn.cursor()
         cursor.execute(f"SET statement_timeout = {DB_STATEMENT_TIMEOUT}")
         cursor.close()
+
 
 class DatabaseManager:
     """Manager for SQLAlchemy AsyncEngine and AsyncSession factory."""
@@ -80,11 +83,11 @@ class DatabaseManager:
             raise RuntimeError(f"Failed to connect to database: {e}") from e
 
 
-
 @lru_cache(maxsize=1)
 def get_database_manager() -> DatabaseManager:
     """Return a cached DatabaseManager instance to avoid import-time side effects."""
     return DatabaseManager()
+
 
 def SessionFactory() -> SQLModelAsyncSession:
     """Compatibility wrapper returning an AsyncSession instance when called.
@@ -92,6 +95,7 @@ def SessionFactory() -> SQLModelAsyncSession:
     Tests and other modules call `SessionFactory()` to get a new session.
     """
     return get_database_manager().session_factory()
+
 
 async def session() -> AsyncGenerator[SQLModelAsyncSession, None]:
     """Use as a dependency to provide an async database session to the route"""
@@ -146,7 +150,7 @@ def _handle_db_exception(e: Exception) -> None:
     # Client errors (400 Bad Request)
     elif isinstance(e, DBAPIError | ValueError):
         status_code = 400
-        error_message = str(e).split('\n')[0]
+        error_message = str(e).split("\n")[0]
         detail = f"Database constraint violation: {error_message}"
 
     # Log server errors for debugging

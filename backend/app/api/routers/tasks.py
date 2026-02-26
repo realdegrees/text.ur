@@ -55,12 +55,7 @@ def _is_admin(user: User, document: Document) -> bool:
     ADMINISTRATOR permission.
     """
     return any(
-        m.user_id == user.id
-        and m.accepted
-        and (
-            m.is_owner
-            or Permission.ADMINISTRATOR in (m.permissions or [])
-        )
+        m.user_id == user.id and m.accepted and (m.is_owner or Permission.ADMINISTRATOR in (m.permissions or []))
         for m in document.group.memberships
     )
 
@@ -83,14 +78,8 @@ def check_task_answer(task: Task, answer: dict) -> bool:
         value = answer.get("value")
         if value is None or task.correct_number_answer is None:
             return False
-        tolerance = (
-            task.number_tolerance
-            if task.number_tolerance is not None
-            else _NUMBER_EPSILON
-        )
-        return (
-            abs(float(value) - task.correct_number_answer) <= tolerance
-        )
+        tolerance = task.number_tolerance if task.number_tolerance is not None else _NUMBER_EPSILON
+        return abs(float(value) - task.correct_number_answer) <= tolerance
 
     return False
 
@@ -99,9 +88,7 @@ def _build_correct_answer(task: Task) -> dict:
     """Build the correct-answer dict to reveal to the user."""
     if task.answer_type == AnswerType.MULTIPLE_CHOICE:
         return {
-            "selected_option_ids": [
-                o.id for o in task.options if o.is_correct
-            ],
+            "selected_option_ids": [o.id for o in task.options if o.is_correct],
         }
     if task.answer_type == AnswerType.STRING:
         return {"text": task.correct_string_answer}
@@ -148,9 +135,7 @@ async def _publish_tasks_updated(
             payload=TasksUpdatedEvent(document_id=document_id),
             resource_id=document_id,
             resource="tasks",
-            originating_connection_id=request.headers.get(
-                "X-Connection-ID"
-            ),
+            originating_connection_id=request.headers.get("X-Connection-ID"),
         ).model_dump(mode="json"),
         f"documents:{document_id}:comments",
     )
@@ -166,28 +151,19 @@ async def create_task(
     db: Database,
     events: Events,
     request: Request,
-    session_user: User = Authenticate(
-        guards=[Guard.document_access({Permission.ADMINISTRATOR})]
-    ),
+    session_user: User = Authenticate(guards=[Guard.document_access({Permission.ADMINISTRATOR})]),
     task_create: TaskCreate = Body(...),
     document: Document = Resource(Document, param_alias="document_id"),
 ) -> TaskAdminRead:
     """Create a new task for the document."""
     # Check max tasks limit
-    result = await db.exec(
-        select(func.count(Task.id)).where(
-            Task.document_id == document.id
-        )
-    )
+    result = await db.exec(select(func.count(Task.id)).where(Task.document_id == document.id))
     task_count = result.one()
     if task_count >= MAX_TASKS_PER_DOCUMENT:
         raise AppException(
             status_code=400,
             error_code=AppErrorCode.VALIDATION_ERROR,
-            detail=(
-                f"Document has reached the maximum of "
-                f"{MAX_TASKS_PER_DOCUMENT} tasks."
-            ),
+            detail=(f"Document has reached the maximum of {MAX_TASKS_PER_DOCUMENT} tasks."),
         )
 
     task = Task(
@@ -227,20 +203,14 @@ async def create_task(
 @router.get("/")
 async def list_tasks(
     db: Database,
-    session_user: User = Authenticate(
-        guards=[Guard.document_access()]
-    ),
+    session_user: User = Authenticate(guards=[Guard.document_access()]),
     document: Document = Resource(Document, param_alias="document_id"),
 ) -> list[TaskAdminRead] | list[TaskRead]:
     """List all tasks for a document (ordered).
 
     Admins see correct answers; members do not.
     """
-    result = await db.exec(
-        select(Task)
-        .where(Task.document_id == document.id)
-        .order_by(Task.order)
-    )
+    result = await db.exec(select(Task).where(Task.document_id == document.id).order_by(Task.order))
     tasks = result.all()
 
     if _is_admin(session_user, document):
@@ -258,16 +228,12 @@ async def reorder_tasks(
     db: Database,
     events: Events,
     request: Request,
-    session_user: User = Authenticate(
-        guards=[Guard.document_access({Permission.ADMINISTRATOR})]
-    ),
+    session_user: User = Authenticate(guards=[Guard.document_access({Permission.ADMINISTRATOR})]),
     reorder: TaskReorder = Body(...),
     document: Document = Resource(Document, param_alias="document_id"),
 ) -> list[TaskAdminRead]:
     """Bulk reorder tasks by providing ordered task IDs."""
-    result = await db.exec(
-        select(Task).where(Task.document_id == document.id)
-    )
+    result = await db.exec(select(Task).where(Task.document_id == document.id))
     tasks_by_id = {t.id: t for t in result.all()}
 
     # Validate completeness: must include every task for this document
@@ -278,20 +244,13 @@ async def reorder_tasks(
         extra = submitted - existing
         parts = []
         if missing:
-            parts.append(
-                f"Missing task IDs: {sorted(missing)}"
-            )
+            parts.append(f"Missing task IDs: {sorted(missing)}")
         if extra:
-            parts.append(
-                f"Unknown task IDs: {sorted(extra)}"
-            )
+            parts.append(f"Unknown task IDs: {sorted(extra)}")
         raise AppException(
             status_code=400,
             error_code=AppErrorCode.VALIDATION_ERROR,
-            detail=(
-                "Reorder must include all task IDs for this "
-                f"document. {'; '.join(parts)}"
-            ),
+            detail=(f"Reorder must include all task IDs for this document. {'; '.join(parts)}"),
         )
 
     for idx, tid in enumerate(reorder.task_ids):
@@ -301,11 +260,7 @@ async def reorder_tasks(
     await db.commit()
 
     # Re-fetch ordered
-    result = await db.exec(
-        select(Task)
-        .where(Task.document_id == document.id)
-        .order_by(Task.order)
-    )
+    result = await db.exec(select(Task).where(Task.document_id == document.id).order_by(Task.order))
     tasks = result.all()
 
     await _publish_tasks_updated(events, document.id, request)
@@ -316,16 +271,12 @@ async def reorder_tasks(
 @router.get("/responses", response_model=list[TaskResponseRead])
 async def list_task_responses(
     db: Database,
-    session_user: User = Authenticate(
-        guards=[Guard.document_access()]
-    ),
+    session_user: User = Authenticate(guards=[Guard.document_access()]),
     document: Document = Resource(Document, param_alias="document_id"),
 ) -> list[TaskResponseRead]:
     """Get the current user's responses for all tasks in the document."""
     # Get all tasks for the document (for correct answer revelation)
-    task_result = await db.exec(
-        select(Task).where(Task.document_id == document.id)
-    )
+    task_result = await db.exec(select(Task).where(Task.document_id == document.id))
     tasks_by_id = {t.id: t for t in task_result.all()}
 
     resp_result = await db.exec(
@@ -342,11 +293,7 @@ async def list_task_responses(
     for resp in responses:
         task = tasks_by_id.get(resp.task_id)
         correct_answer = None
-        if (
-            task
-            and not resp.is_correct
-            and resp.attempts >= task.max_attempts
-        ):
+        if task and not resp.is_correct and resp.attempts >= task.max_attempts:
             correct_answer = _build_correct_answer(task)
 
         result.append(
@@ -370,9 +317,7 @@ async def list_task_responses(
 @router.get("/{task_id}")
 async def get_task(
     db: Database,
-    session_user: User = Authenticate(
-        guards=[Guard.document_access()]
-    ),
+    session_user: User = Authenticate(guards=[Guard.document_access()]),
     document: Document = Resource(Document, param_alias="document_id"),
     task: Task = Resource(Task, param_alias="task_id"),
 ) -> TaskAdminRead | TaskRead:
@@ -393,9 +338,7 @@ async def update_task(
     db: Database,
     events: Events,
     request: Request,
-    session_user: User = Authenticate(
-        guards=[Guard.document_access({Permission.ADMINISTRATOR})]
-    ),
+    session_user: User = Authenticate(guards=[Guard.document_access({Permission.ADMINISTRATOR})]),
     task_update: TaskUpdate = Body(...),
     document: Document = Resource(Document, param_alias="document_id"),
     task: Task = Resource(Task, param_alias="task_id"),
@@ -437,28 +380,19 @@ async def update_task(
 
     # Replace options only for multiple-choice tasks
     effective_type = task.answer_type
-    if (
-        effective_type == AnswerType.MULTIPLE_CHOICE
-        and new_options is not None
-    ):
+    if effective_type == AnswerType.MULTIPLE_CHOICE and new_options is not None:
         opts = [TaskOptionCreate(**o) for o in new_options]
         if len(opts) < 2:
             raise AppException(
                 status_code=400,
                 error_code=AppErrorCode.VALIDATION_ERROR,
-                detail=(
-                    "Multiple choice tasks require at least "
-                    "2 options."
-                ),
+                detail=("Multiple choice tasks require at least 2 options."),
             )
         if not any(o.is_correct for o in opts):
             raise AppException(
                 status_code=400,
                 error_code=AppErrorCode.VALIDATION_ERROR,
-                detail=(
-                    "At least one option must be marked as "
-                    "correct."
-                ),
+                detail=("At least one option must be marked as correct."),
             )
         await _replace_options(db, task, opts)
         answer_changed = True
@@ -468,11 +402,7 @@ async def update_task(
     # Delete all existing responses if answer changed so members
     # can re-answer the updated task with a clean slate.
     if answer_changed:
-        await db.exec(
-            delete(TaskResponse).where(
-                TaskResponse.task_id == task.id
-            )
-        )
+        await db.exec(delete(TaskResponse).where(TaskResponse.task_id == task.id))
 
     await db.commit()
     await db.refresh(task)
@@ -488,9 +418,7 @@ async def delete_task(
     db: Database,
     events: Events,
     request: Request,
-    session_user: User = Authenticate(
-        guards=[Guard.document_access({Permission.ADMINISTRATOR})]
-    ),
+    session_user: User = Authenticate(guards=[Guard.document_access({Permission.ADMINISTRATOR})]),
     document: Document = Resource(Document, param_alias="document_id"),
     task: Task = Resource(Task, param_alias="task_id"),
 ) -> Response:
@@ -521,11 +449,9 @@ async def delete_task(
     response_model=TaskResponseRead,
     status_code=200,
 )
-async def submit_task_response( # noqa: C901
+async def submit_task_response(  # noqa: C901
     db: Database,
-    session_user: User = Authenticate(
-        guards=[Guard.document_access()]
-    ),
+    session_user: User = Authenticate(guards=[Guard.document_access()]),
     response_data: TaskResponseCreate = Body(...),
     document: Document = Resource(Document, param_alias="document_id"),
     task: Task = Resource(Task, param_alias="task_id"),
@@ -570,9 +496,7 @@ async def submit_task_response( # noqa: C901
             raise AppException(
                 status_code=400,
                 error_code=AppErrorCode.VALIDATION_ERROR,
-                detail=(
-                    "selected_option_ids is required for MC tasks."
-                ),
+                detail=("selected_option_ids is required for MC tasks."),
             )
         # Validate option IDs belong to this task
         valid_ids = {o.id for o in task.options}
@@ -581,10 +505,7 @@ async def submit_task_response( # noqa: C901
                 raise AppException(
                     status_code=400,
                     error_code=AppErrorCode.VALIDATION_ERROR,
-                    detail=(
-                        f"Option ID {oid} does not belong to "
-                        f"this task."
-                    ),
+                    detail=(f"Option ID {oid} does not belong to this task."),
                 )
         answer = {
             "selected_option_ids": response_data.selected_option_ids,

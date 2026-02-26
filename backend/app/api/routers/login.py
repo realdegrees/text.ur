@@ -34,10 +34,7 @@ router = APIRouter(
 
 @router.post("/")
 @limiter.limit("5/minute", key_func=get_remote_address)
-async def login(
-    request: Request,
-    form_data: Annotated[OAuth2PasswordRequestForm, Depends()], db: Database, response: Response
-) -> Token:
+async def login(request: Request, form_data: Annotated[OAuth2PasswordRequestForm, Depends()], db: Database, response: Response) -> Token:
     """Return a JWT if the user is authenticated successfully."""
     query = select(User).where(or_(User.username == form_data.username, User.email == form_data.username))
     result = await db.exec(query)
@@ -50,8 +47,7 @@ async def login(
         )
 
     if not user.verified:
-        raise AppException(status_code=403, detail="Forbidden: Email not verified",
-                           error_code=AppErrorCode.EMAIL_NOT_VERIFIED)
+        raise AppException(status_code=403, detail="Forbidden: Email not verified", error_code=AppErrorCode.EMAIL_NOT_VERIFIED)
 
     token = Token(
         access_token=generate_token(user, "access"),
@@ -64,7 +60,7 @@ async def login(
         httponly=True,
         secure=cfg.COOKIE_SECURE,
         samesite=cfg.COOKIE_SAMESITE,
-        max_age=int(cfg.JWT_ACCESS_EXPIRATION_MINUTES * 60)
+        max_age=int(cfg.JWT_ACCESS_EXPIRATION_MINUTES * 60),
     )
     response.set_cookie(
         key="refresh_token",
@@ -72,7 +68,7 @@ async def login(
         httponly=True,
         secure=cfg.COOKIE_SECURE,
         samesite=cfg.COOKIE_SAMESITE,
-        max_age=int(cfg.JWT_REFRESH_EXPIRATION_DAYS * 24 * 60 * 60)
+        max_age=int(cfg.JWT_REFRESH_EXPIRATION_DAYS * 24 * 60 * 60),
     )
     return token
 
@@ -89,11 +85,11 @@ async def refresh(request: Request, response: Response, db: Database, user: User
 
     # Find all memberships for the user where a share_link is present and delete the membership if the share_link is expired or if
     result = await db.exec(
-            select(Membership).where(
-                Membership.user_id == user.id,
-                Membership.is_expired == True,  # noqa: E712
-            )
+        select(Membership).where(
+            Membership.user_id == user.id,
+            Membership.is_expired == True,  # noqa: E712
         )
+    )
     invalid_memberships = result.all()
     for membership in invalid_memberships:
         await db.delete(membership)
@@ -105,7 +101,7 @@ async def refresh(request: Request, response: Response, db: Database, user: User
         httponly=True,
         secure=cfg.COOKIE_SECURE,
         samesite=cfg.COOKIE_SAMESITE,
-        max_age=int(cfg.JWT_ACCESS_EXPIRATION_MINUTES * 60)
+        max_age=int(cfg.JWT_ACCESS_EXPIRATION_MINUTES * 60),
     )
 
     return token
@@ -134,9 +130,7 @@ async def reset_password(request: Request, db: Database, mail: Mail, email: str 
             template="reset_password.jinja",
             template_vars={
                 "reset_link": reset_link,
-                "expiry_time": expiry_time.strftime(
-                    "%B %d, %Y at %H:%M UTC"
-                ),
+                "expiry_time": expiry_time.strftime("%B %d, %Y at %H:%M UTC"),
                 "email": email,
                 "username": user.username,
                 "current_year": datetime.now(UTC).year,
@@ -167,9 +161,7 @@ async def reset_verify(request: Request, token: str, db: Database, body: Passwor
     try:
         # Deserialize token to get token data (email + password hash for one-time use)
         serializer = URLSafeTimedSerializer(cfg.EMAIL_PRESIGN_SECRET)
-        token_data = serializer.loads(
-            token, max_age=int(cfg.PASSWORD_RESET_LINK_EXPIRY_MINUTES * 60), salt="password-reset"
-        )
+        token_data = serializer.loads(token, max_age=int(cfg.PASSWORD_RESET_LINK_EXPIRY_MINUTES * 60), salt="password-reset")
 
         # Handle both old tokens (string) and new tokens (dict) for backwards compatibility
         if isinstance(token_data, str):
@@ -180,8 +172,7 @@ async def reset_verify(request: Request, token: str, db: Database, body: Passwor
             pwd_hash_check = token_data.get("pwd")
 
     except (BadSignature, SignatureExpired) as e:
-        raise AppException(
-            status_code=403, error_code=AppErrorCode.INVALID_TOKEN, detail="Invalid or expired token") from e
+        raise AppException(status_code=403, error_code=AppErrorCode.INVALID_TOKEN, detail="Invalid or expired token") from e
 
     query = select(User).where(User.email == email)
     result = await db.exec(query)

@@ -70,6 +70,7 @@ router = APIRouter(
 # ================= Document/Comment WebSocket Hooks ====================
 # ========================================================================
 
+
 def can_user_see_comment(
     user: User,
     membership: Membership,
@@ -124,10 +125,7 @@ async def _setup_document_comment_connection(websocket: WebSocket, related_resou
     has_access = False
     if membership is not None:
         if related_resource.visibility == DocumentVisibility.PRIVATE:
-            has_access = (
-                membership.is_owner
-                or Permission.ADMINISTRATOR in membership.permissions
-            )
+            has_access = membership.is_owner or Permission.ADMINISTRATOR in membership.permissions
         else:
             has_access = True  # public doc + accepted member
 
@@ -194,7 +192,6 @@ def _comment_visibility_transform(event_data: dict, websocket: WebSocket) -> dic
     return None
 
 
-
 async def _handle_mouse_position(event: Event, websocket: WebSocket, session: AsyncSession) -> Event:
     """Handle incoming mouse_position event - enriches with user info.
 
@@ -254,7 +251,7 @@ events_router = get_events_router(
         },
         setup_connection=_setup_document_comment_connection,
         track_active_users=True,
-    )
+    ),
 )
 
 # Include the HTTP router
@@ -268,11 +265,12 @@ router.tags.append("Documents")
 
 # ======= Document Endpoints ==============
 
+
 @router.post("/", response_model=DocumentRead)
 async def create_document(
     db: Database,
     s3: S3,
-    session_user: BasicAuthentication, # only basic auth because we need the validated form data for authorization in this case
+    session_user: BasicAuthentication,  # only basic auth because we need the validated form data for authorization in this case
     file: UploadFile = File(...),
     data: str = Form(..., description="JSON string of type `DocumentCreate`"),
 ) -> DocumentRead:
@@ -292,9 +290,7 @@ async def create_document(
     total_bytes = 0
     from tempfile import SpooledTemporaryFile
 
-    validated_file = SpooledTemporaryFile(
-        max_size=1024 * 1024, mode="w+b"
-    )
+    validated_file = SpooledTemporaryFile(max_size=1024 * 1024, mode="w+b")
     while chunk := await file.read(chunk_size):
         total_bytes += len(chunk)
         if total_bytes > max_size_bytes:
@@ -302,10 +298,7 @@ async def create_document(
             raise AppException(
                 status_code=400,
                 error_code=AppErrorCode.INVALID_INPUT,
-                detail=(
-                    "File size exceeds maximum of"
-                    f" {cfg.MAX_UPLOAD_SIZE_MB}MB."
-                ),
+                detail=(f"File size exceeds maximum of {cfg.MAX_UPLOAD_SIZE_MB}MB."),
             )
         validated_file.write(chunk)
     validated_file.seek(0)
@@ -326,16 +319,20 @@ async def create_document(
     file.size = total_bytes
 
     # Check if user is authorized if they are uploading to a group
-    result = await db.exec(select(Membership).where(
-        Membership.user_id == session_user.id,
-        Membership.group_id == document_create.group_id,
-        Membership.accepted == True,  # noqa: E712
-    ))
+    result = await db.exec(
+        select(Membership).where(
+            Membership.user_id == session_user.id,
+            Membership.group_id == document_create.group_id,
+            Membership.accepted == True,  # noqa: E712
+        )
+    )
     membership = result.first()
     if not membership:
         raise AppException(status_code=403, error_code=AppErrorCode.NOT_IN_GROUP, detail="User is not a member of the group.")
     if not membership.is_owner and Permission.ADMINISTRATOR not in membership.permissions:
-        raise AppException(status_code=403, error_code=AppErrorCode.NOT_AUTHORIZED, detail="User does not have permission to add documents.")
+        raise AppException(
+            status_code=403, error_code=AppErrorCode.NOT_AUTHORIZED, detail="User does not have permission to add documents."
+        )
 
     # Generate unique S3 key
     s3_key = f"document-{uuid4()}.pdf"
@@ -354,6 +351,7 @@ async def create_document(
     await db.refresh(document)
     return document
 
+
 @router.get("/{document_id}", response_model=DocumentRead)
 async def get_document(
     _: User = Authenticate(guards=[Guard.document_access()]),
@@ -362,10 +360,12 @@ async def get_document(
     """Get a document by ID."""
     return document
 
+
 def slugify(text: str) -> str:
     """Generate a safe filename from an S3 key."""
     # Make the text safe for urls by replacing unsafe characters
-    return "".join(c if c.isalnum() or c in (' ', '.', '_') else '_' for c in text).rstrip()
+    return "".join(c if c.isalnum() or c in (" ", ".", "_") else "_" for c in text).rstrip()
+
 
 @router.get("/{document_id}/file")
 async def get_document_file(
@@ -381,9 +381,7 @@ async def get_document_file(
     """
     # Cheap HEAD request to get S3 metadata (including ETag)
     metadata = s3.metadata(document.s3_key)
-    etag = (
-        metadata.get("ETag", "").strip('"') if metadata else ""
-    )
+    etag = metadata.get("ETag", "").strip('"') if metadata else ""
 
     # Check conditional request header
     if_none_match = request.headers.get("If-None-Match", "").strip('"')
@@ -393,24 +391,23 @@ async def get_document_file(
     # Stream the file from S3 with caching headers
     iterator = s3.download_stream(document.s3_key)
     headers = {
-        "Content-Disposition": (
-            f'attachment; filename="{slugify(document.name)}.pdf"'
-        ),
+        "Content-Disposition": (f'attachment; filename="{slugify(document.name)}.pdf"'),
         "Cache-Control": "private, max-age=3600",
     }
     if etag:
         headers["ETag"] = f'"{etag}"'
 
-    return StreamingResponse(
-        iterator, media_type="application/pdf", headers=headers
-    )
+    return StreamingResponse(iterator, media_type="application/pdf", headers=headers)
+
 
 @router.get("/", response_model=Paginated[DocumentRead], response_class=ExcludableFieldsJSONResponse)
 async def list_documents(
     _: BasicAuthentication,
     documents: Paginated[Document] = PaginatedResource(
-        Document, DocumentFilter, guards=[Guard.document_access()],
-    )
+        Document,
+        DocumentFilter,
+        guards=[Guard.document_access()],
+    ),
 ) -> Paginated[DocumentRead]:
     """Get all documents matching the filter for the authenticated user.
 
@@ -442,8 +439,9 @@ async def update_document(
         guard = Guard.document_access(required_permissions)
 
         if not guard.predicate(document, user):
-            raise AppException(status_code=403, error_code=AppErrorCode.NOT_AUTHORIZED, detail="You do not have access to this document after the update.")
-
+            raise AppException(
+                status_code=403, error_code=AppErrorCode.NOT_AUTHORIZED, detail="You do not have access to this document after the update."
+            )
 
     document.sqlmodel_update(document_update.model_dump(exclude_unset=True))
     await db.commit()
@@ -462,12 +460,10 @@ async def update_document(
             resource="document",
             type="view_mode_changed",
         )
-        await events.publish(
-            view_mode_event.model_dump(mode="json"),
-            channel=f"documents:{document.id}:comments"
-        )
+        await events.publish(view_mode_event.model_dump(mode="json"), channel=f"documents:{document.id}:comments")
 
     return document
+
 
 @router.delete("/{document_id}")
 async def delete_document(
@@ -502,9 +498,7 @@ async def clear_document_comments(
 ) -> Response:
     """Clear all comments from a document. Only group owners and administrators can perform this action."""
     # Bulk delete all comments; FK cascades handle child records
-    await db.exec(
-        delete(Comment).where(Comment.document_id == document.id)
-    )
+    await db.exec(delete(Comment).where(Comment.document_id == document.id))
     await db.commit()
 
     # Notify connected clients to clear their local comment cache
@@ -522,4 +516,3 @@ async def clear_document_comments(
     )
 
     return Response(status_code=204)
-

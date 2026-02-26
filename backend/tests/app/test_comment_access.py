@@ -21,7 +21,6 @@ from util.queries import Guard
         (False, ViewMode.PUBLIC, Visibility.RESTRICTED, True, True),
         (False, ViewMode.PUBLIC, Visibility.PRIVATE, False, False),
         (False, ViewMode.PUBLIC, Visibility.PRIVATE, True, True),
-
         # user_has_perm False, document view_mode restricted
         (False, ViewMode.RESTRICTED, Visibility.PUBLIC, False, False),
         (False, ViewMode.RESTRICTED, Visibility.PUBLIC, True, True),
@@ -29,7 +28,6 @@ from util.queries import Guard
         (False, ViewMode.RESTRICTED, Visibility.RESTRICTED, True, True),
         (False, ViewMode.RESTRICTED, Visibility.PRIVATE, False, False),
         (False, ViewMode.RESTRICTED, Visibility.PRIVATE, True, True),
-
         # user_has_perm True, document view_mode public
         (True, ViewMode.PUBLIC, Visibility.PUBLIC, False, True),
         (True, ViewMode.PUBLIC, Visibility.PUBLIC, True, True),
@@ -37,7 +35,6 @@ from util.queries import Guard
         (True, ViewMode.PUBLIC, Visibility.RESTRICTED, True, True),
         (True, ViewMode.PUBLIC, Visibility.PRIVATE, False, False),
         (True, ViewMode.PUBLIC, Visibility.PRIVATE, True, True),
-
         # user_has_perm True, document view_mode restricted
         (True, ViewMode.RESTRICTED, Visibility.PUBLIC, False, True),
         (True, ViewMode.RESTRICTED, Visibility.PUBLIC, True, True),
@@ -47,7 +44,9 @@ from util.queries import Guard
         (True, ViewMode.RESTRICTED, Visibility.PRIVATE, True, True),
     ],
 )
-async def test_comment_access_predicate_and_sql(db: SQLModelAsyncSession, user_has_perm: bool, view_mode: ViewMode, comment_visibility: Visibility, is_author: bool, expected: bool) -> None:
+async def test_comment_access_predicate_and_sql(
+    db: SQLModelAsyncSession, user_has_perm: bool, view_mode: ViewMode, comment_visibility: Visibility, is_author: bool, expected: bool
+) -> None:
     """Test the comment_access predicate and SQL clause against the truth table.
 
     We create a group + document + comment, add memberships for an author and

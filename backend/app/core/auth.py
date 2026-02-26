@@ -20,8 +20,7 @@ from models.tables import User
 from sqlmodel import select
 
 if not JWT_SECRET:
-    raise RuntimeError(
-        "Required environment variable JWT_SECRET is not set")
+    raise RuntimeError("Required environment variable JWT_SECRET is not set")
 
 
 ALGORITHM = "HS256"
@@ -47,8 +46,10 @@ def validate_password(user: User, password: str) -> bool:
 @overload
 async def parse_jwt(token: str, db: Database, *, for_type: TokenType | None = None, strict: Literal[True] = True) -> User: ...
 
+
 @overload
 async def parse_jwt(token: str, db: Database, *, for_type: TokenType | None = None, strict: Literal[False] = False) -> User | None: ...
+
 
 async def parse_jwt(token: str, db: Database, *, for_type: TokenType | None = None, strict: bool = True) -> User | None:
     """Validate a nested JWT and return the user if valid."""
@@ -67,7 +68,7 @@ async def parse_jwt(token: str, db: Database, *, for_type: TokenType | None = No
 
             q = await db.exec(select(User).where(User.id == int(user_id)))
             user = q.first()
-            
+
             if not user:
                 return None, "User not found"
 
@@ -95,11 +96,11 @@ async def parse_jwt(token: str, db: Database, *, for_type: TokenType | None = No
             ) from e
         return None
 
+
 def refresh_token(user: User, db: Database) -> Token:
     """Generate a new access token using a valid refresh token."""
     token = generate_token(user, "access")
     return Token(access_token=token, token_type="bearer")
-
 
 
 def generate_token(user: User, token_type: Literal["access", "refresh"], scopes: list[str] | None = None) -> str:
@@ -107,11 +108,7 @@ def generate_token(user: User, token_type: Literal["access", "refresh"], scopes:
     if token_type == "access":
         expire = datetime.now(UTC) + timedelta(minutes=JWT_ACCESS_EXPIRATION_MINUTES)
     elif token_type == "refresh":
-        days = (
-            GUEST_ACCOUNT_TTL_DAYS
-            if user.is_guest
-            else JWT_REFRESH_EXPIRATION_DAYS
-        )
+        days = GUEST_ACCOUNT_TTL_DAYS if user.is_guest else JWT_REFRESH_EXPIRATION_DAYS
         expire = datetime.now(UTC) + timedelta(days=days)
 
     # Inner JWT (personal)

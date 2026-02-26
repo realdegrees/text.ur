@@ -85,6 +85,7 @@ class Permission(StrEnum):
     VIEW_RESTRICTED_COMMENTS = "view_restricted_comments"
     ADD_REACTIONS = "add_reactions"
 
+
 class ViewMode(StrEnum):
     """Document view mode settings.
 
@@ -110,6 +111,7 @@ class DocumentVisibility(StrEnum):
     PRIVATE = "private"
     PUBLIC = "public"
 
+
 class AppErrorCode(StrEnum):
     """Types of custom application exceptions."""
 
@@ -129,14 +131,16 @@ class AppErrorCode(StrEnum):
     EMAIL_NOT_VERIFIED = "email_not_verified"  # use when user has not verified their email address
     SHARELINK_INVALID = "sharelink_invalid"  # use when sharelink token is invalid
     SHARELINK_EXPIRED = "sharelink_expired"  # use when sharelink has
-    
+
     # Group Membership Errors
-    MEMBERSHIP_NOT_FOUND = "membership_not_found"  # use when membership invite is not found or has been revoked or user is not a member of the group
+    MEMBERSHIP_NOT_FOUND = (
+        "membership_not_found"  # use when membership invite is not found or has been revoked or user is not a member of the group
+    )
     OWNER_CANNOT_LEAVE_GROUP = "owner_cannot_leave_group"  # use when the owner tries to leave the group instead of deleting it
     CANNOT_REMOVE_PERMISSION_REASON_DEFAULT_GROUP = "cannot_remove_permission_reason_default_group"  # use when trying to remove a permission that is included in the group's default permission reason
     CANNOT_REMOVE_PERMISSION_REASON_SHARELINK = "cannot_remove_permission_reason_sharelink"  # use when trying to remove a permission that is included in the related sharelink's permission reason
     CANNOT_PROMOTE_SELF = "cannot_promote_self"  # use when a user tries to promote their own guest membership to permanent
-    
+
     # Resource Not Found
     NOT_FOUND = "not_found"  # use when a requested resource does not exist
 
@@ -172,4 +176,3 @@ class AppErrorCode(StrEnum):
     # Account Errors
     ALREADY_VERIFIED = "already_verified"  # use when a user is already verified
     MUST_TRANSFER_OWNERSHIP = "must_transfer_ownership"  # use when user must transfer group ownership before deleting account
-

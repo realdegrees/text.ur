@@ -57,23 +57,15 @@ def _validate_answer_type_fields(
     if answer_type == AnswerType.MULTIPLE_CHOICE:
         resolved = options or []
         if len(resolved) < 2:
-            raise ValueError(
-                "Multiple choice tasks require at least 2 options."
-            )
+            raise ValueError("Multiple choice tasks require at least 2 options.")
         if not any(o.is_correct for o in resolved):
-            raise ValueError(
-                "At least one option must be marked as correct."
-            )
+            raise ValueError("At least one option must be marked as correct.")
     elif answer_type == AnswerType.STRING:
         if not correct_string_answer:
-            raise ValueError(
-                "String tasks require a correct_string_answer."
-            )
+            raise ValueError("String tasks require a correct_string_answer.")
     elif answer_type == AnswerType.NUMBER:
         if correct_number_answer is None:
-            raise ValueError(
-                "Number tasks require a correct_number_answer."
-            )
+            raise ValueError("Number tasks require a correct_number_answer.")
 
 
 # ---------------------
@@ -88,9 +80,7 @@ class TaskCreate(SQLModel):
 
     question: str = Field(max_length=500, min_length=1)
     answer_type: AnswerType
-    correct_string_answer: str | None = Field(
-        default=None, max_length=255
-    )
+    correct_string_answer: str | None = Field(default=None, max_length=255)
     correct_number_answer: float | None = None
     number_tolerance: float | None = Field(default=None, ge=0)
     string_match_mode: StringMatchMode = StringMatchMode.CASE_INSENSITIVE
@@ -116,9 +106,7 @@ class TaskUpdate(SQLModel):
 
     question: str | None = Field(default=None, max_length=500)
     answer_type: AnswerType | None = None
-    correct_string_answer: str | None = Field(
-        default=None, max_length=255
-    )
+    correct_string_answer: str | None = Field(default=None, max_length=255)
     correct_number_answer: float | None = None
     number_tolerance: float | None = Field(default=None, ge=0)
     string_match_mode: StringMatchMode | None = None

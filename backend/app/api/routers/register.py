@@ -25,38 +25,20 @@ from util.api_router import APIRouter
 
 register_logger = get_logger("app")
 
-router = APIRouter(
-    prefix="/register",
-    tags=["Register"]
-)
+router = APIRouter(prefix="/register", tags=["Register"])
 
 
-async def _upgrade_guest_account(
-    db: Database,
-    mail: Mail,
-    user: User,
-    user_create: UserCreate
-) -> None:
+async def _upgrade_guest_account(db: Database, mail: Mail, user: User, user_create: UserCreate) -> None:
     """Upgrade a guest account to a permanent account with email verification."""
     if not user.is_guest:
-        raise AppException(
-            status_code=400,
-            detail="Account is already a permanent account",
-            error_code=AppErrorCode.INVALID_INPUT
-        )
+        raise AppException(status_code=400, detail="Account is already a permanent account", error_code=AppErrorCode.INVALID_INPUT)
 
     # Check if email is already taken
-    result = await db.exec(
-        select(User).where(User.email == user_create.email)
-    )
+    result = await db.exec(select(User).where(User.email == user_create.email))
     existing_user = result.first()
 
     if existing_user and existing_user.id != user.id:
-        raise AppException(
-            status_code=400,
-            detail="Email already registered",
-            error_code=AppErrorCode.EMAIL_TAKEN
-        )
+        raise AppException(status_code=400, detail="Email already registered", error_code=AppErrorCode.EMAIL_TAKEN)
 
     # Update user with email and password
     user.email = user_create.email
@@ -75,13 +57,12 @@ async def _upgrade_guest_account(
 
     # Send verification email
     verification_link = mail.generate_verification_link(
-        user.email, router,
+        user.email,
+        router,
         salt="email-verification",
         confirm_route="verify",
     )
-    expiry_time = datetime.now(UTC) + timedelta(
-        days=cfg.REGISTER_LINK_EXPIRY_DAYS
-    )
+    expiry_time = datetime.now(UTC) + timedelta(days=cfg.REGISTER_LINK_EXPIRY_DAYS)
     try:
         mail.send_email(
             user.email,
@@ -89,9 +70,7 @@ async def _upgrade_guest_account(
             template="register.jinja",
             template_vars={
                 "verification_link": verification_link,
-                "expiry_time": expiry_time.strftime(
-                    "%B %d, %Y at %H:%M UTC"
-                ),
+                "expiry_time": expiry_time.strftime("%B %d, %Y at %H:%M UTC"),
                 "username": user.username,
                 "email": user.email,
                 "current_year": datetime.now(UTC).year,
@@ -118,18 +97,9 @@ async def _upgrade_guest_account(
     await db.refresh(user)
 
 
-async def _register_regular_user(
-    db: Database,
-    mail: Mail,
-    user_create: UserCreate
-) -> None:
+async def _register_regular_user(db: Database, mail: Mail, user_create: UserCreate) -> None:
     """Handle regular user registration with email verification."""
-    result = await db.exec(
-        select(User).where(
-            (User.email == user_create.email) | (
-                User.username == user_create.username)
-        )
-    )
+    result = await db.exec(select(User).where((User.email == user_create.email) | (User.username == user_create.username)))
     existing_user = result.first()
 
     if existing_user:
@@ -137,19 +107,11 @@ async def _register_regular_user(
             await db.delete(existing_user)
             await db.commit()
         elif existing_user.username == user_create.username:
-            raise AppException(
-                status_code=400,
-                detail="Username already registered",
-                error_code=AppErrorCode.USERNAME_TAKEN
-            )
+            raise AppException(status_code=400, detail="Username already registered", error_code=AppErrorCode.USERNAME_TAKEN)
         else:
-            raise AppException(
-                status_code=400,
-                detail="Email already registered",
-                error_code=AppErrorCode.EMAIL_TAKEN
-            )
+            raise AppException(status_code=400, detail="Email already registered", error_code=AppErrorCode.EMAIL_TAKEN)
 
-    user = User(**user_create.model_dump(exclude={'token'}))
+    user = User(**user_create.model_dump(exclude={"token"}))
     user.password = hash_password(user_create.password)
 
     # Attempt to create user
@@ -158,19 +120,16 @@ async def _register_regular_user(
         await db.commit()
         await db.refresh(user)
     except IntegrityError as e:
-        raise AppException(
-            status_code=409, error_code=AppErrorCode.ALREADY_EXISTS, detail="Username or email already exists"
-        ) from e
+        raise AppException(status_code=409, error_code=AppErrorCode.ALREADY_EXISTS, detail="Username or email already exists") from e
 
     # Send verification email
     verification_link = mail.generate_verification_link(
-        user.email, router,
+        user.email,
+        router,
         salt="email-verification",
         confirm_route="verify",
     )
-    expiry_time = datetime.now(UTC) + timedelta(
-        days=cfg.REGISTER_LINK_EXPIRY_DAYS
-    )
+    expiry_time = datetime.now(UTC) + timedelta(days=cfg.REGISTER_LINK_EXPIRY_DAYS)
     try:
         mail.send_email(
             user.email,
@@ -178,9 +137,7 @@ async def _register_regular_user(
             template="register.jinja",
             template_vars={
                 "verification_link": verification_link,
-                "expiry_time": expiry_time.strftime(
-                    "%B %d, %Y at %H:%M UTC"
-                ),
+                "expiry_time": expiry_time.strftime("%B %d, %Y at %H:%M UTC"),
                 "username": user.username,
                 "email": user.email,
                 "current_year": datetime.now(UTC).year,
@@ -204,41 +161,33 @@ async def _register_regular_user(
 
 
 async def _register_anonymous_user(
-    request: Request,
-    db: Database,
-    response: Response,
-    user_create: UserCreate,
-    sharelink_token: str
+    request: Request, db: Database, response: Response, user_create: UserCreate, sharelink_token: str
 ) -> Token:
     """Handle anonymous user registration with sharelink token."""
     # Find the sharelink by token
-    result = await db.exec(
-        select(ShareLink).where(ShareLink.token == sharelink_token)
-    )
+    result = await db.exec(select(ShareLink).where(ShareLink.token == sharelink_token))
     share_link: ShareLink | None = result.first()
 
     if not share_link:
-        raise AppException(status_code=401, detail="Invalid sharelink token",
-                           error_code=AppErrorCode.INVALID_TOKEN)
+        raise AppException(status_code=401, detail="Invalid sharelink token", error_code=AppErrorCode.INVALID_TOKEN)
 
     # Check if expired
     if share_link.expires_at and share_link.expires_at < datetime.now(UTC):
-        raise AppException(status_code=403, detail="Share link has expired",
-                           error_code=AppErrorCode.SHARELINK_EXPIRED)
+        raise AppException(status_code=403, detail="Share link has expired", error_code=AppErrorCode.SHARELINK_EXPIRED)
 
     # Check if anonymous access is allowed
     if not share_link.allow_anonymous_access:
-        raise AppException(status_code=403, detail="Anonymous access is not allowed with this sharelink",
-                           error_code=AppErrorCode.SHARELINK_ANONYMOUS_DISABLED)
+        raise AppException(
+            status_code=403,
+            detail="Anonymous access is not allowed with this sharelink",
+            error_code=AppErrorCode.SHARELINK_ANONYMOUS_DISABLED,
+        )
 
     # Check if username already exists
-    result = await db.exec(
-        select(User).where(User.username == user_create.username)
-    )
+    result = await db.exec(select(User).where(User.username == user_create.username))
     existing_user = result.first()
     if existing_user:
-        raise AppException(status_code=400, detail="Username already registered",
-                           error_code=AppErrorCode.USERNAME_TAKEN)
+        raise AppException(status_code=400, detail="Username already registered", error_code=AppErrorCode.USERNAME_TAKEN)
 
     # Create anonymous user
     user = User(
@@ -274,7 +223,7 @@ async def _register_anonymous_user(
         httponly=True,
         secure=cfg.COOKIE_SECURE,
         samesite=cfg.COOKIE_SAMESITE,
-        max_age=int(cfg.JWT_ACCESS_EXPIRATION_MINUTES * 60)
+        max_age=int(cfg.JWT_ACCESS_EXPIRATION_MINUTES * 60),
     )
 
     response.set_cookie(
@@ -283,7 +232,7 @@ async def _register_anonymous_user(
         httponly=True,
         secure=cfg.COOKIE_SECURE,
         samesite=cfg.COOKIE_SAMESITE,
-        max_age=int(cfg.GUEST_ACCOUNT_TTL_DAYS * 24 * 60 * 60)
+        max_age=int(cfg.GUEST_ACCOUNT_TTL_DAYS * 24 * 60 * 60),
     )
 
     return token
@@ -297,7 +246,7 @@ async def register(
     mail: Mail,
     response: Response,
     user_create: UserCreate,
-    authenticated_user: User | None = Authenticate(strict=False)
+    authenticated_user: User | None = Authenticate(strict=False),
 ) -> Token | None:
     """Register a new user, anonymous user, or upgrade a guest account.
 
@@ -348,8 +297,7 @@ async def verify(request: Request, token: str, db: Database) -> RedirectResponse
             token, max_age=int(cfg.REGISTER_LINK_EXPIRY_DAYS * 24 * 60 * 60), salt="email-verification"
         )
     except (BadSignature, SignatureExpired) as e:
-        raise AppException(
-            status_code=403, error_code=AppErrorCode.INVALID_TOKEN, detail="Invalid or expired token") from e
+        raise AppException(status_code=403, error_code=AppErrorCode.INVALID_TOKEN, detail="Invalid or expired token") from e
 
     query = select(User).filter(User.email == email)
     result = await db.exec(query)
@@ -376,8 +324,7 @@ async def verify(request: Request, token: str, db: Database) -> RedirectResponse
 
     # Create the redirect response to login page with verified param
     # Login page will redirect authenticated users to dashboard while preserving the param
-    redirect_response = RedirectResponse(
-        url=f"{cfg.FRONTEND_BASEURL}/login?verified=true", status_code=303)
+    redirect_response = RedirectResponse(url=f"{cfg.FRONTEND_BASEURL}/login?verified=true", status_code=303)
 
     # Set cookies on that response
     redirect_response.set_cookie(
@@ -386,7 +333,7 @@ async def verify(request: Request, token: str, db: Database) -> RedirectResponse
         httponly=True,
         secure=cfg.COOKIE_SECURE,
         samesite=cfg.COOKIE_SAMESITE,
-        max_age=int(cfg.JWT_ACCESS_EXPIRATION_MINUTES * 60)
+        max_age=int(cfg.JWT_ACCESS_EXPIRATION_MINUTES * 60),
     )
     redirect_response.set_cookie(
         key="refresh_token",
@@ -394,7 +341,7 @@ async def verify(request: Request, token: str, db: Database) -> RedirectResponse
         httponly=True,
         secure=cfg.COOKIE_SECURE,
         samesite=cfg.COOKIE_SAMESITE,
-        max_age=int(cfg.JWT_REFRESH_EXPIRATION_DAYS * 24 * 60 * 60)
+        max_age=int(cfg.JWT_REFRESH_EXPIRATION_DAYS * 24 * 60 * 60),
     )
 
     return redirect_response

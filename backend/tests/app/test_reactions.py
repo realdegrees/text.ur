@@ -62,11 +62,7 @@ async def _setup(
     ]
     group_reactions = []
     for emoji, order in emojis:
-        gr = await db.run_sync(
-            lambda s, e=emoji, o=order: f.GroupReactionFactory(
-                group=group, emoji=e, order=o
-            )
-        )
+        gr = await db.run_sync(lambda s, e=emoji, o=order: f.GroupReactionFactory(group=group, emoji=e, order=o))
         group_reactions.append(gr)
 
     comment = await db.run_sync(
@@ -108,9 +104,7 @@ async def _setup(
 class TestSelfReactionPrevention:
     """The router checks comment.user_id == user.id before allowing."""
 
-    async def test_self_reaction_detected(
-        self, db: SQLModelAsyncSession
-    ) -> None:
+    async def test_self_reaction_detected(self, db: SQLModelAsyncSession) -> None:
         """The comment author should be identified as self-reacting."""
         data = await _setup(db)
         comment = data["comment"]
@@ -174,9 +168,7 @@ class TestReactionCRUD:
         assert fetched is not None
         assert fetched.group_reaction_id == gr.id
 
-    async def test_upsert_changes_group_reaction(
-        self, db: SQLModelAsyncSession
-    ) -> None:
+    async def test_upsert_changes_group_reaction(self, db: SQLModelAsyncSession) -> None:
         """Updating an existing reaction changes its group_reaction_id."""
         data = await _setup(db)
         gr_smile = data["all_group_reactions"][1]  # SMILE
@@ -250,9 +242,7 @@ class TestReactionCRUD:
         )
         assert result2.first() is None
 
-    async def test_composite_pk_uniqueness(
-        self, db: SQLModelAsyncSession
-    ) -> None:
+    async def test_composite_pk_uniqueness(self, db: SQLModelAsyncSession) -> None:
         """The (user_id, comment_id) composite PK prevents duplicates."""
         data = await _setup(db)
         gr = data["group_reaction"]  # THUMBS_UP

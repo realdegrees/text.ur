@@ -14,7 +14,8 @@ from util.queries import EndpointGuard
 
 logger = get_logger("app")
 
-def Authenticate( # noqa: C901
+
+def Authenticate(  # noqa: C901
     guards: Sequence[EndpointGuard] = (),
     *,
     endpoint: Literal["ws", "http"] = "http",
@@ -36,28 +37,31 @@ def Authenticate( # noqa: C901
         HTTPException: If the user is not authenticated or does not pass custom validation.
 
     """
-    async def dependency( # noqa: C901
+
+    async def dependency(  # noqa: C901
         db: Database,
         context: Request | WebSocket,
         token: str | None = None,
     ) -> User | None:
         if not token:
             if strict:
-                raise AppException(status_code=401, detail="Unauthorized: No access token provided", error_code=AppErrorCode.NOT_AUTHENTICATED)
+                raise AppException(
+                    status_code=401, detail="Unauthorized: No access token provided", error_code=AppErrorCode.NOT_AUTHENTICATED
+                )
             return None
 
         user = await parse_jwt(token, db, for_type=token_type, strict=strict)
-        
+
         if not user and not strict:
             return None
-        
+
         if not user.verified and not user.is_guest:
             raise AppException(status_code=403, detail="Forbidden: Email not verified", error_code=AppErrorCode.EMAIL_NOT_VERIFIED)
 
         context_path_params: dict[str, Any] = context.path_params
         context_query_params: QueryParams = context.query_params
         body_data: dict[str, Any] = {}
-        
+
         if hasattr(context, "json"):
             try:
                 body_data = await context.json()
@@ -66,7 +70,7 @@ def Authenticate( # noqa: C901
                     body_data = {}
             except Exception:
                 body_data = {}
-                
+
         # merge context_path_params and body_data, path takes precedence
         merged_params = {**body_data, **context_path_params, **context_query_params}
 
