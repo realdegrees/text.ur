@@ -27,7 +27,7 @@ type RootTranslation = {
 	 */
 	contact: string
 	/**
-	 * I​m​p​r​i​n​t
+	 * L​e​g​a​l​ ​N​o​t​i​c​e
 	 */
 	imprint: string
 	/**
@@ -576,9 +576,10 @@ type RootTranslation = {
 		 */
 		owner_cannot_leave_group: string
 		/**
-		 * T​o​o​ ​m​a​n​y​ ​r​e​q​u​e​s​t​s​.​ ​P​l​e​a​s​e​ ​t​r​y​ ​a​g​a​i​n​ ​s​h​o​r​t​l​y​.
+		 * T​o​o​ ​m​a​n​y​ ​r​e​q​u​e​s​t​s​.​ ​P​l​e​a​s​e​ ​t​r​y​ ​a​g​a​i​n​ ​i​n​ ​{​r​e​t​r​y​A​f​t​e​r​}​.
+		 * @param {string} retryAfter
 		 */
-		rate_limited: string
+		rate_limited: RequiredParams<'retryAfter'>
 		/**
 		 * T​h​i​s​ ​s​h​a​r​e​ ​l​i​n​k​ ​i​s​ ​i​n​v​a​l​i​d
 		 */
@@ -647,6 +648,14 @@ type RootTranslation = {
 		 * F​a​i​l​e​d​ ​t​o​ ​s​e​n​d​ ​e​m​a​i​l​.​ ​P​l​e​a​s​e​ ​t​r​y​ ​a​g​a​i​n​ ​l​a​t​e​r​.
 		 */
 		mail_send_failed: string
+		/**
+		 * Y​o​u​ ​h​a​v​e​ ​a​l​r​e​a​d​y​ ​a​n​s​w​e​r​e​d​ ​t​h​i​s​ ​q​u​e​s​t​i​o​n​ ​c​o​r​r​e​c​t​l​y
+		 */
+		task_already_correct: string
+		/**
+		 * N​o​ ​a​t​t​e​m​p​t​s​ ​r​e​m​a​i​n​i​n​g​ ​f​o​r​ ​t​h​i​s​ ​q​u​e​s​t​i​o​n
+		 */
+		task_no_attempts_left: string
 		/**
 		 * T​h​i​s​ ​a​c​c​o​u​n​t​ ​i​s​ ​a​l​r​e​a​d​y​ ​v​e​r​i​f​i​e​d
 		 */
@@ -1667,6 +1676,10 @@ type RootTranslation = {
 		 */
 		reorderSuccess: string
 		/**
+		 * Q​u​e​s​t​i​o​n​ ​i​s​ ​r​e​q​u​i​r​e​d
+		 */
+		questionRequired: string
+		/**
 		 * N​o​ ​t​a​s​k​s​ ​c​r​e​a​t​e​d​ ​y​e​t
 		 */
 		noTasks: string
@@ -1805,6 +1818,14 @@ type RootTranslation = {
 		 * R​e​g​i​s​t​e​r
 		 */
 		registerTab: string
+		/**
+		 * R​e​g​i​s​t​r​a​t​i​o​n​ ​f​a​i​l​e​d
+		 */
+		registrationFailed: string
+		/**
+		 * R​e​g​i​s​t​r​a​t​i​o​n​ ​s​u​c​c​e​s​s​f​u​l​!​ ​P​l​e​a​s​e​ ​c​h​e​c​k​ ​y​o​u​r​ ​e​m​a​i​l​ ​t​o​ ​v​e​r​i​f​y​ ​y​o​u​r​ ​a​c​c​o​u​n​t​.
+		 */
+		registrationSuccess: string
 	}
 	comments: {
 		/**
@@ -2156,6 +2177,32 @@ type RootTranslation = {
 		 */
 		nDaysAgo: RequiredParams<'count'>
 	}
+	duration: {
+		/**
+		 * {​c​o​u​n​t​}​ ​s​e​c​o​n​d​{​{​s​}​}
+		 * @param {number} count
+		 */
+		nSeconds: RequiredParams<'count'>
+		/**
+		 * {​c​o​u​n​t​}​ ​m​i​n​u​t​e​{​{​s​}​}
+		 * @param {number} count
+		 */
+		nMinutes: RequiredParams<'count'>
+		/**
+		 * {​c​o​u​n​t​}​ ​h​o​u​r​{​{​s​}​}
+		 * @param {number} count
+		 */
+		nHours: RequiredParams<'count'>
+		/**
+		 * {​c​o​u​n​t​}​ ​d​a​y​{​{​s​}​}
+		 * @param {number} count
+		 */
+		nDays: RequiredParams<'count'>
+		/**
+		 * a​ ​f​e​w​ ​m​i​n​u​t​e​s
+		 */
+		aFewMinutes: string
+	}
 	datePicker: {
 		/**
 		 * S​e​l​e​c​t​ ​d​a​t​e​ ​a​n​d​ ​t​i​m​e
@@ -2192,6 +2239,30 @@ type RootTranslation = {
 		 */
 		densityDescription: string
 	}
+	privacy: {
+		/**
+		 * D​o​w​n​l​o​a​d​ ​M​y​ ​D​a​t​a
+		 */
+		exportButton: string
+		/**
+		 * P​l​e​a​s​e​ ​l​o​g​ ​i​n​ ​t​o​ ​e​x​p​o​r​t​ ​y​o​u​r​ ​d​a​t​a​.
+		 */
+		exportLoginRequired: string
+	}
+	errorPage: {
+		/**
+		 * A​n​ ​u​n​e​x​p​e​c​t​e​d​ ​e​r​r​o​r​ ​o​c​c​u​r​r​e​d
+		 */
+		unexpectedError: string
+		/**
+		 * G​o​ ​t​o​ ​D​a​s​h​b​o​a​r​d
+		 */
+		goToDashboard: string
+		/**
+		 * B​a​c​k​ ​t​o​ ​H​o​m​e
+		 */
+		backToHome: string
+	}
 	footer: {
 		/**
 		 * E​n​a​b​l​e​ ​D​a​r​k​ ​M​o​d​e
@@ -2205,6 +2276,10 @@ type RootTranslation = {
 		 * C​h​a​n​g​e​ ​L​a​n​g​u​a​g​e
 		 */
 		changeLanguage: string
+		/**
+		 * P​r​i​v​a​c​y​ ​P​o​l​i​c​y
+		 */
+		privacyPolicy: string
 	}
 }
 
@@ -2222,7 +2297,7 @@ export type TranslationFunctions = {
 	 */
 	contact: () => LocalizedString
 	/**
-	 * Imprint
+	 * Legal Notice
 	 */
 	imprint: () => LocalizedString
 	/**
@@ -2763,9 +2838,9 @@ export type TranslationFunctions = {
 		 */
 		owner_cannot_leave_group: () => LocalizedString
 		/**
-		 * Too many requests. Please try again shortly.
+		 * Too many requests. Please try again in {retryAfter}.
 		 */
-		rate_limited: () => LocalizedString
+		rate_limited: (arg: { retryAfter: string }) => LocalizedString
 		/**
 		 * This share link is invalid
 		 */
@@ -2834,6 +2909,14 @@ export type TranslationFunctions = {
 		 * Failed to send email. Please try again later.
 		 */
 		mail_send_failed: () => LocalizedString
+		/**
+		 * You have already answered this question correctly
+		 */
+		task_already_correct: () => LocalizedString
+		/**
+		 * No attempts remaining for this question
+		 */
+		task_no_attempts_left: () => LocalizedString
 		/**
 		 * This account is already verified
 		 */
@@ -3829,6 +3912,10 @@ export type TranslationFunctions = {
 		 */
 		reorderSuccess: () => LocalizedString
 		/**
+		 * Question is required
+		 */
+		questionRequired: () => LocalizedString
+		/**
 		 * No tasks created yet
 		 */
 		noTasks: () => LocalizedString
@@ -3964,6 +4051,14 @@ export type TranslationFunctions = {
 		 * Register
 		 */
 		registerTab: () => LocalizedString
+		/**
+		 * Registration failed
+		 */
+		registrationFailed: () => LocalizedString
+		/**
+		 * Registration successful! Please check your email to verify your account.
+		 */
+		registrationSuccess: () => LocalizedString
 	}
 	comments: {
 		/**
@@ -4301,6 +4396,28 @@ export type TranslationFunctions = {
 		 */
 		nDaysAgo: (arg: { count: number }) => LocalizedString
 	}
+	duration: {
+		/**
+		 * {count} second{{s}}
+		 */
+		nSeconds: (arg: { count: number }) => LocalizedString
+		/**
+		 * {count} minute{{s}}
+		 */
+		nMinutes: (arg: { count: number }) => LocalizedString
+		/**
+		 * {count} hour{{s}}
+		 */
+		nHours: (arg: { count: number }) => LocalizedString
+		/**
+		 * {count} day{{s}}
+		 */
+		nDays: (arg: { count: number }) => LocalizedString
+		/**
+		 * a few minutes
+		 */
+		aFewMinutes: () => LocalizedString
+	}
 	datePicker: {
 		/**
 		 * Select date and time
@@ -4337,6 +4454,30 @@ export type TranslationFunctions = {
 		 */
 		densityDescription: () => LocalizedString
 	}
+	privacy: {
+		/**
+		 * Download My Data
+		 */
+		exportButton: () => LocalizedString
+		/**
+		 * Please log in to export your data.
+		 */
+		exportLoginRequired: () => LocalizedString
+	}
+	errorPage: {
+		/**
+		 * An unexpected error occurred
+		 */
+		unexpectedError: () => LocalizedString
+		/**
+		 * Go to Dashboard
+		 */
+		goToDashboard: () => LocalizedString
+		/**
+		 * Back to Home
+		 */
+		backToHome: () => LocalizedString
+	}
 	footer: {
 		/**
 		 * Enable Dark Mode
@@ -4350,6 +4491,10 @@ export type TranslationFunctions = {
 		 * Change Language
 		 */
 		changeLanguage: () => LocalizedString
+		/**
+		 * Privacy Policy
+		 */
+		privacyPolicy: () => LocalizedString
 	}
 }
 

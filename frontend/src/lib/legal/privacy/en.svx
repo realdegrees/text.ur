@@ -1,0 +1,63 @@
+<script>
+	import DataExportButton from '$lib/legal/DataExportButton.svelte';
+	import { env } from '$env/dynamic/public';
+
+	const contactEmail = env.PUBLIC_CONTACT_EMAIL || 'Text.ur@sprachlit.uni-regensburg.de';
+</script>
+
+# Privacy Policy
+
+## Responsible Body, Data Protection Officer, and Supervisory Authority
+
+text.ur is operated by the University of Regensburg. For information on the responsible body (Art. 4(7) GDPR), the data protection officer, and the competent supervisory authority, please refer to the university's data protection page:
+
+[Data protection -- University of Regensburg](https://www.uni-regensburg.de/en/data-protection)
+
+## Purpose and Legal Basis
+
+text.ur is a collaborative PDF annotation platform operated by the University of Regensburg for academic purposes. Personal data is processed on the legal basis of Art. 6(1)(e) GDPR in conjunction with Art. 4 BayDSG (public interest / exercise of official authority) to enable collaborative document annotation in teaching and research.
+
+## Data Collected
+
+**Account data:** When you register, we store your username, email address, first name, last name, and a hashed password. Guest accounts only store a username.
+
+**Usage data:** Comments, annotations, reactions, task responses, and group memberships you create while using the platform.
+
+**Uploaded files:** PDF documents you upload are stored in our object storage system on university infrastructure.
+
+## Cookies
+
+This application uses only technically necessary cookies. No tracking or analytics cookies are used. Since all cookies are essential for the application to function, no consent banner is required.
+
+| Name | Purpose | Expiry |
+|------|---------|--------|
+| `access_token` | Authentication (session token) | 12 hours |
+| `refresh_token` | Session renewal | 3--30 days (depending on account type) |
+| `theme` | Dark/light mode preference | Session (browser) |
+| `locale` | Language preference | 30 days |
+
+## Server Logs
+
+For security and error analysis, the server logs HTTP requests with anonymized IP addresses (last octet set to 0 for IPv4, /48 mask for IPv6). Log files are automatically deleted after 90 days. Full (unanonymized) IP addresses are only held transiently in memory for rate limiting purposes and are not persisted.
+
+## Third Parties
+
+This application does not transmit any personal data to third-party services and does not load any external resources. All data is processed and all assets are served exclusively from university infrastructure.
+
+## Your Rights
+
+Under the GDPR, you have the right to access (Art. 15), rectification (Art. 16), erasure (Art. 17), restriction of processing (Art. 18), data portability (Art. 20), and objection (Art. 21). To exercise these rights, contact the responsible body or the data protection officer listed above.
+
+### Data Export
+
+You can download all personal data associated with your account at any time. The export includes your profile information, group memberships, comments, reactions, and task responses.
+
+<DataExportButton />
+
+### Account Deletion
+
+You can permanently delete your account and all associated data from your account settings page. Groups you own will be transferred to another administrator or deleted if none exists.
+
+## Contact
+
+For questions about data protection, please contact the data protection officer at [dsb@ur.de](mailto:dsb@ur.de) or the application administrators at <a href="mailto:{contactEmail}">{contactEmail}</a>.

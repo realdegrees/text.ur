@@ -26,16 +26,10 @@ async def prepare_group_deletion(
     Returns the list of S3 object keys that should be removed
     **after** the commit succeeds.
     """
-    result = await db.exec(
-        select(Document.s3_key).where(
-            Document.group_id == group_id
-        )
-    )
+    result = await db.exec(select(Document.s3_key).where(Document.group_id == group_id))
     s3_keys: list[str] = list(result.all())
 
-    result = await db.exec(
-        select(Group).where(Group.id == group_id)
-    )
+    result = await db.exec(select(Group).where(Group.id == group_id))
     group = result.one()
     await db.delete(group)
 

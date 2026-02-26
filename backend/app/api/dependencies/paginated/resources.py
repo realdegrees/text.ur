@@ -26,28 +26,28 @@ from util.queries import EndpointGuard
 
 def build_paginated_description(base_description: str, guards: Sequence[EndpointGuard]) -> str:
     """Build endpoint description with guard exclusion information.
-    
+
     Args:
         base_description: The main endpoint description
         guards: Sequence of guards to extract exclusions from
-    
+
     Returns:
         Complete description with exclusion notices appended
-    
+
     """
     guard_exclusions = []
     for guard in guards:
         excluded = guard.get_excluded_fields()
         if excluded:
             guard_exclusions.extend(excluded)
-    
+
     if guard_exclusions:
         exclusion_notice = (
             f"\\n\\n**Field Exclusions:** The following fields are always excluded from this endpoint's "
             f"responses due to access control rules: `{'`, `'.join(sorted(set(guard_exclusions)))}`"
         )
         return base_description + exclusion_notice
-    
+
     return base_description
 
 
@@ -60,19 +60,19 @@ def PaginatedResource[Model: SQLModel, FilterModel: SQLModel](  # noqa: C901
     guards: Sequence[EndpointGuard] = (),
 ) -> Callable[..., Paginated[Model]]:
     """Generate an advanced filter+sort query dependency with pagination.
-    
+
     Args:
         base_model: The SQLModel class to query
         filter_model: The filter model class defining available filters
         key_columns: Custom primary key columns (defaults to base_model.id)
         validate: Optional validator function to transform results
         guards: Sequence of EndpointGuard instances for access control
-    
+
     """
     filterable_field_data = FilterMeta.from_filter(filter_model)
 
     def build_conditions(
-        filters: list[Filter], 
+        filters: list[Filter],
         filterable_field_data: list[FilterableField] = filterable_field_data,
         session_user: User | None = None,
     ) -> list[ColumnElement[bool]]:
@@ -117,31 +117,28 @@ def PaginatedResource[Model: SQLModel, FilterModel: SQLModel](  # noqa: C901
                 continue
             column = field_data.field
             columns.append(column.label(f"order_{len(columns)}"))  # Labeled column for SELECT
-            order_expressions.append(
-                column.desc() if sort.direction.lower() == "desc" else column.asc()
-            )  # Direction for ORDER BY
+            order_expressions.append(column.desc() if sort.direction.lower() == "desc" else column.asc())  # Direction for ORDER BY
 
         return columns, order_expressions
-    
 
-    async def dependency( # noqa: C901
+    async def dependency(  # noqa: C901
         db: Database,
         request: Request,
         pagination: Pagination = Depends(),
         filters: list[Filter] = get_filters_dependency(filterable_field_data),
         sorts: list[Sort] = get_sorts_dependency(filterable_field_data),
         session_user: User | None = Authenticate(strict=False),
-    ) -> Paginated[Model]:            
+    ) -> Paginated[Model]:
         # Resolve primary key(s)
         resolved_key_columns: list[ColumnElement] = key_columns if key_columns else [base_model.id]
 
         # Collect fields to exclude from response
         excluded_fields: list[str] = []
-        
+
         # 1. Guard-based exclusions (static, based on endpoint access rules)
         for guard in guards:
             excluded_fields.extend(guard.get_excluded_fields())
-        
+
         # 2. Filter-based exclusions (dynamic, based on active equality filters)
         for filter_item in filters:
             # Only exclude fields when using the equality operator
@@ -165,18 +162,18 @@ def PaginatedResource[Model: SQLModel, FilterModel: SQLModel](  # noqa: C901
         )
         if filter_conditions:
             base_query = base_query.where(*filter_conditions)
-            
+
         params: dict[str, Any] = {}
         # Add filters to params as dict entries
         for filter_item in filters:
             params[filter_item.field] = filter_item.value
-        
+
         # Add query parameters from request (excluding filters)
         if isinstance(request.query_params, QueryParams):
             for key, value in request.query_params.multi_items():
                 if key not in params and not key.startswith("filter[["):
                     params[key] = value
-                    
+
         # Add path parameters from request
         for key, value in request.path_params.items():
             if key not in params:

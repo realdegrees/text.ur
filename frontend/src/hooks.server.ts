@@ -127,7 +127,7 @@ export const handleFetch: HandleFetch = async ({ request, fetch, event }) => {
 /** Allow ETag and Cache-Control headers to pass through to universal load functions during SSR. */
 const serializeOptions = {
 	filterSerializedResponseHeaders: (name: string) =>
-		['etag', 'cache-control'].includes(name.toLowerCase())
+		['etag', 'cache-control', 'retry-after'].includes(name.toLowerCase())
 };
 
 const user: Handle = async ({ event, resolve }) => {
@@ -189,7 +189,7 @@ const translation: Handle = async ({ event, resolve }) => {
 		path: '/',
 		httpOnly: false, // Allow client-side access for language switching
 		sameSite: 'lax',
-		maxAge: 60 * 60 * 24 * 365 // 1 year
+		maxAge: 60 * 60 * 24 * 30 // 30 days
 	});
 
 	// Continue with SSR rendering

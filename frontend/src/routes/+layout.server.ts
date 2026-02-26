@@ -6,6 +6,8 @@ import { api } from '$api/client';
 const noAuthRoutes = [
 	'/login',
 	'/',
+	'/privacy',
+	'/imprint',
 	'/sharelink/[token]',
 	'/password-reset/request',
 	'/password-reset/[token]'

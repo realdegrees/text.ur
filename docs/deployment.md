@@ -99,7 +99,8 @@ Copy `.env.template` to `.env` and configure the values. The tables below list a
 | `PUBLIC_BACKEND_BASEURL` | `http://localhost:8000` | Backend URL used by the browser for client-side API calls and WebSocket connections |
 | `COOKIE_SECURE` | `True` | Require HTTPS for cookies (set `False` for local HTTP development) |
 | `COOKIE_SAMESITE` | `lax` | Cookie SameSite attribute |
-| `GUEST_ACCOUNT_TTL_DAYS` | `90` | Days before unused guest accounts are eligible for cleanup |
+| `GUEST_ACCOUNT_TTL_DAYS` | `90` | Guest account lifetime in days (drives refresh-token expiry, cookie max-age, and cleanup) |
+| `PUBLIC_CONTACT_EMAIL` | `Text.ur@sprachlit.uni-regensburg.de` | Contact email shown in the footer and legal pages |
 
 </details>
 
@@ -148,8 +149,7 @@ Copy `.env.template` to `.env` and configure the values. The tables below list a
 |---|---|---|
 | `JWT_SECRET` | *(none)* | **Required.** Secret key for signing JWT tokens. Generate with `openssl rand -hex 32` |
 | `JWT_ACCESS_EXPIRATION_MINUTES` | `30` | Access token lifetime |
-| `JWT_REFRESH_EXPIRATION_DAYS` | `7` | Refresh token lifetime |
-| `JWT_REFRESH_GUEST_EXPIRATION_DAYS` | `30` | Refresh token lifetime for guest accounts |
+| `JWT_REFRESH_EXPIRATION_DAYS` | `7` | Refresh token lifetime (non-guest accounts; guest accounts use `GUEST_ACCOUNT_TTL_DAYS`) |
 
 </details>
 

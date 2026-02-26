@@ -1,10 +1,12 @@
 # fmt: on
+import asyncio
 import os
 import sys
 import time
 
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 # fmt: off
+import contextlib
 from collections.abc import AsyncGenerator, Callable
 from contextlib import asynccontextmanager
 
@@ -43,7 +45,7 @@ from models.enums import AppErrorCode
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from util.api_router import APIRouter
-from util.ip import get_client_ip
+from util.ip import anonymize_ip, get_client_ip
 from util.openapi import custom_openapi
 
 routers = [RegisterRouter, LoginRouter, LogoutRouter, UserRouter, MembershipRouter, GroupRouter, ShareLinkRouter, DocumentsRouter, CommentRouter, TagRouter, TaskRouter]
@@ -66,11 +68,24 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         app_logger.error("Error during dependency verification: %s", e, exc_info=True)
         sys.exit(1)
 
+    # Start periodic cleanup task (log retention, abandoned accounts)
+    from util.cleanup import periodic_cleanup_loop
+
+    cleanup_task = asyncio.create_task(
+        periodic_cleanup_loop(config.CLEANUP_INTERVAL_HOURS)
+    )
+
     app_logger.info("Application started successfully")
     try:
         yield
     finally:
         app_logger.info("Shutting down application...")
+
+        # Cancel the periodic cleanup task
+        cleanup_task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await cleanup_task
+
         await mgrs["event_manager"].disconnect()
 
         # Close the cache Redis singleton so connections are not
@@ -90,9 +105,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
 app = FastAPI(
     lifespan=lifespan,
-    title="Annotation Software API",
+    title="text.ur API",
     description=(
-        "This API allows interfacing with the Annotation Software database.\n\n"
+        "This API allows interfacing with the text.ur database.\n\n"
         "## Pagination\n"
         "All list endpoints are paginated and return results in a standardized format with metadata.\n\n"
         "## Filter Exclusions\n"
@@ -116,23 +131,42 @@ from core.rate_limit import limiter  # noqa: E402
 app.state.limiter = limiter
 
 
+def _parse_window_seconds(detail: str) -> int:
+    """Parse a slowapi limit string into the window duration in seconds.
+
+    Examples: "1 per 1 day" → 86400, "3 per 1 hour" → 3600,
+    "10 per 5 minute" → 300, "120 per 1 minute" → 60.
+    """
+    multipliers = {"second": 1, "minute": 60, "hour": 3600, "day": 86400}
+    try:
+        _, _, window = detail.partition(" per ")
+        parts = window.strip().split()
+        count = int(parts[0]) if len(parts) >= 2 else 1
+        unit = parts[-1].rstrip("s")
+        return count * multipliers.get(unit, 60)
+    except (ValueError, IndexError):
+        return 60
+
+
 @app.exception_handler(RateLimitExceeded)
 async def rate_limit_handler(
     request: Request, exc: RateLimitExceeded
 ) -> JSONResponse:
     """Return a structured AppError when a rate limit is exceeded."""
-    retry_after = exc.detail.split("per")[0].strip() if exc.detail else "later"
+    window_seconds = _parse_window_seconds(exc.detail or "")
+    content = AppError(
+        status_code=429,
+        error_code=AppErrorCode.RATE_LIMITED,
+        detail=(
+            f"Rate limit exceeded ({exc.detail}). "
+            f"Please try again later."
+        ),
+    ).model_dump()
+    content["retry_after"] = window_seconds
     return JSONResponse(
         status_code=429,
-        content=AppError(
-            status_code=429,
-            error_code=AppErrorCode.RATE_LIMITED,
-            detail=(
-                f"Rate limit exceeded ({exc.detail}). "
-                f"Please try again later."
-            ),
-        ).model_dump(),
-        headers={"Retry-After": retry_after},
+        content=content,
+        headers={"Retry-After": str(window_seconds)},
     )
 
 
@@ -262,7 +296,7 @@ async def log_requests(request: Request, call_next: Callable) -> Response:
     # Skip logging for static files and health checks
     path = request.url.path
     if not path.startswith("/static"):
-        client_ip = get_client_ip(request)
+        client_ip = anonymize_ip(get_client_ip(request))
         logger.info(
             "%s %s %s %.2fms",
             request.method,
@@ -302,17 +336,25 @@ async def health() -> dict[str, str]:
 
 @router.get("/docs", include_in_schema=False)
 def docs(req: Request) -> HTMLResponse:
-    """Return Custom Swagger UI."""
+    """Return Custom Swagger UI with self-hosted assets."""
     response = get_swagger_ui_html(
         openapi_url=app.openapi_url,
-        title="Annotation Software Docs",
-        swagger_ui_parameters={"displayRequestDuration": True, "persistAuthorization": True},
+        title="text.ur API Docs",
+        swagger_js_url="/static/swagger-ui-bundle.js",
+        swagger_css_url="/static/swagger-ui.css",
+        swagger_favicon_url="/static/favicon.svg",
+        swagger_ui_parameters={
+            "displayRequestDuration": True,
+            "persistAuthorization": True,
+        },
     )
     css: str = """
         <link rel="stylesheet" type="text/css" href="/static/openapi.css">
         </head>
     """
-    body: bytes = response.body.replace(b"</head>", css.encode("utf-8"))
+    body: bytes = response.body.replace(
+        b"</head>", css.encode("utf-8")
+    )
     response.body = body
     response.headers["content-length"] = str(len(body))
     return response

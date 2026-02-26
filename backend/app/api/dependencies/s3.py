@@ -45,9 +45,7 @@ class S3Manager:
                 read_timeout=30,
             ),
         )
-        s3_logger.info(
-            "S3 client configured (bucket: %s)", S3_BUCKET
-        )
+        s3_logger.info("S3 client configured (bucket: %s)", S3_BUCKET)
 
     def metadata(self, key: str) -> dict | None:
         """Check if an object exists in S3 and return its metadata."""
@@ -61,7 +59,7 @@ class S3Manager:
     def exists(self, key: str) -> bool:
         """Check if an object exists in S3."""
         return self.metadata(key) is not None
-    
+
     def get_last_modified(self, key: str) -> datetime:
         """Get the Last-Modified timestamp of an object in S3."""
         metadata = self.metadata(key)
@@ -83,8 +81,10 @@ class S3Manager:
         """Upload an object to S3."""
         try:
             self._client.put_object(
-                Bucket=S3_BUCKET, Key=key,
-                Body=data, ContentType=content_type,
+                Bucket=S3_BUCKET,
+                Key=key,
+                Body=data,
+                ContentType=content_type,
             )
         except ClientError as e:
             s3_logger.error("Upload failed for %s: %s", key, e)
@@ -94,14 +94,17 @@ class S3Manager:
                 detail="File storage is temporarily unavailable.",
             ) from e
         s3_logger.info(
-            "Uploaded object: %s (content_type=%s)", key, content_type,
+            "Uploaded object: %s (content_type=%s)",
+            key,
+            content_type,
         )
 
     def download(self, key: str) -> Any:  # noqa: ANN401 # this trash library is so poorly typed I cba to find the right type
         """Download an object from S3."""
         try:
             response = self._client.get_object(
-                Bucket=S3_BUCKET, Key=key,
+                Bucket=S3_BUCKET,
+                Key=key,
             )
         except ClientError as e:
             error_code = e.response["Error"]["Code"]
@@ -130,7 +133,8 @@ class S3Manager:
         """
         try:
             response = self._client.get_object(
-                Bucket=S3_BUCKET, Key=key,
+                Bucket=S3_BUCKET,
+                Key=key,
             )
         except ClientError as e:
             error_code = e.response["Error"]["Code"]
@@ -142,7 +146,9 @@ class S3Manager:
                     detail="The requested file was not found.",
                 ) from e
             s3_logger.error(
-                "Download stream failed for %s: %s", key, e,
+                "Download stream failed for %s: %s",
+                key,
+                e,
             )
             raise AppException(
                 status_code=502,
@@ -159,6 +165,7 @@ class S3Manager:
         # If only a file-like object with `read` is available, wrap it in a
         # generator to yield chunks.
         if hasattr(body, "read"):
+
             def _reader() -> Iterator[bytes]:
                 chunk = body.read(chunk_size)
                 while chunk:
@@ -183,6 +190,3 @@ def get_s3_manager() -> S3Manager:
 
 
 S3 = Annotated[S3Manager, Depends(get_s3_manager)]
-
-
- 

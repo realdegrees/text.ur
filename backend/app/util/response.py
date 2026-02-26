@@ -28,5 +28,5 @@ class ExcludableFieldsJSONResponse(JSONResponse):
                     else:
                         cleaned_data.append(item)
                 content["data"] = cleaned_data
-        
+
         return super().render(content)

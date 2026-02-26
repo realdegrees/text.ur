@@ -29,9 +29,7 @@ async def create_tag(
     Requires MANAGE_TAGS permission in the document's group.
     """
     # Check if document has reached max tag limit
-    result = await db.exec(
-        select(func.count(Tag.id)).where(Tag.document_id == document.id)
-    )
+    result = await db.exec(select(func.count(Tag.id)).where(Tag.document_id == document.id))
     tag_count = result.one()
     if tag_count >= config.MAX_TAGS_PER_DOCUMENT:
         raise AppException(
@@ -57,9 +55,7 @@ async def list_tags(
 
     Any user with access to the document can view tags.
     """
-    result = await db.exec(
-        select(Tag).where(Tag.document_id == document.id)
-    )
+    result = await db.exec(select(Tag).where(Tag.document_id == document.id))
     tags = result.all()
     return tags
 
@@ -123,4 +119,5 @@ async def delete_tag(
     await db.delete(tag)
     await db.commit()
     from fastapi import Response
+
     return Response(status_code=204)

@@ -33,23 +33,18 @@ class EndpointGuard[T]:
         exclude_fields: list[ColumnElement] | None = None,
     ) -> None:
         """Initialize the Guard with a clause factory, predicate, and optional field exclusions.
-        
+
         Args:
             clause_factory: Function to generate SQLAlchemy WHERE clause
             predicate: Function to validate access on Python objects
             exclude_fields: List of model fields (e.g., Membership.user) to exclude from responses
-        
+
         """
         self._clause_factory = clause_factory
         self._predicate = predicate
         self._exclude_fields = exclude_fields or []
 
-    def clause(
-        self,
-        user: User,
-        params: dict[str, Any],
-        multi: bool = False
-    ) -> ColumnElement[bool]:
+    def clause(self, user: User, params: dict[str, Any], multi: bool = False) -> ColumnElement[bool]:
         """Generate the SQLAlchemy clause for this guard."""
         return self._clause_factory(user, params, multi=multi)
 
@@ -60,7 +55,7 @@ class EndpointGuard[T]:
     ) -> bool:
         """Run the Python-side predicate for this guard."""
         return self._predicate(obj, user)
-    
+
     def get_excluded_fields(self) -> list[str]:
         """Get field names that should be excluded from responses."""
         return [field.key for field in self._exclude_fields]
@@ -73,8 +68,7 @@ class EndpointGuard[T]:
 
         def validator(obj: Paginated[T] | T, user: User | None) -> SQLModel:
             if isinstance(obj, Paginated):
-                obj.data = [self.validate(predicate_false_model, predicate_true_model)(
-                    item, user) for item in obj.data]
+                obj.data = [self.validate(predicate_false_model, predicate_true_model)(item, user) for item in obj.data]
                 return obj
             if user and self.predicate(obj, user):
                 return predicate_true_model.model_validate(obj)
@@ -107,44 +101,38 @@ class Guard:
         def clause(user: User, params: dict[str, Any], multi: bool = False) -> ColumnElement[bool]:
             target_user_id = params.get("user_id", None)
             if not target_user_id and not multi:
-                raise HTTPException(
-                    status_code=500, detail="Endpoint Guard misconfiguration: missing user_id parameter")
+                raise HTTPException(status_code=500, detail="Endpoint Guard misconfiguration: missing user_id parameter")
             # Convert user_id to int if it's a string (from path params)
             if target_user_id is not None and isinstance(target_user_id, str):
                 try:
                     target_user_id = int(target_user_id)
                 except (ValueError, TypeError):
-                    raise HTTPException(
-                        status_code=400, detail="Invalid user_id: must be an integer"
-                    ) from None
+                    raise HTTPException(status_code=400, detail="Invalid user_id: must be an integer") from None
 
             if multi and target_user_id is None:
                 # For multi-user queries (filtering Membership table directly)
                 return Membership.group_id.in_(
-                    select(Membership.group_id).where(
-                        Membership.accepted.is_(True),
-                        Membership.user_id == user.id
-                    )
+                    select(Membership.group_id).where(Membership.accepted.is_(True), Membership.user_id == user.id)
                 )
             elif not multi:
                 # For single user access checks - use EXISTS to avoid cross join
-                return select(Membership).where(
-                    (Membership.user_id == target_user_id) &
-                    (Membership.group_id.in_(
-                        select(Membership.group_id).where(
-                            Membership.accepted.is_(True),
-                            Membership.user_id == user.id)
-                    ))
-                ).exists()
+                return (
+                    select(Membership)
+                    .where(
+                        (Membership.user_id == target_user_id)
+                        & (
+                            Membership.group_id.in_(
+                                select(Membership.group_id).where(Membership.accepted.is_(True), Membership.user_id == user.id)
+                            )
+                        )
+                    )
+                    .exists()
+                )
             else:
-                raise HTTPException(
-                    status_code=500, detail="Endpoint Guard misconfiguration: invalid configuration for multi parameter")
+                raise HTTPException(status_code=500, detail="Endpoint Guard misconfiguration: invalid configuration for multi parameter")
 
         def predicate(membership: Membership, user: User) -> bool:
-            return any(
-                m.accepted and m.user_id == user.id
-                for m in membership.group.memberships
-            )
+            return any(m.accepted and m.user_id == user.id for m in membership.group.memberships)
 
         return EndpointGuard(clause, predicate)
 
@@ -156,19 +144,18 @@ class Guard:
             if multi:
                 raise HTTPException(
                     # TODO: This should throw an internal error and print it to the logs
-                    status_code=500, detail="Endpoint Guard misconfiguration: This Guard is not designed for use in PaginatedQueries!")
+                    status_code=500,
+                    detail="Endpoint Guard misconfiguration: This Guard is not designed for use in PaginatedQueries!",
+                )
             target_user_id = params.get("user_id", None)
             if not target_user_id:
-                raise HTTPException(
-                    status_code=500, detail="Endpoint Guard misconfiguration: missing user_id parameter")
+                raise HTTPException(status_code=500, detail="Endpoint Guard misconfiguration: missing user_id parameter")
             # Convert user_id to int if it's a string (from path params)
             if isinstance(target_user_id, str):
                 try:
                     target_user_id = int(target_user_id)
                 except (ValueError, TypeError):
-                    raise HTTPException(
-                        status_code=400, detail="Invalid user_id: must be an integer"
-                    ) from None
+                    raise HTTPException(status_code=400, detail="Invalid user_id: must be an integer") from None
             return (User.id == user.id) & (User.id == target_user_id)
 
         def predicate(user: User, session_user: User) -> bool:
@@ -196,8 +183,7 @@ class Guard:
         def clause(user: User, params: dict[str, Any], multi: bool = False) -> ColumnElement[bool]:
             document_id = params.get("document_id", None)
             if not document_id and not multi:
-                raise HTTPException(
-                    status_code=500, detail="Endpoint Guard misconfiguration: missing document_id parameter")
+                raise HTTPException(status_code=500, detail="Endpoint Guard misconfiguration: missing document_id parameter")
 
             def has_required_permissions_for_public() -> ColumnElement[bool]:
                 """Verify membership has required permissions for public docs."""
@@ -207,12 +193,10 @@ class Guard:
 
             def build_visibility_clause(doc_id_filter: ColumnElement[bool] | None = None) -> ColumnElement[bool]:
                 """Build visibility clause, optionally filtering by document ID."""
-                base_conditions = [
-                    doc_id_filter] if doc_id_filter is not None else []
+                base_conditions = [doc_id_filter] if doc_id_filter is not None else []
                 admin_bypass = or_(
                     Membership.is_owner.is_(True),
-                    Membership.permissions.contains(
-                        [Permission.ADMINISTRATOR.value]),
+                    Membership.permissions.contains([Permission.ADMINISTRATOR.value]),
                 )
 
                 return or_(
@@ -224,7 +208,8 @@ class Guard:
                             select(Membership.group_id).where(
                                 Membership.user_id == user.id,
                                 admin_bypass,
-                            ))
+                            )
+                        ),
                     ),
                     # Public documents: owner/admins OR accepted members with required permissions
                     and_(
@@ -237,7 +222,7 @@ class Guard:
                                 or_(
                                     admin_bypass,
                                     has_required_permissions_for_public(),
-                                )
+                                ),
                             )
                         ),
                     ),
@@ -246,9 +231,7 @@ class Guard:
             if multi and document_id is None:
                 return build_visibility_clause()
             elif not multi:
-                return select(Document).where(
-                    build_visibility_clause(Document.id == document_id)
-                ).exists()
+                return select(Document).where(build_visibility_clause(Document.id == document_id)).exists()
             else:
                 return build_visibility_clause()
 
@@ -258,23 +241,18 @@ class Guard:
 
             if doc.visibility == DocumentVisibility.PRIVATE:
                 return any(
-                    m.user_id == user.id and (
-                        m.is_owner or
-                        Permission.ADMINISTRATOR.value in m.permissions
-                    )
-                    for m in doc.group.memberships
+                    m.user_id == user.id and (m.is_owner or Permission.ADMINISTRATOR.value in m.permissions) for m in doc.group.memberships
                 )
             elif doc.visibility == DocumentVisibility.PUBLIC:
                 if not require_permissions:
-                    return any(
-                        m.accepted and m.user_id == user.id
-                        for m in doc.group.memberships
-                    )
+                    return any(m.accepted and m.user_id == user.id for m in doc.group.memberships)
                 return any(
-                    m.accepted and m.user_id == user.id and (
-                        m.is_owner or
-                        Permission.ADMINISTRATOR.value in m.permissions or
-                        all(p.value in m.permissions for p in require_permissions)
+                    m.accepted
+                    and m.user_id == user.id
+                    and (
+                        m.is_owner
+                        or Permission.ADMINISTRATOR.value in m.permissions
+                        or all(p.value in m.permissions for p in require_permissions)
                     )
                     for m in doc.group.memberships
                 )
@@ -290,19 +268,18 @@ class Guard:
         exclude_fields: list[ColumnElement] | None = None,
     ) -> EndpointGuard[Group]:
         """User can access a group if they have at least min_role in it.
-        
+
         Args:
             require_permissions: Set of permissions required to access groups
             only_owner: If True, restrict access to group owners only
             exclude_fields: List of model fields to exclude from responses
-        
+
         """
 
         def clause(user: User, params: dict[str, Any], multi: bool = False) -> ColumnElement[bool]:
             group_id = params.get("group_id", None)
             if not group_id and not multi:
-                raise HTTPException(
-                    status_code=500, detail="Endpoint Guard misconfiguration: missing group_id parameter")
+                raise HTTPException(status_code=500, detail="Endpoint Guard misconfiguration: missing group_id parameter")
 
             def build_permission_clause() -> ColumnElement[bool]:
                 """Build permission check clause."""
@@ -310,47 +287,40 @@ class Guard:
                     return Membership.is_owner.is_(True)
                 else:
                     return (
-                        Membership.is_owner.is_(True) |
-                        Membership.permissions.contains([Permission.ADMINISTRATOR.value]) |
-                        (and_(*(Membership.permissions.contains([permission.value])
-                                for permission in require_permissions)) if require_permissions else true())
+                        Membership.is_owner.is_(True)
+                        | Membership.permissions.contains([Permission.ADMINISTRATOR.value])
+                        | (
+                            and_(*(Membership.permissions.contains([permission.value]) for permission in require_permissions))
+                            if require_permissions
+                            else true()
+                        )
                     )
 
             if multi and group_id is None:
                 # For multi-group queries (filtering Group table directly)
-                return Group.id.in_(
-                    select(Membership.group_id).where(
-                        Membership.user_id == user.id,
-                        build_permission_clause()
-                    )
-                )
+                return Group.id.in_(select(Membership.group_id).where(Membership.user_id == user.id, build_permission_clause()))
             elif not multi:
                 # For single group access checks - use EXISTS to avoid cross join
-                return select(Membership).where(
-                    (Membership.user_id == user.id) &
-                    (Membership.group_id == group_id) &
-                    build_permission_clause()
-                ).exists()
+                return (
+                    select(Membership)
+                    .where((Membership.user_id == user.id) & (Membership.group_id == group_id) & build_permission_clause())
+                    .exists()
+                )
             else:
-                return select(Membership).where(
-                    (Membership.user_id == user.id) &
-                    build_permission_clause()
-                ).exists()
+                return select(Membership).where((Membership.user_id == user.id) & build_permission_clause()).exists()
 
         def predicate(group: Group, user: User) -> bool:
             required_vals: list[str] = [] if require_permissions is None else [p.value for p in require_permissions]
 
             return any(
-                (m.user_id == user.id)
-                and (m.is_owner if only_owner else True)
-                and all(p in m.permissions for p in required_vals)
+                (m.user_id == user.id) and (m.is_owner if only_owner else True) and all(p in m.permissions for p in required_vals)
                 for m in group.memberships
             )
 
         return EndpointGuard(clause, predicate, exclude_fields=exclude_fields)
 
     @staticmethod
-    def sharelink_access( # noqa: C901
+    def sharelink_access(  # noqa: C901
         *,
         exclude_fields: list[ColumnElement] | None = None,
     ) -> EndpointGuard[ShareLink]:
@@ -359,32 +329,26 @@ class Guard:
         Args:
             require_permissions: Set of permissions required to access share links
             exclude_fields: List of model fields to exclude from responses
-            
+
         """
 
         def clause(user: User, params: dict[str, Any], multi: bool = False) -> ColumnElement[bool]:
             share_link_id = params.get("share_link_id", None)
             token = params.get("token", None)
             group_id = params.get("group_id", None)
-            
+
             if (not share_link_id or not token) and not multi:
-                raise HTTPException(
-                    status_code=500, detail="Endpoint Guard misconfiguration: missing share_link_id parameter")
+                raise HTTPException(status_code=500, detail="Endpoint Guard misconfiguration: missing share_link_id parameter")
             # Convert share_link_id to int if it's a string (from path params)
             if share_link_id is not None and isinstance(share_link_id, str):
                 try:
                     share_link_id = int(share_link_id)
                 except (ValueError, TypeError):
-                    raise HTTPException(
-                        status_code=400, detail="Invalid share_link_id: must be an integer"
-                    ) from None
+                    raise HTTPException(status_code=400, detail="Invalid share_link_id: must be an integer") from None
 
             def build_permission_clause() -> ColumnElement[bool]:
                 """Build permission check clause."""
-                return (
-                    Membership.is_owner.is_(True) |
-                    Membership.permissions.contains([Permission.ADMINISTRATOR.value])
-                )
+                return Membership.is_owner.is_(True) | Membership.permissions.contains([Permission.ADMINISTRATOR.value])
 
             if multi:
                 # For multi-sharelink queries (filtering ShareLink table directly)
@@ -393,51 +357,55 @@ class Guard:
                         Membership.user_id == user.id,
                         Membership.accepted.is_(True),
                         Membership.group_id == group_id if group_id is not None else true(),
-                        build_permission_clause()
+                        build_permission_clause(),
                     )
                 )
             elif share_link_id is not None:
                 # For single share link access checks - use EXISTS to avoid cross join
-                return select(ShareLink).where(
-                    (ShareLink.id == share_link_id) &
-                    ShareLink.group_id.in_(
-                        select(Membership.group_id).where(
-                            Membership.user_id == user.id,
-                            Membership.accepted.is_(True),
-                            Membership.group_id == group_id if group_id is not None else true(),
-                            build_permission_clause()
+                return (
+                    select(ShareLink)
+                    .where(
+                        (ShareLink.id == share_link_id)
+                        & ShareLink.group_id.in_(
+                            select(Membership.group_id).where(
+                                Membership.user_id == user.id,
+                                Membership.accepted.is_(True),
+                                Membership.group_id == group_id if group_id is not None else true(),
+                                build_permission_clause(),
+                            )
                         )
                     )
-                ).exists()
+                    .exists()
+                )
             elif token is not None:
-                return select(ShareLink).where(
-                    (ShareLink.token == token) &
-                    ShareLink.group_id.in_(
-                        select(Membership.group_id).where(
-                            Membership.user_id == user.id,
-                            Membership.accepted.is_(True),
-                            Membership.group_id == group_id if group_id is not None else true(),
-                            build_permission_clause()
+                return (
+                    select(ShareLink)
+                    .where(
+                        (ShareLink.token == token)
+                        & ShareLink.group_id.in_(
+                            select(Membership.group_id).where(
+                                Membership.user_id == user.id,
+                                Membership.accepted.is_(True),
+                                Membership.group_id == group_id if group_id is not None else true(),
+                                build_permission_clause(),
+                            )
                         )
                     )
-                ).exists()
+                    .exists()
+                )
             else:
-                raise HTTPException(
-                    status_code=500, detail="Endpoint Guard misconfiguration: invalid configuration for multi parameter")
+                raise HTTPException(status_code=500, detail="Endpoint Guard misconfiguration: invalid configuration for multi parameter")
 
         def predicate(share_link: ShareLink, user: User) -> bool:
             if share_link.group is None:
                 return False
 
             return any(
-                (m.user_id == user.id)
-                and m.accepted
-                and (m.is_owner or Permission.ADMINISTRATOR.value in m.permissions)
+                (m.user_id == user.id) and m.accepted and (m.is_owner or Permission.ADMINISTRATOR.value in m.permissions)
                 for m in share_link.group.memberships
             )
 
         return EndpointGuard(clause, predicate, exclude_fields=exclude_fields)
-
 
     # Access Rules Truth Table
     #
@@ -488,7 +456,7 @@ class Guard:
     # -------------------------------------------------------------------------------
 
     @staticmethod
-    def comment_access( # noqa: C901
+    def comment_access(  # noqa: C901
         require_permissions: set[Permission] | None = None,
         *,
         only_owner: bool = False,
@@ -500,17 +468,13 @@ class Guard:
             """Generate the SQLAlchemy clause for comment access, following the truth table exactly."""
             comment_id = params.get("comment_id", None)
             if not comment_id and not multi:
-                raise HTTPException(
-                    status_code=500, detail="Endpoint Guard misconfiguration: missing comment_id parameter"
-                )
+                raise HTTPException(status_code=500, detail="Endpoint Guard misconfiguration: missing comment_id parameter")
             # Convert comment_id to int if it's a string (from path params)
             if comment_id is not None and isinstance(comment_id, str):
                 try:
                     comment_id = int(comment_id)
                 except (ValueError, TypeError):
-                    raise HTTPException(
-                        status_code=400, detail="Invalid comment_id: must be an integer"
-                    ) from None
+                    raise HTTPException(status_code=400, detail="Invalid comment_id: must be an integer") from None
 
             def build_visibility_clause(comment_id_filter: ColumnElement[bool] | None = None) -> ColumnElement[bool]:
                 """Build the visibility clause following the truth table exactly."""
@@ -636,13 +600,11 @@ class Guard:
                 return build_visibility_clause()
             elif not multi:
                 # For single comment access checks - use EXISTS to avoid cross join
-                return select(Comment).where(
-                    build_visibility_clause(Comment.id == comment_id)
-                ).exists()
+                return select(Comment).where(build_visibility_clause(Comment.id == comment_id)).exists()
             else:
                 return build_visibility_clause()
 
-        def predicate(comment: Comment, user: User) -> bool: # noqa: C901
+        def predicate(comment: Comment, user: User) -> bool:  # noqa: C901
             """Run Python-side predicate for comment access, following the truth table exactly."""
             if only_owner:
                 return comment.user_id == user.id
@@ -656,11 +618,9 @@ class Guard:
                 if document.group is None:
                     return False
                 return any(
-                    m.accepted and m.user_id == user.id and (
-                        m.is_owner or
-                        Permission.VIEW_RESTRICTED_COMMENTS in m.permissions or
-                        Permission.ADMINISTRATOR in m.permissions
-                    )
+                    m.accepted
+                    and m.user_id == user.id
+                    and (m.is_owner or Permission.VIEW_RESTRICTED_COMMENTS in m.permissions or Permission.ADMINISTRATOR in m.permissions)
                     for m in document.group.memberships
                 )
 
@@ -670,17 +630,12 @@ class Guard:
                     return False
                 # If no required permissions, any accepted member can access
                 if not require_permissions:
-                    return any(
-                        m.accepted and m.user_id == user.id
-                        for m in document.group.memberships
-                    )
+                    return any(m.accepted and m.user_id == user.id for m in document.group.memberships)
                 # If required permissions provided, need to be owner/admin OR have those permissions
                 return any(
-                    m.accepted and m.user_id == user.id and (
-                        m.is_owner or
-                        Permission.ADMINISTRATOR in m.permissions or
-                        all(p in m.permissions for p in require_permissions)
-                    )
+                    m.accepted
+                    and m.user_id == user.id
+                    and (m.is_owner or Permission.ADMINISTRATOR in m.permissions or all(p in m.permissions for p in require_permissions))
                     for m in document.group.memberships
                 )
 
@@ -717,38 +672,32 @@ class Guard:
         exclude_fields: list[ColumnElement] | None = None,
     ) -> EndpointGuard[Reaction]:
         """User can access a reaction if they can access the parent comment.
-        
+
         Args:
             only_owner: If True, restrict access to reaction owners only
             exclude_fields: List of model fields to exclude from responses
-        
+
         """
+
         def clause(user: User, params: dict[str, Any], multi: bool = False) -> ColumnElement[bool]:
             reaction_id = params.get("reaction_id", None)
             if not reaction_id and not multi:
-                raise HTTPException(
-                    status_code=500, detail="Endpoint Guard misconfiguration: missing reaction_id parameter")
+                raise HTTPException(status_code=500, detail="Endpoint Guard misconfiguration: missing reaction_id parameter")
             # Convert reaction_id to int if it's a string (from path params)
             if reaction_id is not None and isinstance(reaction_id, str):
                 try:
                     reaction_id = int(reaction_id)
                 except (ValueError, TypeError):
-                    raise HTTPException(
-                        status_code=400, detail="Invalid reaction_id: must be an integer"
-                    ) from None
+                    raise HTTPException(status_code=400, detail="Invalid reaction_id: must be an integer") from None
 
             def build_clause(reaction_id_filter: ColumnElement[bool] | None = None) -> ColumnElement[bool]:
                 """Build the clause for reaction access."""
-                base_conditions = [
-                    reaction_id_filter] if reaction_id_filter is not None else []
+                base_conditions = [reaction_id_filter] if reaction_id_filter is not None else []
                 return and_(
                     *base_conditions,
                     Reaction.comment_id.in_(
-                        select(Comment.id).where(
-                            Guard.comment_access(None, only_owner=only_owner).clause(
-                                user, params, multi=True
-                            )
-                        ))
+                        select(Comment.id).where(Guard.comment_access(None, only_owner=only_owner).clause(user, params, multi=True))
+                    ),
                 )
 
             if multi and reaction_id is None:
@@ -756,15 +705,13 @@ class Guard:
                 return build_clause()
             elif not multi:
                 # For single reaction access checks - use EXISTS to avoid cross join
-                return select(Reaction).where(
-                    build_clause(Reaction.id == reaction_id)
-                ).exists()
+                return select(Reaction).where(build_clause(Reaction.id == reaction_id)).exists()
             else:
                 return build_clause()
 
         def predicate(reaction: Reaction, user: User) -> bool:
             return Guard.comment_access(None, only_owner=only_owner).predicate(reaction.comment, user)
-        
+
         return EndpointGuard(clause, predicate, exclude_fields=exclude_fields)
 
     @staticmethod
@@ -774,8 +721,7 @@ class Guard:
             raise ValueError("op must be 'and' or 'or'")
 
         def clause(session_user: User, params: dict[str, Any], multi: bool = False) -> ColumnElement[bool]:
-            clauses = [guard.clause(session_user, params, multi=multi)
-                       for guard in guards]
+            clauses = [guard.clause(session_user, params, multi=multi) for guard in guards]
             if op == "and":
                 combined = clauses[0]
                 for c in clauses[1:]:

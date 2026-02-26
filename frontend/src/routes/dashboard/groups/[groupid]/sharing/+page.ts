@@ -1,7 +1,7 @@
 import { api } from '$api/client';
 import type { Paginated } from '$api/pagination';
 import type { ShareLinkRead } from '$api/types';
-import { redirect } from '@sveltejs/kit';
+import { error, redirect } from '@sveltejs/kit';
 import type { PageLoad } from './$types';
 import type { BreadcrumbItem } from '$types/breadcrumb';
 
@@ -25,7 +25,7 @@ export const load: PageLoad = async ({ parent, params, fetch, depends }) => {
 	);
 
 	if (!shareLinkResult.success) {
-		throw new Error(`Failed to load share links: ${shareLinkResult.error.detail}`);
+		throw error(shareLinkResult.error.status_code, shareLinkResult.error.detail);
 	}
 
 	return {

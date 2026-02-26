@@ -61,9 +61,7 @@ async def _publish_reaction_event(
 async def add_reaction(
     db: Database,
     events: Events,
-    user: User = Authenticate(
-        guards=[Guard.comment_access({Permission.ADD_REACTIONS})]
-    ),
+    user: User = Authenticate(guards=[Guard.comment_access({Permission.ADD_REACTIONS})]),
     reaction_create: ReactionCreate = Body(...),
     comment: Comment = Resource(Comment, param_alias="comment_id"),
     x_connection_id: str | None = Header(None, alias="X-Connection-ID"),
@@ -133,14 +131,10 @@ async def add_reaction(
         )
         existing = result.first()
         if existing:
-            existing.group_reaction_id = (
-                reaction_create.group_reaction_id
-            )
+            existing.group_reaction_id = reaction_create.group_reaction_id
             await db.commit()
             await db.refresh(existing)
-            await _publish_reaction_event(
-                db, events, comment, x_connection_id
-            )
+            await _publish_reaction_event(db, events, comment, x_connection_id)
             return _to_reaction_read(existing)
     await db.refresh(reaction)
     await _publish_reaction_event(db, events, comment, x_connection_id)
@@ -151,9 +145,7 @@ async def add_reaction(
 async def remove_reaction(
     db: Database,
     events: Events,
-    user: User = Authenticate(
-        guards=[Guard.comment_access({Permission.ADD_REACTIONS})]
-    ),
+    user: User = Authenticate(guards=[Guard.comment_access({Permission.ADD_REACTIONS})]),
     comment: Comment = Resource(Comment, param_alias="comment_id"),
     x_connection_id: str | None = Header(None, alias="X-Connection-ID"),
 ) -> Response:
@@ -179,9 +171,7 @@ async def remove_user_reaction(
     db: Database,
     events: Events,
     user_id: int,
-    admin: User = Authenticate(
-        guards=[Guard.comment_access({Permission.ADMINISTRATOR})]
-    ),
+    admin: User = Authenticate(guards=[Guard.comment_access({Permission.ADMINISTRATOR})]),
     comment: Comment = Resource(Comment, param_alias="comment_id"),
     x_connection_id: str | None = Header(None, alias="X-Connection-ID"),
 ) -> Response:

@@ -2,7 +2,9 @@
 	import Field from '$lib/components/advancedInput.svelte';
 	import Loading from '~icons/svg-spinners/90-ring-with-bg';
 	import { api } from '$api/client';
+	import { resolveErrorMessage } from '$lib/util/errorMessage';
 	import InfoBanner from '$lib/components/InfoBanner.svelte';
+	import LL from '$i18n/i18n-svelte';
 
 	let { onSuccess, token }: { onSuccess: () => void; token: string } = $props();
 
@@ -16,7 +18,7 @@
 		errorMessage = null;
 
 		if (!username.trim()) {
-			errorMessage = 'Username is required';
+			errorMessage = $LL.sharelink.errors.usernameRequired();
 			isLoading = false;
 			return;
 		}
@@ -25,7 +27,7 @@
 			const result = await api.post('/register', { username, token });
 
 			if (!result.success) {
-				errorMessage = result.error.detail || 'Anonymous registration failed';
+				errorMessage = resolveErrorMessage(result.error);
 				return;
 			}
 

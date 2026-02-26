@@ -20,6 +20,7 @@ class DocumentCreate(SQLModel):
     group_id: str
     default_max_attempts: int = Field(default=1, ge=1)
 
+
 class DocumentRead(BaseModel):
     id: str
     s3_key: str
@@ -30,6 +31,7 @@ class DocumentRead(BaseModel):
     view_mode: ViewMode
     default_max_attempts: int
     tags: list["TagRead"]
+
 
 class DocumentUpdate(SQLModel):
     visibility: DocumentVisibility | None = None

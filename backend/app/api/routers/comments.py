@@ -43,10 +43,11 @@ async def list_comments(
         Comment,
         CommentFilter,
         guards=[Guard.comment_access()],
-    )
+    ),
 ) -> Paginated[CommentRead]:
     """Get all comments that the user can access."""
     return comments
+
 
 @router.post("/", response_model=CommentRead)
 async def create_comment(
@@ -72,12 +73,9 @@ async def create_comment(
         resource_id=comment.id,
         resource="comment",
         type="create",
-        originating_connection_id=x_connection_id  # Don't echo to originating connection
+        originating_connection_id=x_connection_id,  # Don't echo to originating connection
     )
-    await events.publish(
-        event.model_dump(mode="json"),
-        channel=f"documents:{comment.document_id}:comments"
-    )
+    await events.publish(event.model_dump(mode="json"), channel=f"documents:{comment.document_id}:comments")
 
     return comment
 
@@ -118,15 +116,12 @@ async def update_comment(
         resource_id=comment.id,
         resource="comment",
         type="update",
-        originating_connection_id=x_connection_id  # Don't echo to originating connection
+        originating_connection_id=x_connection_id,  # Don't echo to originating connection
     )
     event_data = event.model_dump(mode="json")
     event_data["old_visibility"] = old_visibility  # Include old visibility for filtering
 
-    await events.publish(
-        event_data,
-        channel=f"documents:{comment.document_id}:comments"
-    )
+    await events.publish(event_data, channel=f"documents:{comment.document_id}:comments")
 
     return comment
 
@@ -158,12 +153,9 @@ async def delete_comment(
         resource_id=comment_id,
         resource="comment",
         type="delete",
-        originating_connection_id=x_connection_id  # Don't echo to originating connection
+        originating_connection_id=x_connection_id,  # Don't echo to originating connection
     )
-    await events.publish(
-        event.model_dump(mode="json"),
-        channel=f"documents:{document_id}:comments"
-    )
+    await events.publish(event.model_dump(mode="json"), channel=f"documents:{document_id}:comments")
 
     return Response(status_code=204)
 
@@ -187,9 +179,7 @@ async def update_comment_tags(
 
     # Verify all tags exist and belong to the same document as the comment
     if tag_ids:
-        tag_result = await db.exec(
-            select(Tag).where(Tag.id.in_(tag_ids))
-        )
+        tag_result = await db.exec(select(Tag).where(Tag.id.in_(tag_ids)))
         tags = tag_result.all()
 
         if len(tags) != len(tag_ids):
@@ -204,9 +194,7 @@ async def update_comment_tags(
                 )
 
     # Get existing comment-tag associations
-    existing_result = await db.exec(
-        select(CommentTag).where(CommentTag.comment_id == comment_id)
-    )
+    existing_result = await db.exec(select(CommentTag).where(CommentTag.comment_id == comment_id))
     existing_tags = {ct.tag_id: ct for ct in existing_result.all()}
 
     # Calculate diff
@@ -226,11 +214,7 @@ async def update_comment_tags(
             db.add(existing_tags[tag_id])
         else:
             # Insert new tag
-            comment_tag = CommentTag(
-                comment_id=comment_id,
-                tag_id=tag_id,
-                order=order
-            )
+            comment_tag = CommentTag(comment_id=comment_id, tag_id=tag_id, order=order)
             db.add(comment_tag)
 
     await db.commit()
@@ -244,12 +228,9 @@ async def update_comment_tags(
         resource_id=comment.id,
         resource="comment",
         type="update",
-        originating_connection_id=x_connection_id
+        originating_connection_id=x_connection_id,
     )
-    await events.publish(
-        event.model_dump(mode="json"),
-        channel=f"documents:{comment.document_id}:comments"
-    )
+    await events.publish(event.model_dump(mode="json"), channel=f"documents:{comment.document_id}:comments")
 
     return Response(status_code=204)
 

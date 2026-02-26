@@ -197,7 +197,7 @@ const de = {
 		owner_cannot_leave_group:
 			'Der Gruppeninhaber kann die Gruppe nicht verlassen',
 		rate_limited:
-			'Zu viele Anfragen. Bitte versuchen Sie es in Kürze erneut.',
+			'Zu viele Anfragen. Bitte versuchen Sie es in {retryAfter} erneut.',
 		sharelink_invalid:
 			'Dieser Freigabelink ist ungültig',
 		sharelink_expired:
@@ -230,6 +230,8 @@ const de = {
 			'Dieser Link wurde bereits verwendet',
 		mail_send_failed:
 			'E-Mail konnte nicht gesendet werden. Bitte versuchen Sie es später erneut.',
+		task_already_correct: 'Sie haben diese Frage bereits richtig beantwortet',
+		task_no_attempts_left: 'Keine Versuche mehr für diese Frage übrig',
 		already_verified: 'Dieses Konto ist bereits verifiziert'
 	},
 
@@ -599,6 +601,7 @@ const de = {
 		deleteSuccess: 'Aufgabe erfolgreich gelöscht',
 		deleteConfirm: 'Löschen?',
 		reorderSuccess: 'Aufgaben erfolgreich neu geordnet',
+		questionRequired: 'Frage ist erforderlich',
 		noTasks: 'Noch keine Aufgaben erstellt',
 		noTasksDescription: 'Aufgaben können von Gruppenadministratoren in den Dokumenteinstellungen konfiguriert werden.',
 		// Member-facing
@@ -649,7 +652,10 @@ const de = {
 	// Login page
 	loginPage: {
 		loginTab: 'Anmelden',
-		registerTab: 'Registrieren'
+		registerTab: 'Registrieren',
+		registrationFailed: 'Registrierung fehlgeschlagen',
+		registrationSuccess:
+			'Registrierung erfolgreich! Bitte überprüfen Sie Ihre E-Mail, um Ihr Konto zu bestätigen.'
 	},
 
 	// PDF viewer / comments
@@ -767,6 +773,15 @@ const de = {
 		nDaysAgo: 'vor {count} Tag{{en}}'
 	},
 
+	// Dauerformatierung (vorausschauend, z.B. "in 24 Stunden")
+	duration: {
+		nSeconds: '{count} Sekunde{{n}}',
+		nMinutes: '{count} Minute{{n}}',
+		nHours: '{count} Stunde{{n}}',
+		nDays: '{count} Tag{{en}}',
+		aFewMinutes: 'einigen Minuten'
+	},
+
 	// Date picker
 	datePicker: {
 		selectDateTime: 'Datum und Uhrzeit auswählen',
@@ -783,11 +798,25 @@ const de = {
 		densityDescription: 'Nutzen Sie Sichtbarkeitsfilter und Pins, um hohe Kommentardichten effektiver zu verwalten.',
 	},
 
+	// Datenschutz (nur UI-Labels; rechtliche Inhalte in .svx-Markdown-Dateien)
+	privacy: {
+		exportButton: 'Meine Daten herunterladen',
+		exportLoginRequired: 'Bitte melden Sie sich an, um Ihre Daten zu exportieren.'
+	},
+
+	// Fehlerseiten
+	errorPage: {
+		unexpectedError: 'Ein unerwarteter Fehler ist aufgetreten',
+		goToDashboard: 'Zum Dashboard',
+		backToHome: 'Zur Startseite'
+	},
+
 	// Footer
 	footer: {
 		enableDarkMode: 'Dunkelmodus aktivieren',
 		enableLightMode: 'Hellmodus aktivieren',
-		changeLanguage: 'Sprache ändern'
+		changeLanguage: 'Sprache ändern',
+		privacyPolicy: 'Datenschutz'
 	}
 } satisfies Translation;
 

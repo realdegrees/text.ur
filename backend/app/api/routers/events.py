@@ -28,7 +28,7 @@ from pydantic import create_model as internal_model
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import SQLModel, select
 from util.api_router import APIRouter
-from util.ip import get_client_ip
+from util.ip import anonymize_ip, get_client_ip
 
 logger = get_logger("app")
 
@@ -61,6 +61,7 @@ class EventModelConfig[T: SQLModel, R: SQLModel](dict):
     # Signature: (event, websocket, session) -> event
     handle_incoming: Callable[[Event, WebSocket, AsyncSession], Event] | None = None
 
+
 @dataclass
 class EventRouterConfig(dict):
     """Configuration for event models used in the event router.
@@ -77,6 +78,7 @@ class EventRouterConfig(dict):
     setup_connection: Callable[[WebSocket, BaseModel, User, AsyncSession], None] | None = None
     # Whether to track active users for this channel (default: True)
     track_active_users: bool = True
+
 
 def get_events_router[RelatedResourceModel: BaseModel](  # noqa: C901
     channel: str,
@@ -108,21 +110,21 @@ def get_events_router[RelatedResourceModel: BaseModel](  # noqa: C901
 
     base_prefix = [p for p in base_router.prefix.split("/") if p]
     router_prefix = [p for p in router.prefix.split("/") if p]
-    full_channel = ":".join(
-        [*base_prefix, *router_prefix[:-2]]) + f":{channel}"
+    full_channel = ":".join([*base_prefix, *router_prefix[:-2]]) + f":{channel}"
 
     # Create the WebSocket path for registration on the main app
     full_path = "/" + "/".join(base_prefix + router_prefix)
 
     # Create the WebSocket handler function
     async def client_endpoint(  # noqa: C901
-        websocket: WebSocket, events: WebsocketEvents, resource_id: str, user: WebsocketAuthentication
+        websocket: WebSocket,
+        events: WebsocketEvents,
+        resource_id: str,
+        user: WebsocketAuthentication,
     ) -> None:
         """Connect a client to the event stream."""
-        client_ip = get_client_ip(websocket)
-        logger.info(
-            f"[WS] Connection attempt for resource_id={resource_id}, user={user.id if user else None}, ip={client_ip}"
-        )
+        client_ip = anonymize_ip(get_client_ip(websocket))
+        logger.info(f"[WS] Connection attempt for resource_id={resource_id}, user={user.id if user else None}, ip={client_ip}")
         logger.info("[WS] Cookies present: %s", list(websocket.cookies.keys()))
 
         # Create on-demand session for initial resource verification
@@ -152,16 +154,13 @@ def get_events_router[RelatedResourceModel: BaseModel](  # noqa: C901
             except RuntimeError:
                 # setup_connection closed the WS (e.g. access denied)
                 logger.info(
-                    "[WS] Connection rejected by setup hook for "
-                    "resource_id=%s, user=%s",
+                    "[WS] Connection rejected by setup hook for resource_id=%s, user=%s",
                     resource_id,
                     user.id if user else None,
                 )
                 return
 
-        logger.info(
-            f"[WS] Accepting connection for resource_id={resource_id}, connection_id={connection_id}, ip={client_ip}"
-        )
+        logger.info(f"[WS] Accepting connection for resource_id={resource_id}, connection_id={connection_id}, ip={client_ip}")
         await websocket.accept()
 
         # Build endpoint-specific channel key (matches subscription/publish channel)
@@ -173,17 +172,15 @@ def get_events_router[RelatedResourceModel: BaseModel](  # noqa: C901
 
         if config.track_active_users:
             # Add this user to active users and get current list
-            active_users = await events.add_active_user(
-                channel_key, user.id, user.username, connection_id
-            )
+            active_users = await events.add_active_user(channel_key, user.id, user.username, connection_id)
 
             # Send handshake response with active users
             handshake_response = {
                 "type": "handshake",
                 "payload": {
                     "connection_id": connection_id,
-                    "active_users": [u.model_dump() for u in active_users]
-                }
+                    "active_users": [u.model_dump() for u in active_users],
+                },
             }
             await websocket.send_json(handshake_response)
 
@@ -194,9 +191,9 @@ def get_events_router[RelatedResourceModel: BaseModel](  # noqa: C901
                     "user_id": user.id,
                     "username": user.username,
                     "connection_id": connection_id,
-                    "connected_at": datetime.now(UTC).isoformat()
+                    "connected_at": datetime.now(UTC).isoformat(),
                 },
-                "originating_connection_id": connection_id
+                "originating_connection_id": connection_id,
             }
             # Publish using the same channel key other subscribers will be
             # listening on for this endpoint/resource.
@@ -231,8 +228,7 @@ def get_events_router[RelatedResourceModel: BaseModel](  # noqa: C901
                 await websocket.send_json(data)
             except RuntimeError:
                 logger.debug(
-                    "[WS] Suppressed send to closed websocket "
-                    "(connection_id=%s)",
+                    "[WS] Suppressed send to closed websocket (connection_id=%s)",
                     getattr(websocket.state, "connection_id", "?"),
                 )
 
@@ -277,7 +273,10 @@ def get_events_router[RelatedResourceModel: BaseModel](  # noqa: C901
                     comparisons = []
                     for k in available:
                         comparisons.append(f"{k!r}=={event_type!r}:{k == event_type}")
-                    logger.debug("[WS] Event type comparisons: %s", ", ".join(comparisons))
+                    logger.debug(
+                        "[WS] Event type comparisons: %s",
+                        ", ".join(comparisons),
+                    )
                 except Exception:
                     logger.debug("[WS] Failed to produce event type comparisons")
                 return
@@ -291,13 +290,16 @@ def get_events_router[RelatedResourceModel: BaseModel](  # noqa: C901
                         return
                     event_data = transformed
                 except Exception:
-                    logger.exception("Error running transform_outgoing hook for event %s", event_type)
+                    logger.exception(
+                        "Error running transform_outgoing hook for event %s",
+                        event_type,
+                    )
                     # Fail-safe: if the transformation errors, skip sending to avoid leaking info
                     return
 
             await _safe_send_json(event_data)
-            
-        async def client_event_loop() -> None: # noqa: C901
+
+        async def client_event_loop() -> None:  # noqa: C901
             """Handle incoming events from the client."""
             while True:
                 event_data = await websocket.receive_json()
@@ -319,7 +321,11 @@ def get_events_router[RelatedResourceModel: BaseModel](  # noqa: C901
                 if type_config is None:
                     # Log available event types and a couple of diagnostics to help
                     available = list(config.event_types.keys()) if hasattr(config, "event_types") else []
-                    logger.warning('Received unknown event type: %s. Available types: %s', event_type, available)
+                    logger.warning(
+                        "Received unknown event type: %s. Available types: %s",
+                        event_type,
+                        available,
+                    )
                     continue
 
                 # Validate the event structure
@@ -363,8 +369,6 @@ def get_events_router[RelatedResourceModel: BaseModel](  # noqa: C901
                 else:
                     # TODO: Send back an error event indicating no handler is configured
                     pass
-                
-                
 
                 # Publish the event to other clients
                 event_dict = event.model_dump(mode="json")
@@ -372,9 +376,9 @@ def get_events_router[RelatedResourceModel: BaseModel](  # noqa: C901
 
         # Register the client with the event manager (Outgoing events from server to client)
         await events.register_client(
-            websocket, 
+            websocket,
             channel=full_channel.format(resource_id=resource_id),
-            on_event=on_event
+            on_event=on_event,
         )
 
         # Cleanup function for disconnect
@@ -397,9 +401,7 @@ def get_events_router[RelatedResourceModel: BaseModel](  # noqa: C901
                 # Publish user_disconnected event
                 user_disconnected_event = {
                     "type": "user_disconnected",
-                    "payload": {
-                        "user_id": user.id
-                    }
+                    "payload": {"user_id": user.id},
                 }
                 await events.publish(
                     user_disconnected_event,
@@ -415,39 +417,32 @@ def get_events_router[RelatedResourceModel: BaseModel](  # noqa: C901
             await cleanup_connection()
             try:
                 await websocket.send_json(
-                    {"error": "Validation error",
-                     "details": str(e)},
+                    {"error": "Validation error", "details": str(e)},
                     mode="text",
                 )
                 await websocket.close(code=1003)
             except Exception:
                 logger.debug(
-                    "[WS] Could not send validation error "
-                    "— socket already closed "
-                    "(resource_id=%s)",
+                    "[WS] Could not send validation error — socket already closed (resource_id=%s)",
                     resource_id,
                 )
         except Exception as e:
-            logger.error(
-                f"Error processing WebSocket message for "
-                f"resource {resource_id} "
-                f"on route {full_path}: {e}"
-            )
+            logger.error(f"Error processing WebSocket message for resource {resource_id} on route {full_path}: {e}")
             await cleanup_connection()
             try:
                 await websocket.send_json(
-                    {"error": "Internal server error",
-                     "details": "Unknown error"},
+                    {
+                        "error": "Internal server error",
+                        "details": "Unknown error",
+                    },
                 )
                 await websocket.close(code=1011)
             except Exception:
                 logger.debug(
-                    "[WS] Could not send error response "
-                    "— socket already closed "
-                    "(resource_id=%s)",
+                    "[WS] Could not send error response — socket already closed (resource_id=%s)",
                     resource_id,
                 )
-            
+
     # ====================================================================
     # ================= WebSocket documentation endpoint =================
     # ====================================================================
@@ -512,13 +507,16 @@ def get_events_router[RelatedResourceModel: BaseModel](  # noqa: C901
         summary="WebSocket Event Stream",
         response_description=response_description,
         description=dynamic_description,
-        response_model=response_model_type
+        response_model=response_model_type,
     )
     async def websocket_docs() -> Event:
         """WebSocket endpoint documentation."""
         # This is a dummy endpoint for documentation - actual functionality is via WebSocket
         raise AppException(
-            status_code=400, error_code=AppErrorCode.VALIDATION_ERROR, detail="Use WebSocket connection at this endpoint, not HTTP")
+            status_code=400,
+            error_code=AppErrorCode.VALIDATION_ERROR,
+            detail="Use WebSocket connection at this endpoint, not HTTP",
+        )
 
     # Attach WebSocket handler and path to the router for main app registration
     router.websocket_config = (full_path, client_endpoint)

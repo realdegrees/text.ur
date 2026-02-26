@@ -13,6 +13,9 @@
 	import language from '$lib/stores/language.svelte';
 	import { invalidateAll } from '$app/navigation';
 	import Dropdown from '../lib/components/dropdown.svelte';
+	import { env } from '$env/dynamic/public';
+
+	const contactEmail = env.PUBLIC_CONTACT_EMAIL || 'Text.ur@sprachlit.uni-regensburg.de';
 
 	let currentLanguage = $derived(language.locale);
 
@@ -87,26 +90,16 @@
 		>
 			<GithubIcon />
 		</a>
-		<a
-			href="mailto:Text.ur@sprachlit.uni-regensburg.de"
-			target="_blank"
-			rel="noreferrer noopener"
-			class="h-full"
-		>
+		<a href="mailto:{contactEmail}" target="_blank" rel="noreferrer noopener" class="h-full">
 			<MailIcon />
 		</a>
 
-		<a
-			href={language.locale === 'de'
-				? 'https://www.uni-regensburg.de/impressum'
-				: 'https://www.uni-regensburg.de/en/legal-notice'}
-			target="_blank"
-			rel="noreferrer noopener"
-		>
-			<p class="ml-1">{$LL.imprint()}</p>
+		<a href="/privacy">
+			<p class="ml-1">{$LL.footer.privacyPolicy()}</p>
 		</a>
-		<p class="col-span-2 row-start-2 text-center opacity-60">
-			© {new Date().getFullYear()} Universität Regensburg
-		</p>
+		<span class="text-text/30">|</span>
+		<a href="/imprint">
+			<p>{$LL.imprint()}</p>
+		</a>
 	</section>
 </footer>

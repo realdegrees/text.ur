@@ -19,10 +19,7 @@ def _validate_tz_aware(
 ) -> datetime | None:
     """Reject naive datetimes — requires timezone info."""
     if v is not None and v.tzinfo is None:
-        raise ValueError(
-            "expires_at must include timezone info "
-            "(e.g. '2025-09-13T14:30:00Z')"
-        )
+        raise ValueError("expires_at must include timezone info (e.g. '2025-09-13T14:30:00Z')")
     return v
 
 
@@ -37,10 +34,9 @@ class ShareLinkCreate(SQLModel):
     expires_at: datetime | None = None
     label: str | None = Field(default=None, max_length=MAX_LABEL_LENGTH)
 
-    _validate_expires_at = field_validator("expires_at")(
-        _validate_tz_aware
-    )
-    
+    _validate_expires_at = field_validator("expires_at")(_validate_tz_aware)
+
+
 class ShareLinkReadBase(SQLModel):
     id: int
     permissions: set[Permission]
@@ -49,21 +45,25 @@ class ShareLinkReadBase(SQLModel):
     created_at: datetime
     updated_at: datetime
 
+
 class ShareLinkRead(ShareLinkReadBase):
     label: str | None = None
     token: str
     author: "UserRead | None"
     group_id: str
     num_memberships: int
-    
+
+
 class ShareLinkReadNoToken(ShareLinkReadBase):
     group_id: str
-    
+
+
 class ShareLinkReadFromToken(ShareLinkReadBase):
     """Read model for share link fetched via token, includes group info and the token itself."""
-    
+
     group: "GroupRead"
     token: str
+
 
 class ShareLinkUpdate(SQLModel):
     """Schema for updating a share link."""
@@ -74,6 +74,4 @@ class ShareLinkUpdate(SQLModel):
     label: str | None = Field(default=None, max_length=MAX_LABEL_LENGTH)
     rotate_token: bool | None = None
 
-    _validate_expires_at = field_validator("expires_at")(
-        _validate_tz_aware
-    )
+    _validate_expires_at = field_validator("expires_at")(_validate_tz_aware)

@@ -63,13 +63,15 @@
 		const result = await api.get<TaskAdminRead[]>(`/documents/${document.id}/tasks`);
 		if (result.success) {
 			tasks = result.data;
+		} else {
+			notification(result.error);
 		}
 		isLoading = false;
 	}
 
 	async function createTask() {
 		if (!newTask.question.trim()) {
-			notification('error', 'Question is required');
+			notification('error', $LL.tasks.questionRequired());
 			return;
 		}
 
@@ -112,7 +114,7 @@
 
 	async function updateTask(taskId: number) {
 		if (!editTask.question.trim()) {
-			notification('error', 'Question is required');
+			notification('error', $LL.tasks.questionRequired());
 			return;
 		}
 

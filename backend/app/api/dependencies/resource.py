@@ -16,6 +16,7 @@ DEFAULT_ID_ALIAS: str = "id"
 
 logger = get_logger("app")
 
+
 @overload
 def Resource[ResourceModel: BaseModel](
     resource: type[ResourceModel],
@@ -25,8 +26,8 @@ def Resource[ResourceModel: BaseModel](
     index_field_type: type = int,
     model_validator: Callable[[ResourceModel, User | None], ResourceModel] | None = None,
     raise_on_not_found: bool = True,
-) -> Callable[..., ResourceModel]:
-    ...
+) -> Callable[..., ResourceModel]: ...
+
 
 @overload
 def Resource[ResourceModel: BaseModel](
@@ -37,8 +38,7 @@ def Resource[ResourceModel: BaseModel](
     index_field_type: type = int,
     model_validator: Callable[[ResourceModel, User | None], ResourceModel] | None = None,
     raise_on_not_found: bool = False,
-) -> Callable[..., ResourceModel | None]:
-    ...
+) -> Callable[..., ResourceModel | None]: ...
 
 
 def Resource[ResourceModel: BaseModel](
@@ -84,4 +84,3 @@ def Resource[ResourceModel: BaseModel](
         return model_validator(res, user) if model_validator else res
 
     return Depends(dependency)
-

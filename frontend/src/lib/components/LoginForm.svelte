@@ -3,6 +3,7 @@
 	import InfoBanner from '$lib/components/InfoBanner.svelte';
 	import Loading from '~icons/svg-spinners/90-ring-with-bg';
 	import { api } from '$api/client';
+	import { resolveErrorMessage } from '$lib/util/errorMessage';
 
 	let { onSuccess }: { onSuccess: () => void } = $props();
 
@@ -24,7 +25,7 @@
 			const result = await api.post('/login', formData);
 
 			if (!result.success) {
-				errorMessage = result.error.detail || 'Invalid username/email or password';
+				errorMessage = resolveErrorMessage(result.error);
 				return;
 			}
 

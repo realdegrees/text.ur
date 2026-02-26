@@ -22,14 +22,8 @@ def _default_key_func(request):  # noqa: ANN001, ANN202
 
 def _build_redis_uri() -> str:
     """Build the Redis URI from configuration."""
-    password_part = (
-        f":{quote(cfg.REDIS_PASSWORD, safe='')}@"
-        if cfg.REDIS_PASSWORD
-        else ""
-    )
-    return (
-        f"redis://{password_part}{cfg.REDIS_HOST}:{cfg.REDIS_PORT}/1"
-    )
+    password_part = f":{quote(cfg.REDIS_PASSWORD, safe='')}@" if cfg.REDIS_PASSWORD else ""
+    return f"redis://{password_part}{cfg.REDIS_HOST}:{cfg.REDIS_PORT}/1"
 
 
 limiter = Limiter(
