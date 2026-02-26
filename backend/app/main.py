@@ -105,9 +105,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
 app = FastAPI(
     lifespan=lifespan,
-    title="Annotation Software API",
+    title="text.ur API",
     description=(
-        "This API allows interfacing with the Annotation Software database.\n\n"
+        "This API allows interfacing with the text.ur database.\n\n"
         "## Pagination\n"
         "All list endpoints are paginated and return results in a standardized format with metadata.\n\n"
         "## Filter Exclusions\n"
@@ -320,7 +320,7 @@ def docs(req: Request) -> HTMLResponse:
     """Return Custom Swagger UI with self-hosted assets."""
     response = get_swagger_ui_html(
         openapi_url=app.openapi_url,
-        title="Annotation Software Docs",
+        title="text.ur API Docs",
         swagger_js_url="/static/swagger-ui-bundle.js",
         swagger_css_url="/static/swagger-ui.css",
         swagger_favicon_url="/static/favicon.svg",

@@ -1,0 +1,22 @@
+# Impressum
+
+## Diensteanbieter (§ 5 DDG)
+
+text.ur ist ein Dienst der Universität Regensburg. Die vollständige Anbieterkennzeichnung gemäß § 5 DDG (Name, Anschrift, Kontakt, Rechtsform, Vertretungsberechtigte) finden Sie im Impressum der Universität:
+
+[Impressum der Universität Regensburg](https://www.uni-regensburg.de/impressum)
+
+## Inhaltlich Verantwortliche (§ 18 Abs. 2 MStV)
+
+[Tatjana Kühnast M.A.](https://www.uni-regensburg.de/sprache-literatur-kultur/germanistik-ndl-1/mitarbeitende/tatjana-kuehnast/index.html)
+Wissenschaftliche Mitarbeiterin, Lehrstuhl für Neuere deutsche Literaturwissenschaft 1, Universität Regensburg
+
+## Kontakt
+
+E-Mail: [Text.ur@sprachlit.uni-regensburg.de](mailto:Text.ur@sprachlit.uni-regensburg.de)
+
+## Über das Projekt
+
+text.ur ist eine kollaborative PDF-Annotationsplattform, entwickelt im Auftrag des [Lehrstuhls für Neuere deutsche Literaturwissenschaft 1](https://www.uni-regensburg.de/sprache-literatur-kultur/germanistik-ndl-1/startseite/index.html).
+
+Das Projekt wird gefördert durch die [Universität Regensburg](https://www.uni-regensburg.de) und das [DigiLabUR](https://www.uni-regensburg.de/digilabur/startseite/index.html).

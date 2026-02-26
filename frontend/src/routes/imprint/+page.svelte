@@ -1,13 +1,13 @@
 <script lang="ts">
-	import PrivacyEn from '$lib/legal/privacy/en.svx';
-	import PrivacyDe from '$lib/legal/privacy/de.svx';
+	import ImprintEn from '$lib/legal/imprint/en.svx';
+	import ImprintDe from '$lib/legal/imprint/de.svx';
 	import language from '$lib/stores/language.svelte';
 </script>
 
 <div class="mx-auto prose max-w-4xl overflow-y-auto p-8">
 	{#if language.locale === 'de'}
-		<PrivacyDe />
+		<ImprintDe />
 	{:else}
-		<PrivacyEn />
+		<ImprintEn />
 	{/if}
 </div>

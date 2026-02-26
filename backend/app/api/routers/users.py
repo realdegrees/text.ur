@@ -30,6 +30,7 @@ from models.tables import (
 from models.user import (
     ExportComment,
     ExportMembership,
+    ExportProfile,
     ExportReaction,
     ExportTaskResponse,
     UserDataExport,
@@ -205,7 +206,7 @@ async def export_user_data(
 
     export = UserDataExport(
         exported_at=datetime.now(UTC),
-        profile=user,
+        profile=ExportProfile.model_validate(user.model_dump()),
         memberships=memberships,
         comments=comments,
         reactions=reactions,

@@ -1,5 +1,27 @@
 @import 'tailwindcss';
 @plugin '@tailwindcss/forms';
+@plugin '@tailwindcss/typography';
+
+/* --- Legal / prose pages (privacy, imprint) ---
+   Placed outside @layer so these override the typography plugin's defaults.
+   The var() references resolve dynamically, so dark mode works automatically
+   when --color-text / --color-primary change under the .dark class. */
+
+.prose {
+	--tw-prose-body: var(--color-text);
+	--tw-prose-headings: var(--color-text);
+	--tw-prose-links: var(--color-primary);
+	--tw-prose-bold: var(--color-text);
+	--tw-prose-counters: color-mix(in srgb, var(--color-text) 60%, transparent);
+	--tw-prose-bullets: color-mix(in srgb, var(--color-text) 40%, transparent);
+	--tw-prose-hr: color-mix(in srgb, var(--color-text) 20%, transparent);
+	--tw-prose-quotes: var(--color-text);
+	--tw-prose-quote-borders: color-mix(in srgb, var(--color-text) 20%, transparent);
+	--tw-prose-code: var(--color-text);
+	--tw-prose-pre-bg: color-mix(in srgb, var(--color-text) 5%, transparent);
+	--tw-prose-th-borders: color-mix(in srgb, var(--color-text) 20%, transparent);
+	--tw-prose-td-borders: color-mix(in srgb, var(--color-text) 10%, transparent);
+}
 
 @theme {
 	--color-text: #111111;

@@ -100,13 +100,7 @@
 			<p class="ml-1">{$LL.footer.privacyPolicy()}</p>
 		</a>
 		<span class="text-text/30">|</span>
-		<a
-			href={language.locale === 'de'
-				? 'https://www.uni-regensburg.de/impressum'
-				: 'https://www.uni-regensburg.de/en/legal-notice'}
-			target="_blank"
-			rel="noreferrer noopener"
-		>
+		<a href="/imprint">
 			<p>{$LL.imprint()}</p>
 		</a>
 		<p class="col-span-2 row-start-2 text-center opacity-60">

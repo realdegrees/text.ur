@@ -1,0 +1,60 @@
+<script>
+	import DataExportButton from '$lib/legal/DataExportButton.svelte';
+</script>
+
+# Datenschutzerklärung
+
+## Verantwortliche Stelle, Datenschutzbeauftragter und Aufsichtsbehörde
+
+text.ur wird von der Universität Regensburg betrieben. Informationen zur verantwortlichen Stelle (Art. 4 Nr. 7 DSGVO), zum Datenschutzbeauftragten und zur zuständigen Aufsichtsbehörde finden Sie auf der Datenschutzseite der Universität:
+
+[Datenschutz -- Universität Regensburg](https://www.uni-regensburg.de/datenschutz)
+
+## Zweck und Rechtsgrundlage
+
+text.ur ist eine kollaborative PDF-Annotationsplattform der Universität Regensburg für akademische Zwecke. Personenbezogene Daten werden auf der Rechtsgrundlage von Art. 6 Abs. 1 lit. e DSGVO i.V.m. Art. 4 BayDSG (öffentliches Interesse / Ausübung öffentlicher Gewalt) verarbeitet, um die kollaborative Dokumentenannotation in Lehre und Forschung zu ermöglichen.
+
+## Erhobene Daten
+
+**Kontodaten:** Bei der Registrierung speichern wir Ihren Benutzernamen, Ihre E-Mail-Adresse, Vor- und Nachname sowie ein gehashtes Passwort. Gastkonten speichern nur einen Benutzernamen.
+
+**Nutzungsdaten:** Kommentare, Annotationen, Reaktionen, Aufgabenantworten und Gruppenmitgliedschaften, die Sie bei der Nutzung der Plattform erstellen.
+
+**Hochgeladene Dateien:** PDF-Dokumente, die Sie hochladen, werden in unserem Objektspeichersystem auf Universitätsinfrastruktur gespeichert.
+
+## Cookies
+
+Diese Anwendung verwendet ausschließlich technisch notwendige Cookies. Es werden keine Tracking- oder Analyse-Cookies eingesetzt. Da alle Cookies für die Funktion der Anwendung essenziell sind, ist kein Einwilligungsbanner erforderlich.
+
+| Name | Zweck | Gültigkeit |
+|------|-------|------------|
+| `access_token` | Authentifizierung (Sitzungstoken) | 12 Stunden |
+| `refresh_token` | Sitzungserneuerung | 3--30 Tage (je nach Kontotyp) |
+| `theme` | Dunkel-/Hellmodus-Präferenz | Sitzung (Browser) |
+| `locale` | Sprachpräferenz | 30 Tage |
+
+## Server-Protokolle
+
+Zur Sicherheits- und Fehleranalyse protokolliert der Server HTTP-Anfragen mit anonymisierten IP-Adressen (letztes Oktett bei IPv4 auf 0 gesetzt, /48-Maske bei IPv6). Protokolldateien werden nach 90 Tagen automatisch gelöscht. Vollständige (nicht anonymisierte) IP-Adressen werden nur vorübergehend im Arbeitsspeicher für die Ratenbegrenzung gehalten und nicht dauerhaft gespeichert.
+
+## Dritte
+
+Diese Anwendung übermittelt keine personenbezogenen Daten an Drittanbieter und lädt keine externen Ressourcen. Alle Daten werden ausschließlich auf Universitätsinfrastruktur verarbeitet und alle Ressourcen werden von dort bereitgestellt.
+
+## Ihre Rechte
+
+Nach der DSGVO haben Sie das Recht auf Auskunft (Art. 15), Berichtigung (Art. 16), Löschung (Art. 17), Einschränkung der Verarbeitung (Art. 18), Datenübertragbarkeit (Art. 20) und Widerspruch (Art. 21). Um diese Rechte auszuüben, wenden Sie sich an die verantwortliche Stelle oder den oben genannten Datenschutzbeauftragten.
+
+### Datenexport
+
+Sie können jederzeit alle mit Ihrem Konto verbundenen personenbezogenen Daten herunterladen. Der Export umfasst Ihre Profilinformationen, Gruppenmitgliedschaften, Kommentare, Reaktionen und Aufgabenantworten.
+
+<DataExportButton />
+
+### Kontolöschung
+
+Sie können Ihr Konto und alle zugehörigen Daten dauerhaft in Ihren Kontoeinstellungen löschen. Gruppen, die Sie besitzen, werden an einen anderen Administrator übertragen oder gelöscht, wenn keiner vorhanden ist.
+
+## Kontakt
+
+Bei Fragen zum Datenschutz wenden Sie sich bitte an den Datenschutzbeauftragten unter [dsb@ur.de](mailto:dsb@ur.de) oder die Anwendungsadministratoren unter [Text.ur@sprachlit.uni-regensburg.de](mailto:Text.ur@sprachlit.uni-regensburg.de).

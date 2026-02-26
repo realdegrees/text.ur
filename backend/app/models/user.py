@@ -99,7 +99,7 @@ class ExportComment(PydanticBaseModel):
     document_name: str
     group_name: str
     content: str | None
-    annotation: dict
+    annotation: dict | None = None
     visibility: str
     created_at: datetime
     updated_at: datetime

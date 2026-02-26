@@ -1,0 +1,22 @@
+# Legal Notice
+
+## Service Provider (§ 5 DDG)
+
+text.ur is a service of the University of Regensburg. The full provider identification per § 5 DDG (name, address, contact, legal form, representatives) can be found in the university's legal notice:
+
+[Legal Notice of the University of Regensburg](https://www.uni-regensburg.de/en/legal-notice)
+
+## Content Responsibility (§ 18 Abs. 2 MStV)
+
+[Tatjana Kühnast M.A.](https://www.uni-regensburg.de/sprache-literatur-kultur/germanistik-ndl-1/mitarbeitende/tatjana-kuehnast/index.html)
+Wissenschaftliche Mitarbeiterin, Lehrstuhl für Neuere deutsche Literaturwissenschaft 1, University of Regensburg
+
+## Contact
+
+Email: [Text.ur@sprachlit.uni-regensburg.de](mailto:Text.ur@sprachlit.uni-regensburg.de)
+
+## About the Project
+
+text.ur is a collaborative PDF annotation platform developed on behalf of the [Lehrstuhl für Neuere deutsche Literaturwissenschaft 1](https://www.uni-regensburg.de/sprache-literatur-kultur/germanistik-ndl-1/startseite/index.html).
+
+The project is supported by the [University of Regensburg](https://www.uni-regensburg.de) and [DigiLabUR](https://www.uni-regensburg.de/digilabur/startseite/index.html).

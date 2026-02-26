@@ -222,6 +222,13 @@ Use the VS Code **Run and Debug** panel (Ctrl+Shift+D) to select and launch a co
 
 ## 🏭 Production Deployment
 
+> [!CAUTION]
+> The legal notice (Impressum), privacy policy, and branding (favicon, logos, institutional references)
+> are currently hardcoded for the University of Regensburg. If you deploy text.ur for a different
+> institution, you **must** update these pages and assets manually. There is currently no configuration
+> mechanism to swap them. This requires direct code changes to the frontend translations, route
+> components, and static assets.
+
 Production uses `docker-compose.yml` which runs all services including the backend and frontend as containers.
 
 ### 1. Configure Environment
