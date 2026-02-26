@@ -6,9 +6,8 @@ import Error from '~icons/line-md/alert-square-twotone-loop';
 import Warning from '~icons/line-md/alert-twotone-loop';
 import Locked from '~icons/material-symbols/lock-outline';
 import type { AppError } from '$api/types';
-import { appErrorCodeSchema } from '$api/schemas';
-import { get } from 'svelte/store';
-import LL from '$i18n/i18n-svelte';
+import { appErrorSchema } from '$api/schemas';
+import { resolveErrorMessage } from '$lib/util/errorMessage';
 
 // Define the notification store
 export const notificationStore = writable<
@@ -54,14 +53,10 @@ export function notification(
 	let notificationType: NotificationType;
 	let message: string;
 
-	if (appErrorCodeSchema.safeParse(notificationTypeOrError).success) {
+	if (appErrorSchema.safeParse(notificationTypeOrError).success) {
 		const appError = notificationTypeOrError as AppError;
 		notificationType = 'error';
-		const errorTranslations = get(LL).errors as Record<string, (() => string) | undefined>;
-		message =
-			errorTranslations[appError.error_code]?.() ||
-			appError.detail ||
-			get(LL).errors.unknown_error();
+		message = resolveErrorMessage(appError);
 
 		if (typeof messageOrConfig === 'object') {
 			Object.assign(finalConfig, messageOrConfig);

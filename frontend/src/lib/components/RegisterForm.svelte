@@ -3,6 +3,8 @@
 	import InfoBanner from '$lib/components/InfoBanner.svelte';
 	import Loading from '~icons/svg-spinners/90-ring-with-bg';
 	import { api } from '$api/client';
+	import { resolveErrorMessage } from '$lib/util/errorMessage';
+	import LL from '$i18n/i18n-svelte';
 
 	let { onSuccess }: { onSuccess: () => void } = $props();
 
@@ -23,7 +25,7 @@
 		successMessage = null;
 
 		if (password !== confirmPassword) {
-			errorMessage = 'Passwords do not match';
+			errorMessage = $LL.passwordReset.passwordsDoNotMatch();
 			isLoading = false;
 			return;
 		}
@@ -38,11 +40,11 @@
 			});
 
 			if (!result.success) {
-				errorMessage = result.error.detail || 'Registration failed';
+				errorMessage = resolveErrorMessage(result.error);
 				return;
 			}
 
-			successMessage = 'Registration successful! Please check your email to verify your account.';
+			successMessage = $LL.loginPage.registrationSuccess();
 			onSuccess();
 		} finally {
 			isLoading = false;

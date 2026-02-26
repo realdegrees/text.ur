@@ -179,7 +179,7 @@ const en = {
 		membership_not_found: 'Membership not found',
 		owner_cannot_leave_group:
 			'Group owner cannot leave the group',
-		rate_limited: 'Too many requests. Please try again shortly.',
+		rate_limited: 'Too many requests. Please try again in {retryAfter:string}.',
 		sharelink_invalid: 'This share link is invalid',
 		sharelink_expired: 'This share link has expired',
 		cannot_remove_permission_reason_default_group:
@@ -206,6 +206,8 @@ const en = {
 			'This link has already been used',
 		mail_send_failed:
 			'Failed to send email. Please try again later.',
+		task_already_correct: 'You have already answered this question correctly',
+		task_no_attempts_left: 'No attempts remaining for this question',
 		already_verified: 'This account is already verified'
 	},
 
@@ -550,6 +552,7 @@ const en = {
 		deleteSuccess: 'Task deleted successfully',
 		deleteConfirm: 'Delete?',
 		reorderSuccess: 'Tasks reordered successfully',
+		questionRequired: 'Question is required',
 		noTasks: 'No tasks created yet',
 		noTasksDescription: 'Tasks can be configured by group administrators in document settings.',
 		// Member-facing
@@ -598,7 +601,10 @@ const en = {
 	// Login page
 	loginPage: {
 		loginTab: 'Login',
-		registerTab: 'Register'
+		registerTab: 'Register',
+		registrationFailed: 'Registration failed',
+		registrationSuccess:
+			'Registration successful! Please check your email to verify your account.'
 	},
 
 	// PDF viewer / comments
@@ -715,6 +721,15 @@ const en = {
 		nDaysAgo: '{count:number} day{{s}} ago'
 	},
 
+	// Duration formatting (forward-looking, e.g. "in 24 hours")
+	duration: {
+		nSeconds: '{count:number} second{{s}}',
+		nMinutes: '{count:number} minute{{s}}',
+		nHours: '{count:number} hour{{s}}',
+		nDays: '{count:number} day{{s}}',
+		aFewMinutes: 'a few minutes'
+	},
+
 	// Date picker
 	datePicker: {
 		selectDateTime: 'Select date and time',
@@ -735,6 +750,13 @@ const en = {
 	privacy: {
 		exportButton: 'Download My Data',
 		exportLoginRequired: 'Please log in to export your data.'
+	},
+
+	// Error pages
+	errorPage: {
+		unexpectedError: 'An unexpected error occurred',
+		goToDashboard: 'Go to Dashboard',
+		backToHome: 'Back to Home'
 	},
 
 	// Footer

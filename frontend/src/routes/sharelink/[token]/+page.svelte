@@ -6,6 +6,7 @@
 	import { formatDateTime } from '$lib/util/dateFormat';
 	import { goto, invalidateAll } from '$app/navigation';
 	import { api } from '$api/client';
+	import { notification } from '$lib/stores/notificationStore';
 	import LL from '$i18n/i18n-svelte.js';
 	import Badge from '$lib/components/badge.svelte';
 	import { get } from 'svelte/store';
@@ -25,6 +26,8 @@
 		const joinResponse = await api.post(`/sharelinks/${data.shareLink.token}/use`, {}, { fetch });
 		if (joinResponse.success) {
 			goto(`/dashboard/groups/${data.shareLink.group.id}/documents`);
+		} else {
+			notification(joinResponse.error);
 		}
 	}
 </script>

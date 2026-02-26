@@ -131,23 +131,42 @@ from core.rate_limit import limiter  # noqa: E402
 app.state.limiter = limiter
 
 
+def _parse_window_seconds(detail: str) -> int:
+    """Parse a slowapi limit string into the window duration in seconds.
+
+    Examples: "1 per 1 day" → 86400, "3 per 1 hour" → 3600,
+    "10 per 5 minute" → 300, "120 per 1 minute" → 60.
+    """
+    multipliers = {"second": 1, "minute": 60, "hour": 3600, "day": 86400}
+    try:
+        _, _, window = detail.partition(" per ")
+        parts = window.strip().split()
+        count = int(parts[0]) if len(parts) >= 2 else 1
+        unit = parts[-1].rstrip("s")
+        return count * multipliers.get(unit, 60)
+    except (ValueError, IndexError):
+        return 60
+
+
 @app.exception_handler(RateLimitExceeded)
 async def rate_limit_handler(
     request: Request, exc: RateLimitExceeded
 ) -> JSONResponse:
     """Return a structured AppError when a rate limit is exceeded."""
-    retry_after = exc.detail.split("per")[0].strip() if exc.detail else "later"
+    window_seconds = _parse_window_seconds(exc.detail or "")
+    content = AppError(
+        status_code=429,
+        error_code=AppErrorCode.RATE_LIMITED,
+        detail=(
+            f"Rate limit exceeded ({exc.detail}). "
+            f"Please try again later."
+        ),
+    ).model_dump()
+    content["retry_after"] = window_seconds
     return JSONResponse(
         status_code=429,
-        content=AppError(
-            status_code=429,
-            error_code=AppErrorCode.RATE_LIMITED,
-            detail=(
-                f"Rate limit exceeded ({exc.detail}). "
-                f"Please try again later."
-            ),
-        ).model_dump(),
-        headers={"Retry-After": retry_after},
+        content=content,
+        headers={"Retry-After": str(window_seconds)},
     )
 
 

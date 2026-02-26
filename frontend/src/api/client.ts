@@ -148,30 +148,41 @@ class ApiClient {
 	 */
 	private async handleErrorResponse(response: Response): Promise<{ success: false; error: AppError }> {
 		let json: any = null;
+		let error: AppError;
 
 		try {
 			json = await response.json();
 			const errorData = appErrorSchema.safeParse(json);
 
 			if (errorData.success) {
-				return {
-					success: false,
-					error: errorData.data
+				error = errorData.data;
+			} else {
+				error = {
+					error_code: 'unknown_error',
+					detail: response.statusText || 'Request failed',
+					status_code: response.status
 				};
 			}
 		} catch {
-			// JSON parse failed - fall through to generic error
-		}
-
-		// No JSON or parse failed - use response status text
-		return {
-			success: false,
-			error: {
+			// JSON parse failed - use response status text
+			error = {
 				error_code: 'unknown_error',
 				detail: response.statusText || 'Request failed',
 				status_code: response.status
-			}
-		};
+			};
+		}
+
+		// Enrich with retry duration for rate-limited responses.
+		// Prefer the JSON body value (survives proxy/header stripping),
+		// fall back to the standard Retry-After header.
+		const bodyRetry = typeof json?.retry_after === 'number' ? json.retry_after : NaN;
+		const headerRetry = parseInt(response.headers.get('Retry-After') ?? '', 10);
+		const retrySeconds = !isNaN(bodyRetry) ? bodyRetry : headerRetry;
+		if (!isNaN(retrySeconds)) {
+			(error as any).retryAfter = retrySeconds;
+		}
+
+		return { success: false, error };
 	}
 
 	/**

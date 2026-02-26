@@ -3,6 +3,7 @@
 	import InfoBanner from '$lib/components/InfoBanner.svelte';
 	import Loading from '~icons/svg-spinners/90-ring-with-bg';
 	import { api } from '$api/client';
+	import { resolveErrorMessage } from '$lib/util/errorMessage';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { onMount } from 'svelte';
@@ -44,7 +45,7 @@
 			const result = await api.update(`/login/reset/verify/${token}`, { password });
 
 			if (!result.success) {
-				errorMessage = result.error.detail || $LL.passwordReset.resetFailedExpired();
+				errorMessage = resolveErrorMessage(result.error);
 				return;
 			}
 

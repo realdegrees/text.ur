@@ -3,6 +3,7 @@
 	import InfoBanner from '$lib/components/InfoBanner.svelte';
 	import Loading from '~icons/svg-spinners/90-ring-with-bg';
 	import { api } from '$api/client';
+	import { resolveErrorMessage } from '$lib/util/errorMessage';
 	import LL from '$i18n/i18n-svelte';
 
 	let email = $state('');
@@ -20,7 +21,7 @@
 			const result = await api.post('/login/reset', { email });
 
 			if (!result.success) {
-				errorMessage = result.error.detail || $LL.passwordReset.resetFailed();
+				errorMessage = resolveErrorMessage(result.error);
 				return;
 			}
 

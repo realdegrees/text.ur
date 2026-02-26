@@ -105,7 +105,7 @@ async def update_user(
 
 
 @router.get("/{user_id}/export", response_model=UserDataExport)
-@limiter.limit("3/hour")
+@limiter.limit("1/day")
 async def export_user_data(
     request: Request,
     db: Database,

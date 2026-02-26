@@ -1,6 +1,7 @@
 import { api } from '$api/client';
 import type { Paginated } from '$api/pagination';
 import type { MembershipRead } from '$api/types';
+import { error } from '@sveltejs/kit';
 import type { PageLoad } from './$types';
 import type { BreadcrumbItem } from '$types/breadcrumb';
 
@@ -23,7 +24,7 @@ export const load: PageLoad = async ({ fetch, params, url, parent, depends }) =>
 	);
 
 	if (!result.success) {
-		throw new Error(`Failed to load memberships: ${result.error.detail}`);
+		throw error(result.error.status_code, result.error.detail);
 	}
 
 	return {

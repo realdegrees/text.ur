@@ -1,6 +1,7 @@
 import { api } from '$api/client';
 import type { Paginated } from '$api/pagination';
 import type { DocumentRead, MembershipRead, ScoreRead } from '$api/types';
+import { error } from '@sveltejs/kit';
 import type { PageLoad } from './$types';
 import type { BreadcrumbItem } from '$types/breadcrumb';
 
@@ -22,11 +23,11 @@ export const load: PageLoad = async ({ fetch, params, parent }) => {
 	]);
 
 	if (!memberResult.success) {
-		throw new Error(`Failed to load member: ${memberResult.error.detail}`);
+		throw error(memberResult.error.status_code, memberResult.error.detail);
 	}
 
 	if (!scoreResult.success) {
-		throw new Error(`Failed to load score: ${scoreResult.error.detail}`);
+		throw error(scoreResult.error.status_code, scoreResult.error.detail);
 	}
 
 	const member = memberResult.data;
