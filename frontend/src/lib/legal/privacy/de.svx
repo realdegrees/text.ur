@@ -1,5 +1,8 @@
 <script>
 	import DataExportButton from '$lib/legal/DataExportButton.svelte';
+	import { env } from '$env/dynamic/public';
+
+	const contactEmail = env.PUBLIC_CONTACT_EMAIL || 'Text.ur@sprachlit.uni-regensburg.de';
 </script>
 
 # Datenschutzerklärung
@@ -57,4 +60,4 @@ Sie können Ihr Konto und alle zugehörigen Daten dauerhaft in Ihren Kontoeinste
 
 ## Kontakt
 
-Bei Fragen zum Datenschutz wenden Sie sich bitte an den Datenschutzbeauftragten unter [dsb@ur.de](mailto:dsb@ur.de) oder die Anwendungsadministratoren unter [Text.ur@sprachlit.uni-regensburg.de](mailto:Text.ur@sprachlit.uni-regensburg.de).
+Bei Fragen zum Datenschutz wenden Sie sich bitte an den Datenschutzbeauftragten unter [dsb@ur.de](mailto:dsb@ur.de) oder die Anwendungsadministratoren unter <a href="mailto:{contactEmail}">{contactEmail}</a>.

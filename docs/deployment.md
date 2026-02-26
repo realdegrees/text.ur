@@ -100,6 +100,7 @@ Copy `.env.template` to `.env` and configure the values. The tables below list a
 | `COOKIE_SECURE` | `True` | Require HTTPS for cookies (set `False` for local HTTP development) |
 | `COOKIE_SAMESITE` | `lax` | Cookie SameSite attribute |
 | `GUEST_ACCOUNT_TTL_DAYS` | `90` | Guest account lifetime in days (drives refresh-token expiry, cookie max-age, and cleanup) |
+| `PUBLIC_CONTACT_EMAIL` | `Text.ur@sprachlit.uni-regensburg.de` | Contact email shown in the footer and legal pages |
 
 </details>
 
@@ -221,13 +222,6 @@ Use the VS Code **Run and Debug** panel (Ctrl+Shift+D) to select and launch a co
 ---
 
 ## 🏭 Production Deployment
-
-> [!CAUTION]
-> The legal notice (Impressum), privacy policy, and branding (favicon, logos, institutional references)
-> are currently hardcoded for the University of Regensburg. If you deploy text.ur for a different
-> institution, you **must** update these pages and assets manually. There is currently no configuration
-> mechanism to swap them. This requires direct code changes to the frontend translations, route
-> components, and static assets.
 
 Production uses `docker-compose.yml` which runs all services including the backend and frontend as containers.
 

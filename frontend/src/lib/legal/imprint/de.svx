@@ -1,3 +1,9 @@
+<script>
+	import { env } from '$env/dynamic/public';
+
+	const contactEmail = env.PUBLIC_CONTACT_EMAIL || 'Text.ur@sprachlit.uni-regensburg.de';
+</script>
+
 # Impressum
 
 ## Diensteanbieter (§ 5 DDG)
@@ -13,7 +19,7 @@ Wissenschaftliche Mitarbeiterin, Lehrstuhl für Neuere deutsche Literaturwissens
 
 ## Kontakt
 
-E-Mail: [Text.ur@sprachlit.uni-regensburg.de](mailto:Text.ur@sprachlit.uni-regensburg.de)
+E-Mail: <a href="mailto:{contactEmail}">{contactEmail}</a>
 
 ## Über das Projekt
 
