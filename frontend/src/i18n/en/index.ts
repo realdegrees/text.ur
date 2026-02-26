@@ -731,11 +731,90 @@ const en = {
 		densityDescription: 'Use visibility filters and pins to manage high comment density more effectively.',
 	},
 
+	// Privacy policy
+	privacy: {
+		title: 'Privacy Policy',
+		responsibleBody: {
+			title: 'Responsible Body',
+			content:
+				'University of Regensburg\nUniversitätsstraße 31\n93053 Regensburg\nGermany\nPhone: +49 941 943-01\nEmail: kontakt@ur.de'
+		},
+		dpo: {
+			title: 'Data Protection Officer',
+			content:
+				'Data Protection Officer of the University of Regensburg\nUniversitätsstraße 31\n93053 Regensburg\nGermany\nEmail: dsb@ur.de'
+		},
+		supervisory: {
+			title: 'Supervisory Authority',
+			content:
+				'The Bavarian State Commissioner for Data Protection (BayLfD)\nWagmüllerstraße 18\n80538 Munich\nGermany\nEmail: poststelle@datenschutz-bayern.de\nhttps://www.datenschutz-bayern.de'
+		},
+		purpose: {
+			title: 'Purpose and Legal Basis',
+			content:
+				'text.ur is a collaborative PDF annotation platform operated by the University of Regensburg for academic purposes. Personal data is processed on the legal basis of Art. 6(1)(e) GDPR in conjunction with Art. 4 BayDSG (public interest / exercise of official authority) to enable collaborative document annotation in teaching and research.'
+		},
+		dataCollected: {
+			title: 'Data Collected',
+			account:
+				'Account data: When you register, we store your username, email address, first name, last name, and a hashed password. Guest accounts only store a username.',
+			content:
+				'Usage data: Comments, annotations, reactions, task responses, and group memberships you create while using the platform.',
+			files:
+				'Uploaded files: PDF documents you upload are stored in our object storage system on university infrastructure.'
+		},
+		cookies: {
+			title: 'Cookies',
+			description:
+				'This application uses only technically necessary cookies. No tracking or analytics cookies are used. Since all cookies are essential for the application to function, no consent banner is required.',
+			name: 'Name',
+			purpose: 'Purpose',
+			expiry: 'Expiry',
+			accessToken: 'Authentication (session token)',
+			accessTokenExpiry: '12 hours',
+			refreshToken: 'Session renewal',
+			refreshTokenExpiry: '3–30 days (depending on account type)',
+			theme: 'Dark/light mode preference',
+			themeExpiry: 'Session (browser)',
+			locale: 'Language preference',
+			localeExpiry: '30 days'
+		},
+		logs: {
+			title: 'Server Logs',
+			content:
+				'For security and error analysis, the server logs HTTP requests with anonymized IP addresses (last octet set to 0 for IPv4, /48 mask for IPv6). Log files are automatically deleted after 90 days. Full (unanonymized) IP addresses are only held transiently in memory for rate limiting purposes and are not persisted.'
+		},
+		thirdParties: {
+			title: 'Third Parties',
+			content:
+				'This application does not transmit any personal data to third-party services. All data is processed exclusively on university infrastructure. The only exception is the API documentation page (/api/docs), which loads Swagger UI assets from an external CDN — this page is not accessible to regular users.'
+		},
+		rights: {
+			title: 'Your Rights',
+			content:
+				'Under the GDPR, you have the right to access (Art. 15), rectification (Art. 16), erasure (Art. 17), restriction of processing (Art. 18), data portability (Art. 20), and objection (Art. 21). To exercise these rights, contact the responsible body or the data protection officer listed above.',
+			exportTitle: 'Data Export',
+			exportDescription:
+				'You can download all personal data associated with your account at any time. The export includes your profile information, group memberships, comments, reactions, and task responses.',
+			exportButton: 'Download My Data',
+			exportLoginRequired: 'Please log in to export your data.',
+			deletionTitle: 'Account Deletion',
+			deletionDescription:
+				'You can permanently delete your account and all associated data from your account settings page. Groups you own will be transferred to another administrator or deleted if none exists.'
+		},
+		contact: {
+			title: 'Contact',
+			content:
+				'For questions about data protection, please contact the data protection officer at dsb@ur.de or the application administrators at Text.ur@sprachlit.uni-regensburg.de.'
+		}
+	},
+
 	// Footer
 	footer: {
 		enableDarkMode: 'Enable Dark Mode',
 		enableLightMode: 'Enable Light Mode',
-		changeLanguage: 'Change Language'
+		changeLanguage: 'Change Language',
+		privacyPolicy: 'Privacy Policy'
 	}
 } satisfies BaseTranslation;
 

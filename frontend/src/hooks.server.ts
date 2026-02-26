@@ -189,7 +189,7 @@ const translation: Handle = async ({ event, resolve }) => {
 		path: '/',
 		httpOnly: false, // Allow client-side access for language switching
 		sameSite: 'lax',
-		maxAge: 60 * 60 * 24 * 365 // 1 year
+		maxAge: 60 * 60 * 24 * 30 // 30 days
 	});
 
 	// Continue with SSR rendering

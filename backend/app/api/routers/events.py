@@ -28,12 +28,14 @@ from pydantic import create_model as internal_model
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import SQLModel, select
 from util.api_router import APIRouter
-from util.ip import get_client_ip
+from util.ip import anonymize_ip, get_client_ip
 
 logger = get_logger("app")
 
 # Load the WebSocket description template
-WEBSOCKET_TEMPLATE_PATH = PathLibPath(__file__).parent.parent / "docs" / "websocket.jinja"
+WEBSOCKET_TEMPLATE_PATH = (
+    PathLibPath(__file__).parent.parent / "docs" / "websocket.jinja"
+)
 with open(WEBSOCKET_TEMPLATE_PATH) as template_file:
     WEBSOCKET_TEMPLATE = Template(template_file.read())
 
@@ -50,7 +52,9 @@ class EventModelConfig[T: SQLModel, R: SQLModel](dict):
     """
 
     model: T  # Model for validating incoming payloads
-    response_model: R | None = None  # Optional model for documentation of outgoing payloads
+    response_model: R | None = (
+        None  # Optional model for documentation of outgoing payloads
+    )
     # Optional transform hook for outgoing events. Should return the final event dict to send,
     # or None to skip sending for this particular user. Can access websocket.state for custom state.
     # Signature: (event_data, websocket) -> event_data | None
@@ -59,7 +63,10 @@ class EventModelConfig[T: SQLModel, R: SQLModel](dict):
     # Receives event with pre-validated payload (event.payload is an instance of `model`).
     # Should return the event to publish (potentially modified). Can access websocket.state for custom state.
     # Signature: (event, websocket, session) -> event
-    handle_incoming: Callable[[Event, WebSocket, AsyncSession], Event] | None = None
+    handle_incoming: (
+        Callable[[Event, WebSocket, AsyncSession], Event] | None
+    ) = None
+
 
 @dataclass
 class EventRouterConfig(dict):
@@ -74,9 +81,12 @@ class EventRouterConfig(dict):
     # Optional callback to set up connection-specific state when a client connects.
     # Can attach any objects to websocket.state that will be accessible in all hooks.
     # Signature: (websocket, related_resource, user, session) -> None
-    setup_connection: Callable[[WebSocket, BaseModel, User, AsyncSession], None] | None = None
+    setup_connection: (
+        Callable[[WebSocket, BaseModel, User, AsyncSession], None] | None
+    ) = None
     # Whether to track active users for this channel (default: True)
     track_active_users: bool = True
+
 
 def get_events_router[RelatedResourceModel: BaseModel](  # noqa: C901
     channel: str,
@@ -108,18 +118,20 @@ def get_events_router[RelatedResourceModel: BaseModel](  # noqa: C901
 
     base_prefix = [p for p in base_router.prefix.split("/") if p]
     router_prefix = [p for p in router.prefix.split("/") if p]
-    full_channel = ":".join(
-        [*base_prefix, *router_prefix[:-2]]) + f":{channel}"
+    full_channel = ":".join([*base_prefix, *router_prefix[:-2]]) + f":{channel}"
 
     # Create the WebSocket path for registration on the main app
     full_path = "/" + "/".join(base_prefix + router_prefix)
 
     # Create the WebSocket handler function
     async def client_endpoint(  # noqa: C901
-        websocket: WebSocket, events: WebsocketEvents, resource_id: str, user: WebsocketAuthentication
+        websocket: WebSocket,
+        events: WebsocketEvents,
+        resource_id: str,
+        user: WebsocketAuthentication,
     ) -> None:
         """Connect a client to the event stream."""
-        client_ip = get_client_ip(websocket)
+        client_ip = anonymize_ip(get_client_ip(websocket))
         logger.info(
             f"[WS] Connection attempt for resource_id={resource_id}, user={user.id if user else None}, ip={client_ip}"
         )
@@ -127,7 +139,13 @@ def get_events_router[RelatedResourceModel: BaseModel](  # noqa: C901
 
         # Create on-demand session for initial resource verification
         async with SessionFactory() as db:
-            related_resource = (await db.exec(select(related_resource_model).where(related_resource_model.id == resource_id))).first()
+            related_resource = (
+                await db.exec(
+                    select(related_resource_model).where(
+                        related_resource_model.id == resource_id
+                    )
+                )
+            ).first()
 
         if not related_resource:
             logger.warning(f"[WS] Resource not found: {resource_id}")
@@ -136,7 +154,9 @@ def get_events_router[RelatedResourceModel: BaseModel](  # noqa: C901
 
         # Get or generate unique connection ID for this WebSocket connection
         # Frontend sends connection_id as query param to match with HTTP requests
-        connection_id = websocket.query_params.get("connection_id") or str(uuid4())
+        connection_id = websocket.query_params.get("connection_id") or str(
+            uuid4()
+        )
         websocket.state.connection_id = connection_id
 
         # Store user and related resource (available to all hooks)
@@ -148,7 +168,9 @@ def get_events_router[RelatedResourceModel: BaseModel](  # noqa: C901
             # Create on-demand session for setup
             try:
                 async with SessionFactory() as db:
-                    await config.setup_connection(websocket, related_resource, user, db)
+                    await config.setup_connection(
+                        websocket, related_resource, user, db
+                    )
             except RuntimeError:
                 # setup_connection closed the WS (e.g. access denied)
                 logger.info(
@@ -182,8 +204,8 @@ def get_events_router[RelatedResourceModel: BaseModel](  # noqa: C901
                 "type": "handshake",
                 "payload": {
                     "connection_id": connection_id,
-                    "active_users": [u.model_dump() for u in active_users]
-                }
+                    "active_users": [u.model_dump() for u in active_users],
+                },
             }
             await websocket.send_json(handshake_response)
 
@@ -194,9 +216,9 @@ def get_events_router[RelatedResourceModel: BaseModel](  # noqa: C901
                     "user_id": user.id,
                     "username": user.username,
                     "connection_id": connection_id,
-                    "connected_at": datetime.now(UTC).isoformat()
+                    "connected_at": datetime.now(UTC).isoformat(),
                 },
-                "originating_connection_id": connection_id
+                "originating_connection_id": connection_id,
             }
             # Publish using the same channel key other subscribers will be
             # listening on for this endpoint/resource.
@@ -243,14 +265,19 @@ def get_events_router[RelatedResourceModel: BaseModel](  # noqa: C901
             should be sent to this specific client, allowing for custom permission/visibility logic.
             """
             event_type = event_data.get("type")
-            originating_connection_id = event_data.get("originating_connection_id")
+            originating_connection_id = event_data.get(
+                "originating_connection_id"
+            )
 
             if not event_type:
                 logger.warning(f"Invalid event structure: {event_data}")
                 return
 
             # Skip sending event back to the connection that triggered it
-            if originating_connection_id is not None and originating_connection_id == websocket.state.connection_id:
+            if (
+                originating_connection_id is not None
+                and originating_connection_id == websocket.state.connection_id
+            ):
                 return
 
             # System events bypass config and are always sent
@@ -265,39 +292,57 @@ def get_events_router[RelatedResourceModel: BaseModel](  # noqa: C901
 
             # If no config found — log diagnostics and skip
             if type_config is None:
-                available = list(config.event_types.keys()) if hasattr(config, "event_types") else []
+                available = (
+                    list(config.event_types.keys())
+                    if hasattr(config, "event_types")
+                    else []
+                )
                 logger.warning(
                     "[WS] No config found for event type: %s (raw_type repr=%r, raw_type type=%s). Available types: %s",
                     event_type,
                     event_type,
-                    type(event_type).__name__ if event_type is not None else "None",
+                    type(event_type).__name__
+                    if event_type is not None
+                    else "None",
                     available,
                 )
                 try:
                     comparisons = []
                     for k in available:
-                        comparisons.append(f"{k!r}=={event_type!r}:{k == event_type}")
-                    logger.debug("[WS] Event type comparisons: %s", ", ".join(comparisons))
+                        comparisons.append(
+                            f"{k!r}=={event_type!r}:{k == event_type}"
+                        )
+                    logger.debug(
+                        "[WS] Event type comparisons: %s",
+                        ", ".join(comparisons),
+                    )
                 except Exception:
-                    logger.debug("[WS] Failed to produce event type comparisons")
+                    logger.debug(
+                        "[WS] Failed to produce event type comparisons"
+                    )
                 return
 
             # If a transform_outgoing hook is provided, use it to filter/transform the event
             if type_config is not None and type_config.transform_outgoing:
                 try:
-                    transformed = type_config.transform_outgoing(event_data, websocket)
+                    transformed = type_config.transform_outgoing(
+                        event_data, websocket
+                    )
                     if transformed is None:
                         # The hook decided the event should not be sent to this client
                         return
                     event_data = transformed
                 except Exception:
-                    logger.exception("Error running transform_outgoing hook for event %s", event_type)
+                    logger.exception(
+                        "Error running transform_outgoing hook for event %s",
+                        event_type,
+                    )
                     # Fail-safe: if the transformation errors, skip sending to avoid leaking info
                     return
 
             await _safe_send_json(event_data)
-            
-        async def client_event_loop() -> None: # noqa: C901
+
+        async def client_event_loop() -> None:  # noqa: C901
             """Handle incoming events from the client."""
             while True:
                 event_data = await websocket.receive_json()
@@ -318,8 +363,16 @@ def get_events_router[RelatedResourceModel: BaseModel](  # noqa: C901
 
                 if type_config is None:
                     # Log available event types and a couple of diagnostics to help
-                    available = list(config.event_types.keys()) if hasattr(config, "event_types") else []
-                    logger.warning('Received unknown event type: %s. Available types: %s', event_type, available)
+                    available = (
+                        list(config.event_types.keys())
+                        if hasattr(config, "event_types")
+                        else []
+                    )
+                    logger.warning(
+                        "Received unknown event type: %s. Available types: %s",
+                        event_type,
+                        available,
+                    )
                     continue
 
                 # Validate the event structure
@@ -330,24 +383,32 @@ def get_events_router[RelatedResourceModel: BaseModel](  # noqa: C901
                     if "event_id" not in event_data:
                         event_data["event_id"] = str(uuid4())
                     if "published_at" not in event_data:
-                        event_data["published_at"] = datetime.now(UTC).isoformat()
+                        event_data["published_at"] = datetime.now(
+                            UTC
+                        ).isoformat()
                     if "resource" not in event_data:
                         event_data["resource"] = None
                     if "resource_id" not in event_data:
                         event_data["resource_id"] = None
                     if "originating_connection_id" not in event_data:
-                        event_data["originating_connection_id"] = websocket.state.connection_id
+                        event_data["originating_connection_id"] = (
+                            websocket.state.connection_id
+                        )
 
                     # Validate payload against the configured model
                     event = Event[type_config.model].model_validate(event_data)
 
                 except ValidationError as e:
-                    logger.error(f"[WS] Event validation failed for type '{event_type}': {e}")
+                    logger.error(
+                        f"[WS] Event validation failed for type '{event_type}': {e}"
+                    )
                     logger.error(f"[WS] Event data: {event_data}")
                     # TODO: Inform client with structured error event (validation failed)
                     continue
                 except Exception as e:
-                    logger.exception(f"[WS] Unexpected error during validation: {e}")
+                    logger.exception(
+                        f"[WS] Unexpected error during validation: {e}"
+                    )
                     continue
 
                 # Handle the event using the configured handler
@@ -355,26 +416,30 @@ def get_events_router[RelatedResourceModel: BaseModel](  # noqa: C901
                     try:
                         # Create on-demand session for event handling
                         async with SessionFactory() as db:
-                            event = await type_config.handle_incoming(event, websocket, db)
+                            event = await type_config.handle_incoming(
+                                event, websocket, db
+                            )
                     except Exception as e:
-                        logger.exception(f"[WS] Error handling incoming event: {e}")
+                        logger.exception(
+                            f"[WS] Error handling incoming event: {e}"
+                        )
                         # TODO: Inform client with structured error event (internal error)
                         continue
                 else:
                     # TODO: Send back an error event indicating no handler is configured
                     pass
-                
-                
 
                 # Publish the event to other clients
                 event_dict = event.model_dump(mode="json")
-                await events.publish(event_dict, channel=websocket.state.channel)
+                await events.publish(
+                    event_dict, channel=websocket.state.channel
+                )
 
         # Register the client with the event manager (Outgoing events from server to client)
         await events.register_client(
-            websocket, 
+            websocket,
             channel=full_channel.format(resource_id=resource_id),
-            on_event=on_event
+            on_event=on_event,
         )
 
         # Cleanup function for disconnect
@@ -397,9 +462,7 @@ def get_events_router[RelatedResourceModel: BaseModel](  # noqa: C901
                 # Publish user_disconnected event
                 user_disconnected_event = {
                     "type": "user_disconnected",
-                    "payload": {
-                        "user_id": user.id
-                    }
+                    "payload": {"user_id": user.id},
                 }
                 await events.publish(
                     user_disconnected_event,
@@ -415,8 +478,7 @@ def get_events_router[RelatedResourceModel: BaseModel](  # noqa: C901
             await cleanup_connection()
             try:
                 await websocket.send_json(
-                    {"error": "Validation error",
-                     "details": str(e)},
+                    {"error": "Validation error", "details": str(e)},
                     mode="text",
                 )
                 await websocket.close(code=1003)
@@ -436,8 +498,10 @@ def get_events_router[RelatedResourceModel: BaseModel](  # noqa: C901
             await cleanup_connection()
             try:
                 await websocket.send_json(
-                    {"error": "Internal server error",
-                     "details": "Unknown error"},
+                    {
+                        "error": "Internal server error",
+                        "details": "Unknown error",
+                    },
                 )
                 await websocket.close(code=1011)
             except Exception:
@@ -447,7 +511,7 @@ def get_events_router[RelatedResourceModel: BaseModel](  # noqa: C901
                     "(resource_id=%s)",
                     resource_id,
                 )
-            
+
     # ====================================================================
     # ================= WebSocket documentation endpoint =================
     # ====================================================================
@@ -464,7 +528,9 @@ def get_events_router[RelatedResourceModel: BaseModel](  # noqa: C901
             outgoing_model = event_config.response_model or incoming_model
             if incoming_model is not None and outgoing_model is not None:
                 event_type_models[event_type_name] = {
-                    "incoming": incoming_model if event_config.handle_incoming is not None else None,
+                    "incoming": incoming_model
+                    if event_config.handle_incoming is not None
+                    else None,
                     "outgoing": outgoing_model,
                 }
 
@@ -483,7 +549,9 @@ def get_events_router[RelatedResourceModel: BaseModel](  # noqa: C901
     for _, event_config in config.event_types.items():
         # Collect the response payload model (response_model or model) for each event type
         if event_config is not None:
-            doc_model: type | None = event_config.response_model or event_config.model
+            doc_model: type | None = (
+                event_config.response_model or event_config.model
+            )
             if doc_model is not None:
                 payload_models.append(doc_model)
 
@@ -512,13 +580,16 @@ def get_events_router[RelatedResourceModel: BaseModel](  # noqa: C901
         summary="WebSocket Event Stream",
         response_description=response_description,
         description=dynamic_description,
-        response_model=response_model_type
+        response_model=response_model_type,
     )
     async def websocket_docs() -> Event:
         """WebSocket endpoint documentation."""
         # This is a dummy endpoint for documentation - actual functionality is via WebSocket
         raise AppException(
-            status_code=400, error_code=AppErrorCode.VALIDATION_ERROR, detail="Use WebSocket connection at this endpoint, not HTTP")
+            status_code=400,
+            error_code=AppErrorCode.VALIDATION_ERROR,
+            detail="Use WebSocket connection at this endpoint, not HTTP",
+        )
 
     # Attach WebSocket handler and path to the router for main app registration
     router.websocket_config = (full_path, client_endpoint)

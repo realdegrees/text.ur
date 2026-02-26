@@ -32,7 +32,7 @@ const createLanguage = () => {
 			currentLocale = locale;
 
 			// Set the locale cookie (same pattern as darkMode)
-			document.cookie = `locale=${locale}; path=/; max-age=${60 * 60 * 24 * 365}`;
+			document.cookie = `locale=${locale}; path=/; max-age=${60 * 60 * 24 * 30}`;
 		},
 
 		clearLocale() {

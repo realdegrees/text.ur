@@ -783,11 +783,90 @@ const de = {
 		densityDescription: 'Nutzen Sie Sichtbarkeitsfilter und Pins, um hohe Kommentardichten effektiver zu verwalten.',
 	},
 
+	// Datenschutzerklärung
+	privacy: {
+		title: 'Datenschutzerklärung',
+		responsibleBody: {
+			title: 'Verantwortliche Stelle',
+			content:
+				'Universität Regensburg\nUniversitätsstraße 31\n93053 Regensburg\nDeutschland\nTelefon: +49 941 943-01\nE-Mail: kontakt@ur.de'
+		},
+		dpo: {
+			title: 'Datenschutzbeauftragter',
+			content:
+				'Datenschutzbeauftragter der Universität Regensburg\nUniversitätsstraße 31\n93053 Regensburg\nDeutschland\nE-Mail: dsb@ur.de'
+		},
+		supervisory: {
+			title: 'Aufsichtsbehörde',
+			content:
+				'Der Bayerische Landesbeauftragte für den Datenschutz (BayLfD)\nWagmüllerstraße 18\n80538 München\nDeutschland\nE-Mail: poststelle@datenschutz-bayern.de\nhttps://www.datenschutz-bayern.de'
+		},
+		purpose: {
+			title: 'Zweck und Rechtsgrundlage',
+			content:
+				'text.ur ist eine kollaborative PDF-Annotationsplattform der Universität Regensburg für akademische Zwecke. Personenbezogene Daten werden auf der Rechtsgrundlage von Art. 6 Abs. 1 lit. e DSGVO i.V.m. Art. 4 BayDSG (öffentliches Interesse / Ausübung öffentlicher Gewalt) verarbeitet, um die kollaborative Dokumentenannotation in Lehre und Forschung zu ermöglichen.'
+		},
+		dataCollected: {
+			title: 'Erhobene Daten',
+			account:
+				'Kontodaten: Bei der Registrierung speichern wir Ihren Benutzernamen, Ihre E-Mail-Adresse, Vor- und Nachname sowie ein gehashtes Passwort. Gastkonten speichern nur einen Benutzernamen.',
+			content:
+				'Nutzungsdaten: Kommentare, Annotationen, Reaktionen, Aufgabenantworten und Gruppenmitgliedschaften, die Sie bei der Nutzung der Plattform erstellen.',
+			files:
+				'Hochgeladene Dateien: PDF-Dokumente, die Sie hochladen, werden in unserem Objektspeichersystem auf Universitätsinfrastruktur gespeichert.'
+		},
+		cookies: {
+			title: 'Cookies',
+			description:
+				'Diese Anwendung verwendet ausschließlich technisch notwendige Cookies. Es werden keine Tracking- oder Analyse-Cookies eingesetzt. Da alle Cookies für die Funktion der Anwendung essenziell sind, ist kein Einwilligungsbanner erforderlich.',
+			name: 'Name',
+			purpose: 'Zweck',
+			expiry: 'Gültigkeit',
+			accessToken: 'Authentifizierung (Sitzungstoken)',
+			accessTokenExpiry: '12 Stunden',
+			refreshToken: 'Sitzungserneuerung',
+			refreshTokenExpiry: '3–30 Tage (je nach Kontotyp)',
+			theme: 'Dunkel-/Hellmodus-Präferenz',
+			themeExpiry: 'Sitzung (Browser)',
+			locale: 'Sprachpräferenz',
+			localeExpiry: '30 Tage'
+		},
+		logs: {
+			title: 'Server-Protokolle',
+			content:
+				'Zur Sicherheits- und Fehleranalyse protokolliert der Server HTTP-Anfragen mit anonymisierten IP-Adressen (letztes Oktett bei IPv4 auf 0 gesetzt, /48-Maske bei IPv6). Protokolldateien werden nach 90 Tagen automatisch gelöscht. Vollständige (nicht anonymisierte) IP-Adressen werden nur vorübergehend im Arbeitsspeicher für die Ratenbegrenzung gehalten und nicht dauerhaft gespeichert.'
+		},
+		thirdParties: {
+			title: 'Dritte',
+			content:
+				'Diese Anwendung übermittelt keine personenbezogenen Daten an Drittanbieter. Alle Daten werden ausschließlich auf Universitätsinfrastruktur verarbeitet. Die einzige Ausnahme ist die API-Dokumentationsseite (/api/docs), die Swagger-UI-Ressourcen von einem externen CDN lädt — diese Seite ist für reguläre Benutzer nicht zugänglich.'
+		},
+		rights: {
+			title: 'Ihre Rechte',
+			content:
+				'Nach der DSGVO haben Sie das Recht auf Auskunft (Art. 15), Berichtigung (Art. 16), Löschung (Art. 17), Einschränkung der Verarbeitung (Art. 18), Datenübertragbarkeit (Art. 20) und Widerspruch (Art. 21). Um diese Rechte auszuüben, wenden Sie sich an die verantwortliche Stelle oder den oben genannten Datenschutzbeauftragten.',
+			exportTitle: 'Datenexport',
+			exportDescription:
+				'Sie können jederzeit alle mit Ihrem Konto verbundenen personenbezogenen Daten herunterladen. Der Export umfasst Ihre Profilinformationen, Gruppenmitgliedschaften, Kommentare, Reaktionen und Aufgabenantworten.',
+			exportButton: 'Meine Daten herunterladen',
+			exportLoginRequired: 'Bitte melden Sie sich an, um Ihre Daten zu exportieren.',
+			deletionTitle: 'Kontolöschung',
+			deletionDescription:
+				'Sie können Ihr Konto und alle zugehörigen Daten dauerhaft in Ihren Kontoeinstellungen löschen. Gruppen, die Sie besitzen, werden an einen anderen Administrator übertragen oder gelöscht, wenn keiner vorhanden ist.'
+		},
+		contact: {
+			title: 'Kontakt',
+			content:
+				'Bei Fragen zum Datenschutz wenden Sie sich bitte an den Datenschutzbeauftragten unter dsb@ur.de oder die Anwendungsadministratoren unter Text.ur@sprachlit.uni-regensburg.de.'
+		}
+	},
+
 	// Footer
 	footer: {
 		enableDarkMode: 'Dunkelmodus aktivieren',
 		enableLightMode: 'Hellmodus aktivieren',
-		changeLanguage: 'Sprache ändern'
+		changeLanguage: 'Sprache ändern',
+		privacyPolicy: 'Datenschutz'
 	}
 } satisfies Translation;
 

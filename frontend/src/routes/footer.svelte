@@ -96,6 +96,10 @@
 			<MailIcon />
 		</a>
 
+		<a href="/privacy">
+			<p class="ml-1">{$LL.footer.privacyPolicy()}</p>
+		</a>
+		<span class="text-text/30">|</span>
 		<a
 			href={language.locale === 'de'
 				? 'https://www.uni-regensburg.de/impressum'
@@ -103,7 +107,7 @@
 			target="_blank"
 			rel="noreferrer noopener"
 		>
-			<p class="ml-1">{$LL.imprint()}</p>
+			<p>{$LL.imprint()}</p>
 		</a>
 		<p class="col-span-2 row-start-2 text-center opacity-60">
 			© {new Date().getFullYear()} Universität Regensburg

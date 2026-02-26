@@ -5,6 +5,7 @@ import bcrypt
 from api.dependencies.database import Database
 from core.app_exception import AppException
 from core.config import (
+    GUEST_ACCOUNT_TTL_DAYS,
     JWT_ACCESS_EXPIRATION_MINUTES,
     JWT_REFRESH_EXPIRATION_DAYS,
     JWT_SECRET,
@@ -106,7 +107,12 @@ def generate_token(user: User, token_type: Literal["access", "refresh"], scopes:
     if token_type == "access":
         expire = datetime.now(UTC) + timedelta(minutes=JWT_ACCESS_EXPIRATION_MINUTES)
     elif token_type == "refresh":
-        expire = datetime.now(UTC) + timedelta(days=JWT_REFRESH_EXPIRATION_DAYS)
+        days = (
+            GUEST_ACCOUNT_TTL_DAYS
+            if user.is_guest
+            else JWT_REFRESH_EXPIRATION_DAYS
+        )
+        expire = datetime.now(UTC) + timedelta(days=days)
 
     # Inner JWT (personal)
     inner_payload = UserJWTPayload(

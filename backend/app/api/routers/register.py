@@ -283,7 +283,7 @@ async def _register_anonymous_user(
         httponly=True,
         secure=cfg.COOKIE_SECURE,
         samesite=cfg.COOKIE_SAMESITE,
-        max_age=int(cfg.JWT_REFRESH_GUEST_EXPIRATION_DAYS * 24 * 60 * 60)
+        max_age=int(cfg.GUEST_ACCOUNT_TTL_DAYS * 24 * 60 * 60)
     )
 
     return token

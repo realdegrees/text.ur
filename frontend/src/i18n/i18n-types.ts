@@ -2192,6 +2192,202 @@ type RootTranslation = {
 		 */
 		densityDescription: string
 	}
+	privacy: {
+		/**
+		 * P​r​i​v​a​c​y​ ​P​o​l​i​c​y
+		 */
+		title: string
+		responsibleBody: {
+			/**
+			 * R​e​s​p​o​n​s​i​b​l​e​ ​B​o​d​y
+			 */
+			title: string
+			/**
+			 * U​n​i​v​e​r​s​i​t​y​ ​o​f​ ​R​e​g​e​n​s​b​u​r​g​
+		​U​n​i​v​e​r​s​i​t​ä​t​s​s​t​r​a​ß​e​ ​3​1​
+		​9​3​0​5​3​ ​R​e​g​e​n​s​b​u​r​g​
+		​G​e​r​m​a​n​y​
+		​P​h​o​n​e​:​ ​+​4​9​ ​9​4​1​ ​9​4​3​-​0​1​
+		​E​m​a​i​l​:​ ​k​o​n​t​a​k​t​@​u​r​.​d​e
+			 */
+			content: string
+		}
+		dpo: {
+			/**
+			 * D​a​t​a​ ​P​r​o​t​e​c​t​i​o​n​ ​O​f​f​i​c​e​r
+			 */
+			title: string
+			/**
+			 * D​a​t​a​ ​P​r​o​t​e​c​t​i​o​n​ ​O​f​f​i​c​e​r​ ​o​f​ ​t​h​e​ ​U​n​i​v​e​r​s​i​t​y​ ​o​f​ ​R​e​g​e​n​s​b​u​r​g​
+		​U​n​i​v​e​r​s​i​t​ä​t​s​s​t​r​a​ß​e​ ​3​1​
+		​9​3​0​5​3​ ​R​e​g​e​n​s​b​u​r​g​
+		​G​e​r​m​a​n​y​
+		​E​m​a​i​l​:​ ​d​s​b​@​u​r​.​d​e
+			 */
+			content: string
+		}
+		supervisory: {
+			/**
+			 * S​u​p​e​r​v​i​s​o​r​y​ ​A​u​t​h​o​r​i​t​y
+			 */
+			title: string
+			/**
+			 * T​h​e​ ​B​a​v​a​r​i​a​n​ ​S​t​a​t​e​ ​C​o​m​m​i​s​s​i​o​n​e​r​ ​f​o​r​ ​D​a​t​a​ ​P​r​o​t​e​c​t​i​o​n​ ​(​B​a​y​L​f​D​)​
+		​W​a​g​m​ü​l​l​e​r​s​t​r​a​ß​e​ ​1​8​
+		​8​0​5​3​8​ ​M​u​n​i​c​h​
+		​G​e​r​m​a​n​y​
+		​E​m​a​i​l​:​ ​p​o​s​t​s​t​e​l​l​e​@​d​a​t​e​n​s​c​h​u​t​z​-​b​a​y​e​r​n​.​d​e​
+		​h​t​t​p​s​:​/​/​w​w​w​.​d​a​t​e​n​s​c​h​u​t​z​-​b​a​y​e​r​n​.​d​e
+			 */
+			content: string
+		}
+		purpose: {
+			/**
+			 * P​u​r​p​o​s​e​ ​a​n​d​ ​L​e​g​a​l​ ​B​a​s​i​s
+			 */
+			title: string
+			/**
+			 * t​e​x​t​.​u​r​ ​i​s​ ​a​ ​c​o​l​l​a​b​o​r​a​t​i​v​e​ ​P​D​F​ ​a​n​n​o​t​a​t​i​o​n​ ​p​l​a​t​f​o​r​m​ ​o​p​e​r​a​t​e​d​ ​b​y​ ​t​h​e​ ​U​n​i​v​e​r​s​i​t​y​ ​o​f​ ​R​e​g​e​n​s​b​u​r​g​ ​f​o​r​ ​a​c​a​d​e​m​i​c​ ​p​u​r​p​o​s​e​s​.​ ​P​e​r​s​o​n​a​l​ ​d​a​t​a​ ​i​s​ ​p​r​o​c​e​s​s​e​d​ ​o​n​ ​t​h​e​ ​l​e​g​a​l​ ​b​a​s​i​s​ ​o​f​ ​A​r​t​.​ ​6​(​1​)​(​e​)​ ​G​D​P​R​ ​i​n​ ​c​o​n​j​u​n​c​t​i​o​n​ ​w​i​t​h​ ​A​r​t​.​ ​4​ ​B​a​y​D​S​G​ ​(​p​u​b​l​i​c​ ​i​n​t​e​r​e​s​t​ ​/​ ​e​x​e​r​c​i​s​e​ ​o​f​ ​o​f​f​i​c​i​a​l​ ​a​u​t​h​o​r​i​t​y​)​ ​t​o​ ​e​n​a​b​l​e​ ​c​o​l​l​a​b​o​r​a​t​i​v​e​ ​d​o​c​u​m​e​n​t​ ​a​n​n​o​t​a​t​i​o​n​ ​i​n​ ​t​e​a​c​h​i​n​g​ ​a​n​d​ ​r​e​s​e​a​r​c​h​.
+			 */
+			content: string
+		}
+		dataCollected: {
+			/**
+			 * D​a​t​a​ ​C​o​l​l​e​c​t​e​d
+			 */
+			title: string
+			/**
+			 * A​c​c​o​u​n​t​ ​d​a​t​a​:​ ​W​h​e​n​ ​y​o​u​ ​r​e​g​i​s​t​e​r​,​ ​w​e​ ​s​t​o​r​e​ ​y​o​u​r​ ​u​s​e​r​n​a​m​e​,​ ​e​m​a​i​l​ ​a​d​d​r​e​s​s​,​ ​f​i​r​s​t​ ​n​a​m​e​,​ ​l​a​s​t​ ​n​a​m​e​,​ ​a​n​d​ ​a​ ​h​a​s​h​e​d​ ​p​a​s​s​w​o​r​d​.​ ​G​u​e​s​t​ ​a​c​c​o​u​n​t​s​ ​o​n​l​y​ ​s​t​o​r​e​ ​a​ ​u​s​e​r​n​a​m​e​.
+			 */
+			account: string
+			/**
+			 * U​s​a​g​e​ ​d​a​t​a​:​ ​C​o​m​m​e​n​t​s​,​ ​a​n​n​o​t​a​t​i​o​n​s​,​ ​r​e​a​c​t​i​o​n​s​,​ ​t​a​s​k​ ​r​e​s​p​o​n​s​e​s​,​ ​a​n​d​ ​g​r​o​u​p​ ​m​e​m​b​e​r​s​h​i​p​s​ ​y​o​u​ ​c​r​e​a​t​e​ ​w​h​i​l​e​ ​u​s​i​n​g​ ​t​h​e​ ​p​l​a​t​f​o​r​m​.
+			 */
+			content: string
+			/**
+			 * U​p​l​o​a​d​e​d​ ​f​i​l​e​s​:​ ​P​D​F​ ​d​o​c​u​m​e​n​t​s​ ​y​o​u​ ​u​p​l​o​a​d​ ​a​r​e​ ​s​t​o​r​e​d​ ​i​n​ ​o​u​r​ ​o​b​j​e​c​t​ ​s​t​o​r​a​g​e​ ​s​y​s​t​e​m​ ​o​n​ ​u​n​i​v​e​r​s​i​t​y​ ​i​n​f​r​a​s​t​r​u​c​t​u​r​e​.
+			 */
+			files: string
+		}
+		cookies: {
+			/**
+			 * C​o​o​k​i​e​s
+			 */
+			title: string
+			/**
+			 * T​h​i​s​ ​a​p​p​l​i​c​a​t​i​o​n​ ​u​s​e​s​ ​o​n​l​y​ ​t​e​c​h​n​i​c​a​l​l​y​ ​n​e​c​e​s​s​a​r​y​ ​c​o​o​k​i​e​s​.​ ​N​o​ ​t​r​a​c​k​i​n​g​ ​o​r​ ​a​n​a​l​y​t​i​c​s​ ​c​o​o​k​i​e​s​ ​a​r​e​ ​u​s​e​d​.​ ​S​i​n​c​e​ ​a​l​l​ ​c​o​o​k​i​e​s​ ​a​r​e​ ​e​s​s​e​n​t​i​a​l​ ​f​o​r​ ​t​h​e​ ​a​p​p​l​i​c​a​t​i​o​n​ ​t​o​ ​f​u​n​c​t​i​o​n​,​ ​n​o​ ​c​o​n​s​e​n​t​ ​b​a​n​n​e​r​ ​i​s​ ​r​e​q​u​i​r​e​d​.
+			 */
+			description: string
+			/**
+			 * N​a​m​e
+			 */
+			name: string
+			/**
+			 * P​u​r​p​o​s​e
+			 */
+			purpose: string
+			/**
+			 * E​x​p​i​r​y
+			 */
+			expiry: string
+			/**
+			 * A​u​t​h​e​n​t​i​c​a​t​i​o​n​ ​(​s​e​s​s​i​o​n​ ​t​o​k​e​n​)
+			 */
+			accessToken: string
+			/**
+			 * 1​2​ ​h​o​u​r​s
+			 */
+			accessTokenExpiry: string
+			/**
+			 * S​e​s​s​i​o​n​ ​r​e​n​e​w​a​l
+			 */
+			refreshToken: string
+			/**
+			 * 3​–​3​0​ ​d​a​y​s​ ​(​d​e​p​e​n​d​i​n​g​ ​o​n​ ​a​c​c​o​u​n​t​ ​t​y​p​e​)
+			 */
+			refreshTokenExpiry: string
+			/**
+			 * D​a​r​k​/​l​i​g​h​t​ ​m​o​d​e​ ​p​r​e​f​e​r​e​n​c​e
+			 */
+			theme: string
+			/**
+			 * S​e​s​s​i​o​n​ ​(​b​r​o​w​s​e​r​)
+			 */
+			themeExpiry: string
+			/**
+			 * L​a​n​g​u​a​g​e​ ​p​r​e​f​e​r​e​n​c​e
+			 */
+			locale: string
+			/**
+			 * 3​0​ ​d​a​y​s
+			 */
+			localeExpiry: string
+		}
+		logs: {
+			/**
+			 * S​e​r​v​e​r​ ​L​o​g​s
+			 */
+			title: string
+			/**
+			 * F​o​r​ ​s​e​c​u​r​i​t​y​ ​a​n​d​ ​e​r​r​o​r​ ​a​n​a​l​y​s​i​s​,​ ​t​h​e​ ​s​e​r​v​e​r​ ​l​o​g​s​ ​H​T​T​P​ ​r​e​q​u​e​s​t​s​ ​w​i​t​h​ ​a​n​o​n​y​m​i​z​e​d​ ​I​P​ ​a​d​d​r​e​s​s​e​s​ ​(​l​a​s​t​ ​o​c​t​e​t​ ​s​e​t​ ​t​o​ ​0​ ​f​o​r​ ​I​P​v​4​,​ ​/​4​8​ ​m​a​s​k​ ​f​o​r​ ​I​P​v​6​)​.​ ​L​o​g​ ​f​i​l​e​s​ ​a​r​e​ ​a​u​t​o​m​a​t​i​c​a​l​l​y​ ​d​e​l​e​t​e​d​ ​a​f​t​e​r​ ​9​0​ ​d​a​y​s​.​ ​F​u​l​l​ ​(​u​n​a​n​o​n​y​m​i​z​e​d​)​ ​I​P​ ​a​d​d​r​e​s​s​e​s​ ​a​r​e​ ​o​n​l​y​ ​h​e​l​d​ ​t​r​a​n​s​i​e​n​t​l​y​ ​i​n​ ​m​e​m​o​r​y​ ​f​o​r​ ​r​a​t​e​ ​l​i​m​i​t​i​n​g​ ​p​u​r​p​o​s​e​s​ ​a​n​d​ ​a​r​e​ ​n​o​t​ ​p​e​r​s​i​s​t​e​d​.
+			 */
+			content: string
+		}
+		thirdParties: {
+			/**
+			 * T​h​i​r​d​ ​P​a​r​t​i​e​s
+			 */
+			title: string
+			/**
+			 * T​h​i​s​ ​a​p​p​l​i​c​a​t​i​o​n​ ​d​o​e​s​ ​n​o​t​ ​t​r​a​n​s​m​i​t​ ​a​n​y​ ​p​e​r​s​o​n​a​l​ ​d​a​t​a​ ​t​o​ ​t​h​i​r​d​-​p​a​r​t​y​ ​s​e​r​v​i​c​e​s​.​ ​A​l​l​ ​d​a​t​a​ ​i​s​ ​p​r​o​c​e​s​s​e​d​ ​e​x​c​l​u​s​i​v​e​l​y​ ​o​n​ ​u​n​i​v​e​r​s​i​t​y​ ​i​n​f​r​a​s​t​r​u​c​t​u​r​e​.​ ​T​h​e​ ​o​n​l​y​ ​e​x​c​e​p​t​i​o​n​ ​i​s​ ​t​h​e​ ​A​P​I​ ​d​o​c​u​m​e​n​t​a​t​i​o​n​ ​p​a​g​e​ ​(​/​a​p​i​/​d​o​c​s​)​,​ ​w​h​i​c​h​ ​l​o​a​d​s​ ​S​w​a​g​g​e​r​ ​U​I​ ​a​s​s​e​t​s​ ​f​r​o​m​ ​a​n​ ​e​x​t​e​r​n​a​l​ ​C​D​N​ ​—​ ​t​h​i​s​ ​p​a​g​e​ ​i​s​ ​n​o​t​ ​a​c​c​e​s​s​i​b​l​e​ ​t​o​ ​r​e​g​u​l​a​r​ ​u​s​e​r​s​.
+			 */
+			content: string
+		}
+		rights: {
+			/**
+			 * Y​o​u​r​ ​R​i​g​h​t​s
+			 */
+			title: string
+			/**
+			 * U​n​d​e​r​ ​t​h​e​ ​G​D​P​R​,​ ​y​o​u​ ​h​a​v​e​ ​t​h​e​ ​r​i​g​h​t​ ​t​o​ ​a​c​c​e​s​s​ ​(​A​r​t​.​ ​1​5​)​,​ ​r​e​c​t​i​f​i​c​a​t​i​o​n​ ​(​A​r​t​.​ ​1​6​)​,​ ​e​r​a​s​u​r​e​ ​(​A​r​t​.​ ​1​7​)​,​ ​r​e​s​t​r​i​c​t​i​o​n​ ​o​f​ ​p​r​o​c​e​s​s​i​n​g​ ​(​A​r​t​.​ ​1​8​)​,​ ​d​a​t​a​ ​p​o​r​t​a​b​i​l​i​t​y​ ​(​A​r​t​.​ ​2​0​)​,​ ​a​n​d​ ​o​b​j​e​c​t​i​o​n​ ​(​A​r​t​.​ ​2​1​)​.​ ​T​o​ ​e​x​e​r​c​i​s​e​ ​t​h​e​s​e​ ​r​i​g​h​t​s​,​ ​c​o​n​t​a​c​t​ ​t​h​e​ ​r​e​s​p​o​n​s​i​b​l​e​ ​b​o​d​y​ ​o​r​ ​t​h​e​ ​d​a​t​a​ ​p​r​o​t​e​c​t​i​o​n​ ​o​f​f​i​c​e​r​ ​l​i​s​t​e​d​ ​a​b​o​v​e​.
+			 */
+			content: string
+			/**
+			 * D​a​t​a​ ​E​x​p​o​r​t
+			 */
+			exportTitle: string
+			/**
+			 * Y​o​u​ ​c​a​n​ ​d​o​w​n​l​o​a​d​ ​a​l​l​ ​p​e​r​s​o​n​a​l​ ​d​a​t​a​ ​a​s​s​o​c​i​a​t​e​d​ ​w​i​t​h​ ​y​o​u​r​ ​a​c​c​o​u​n​t​ ​a​t​ ​a​n​y​ ​t​i​m​e​.​ ​T​h​e​ ​e​x​p​o​r​t​ ​i​n​c​l​u​d​e​s​ ​y​o​u​r​ ​p​r​o​f​i​l​e​ ​i​n​f​o​r​m​a​t​i​o​n​,​ ​g​r​o​u​p​ ​m​e​m​b​e​r​s​h​i​p​s​,​ ​c​o​m​m​e​n​t​s​,​ ​r​e​a​c​t​i​o​n​s​,​ ​a​n​d​ ​t​a​s​k​ ​r​e​s​p​o​n​s​e​s​.
+			 */
+			exportDescription: string
+			/**
+			 * D​o​w​n​l​o​a​d​ ​M​y​ ​D​a​t​a
+			 */
+			exportButton: string
+			/**
+			 * P​l​e​a​s​e​ ​l​o​g​ ​i​n​ ​t​o​ ​e​x​p​o​r​t​ ​y​o​u​r​ ​d​a​t​a​.
+			 */
+			exportLoginRequired: string
+			/**
+			 * A​c​c​o​u​n​t​ ​D​e​l​e​t​i​o​n
+			 */
+			deletionTitle: string
+			/**
+			 * Y​o​u​ ​c​a​n​ ​p​e​r​m​a​n​e​n​t​l​y​ ​d​e​l​e​t​e​ ​y​o​u​r​ ​a​c​c​o​u​n​t​ ​a​n​d​ ​a​l​l​ ​a​s​s​o​c​i​a​t​e​d​ ​d​a​t​a​ ​f​r​o​m​ ​y​o​u​r​ ​a​c​c​o​u​n​t​ ​s​e​t​t​i​n​g​s​ ​p​a​g​e​.​ ​G​r​o​u​p​s​ ​y​o​u​ ​o​w​n​ ​w​i​l​l​ ​b​e​ ​t​r​a​n​s​f​e​r​r​e​d​ ​t​o​ ​a​n​o​t​h​e​r​ ​a​d​m​i​n​i​s​t​r​a​t​o​r​ ​o​r​ ​d​e​l​e​t​e​d​ ​i​f​ ​n​o​n​e​ ​e​x​i​s​t​s​.
+			 */
+			deletionDescription: string
+		}
+		contact: {
+			/**
+			 * C​o​n​t​a​c​t
+			 */
+			title: string
+			/**
+			 * F​o​r​ ​q​u​e​s​t​i​o​n​s​ ​a​b​o​u​t​ ​d​a​t​a​ ​p​r​o​t​e​c​t​i​o​n​,​ ​p​l​e​a​s​e​ ​c​o​n​t​a​c​t​ ​t​h​e​ ​d​a​t​a​ ​p​r​o​t​e​c​t​i​o​n​ ​o​f​f​i​c​e​r​ ​a​t​ ​d​s​b​@​u​r​.​d​e​ ​o​r​ ​t​h​e​ ​a​p​p​l​i​c​a​t​i​o​n​ ​a​d​m​i​n​i​s​t​r​a​t​o​r​s​ ​a​t​ ​T​e​x​t​.​u​r​@​s​p​r​a​c​h​l​i​t​.​u​n​i​-​r​e​g​e​n​s​b​u​r​g​.​d​e​.
+			 */
+			content: string
+		}
+	}
 	footer: {
 		/**
 		 * E​n​a​b​l​e​ ​D​a​r​k​ ​M​o​d​e
@@ -2205,6 +2401,10 @@ type RootTranslation = {
 		 * C​h​a​n​g​e​ ​L​a​n​g​u​a​g​e
 		 */
 		changeLanguage: string
+		/**
+		 * P​r​i​v​a​c​y​ ​P​o​l​i​c​y
+		 */
+		privacyPolicy: string
 	}
 }
 
@@ -4337,6 +4537,202 @@ export type TranslationFunctions = {
 		 */
 		densityDescription: () => LocalizedString
 	}
+	privacy: {
+		/**
+		 * Privacy Policy
+		 */
+		title: () => LocalizedString
+		responsibleBody: {
+			/**
+			 * Responsible Body
+			 */
+			title: () => LocalizedString
+			/**
+			 * University of Regensburg
+		Universitätsstraße 31
+		93053 Regensburg
+		Germany
+		Phone: +49 941 943-01
+		Email: kontakt@ur.de
+			 */
+			content: () => LocalizedString
+		}
+		dpo: {
+			/**
+			 * Data Protection Officer
+			 */
+			title: () => LocalizedString
+			/**
+			 * Data Protection Officer of the University of Regensburg
+		Universitätsstraße 31
+		93053 Regensburg
+		Germany
+		Email: dsb@ur.de
+			 */
+			content: () => LocalizedString
+		}
+		supervisory: {
+			/**
+			 * Supervisory Authority
+			 */
+			title: () => LocalizedString
+			/**
+			 * The Bavarian State Commissioner for Data Protection (BayLfD)
+		Wagmüllerstraße 18
+		80538 Munich
+		Germany
+		Email: poststelle@datenschutz-bayern.de
+		https://www.datenschutz-bayern.de
+			 */
+			content: () => LocalizedString
+		}
+		purpose: {
+			/**
+			 * Purpose and Legal Basis
+			 */
+			title: () => LocalizedString
+			/**
+			 * text.ur is a collaborative PDF annotation platform operated by the University of Regensburg for academic purposes. Personal data is processed on the legal basis of Art. 6(1)(e) GDPR in conjunction with Art. 4 BayDSG (public interest / exercise of official authority) to enable collaborative document annotation in teaching and research.
+			 */
+			content: () => LocalizedString
+		}
+		dataCollected: {
+			/**
+			 * Data Collected
+			 */
+			title: () => LocalizedString
+			/**
+			 * Account data: When you register, we store your username, email address, first name, last name, and a hashed password. Guest accounts only store a username.
+			 */
+			account: () => LocalizedString
+			/**
+			 * Usage data: Comments, annotations, reactions, task responses, and group memberships you create while using the platform.
+			 */
+			content: () => LocalizedString
+			/**
+			 * Uploaded files: PDF documents you upload are stored in our object storage system on university infrastructure.
+			 */
+			files: () => LocalizedString
+		}
+		cookies: {
+			/**
+			 * Cookies
+			 */
+			title: () => LocalizedString
+			/**
+			 * This application uses only technically necessary cookies. No tracking or analytics cookies are used. Since all cookies are essential for the application to function, no consent banner is required.
+			 */
+			description: () => LocalizedString
+			/**
+			 * Name
+			 */
+			name: () => LocalizedString
+			/**
+			 * Purpose
+			 */
+			purpose: () => LocalizedString
+			/**
+			 * Expiry
+			 */
+			expiry: () => LocalizedString
+			/**
+			 * Authentication (session token)
+			 */
+			accessToken: () => LocalizedString
+			/**
+			 * 12 hours
+			 */
+			accessTokenExpiry: () => LocalizedString
+			/**
+			 * Session renewal
+			 */
+			refreshToken: () => LocalizedString
+			/**
+			 * 3–30 days (depending on account type)
+			 */
+			refreshTokenExpiry: () => LocalizedString
+			/**
+			 * Dark/light mode preference
+			 */
+			theme: () => LocalizedString
+			/**
+			 * Session (browser)
+			 */
+			themeExpiry: () => LocalizedString
+			/**
+			 * Language preference
+			 */
+			locale: () => LocalizedString
+			/**
+			 * 30 days
+			 */
+			localeExpiry: () => LocalizedString
+		}
+		logs: {
+			/**
+			 * Server Logs
+			 */
+			title: () => LocalizedString
+			/**
+			 * For security and error analysis, the server logs HTTP requests with anonymized IP addresses (last octet set to 0 for IPv4, /48 mask for IPv6). Log files are automatically deleted after 90 days. Full (unanonymized) IP addresses are only held transiently in memory for rate limiting purposes and are not persisted.
+			 */
+			content: () => LocalizedString
+		}
+		thirdParties: {
+			/**
+			 * Third Parties
+			 */
+			title: () => LocalizedString
+			/**
+			 * This application does not transmit any personal data to third-party services. All data is processed exclusively on university infrastructure. The only exception is the API documentation page (/api/docs), which loads Swagger UI assets from an external CDN — this page is not accessible to regular users.
+			 */
+			content: () => LocalizedString
+		}
+		rights: {
+			/**
+			 * Your Rights
+			 */
+			title: () => LocalizedString
+			/**
+			 * Under the GDPR, you have the right to access (Art. 15), rectification (Art. 16), erasure (Art. 17), restriction of processing (Art. 18), data portability (Art. 20), and objection (Art. 21). To exercise these rights, contact the responsible body or the data protection officer listed above.
+			 */
+			content: () => LocalizedString
+			/**
+			 * Data Export
+			 */
+			exportTitle: () => LocalizedString
+			/**
+			 * You can download all personal data associated with your account at any time. The export includes your profile information, group memberships, comments, reactions, and task responses.
+			 */
+			exportDescription: () => LocalizedString
+			/**
+			 * Download My Data
+			 */
+			exportButton: () => LocalizedString
+			/**
+			 * Please log in to export your data.
+			 */
+			exportLoginRequired: () => LocalizedString
+			/**
+			 * Account Deletion
+			 */
+			deletionTitle: () => LocalizedString
+			/**
+			 * You can permanently delete your account and all associated data from your account settings page. Groups you own will be transferred to another administrator or deleted if none exists.
+			 */
+			deletionDescription: () => LocalizedString
+		}
+		contact: {
+			/**
+			 * Contact
+			 */
+			title: () => LocalizedString
+			/**
+			 * For questions about data protection, please contact the data protection officer at dsb@ur.de or the application administrators at Text.ur@sprachlit.uni-regensburg.de.
+			 */
+			content: () => LocalizedString
+		}
+	}
 	footer: {
 		/**
 		 * Enable Dark Mode
@@ -4350,6 +4746,10 @@ export type TranslationFunctions = {
 		 * Change Language
 		 */
 		changeLanguage: () => LocalizedString
+		/**
+		 * Privacy Policy
+		 */
+		privacyPolicy: () => LocalizedString
 	}
 }
 
