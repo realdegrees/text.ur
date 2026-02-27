@@ -82,7 +82,7 @@ class DocumentFactory(BaseFactory):
         model = Document
 
     name = factory.Sequence(lambda n: f"document_{n}.pdf")
-    s3_key = factory.Sequence(lambda n: f"documents/doc_{n}.pdf")
+    storage_key = factory.Sequence(lambda n: f"documents/doc_{n}.pdf")
     size_bytes = factory.Faker("random_int", min=1000, max=1000000)
     visibility = Visibility.PRIVATE
     view_mode = ViewMode.PUBLIC

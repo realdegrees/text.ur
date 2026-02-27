@@ -2,7 +2,7 @@ from api.dependencies.authentication import Authenticate, BasicAuthentication
 from api.dependencies.database import Database
 from api.dependencies.paginated.resources import PaginatedResource
 from api.dependencies.resource import Resource
-from api.dependencies.s3 import S3
+from api.dependencies.storage import Storage
 from api.routers.memberships import (
     groupmembership_router as GroupMembershipRouter,
 )
@@ -32,7 +32,7 @@ from models.tables import (
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 from util.api_router import APIRouter
-from util.group_cleanup import cleanup_s3_keys, prepare_group_deletion
+from util.group_cleanup import cleanup_storage_keys, prepare_group_deletion
 from util.queries import Guard
 from util.response import ExcludableFieldsJSONResponse
 
@@ -193,15 +193,15 @@ async def transfer_ownership(
 @router.delete("/{group_id}")
 async def delete_group(
     db: Database,
-    s3: S3,
+    storage: Storage,
     _: User = Authenticate([Guard.group_access(None, only_owner=True)]),
     group: Group = Resource(Group, param_alias="group_id"),
 ) -> Response:
-    """Delete a group and its associated S3 objects."""
-    s3_keys = await prepare_group_deletion(db, group.id)
+    """Delete a group and its associated stored files."""
+    storage_keys = await prepare_group_deletion(db, group.id)
     await db.commit()
 
-    cleanup_s3_keys(s3, s3_keys, groups_logger, f"group {group.id}")
+    cleanup_storage_keys(storage, storage_keys, groups_logger, f"group {group.id}")
 
     return Response(status_code=204)
 

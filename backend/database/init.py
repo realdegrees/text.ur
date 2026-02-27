@@ -1,4 +1,4 @@
-"""Utility script to setup the PostgreSQL database with alembic and optionally seed it and upload files to S3."""
+"""Utility script to setup the PostgreSQL database with alembic and optionally seed it and upload files to storage."""
 # fmt: on
 import os  # noq: I001
 import sys  # noq: I001
@@ -18,7 +18,7 @@ from datetime import UTC
 import psycopg2
 from alembic import command as alembic_command
 from alembic.config import Config
-from api.dependencies.s3 import S3Manager
+from api.dependencies.storage import StorageManager
 from core import config as app_config
 from core.config import (
     POSTGRES_DB,
@@ -44,9 +44,9 @@ def get_alembic_version_from_dump(dump_path: str) -> str | None:
 
 def parse_args() -> argparse.Namespace:
     """Parse command line arguments."""
-    parser: argparse.ArgumentParser = argparse.ArgumentParser(description="Seed PostgreSQL database and upload S3 files.")
+    parser: argparse.ArgumentParser = argparse.ArgumentParser(description="Seed PostgreSQL database and upload files to storage.")
     parser.add_argument("--sql-dump", type=str, default=None, help="SQL dump file name in current directory")
-    parser.add_argument("--s3-upload-dir", type=str, default=None, help="Directory to upload to S3. If not given, S3 upload is skipped.")
+    parser.add_argument("--storage-upload-dir", type=str, default=None, help="Directory to upload to storage. If not given, upload is skipped.")
     parser.add_argument("--no-backup", action="store_true", help="Disable automatic backup before dropping the database.")
     return parser.parse_args()
 
@@ -175,19 +175,19 @@ def apply_sql_dump(conn: PgConnection, sql_dump_path: str) -> None:
     with conn.cursor() as cursor:
         cursor.execute(sql_content)
 
-def upload_s3_files(upload_dir: str) -> None:
-    """Upload files from upload_dir to S3 using their filename as key."""
-    s3_manager: S3Manager = S3Manager()
+def upload_storage_files(upload_dir: str) -> None:
+    """Upload files from upload_dir to storage using their filename as key."""
+    storage_manager: StorageManager = StorageManager()
     if not os.path.isdir(upload_dir):
         return
     for file_name in os.listdir(upload_dir):
         file_path: str = os.path.join(upload_dir, file_name)
         if os.path.isfile(file_path):
             with open(file_path, "rb") as file_data:
-                s3_manager.upload(file_name, file_data, content_type="application/octet-stream")
+                storage_manager.upload(file_name, file_data, content_type="application/octet-stream")
 
 def main() -> None:
-    """Initialize and optionally seed the database and upload S3 files."""
+    """Initialize and optionally seed the database and upload files to storage."""
     args: argparse.Namespace = parse_args()
     backup_dir = os.getcwd()  # Default backup directory
     alembic_version: str | None = None
@@ -221,10 +221,10 @@ def main() -> None:
             print("Resetting sequences ...")
             reset_sequences(conn)
             print("✅ Sequences reset.")
-        if args.s3_upload_dir:
-            print(f"Uploading files from {args.s3_upload_dir} to S3 ...")
-            upload_s3_files(args.s3_upload_dir)
-            print("✅ S3 upload completed.")
+        if args.storage_upload_dir:
+            print(f"Uploading files from {args.storage_upload_dir} to storage ...")
+            upload_storage_files(args.storage_upload_dir)
+            print("✅ Storage upload completed.")
             
         print("🎉 Database setup completed successfully.")
     except Exception as e:

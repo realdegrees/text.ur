@@ -8,13 +8,13 @@ COPY requirements.txt .
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
     apt-get update && \
-    apt-get install -y --no-install-recommends build-essential jq postgresql-client
+    apt-get install -y --no-install-recommends build-essential jq curl
 
 # Install Python dependencies with pip cache mount
 RUN --mount=type=cache,target=/root/.cache/pip \
     pip install -r requirements.txt
 
-# Clean up build dependencies (keep runtime deps like postgresql-client)
+# Clean up build dependencies (keep runtime deps like curl)
 RUN apt-get purge -y --auto-remove build-essential && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
@@ -28,10 +28,8 @@ COPY gunicorn.conf.py ./gunicorn.conf.py
 # Copy email templates
 COPY templates ./templates
 
-# Copy entrypoint
-COPY docker-entrypoint.sh /docker-entrypoint.sh
-RUN chmod +x /docker-entrypoint.sh
-
 EXPOSE 8000
 
-ENTRYPOINT ["/docker-entrypoint.sh"]
+CMD ["gunicorn", "app.main:app", \
+     "--config", "/annotation-software/gunicorn.conf.py", \
+     "--forwarded-allow-ips", "*"]

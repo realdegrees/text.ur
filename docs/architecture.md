@@ -25,7 +25,7 @@ This document describes the system architecture of text.ur, covering service top
 | **Backend** | REST API, WebSocket server, business logic | FastAPI on Gunicorn + Uvicorn (port 8000) |
 | **PostgreSQL** | Primary data store | PostgreSQL 16 |
 | **PgBouncer** | Connection pooling (transaction mode, optional) | PgBouncer 1.24 |
-| **MinIO** | S3-compatible object storage for PDF files | MinIO |
+| **Storage** | Local filesystem storage for uploaded files (PDFs, etc.) | Docker volume |
 | **Redis** | Pub/sub for WebSocket events, rate limiting backend | Redis 8 |
 | **Watchtower** | Automatic container restarts on new image push | Watchtower (production only) |
 | **MailHog** | Mock SMTP server for email testing | MailHog (development only) |
@@ -257,7 +257,7 @@ The database uses 9 tables managed by SQLModel (SQLAlchemy) with Alembic migrati
 | `User` | `id` (int, auto) | Accounts with optional email/password, guest support, per-user JWT secret |
 | `Group` | `id` (string, nanoid) | Collaboration groups with default permissions |
 | `Membership` | `(user_id, group_id)` | Group membership with permissions array, owner flag, share link reference |
-| `Document` | `id` (string, nanoid) | PDF documents with S3 key, visibility, view mode |
+| `Document` | `id` (string, nanoid) | PDF documents with storage key, visibility, view mode |
 | `Comment` | `id` (int, auto) | Threaded comments with visibility, annotation data (JSONB), Markdown content |
 | `Tag` | `id` (int, auto) | Color-coded document-level tags |
 | `CommentTag` | `(comment_id, tag_id)` | Ordered many-to-many between comments and tags |

@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-**text.ur** is a collaborative PDF annotation platform. FastAPI backend (Python 3.12+) with PostgreSQL/Redis/MinIO, SvelteKit frontend (Svelte 5 / TypeScript) with TailwindCSS 4 / Zod.
+**text.ur** is a collaborative PDF annotation platform. FastAPI backend (Python 3.12+) with PostgreSQL/Redis, SvelteKit frontend (Svelte 5 / TypeScript) with TailwindCSS 4 / Zod.
 
 ## Build / Lint / Test Commands
 
@@ -102,7 +102,7 @@ All frontend commands use `pnpm` and are run from `/frontend`.
 backend/
   app/
     api/
-      dependencies/    # Reusable FastAPI dependencies (auth, db, pagination, events, s3)
+      dependencies/    # Reusable FastAPI dependencies (auth, db, pagination, events, storage)
       routers/         # Route handlers per resource
     core/              # Config, auth (JWT), logging, exceptions
     models/            # SQLModel tables + Pydantic schemas
@@ -132,7 +132,7 @@ The GitHub Actions workflow (`.github/workflows/ci.yml`) runs:
 4. **Validate migrations** — Alembic upgrade + drift check against Postgres 16
 5. **Validate types** — `pnpm typegen` + check for uncommitted diffs
 6. **Build frontend** — `pnpm build`
-7. **Test backend** — `pytest --cov=app` (Postgres 16 + MinIO services)
+7. **Test backend** — `pytest --cov=app` (Postgres 16)
 8. **Test frontend** — `pnpm test:coverage`
 9. **Dockerize** — build and push images to `ghcr.io`
 

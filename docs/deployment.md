@@ -8,7 +8,7 @@ This guide covers both development setup and production deployment of text.ur.
 
 text.ur is currently deployed as a single Docker Compose stack for the University of Regensburg, serving a handful of courses. This all-in-one setup is the recommended starting point and should comfortably scale to thousands of users.
 
-For larger deployments, each service (PostgreSQL, Redis, MinIO, backend, frontend) can be separated and scaled independently based on load.
+For larger deployments, each service (PostgreSQL, Redis, backend, frontend) can be separated and scaled independently based on load.
 
 ## Table of Contents
 
@@ -70,18 +70,15 @@ Copy `.env.template` to `.env` and configure the values. The tables below list a
 </details>
 
 <details>
-<summary><strong>S3 / MinIO</strong></summary>
+<summary><strong>Storage</strong></summary>
 
 | Variable | Code Default | Description |
 |---|---|---|
-| `AWS_ACCESS_KEY` | *(none)* | S3 access key |
-| `AWS_SECRET_KEY` | *(none)* | S3 secret key |
-| `S3_BUCKET` | `default` | Bucket name for PDF storage |
-| `AWS_REGION` | *(none)* | S3 region |
-| `AWS_ENDPOINT_URL` | *(none)* | S3 endpoint base URL (use `http://minio` in Docker) |
-| `AWS_ENDPOINT_PORT` | *(none)* | S3 endpoint port - appended to `AWS_ENDPOINT_URL` if set |
+| `STORAGE_DIR` | `<backend>/storage/` | Local filesystem directory for uploaded files (PDFs, etc.) |
 
-> `MINIO_CONSOLE_PORT` (template default: `6006`) is only used by the Docker Compose file.
+**Path resolution:** The code default is an absolute path computed relative to `config.py`'s own location — it always resolves to the `storage/` directory inside `backend/`, regardless of your working directory. If you override `STORAGE_DIR` via the environment, an **absolute** path (e.g. `/data/storage`) is used as-is. A **relative** path would be resolved against the working directory of the backend process, so prefer absolute paths to avoid ambiguity.
+
+In Docker Compose the volume is mounted to an absolute path so this is not an issue.
 
 </details>
 
@@ -168,7 +165,7 @@ cp .env.template .env
 docker compose -f docker-compose.dev.yml up -d
 ```
 
-This starts PostgreSQL, PgBouncer, MinIO, Redis, Redis Commander, and MailHog. See the [Environment Variables](#-environment-variables) section for port configuration.
+This starts PostgreSQL, PgBouncer, Redis, Redis Commander, and MailHog. See the [Environment Variables](#-environment-variables) section for port configuration.
 
 ### 2. Backend Setup
 
@@ -214,7 +211,6 @@ Use the VS Code **Run and Debug** panel (Ctrl+Shift+D) to select and launch a co
 ### 💡 Tips
 
 - **MailHog** captures all outgoing emails at `http://localhost:6026` - use this to view registration verification and password reset emails.
-- **MinIO Console** is available at `http://localhost:6006` for inspecting uploaded files.
 - **Redis Commander** is available at `http://localhost:6016` for inspecting Redis state.
 - Set `COOKIE_SECURE=False` in `.env` when developing without HTTPS, otherwise cookies will not be set.
 - Set `DEBUG_ALLOW_REGISTRATION_WITHOUT_EMAIL=True` to bypass email verification during development.
@@ -241,13 +237,7 @@ See the [Environment Variables](#-environment-variables) section for description
 docker compose up -d
 ```
 
-This starts all services. The backend container automatically:
-1. Waits for PostgreSQL to be ready.
-2. Acquires a PostgreSQL advisory lock to prevent concurrent migration runs.
-3. Runs Alembic migrations.
-4. Releases the lock and starts Gunicorn.
-
-See [Automatic Migrations](#-automatic-migrations) for details.
+This starts all services. The backend automatically applies pending database migrations on startup using a PostgreSQL advisory lock (see [Automatic Migrations](#-automatic-migrations)).
 
 ### 3. Using Pre-Built Images
 
@@ -281,15 +271,16 @@ A reverse proxy is **required** in production for TLS termination. See [Reverse 
 
 ## 🔄 Automatic Migrations
 
-When the backend container starts, `docker-entrypoint.sh` handles database migrations automatically:
+Database migrations are applied automatically when the Gunicorn master process starts (in the `on_starting` hook in `gunicorn.conf.py`), before any workers are forked:
 
-1. **Wait for PostgreSQL** - polls `pg_isready` until the database is reachable.
-2. **Acquire advisory lock** - uses `pg_try_advisory_lock(12345)` to ensure only one container runs migrations at a time. This is critical when scaling to multiple backend replicas.
-3. **Run migrations** - if the lock is acquired, runs `alembic upgrade head`. If it fails, the container exits with an error.
-4. **Wait for lock release** - if another container already holds the lock, the current container blocks on `pg_advisory_lock(12345)` until the lock is released, then skips migrations and proceeds directly to starting the application.
-5. **Release lock** - the lock is released explicitly after successful migration and also on exit via a trap handler.
+1. **Acquire advisory lock** — uses `pg_try_advisory_lock(100001)` to ensure only one process runs migrations at a time. This is critical when scaling to multiple backend replicas.
+2. **Run migrations** — if the lock is acquired, runs `alembic upgrade head`. If it fails, the process exits with an error.
+3. **Skip if locked** — if another process already holds the lock, migrations are skipped (the other process is handling them).
+4. **Release lock** — the lock is released after the migration completes.
 
-This means you can safely run multiple backend containers in parallel - only one will execute migrations, and the others will wait and then start serving.
+This means you can safely run multiple backend containers in parallel — only one will execute migrations, and the others will skip and proceed to serving.
+
+> **Note:** Advisory locks (both migration and cleanup) connect directly to PostgreSQL, bypassing PgBouncer. Session-level advisory locks are incompatible with PgBouncer's `transaction` pool mode because PgBouncer multiplexes backend connections between transactions — a lock acquired on one transaction may be invisible to the next. The direct connection uses `POSTGRES_HOST`/`POSTGRES_PORT` from the environment.
 
 ---
 

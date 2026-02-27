@@ -108,7 +108,7 @@ Set individual comments to **public**, **restricted** (admins only), or **privat
 | **Frontend** | SvelteKit, Svelte 5, TailwindCSS 4, PDFSlick |
 | **Backend** | FastAPI, SQLModel, Pydantic, Alembic |
 | **Database** | PostgreSQL 16 |
-| **Storage** | MinIO (S3-compatible) |
+| **Storage** | Local filesystem |
 | **Cache & Pub/Sub** | Redis 8 |
 | **Deployment** | Docker Compose, Gunicorn + Uvicorn |
 
@@ -139,7 +139,7 @@ Edit `.env` as needed. The template defaults work for local development. For a f
 docker compose -f docker-compose.dev.yml up -d
 ```
 
-This starts PostgreSQL, Redis, MinIO, and MailHog.
+This starts PostgreSQL, Redis, and MailHog.
 
 #### 3. Backend
 

@@ -242,7 +242,7 @@ export interface Document {
   id?: string;
   name: string;
   description?: string | null;
-  s3_key: string;
+  storage_key: string;
   size_bytes?: number;
   visibility?: DocumentVisibility;
   view_mode?: ViewMode;
@@ -265,7 +265,7 @@ export interface DocumentRead {
   created_at?: string;
   updated_at?: string;
   id: string;
-  s3_key: string;
+  storage_key: string;
   name: string;
   group_id: string;
   visibility: DocumentVisibility;

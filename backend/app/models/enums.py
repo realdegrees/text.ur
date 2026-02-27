@@ -157,7 +157,7 @@ class AppErrorCode(StrEnum):
     SHARELINK_ANONYMOUS_DISABLED = "sharelink_anonymous_disabled"  # use when sharelink does not allow anonymous access
 
     # Storage Errors
-    STORAGE_UNAVAILABLE = "storage_unavailable"  # use when S3/MinIO is unreachable or returns an error
+    STORAGE_UNAVAILABLE = "storage_unavailable"  # use when file storage is unreachable or returns an error
     FILE_NOT_FOUND = "file_not_found"  # use when the requested file does not exist in storage
 
     # Duplicate / Conflict Errors

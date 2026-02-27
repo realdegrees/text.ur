@@ -8,7 +8,7 @@ from api.dependencies.database import Database
 from api.dependencies.events import Events
 from api.dependencies.paginated.resources import PaginatedResource
 from api.dependencies.resource import Resource
-from api.dependencies.s3 import S3
+from api.dependencies.storage import Storage
 from api.routers.events import (
     EventModelConfig,
     EventRouterConfig,
@@ -269,12 +269,12 @@ router.tags.append("Documents")
 @router.post("/", response_model=DocumentRead)
 async def create_document(
     db: Database,
-    s3: S3,
+    storage: Storage,
     session_user: BasicAuthentication,  # only basic auth because we need the validated form data for authorization in this case
     file: UploadFile = File(...),
     data: str = Form(..., description="JSON string of type `DocumentCreate`"),
 ) -> DocumentRead:
-    """Create a new document entry and return presigned S3 upload URL."""
+    """Create a new document entry and upload the file to storage."""
     document_create = DocumentCreate.model_validate_json(data)
 
     # Validate file type and size
@@ -314,7 +314,7 @@ async def create_document(
         )
     validated_file.seek(0)
 
-    # Replace the file reference for the S3 upload
+    # Replace the file reference for the storage upload
     file.file = validated_file
     file.size = total_bytes
 
@@ -334,19 +334,19 @@ async def create_document(
             status_code=403, error_code=AppErrorCode.NOT_AUTHORIZED, detail="User does not have permission to add documents."
         )
 
-    # Generate unique S3 key
-    s3_key = f"document-{uuid4()}.pdf"
+    # Generate unique storage key
+    storage_key = f"document-{uuid4()}.pdf"
 
-    # Upload to S3 first so we don't create orphaned DB records
-    s3.upload(s3_key, file.file, content_type=file.content_type)
+    # Upload to storage first so we don't create orphaned DB records
+    storage.upload(storage_key, file.file, content_type=file.content_type)
 
-    # Create document entry; delete S3 object if DB commit fails
-    document = Document(s3_key=s3_key, size_bytes=file.size, **document_create.model_dump(exclude_unset=True))
+    # Create document entry; delete stored file if DB commit fails
+    document = Document(storage_key=storage_key, size_bytes=file.size, **document_create.model_dump(exclude_unset=True))
     db.add(document)
     try:
         await db.commit()
     except Exception:
-        s3.delete(s3_key)
+        storage.delete(storage_key)
         raise
     await db.refresh(document)
     return document
@@ -362,7 +362,7 @@ async def get_document(
 
 
 def slugify(text: str) -> str:
-    """Generate a safe filename from an S3 key."""
+    """Generate a safe filename from a storage key."""
     # Make the text safe for urls by replacing unsafe characters
     return "".join(c if c.isalnum() or c in (" ", ".", "_") else "_" for c in text).rstrip()
 
@@ -370,17 +370,17 @@ def slugify(text: str) -> str:
 @router.get("/{document_id}/file")
 async def get_document_file(
     request: Request,
-    s3: S3,
+    storage: Storage,
     _: User = Authenticate(guards=[Guard.document_access()]),
     document: Document = Resource(Document, param_alias="document_id"),
 ) -> Response:
-    """Download the document file from S3 and return it.
+    """Download the document file from storage and return it.
 
     Supports conditional requests via ETag/If-None-Match to avoid
     re-downloading unchanged files.
     """
-    # Cheap HEAD request to get S3 metadata (including ETag)
-    metadata = s3.metadata(document.s3_key)
+    # Cheap metadata check (including ETag)
+    metadata = storage.metadata(document.storage_key)
     etag = metadata.get("ETag", "").strip('"') if metadata else ""
 
     # Check conditional request header
@@ -388,8 +388,8 @@ async def get_document_file(
     if etag and if_none_match == etag:
         return Response(status_code=304)
 
-    # Stream the file from S3 with caching headers
-    iterator = s3.download_stream(document.s3_key)
+    # Stream the file from storage with caching headers
+    iterator = storage.download_stream(document.storage_key)
     headers = {
         "Content-Disposition": (f'attachment; filename="{slugify(document.name)}.pdf"'),
         "Cache-Control": "private, max-age=3600",
@@ -468,22 +468,22 @@ async def update_document(
 @router.delete("/{document_id}")
 async def delete_document(
     db: Database,
-    s3: S3,
+    storage: Storage,
     _: User = Authenticate(guards=[Guard.document_access({Permission.ADMINISTRATOR})]),
     document: Document = Resource(Document, param_alias="document_id"),
 ) -> Response:
-    """Delete a document from database and S3."""
-    s3_key = document.s3_key
+    """Delete a document from database and storage."""
+    storage_key = document.storage_key
 
     # Delete from database first (cascade handles related records)
     await db.delete(document)
     await db.commit()
 
-    # Clean up S3 after successful DB commit
-    if not s3.delete(s3_key):
+    # Clean up storage after successful DB commit
+    if not storage.delete(storage_key):
         documents_logger.warning(
-            "Failed to delete S3 object %s after DB deletion",
-            s3_key,
+            "Failed to delete stored file %s after DB deletion",
+            storage_key,
         )
 
     return Response(status_code=204)

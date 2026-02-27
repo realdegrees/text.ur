@@ -1,6 +1,5 @@
 {
     "recommendations": [
-        "boto3typed.boto3-ide",
         "cweijan.vscode-postgresql-client2"
     ]
 }

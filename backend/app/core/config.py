@@ -55,12 +55,26 @@ DATABASE_URL: str = f"postgresql+asyncpg://{quote(user)}:{quote(password)}@{host
 # Sync database URL for migrations and scripts (using psycopg2)
 SYNC_DATABASE_URL: str = f"postgresql+psycopg2://{quote(user)}:{quote(password)}@{host}:{port}/{db}"
 
+# Direct connection URL bypassing PgBouncer — required for
+# session-level advisory locks which are bound to the backend
+# Postgres connection, not the PgBouncer client connection.
+_direct_host = POSTGRES_HOST
+_direct_port = POSTGRES_PORT
+DIRECT_DATABASE_URL: str = (
+    f"postgresql+asyncpg://{quote(user)}:{quote(password)}"
+    f"@{_direct_host}:{_direct_port}/{db}"
+)
+
 # REDIS
 REDIS_PASSWORD: str = os.getenv("REDIS_PASSWORD")
 REDIS_PORT: int = int(os.getenv("REDIS_PORT", "6379"))
 REDIS_HOST: str = os.getenv("REDIS_HOST", "localhost")
 
-# S3
+# Storage
+STORAGE_DIR = os.getenv("STORAGE_DIR", os.path.join(backend_path, "storage"))
+
+# Legacy S3 settings — only needed during migration (MIGRATE_FROM_S3=true)
+MIGRATE_FROM_S3 = os.getenv("MIGRATE_FROM_S3", "False").lower() == "true"
 AWS_ACCESS_KEY = os.getenv("AWS_ACCESS_KEY")
 AWS_ENDPOINT_PORT = os.getenv("AWS_ENDPOINT_PORT")
 _aws_endpoint_base = os.getenv("AWS_ENDPOINT_URL")
@@ -70,6 +84,7 @@ AWS_SECRET_KEY = os.getenv("AWS_SECRET_KEY")
 S3_BUCKET = os.getenv("S3_BUCKET", "default")
 
 if IS_TEST_ENV:
+    STORAGE_DIR = os.path.join(backend_path, "storage-test")
     S3_BUCKET = S3_BUCKET + "-test"
 
 JWT_ACCESS_EXPIRATION_MINUTES = float(os.getenv("JWT_ACCESS_EXPIRATION_MINUTES", 30))

@@ -5,7 +5,7 @@ import redis
 from api.dependencies.database import get_database_manager
 from api.dependencies.events import get_event_manager
 from api.dependencies.mail import get_mail_manager
-from api.dependencies.s3 import get_s3_manager
+from api.dependencies.storage import get_storage_manager
 from core import config as cfg
 from core.logger import get_logger
 
@@ -53,14 +53,18 @@ def verify_all_dependencies_sync() -> None:
         app_logger.error("Redis verification failed (sync): %s", e)
         raise RuntimeError(f"Failed to connect to Redis: {e}") from e
 
-    # S3 - just validate configuration by instantiating
+    # Storage - validate configuration by instantiating
     try:
-        app_logger.debug("Validating S3 configuration")
-        get_s3_manager()
-        app_logger.info("S3 configuration validated")
+        app_logger.debug("Validating storage configuration")
+        get_storage_manager()
+        app_logger.info("Storage configuration validated")
     except Exception as e:
-        app_logger.error("S3 configuration validation failed: %s", e)
-        raise RuntimeError(f"S3 configuration invalid: {e}") from e
+        app_logger.error(
+            "Storage configuration validation failed: %s", e
+        )
+        raise RuntimeError(
+            f"Storage configuration invalid: {e}"
+        ) from e
 
     # Mail - validate configuration, then attempt connection
     # Config errors (missing vars, bad credentials) are fatal.
@@ -89,12 +93,13 @@ async def verify_all_dependencies_async() -> dict:
 
     Args:
         strict: If True, this function raises on diagnostic failures that
-            should abort startup (DB/S3/Redis). The Mail dependency may
-            return False for missing or debug-disabled SMTP; the function
-            treats that as non-fatal unless it raises an exception.
-        The function will create manager instances (e.g. S3Manager, EmailManager)
-        and return them for reuse. If strict is True, any verification failure will
-        raise and should abort startup.
+            should abort startup (DB/Storage/Redis). The Mail dependency
+            may return False for missing or debug-disabled SMTP; the
+            function treats that as non-fatal unless it raises an
+            exception.
+        The function will create manager instances (e.g. StorageManager,
+        EmailManager) and return them for reuse. If strict is True, any
+        verification failure will raise and should abort startup.
 
     """
     # Database
@@ -108,11 +113,11 @@ async def verify_all_dependencies_async() -> dict:
         app_logger.error("Database verification failed")
         raise
 
-    # S3
+    # Storage
     try:
-        result["s3_manager"] = get_s3_manager()
+        result["storage_manager"] = get_storage_manager()
     except Exception:
-        app_logger.error("S3 verification failed")
+        app_logger.error("Storage verification failed")
         raise
 
     # Mail

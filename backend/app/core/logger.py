@@ -92,7 +92,7 @@ def setup_queue_listener() -> None:
     handlers.append(console_handler)
 
     # File handlers (one per logger name)
-    for logger_name in ["requests", "database", "app", "mails", "events", "s3"]:
+    for logger_name in ["requests", "database", "app", "mails", "events", "storage"]:
         file_handler = RotatingFileHandler(
             os.path.join(log_directory, f"{logger_name}.log"),
             maxBytes=5 * 1024 * 1024,
@@ -120,7 +120,7 @@ def stop_queue_listener() -> None:
         _queue_listener = None
 
 
-def get_logger(name: Literal["requests", "database", "app", "mails", "events", "s3"]) -> logging.Logger:
+def get_logger(name: Literal["requests", "database", "app", "mails", "events", "storage"]) -> logging.Logger:
     """Return a logger with the specified name.
 
     When using multiple workers, logs are sent through a queue to a listener

@@ -5,6 +5,13 @@ lifespan.  Handles:
 - Log file retention (default 90 days)
 - Abandoned guest account removal
 - Unverified account removal
+
+Each sub-task acquires its own PostgreSQL advisory lock so that
+only one worker executes it at a time, while independent tasks
+can run in parallel across different workers.
+
+Advisory locks connect directly to PostgreSQL (bypassing
+PgBouncer) via the dedicated engine in ``advisory_lock``.
 """
 
 from __future__ import annotations
@@ -16,37 +23,54 @@ from datetime import UTC, datetime, timedelta
 
 from core import config
 from core.logger import get_logger
+from util.advisory_lock import (
+    LOCK_CLEANUP_GUESTS,
+    LOCK_CLEANUP_LOGS,
+    LOCK_CLEANUP_UNVERIFIED,
+    advisory_lock,
+)
 
 logger = get_logger("app")
 
 
-def _cleanup_old_logs() -> int:
+async def _cleanup_old_logs() -> int:
     """Delete rotated log files older than ``LOG_RETENTION_DAYS``.
 
     Returns the number of files removed.
     """
-    log_dir = config.LOG_FILE_DIR or os.path.join(config.backend_path, "logs")
-    if not os.path.isdir(log_dir):
-        return 0
+    async with advisory_lock(LOCK_CLEANUP_LOGS) as acquired:
+        if not acquired:
+            return 0
 
-    cutoff = time.time() - (config.LOG_RETENTION_DAYS * 86400)
-    removed = 0
+        log_dir = config.LOG_FILE_DIR or os.path.join(
+            config.backend_path, "logs"
+        )
+        if not os.path.isdir(log_dir):
+            return 0
 
-    for filename in os.listdir(log_dir):
-        filepath = os.path.join(log_dir, filename)
-        if not os.path.isfile(filepath):
-            continue
-        # Only touch .log files and their rotated backups (.log.1 etc.)
-        if not filename.endswith(".log") and ".log." not in filename:
-            continue
-        try:
-            if os.path.getmtime(filepath) < cutoff:
-                os.remove(filepath)
-                removed += 1
-        except OSError:
-            logger.warning("Failed to remove old log file: %s", filepath)
+        cutoff = time.time() - (config.LOG_RETENTION_DAYS * 86400)
+        removed = 0
 
-    return removed
+        for filename in os.listdir(log_dir):
+            filepath = os.path.join(log_dir, filename)
+            if not os.path.isfile(filepath):
+                continue
+            # Only touch .log files and their rotated backups
+            if (
+                not filename.endswith(".log")
+                and ".log." not in filename
+            ):
+                continue
+            try:
+                if os.path.getmtime(filepath) < cutoff:
+                    os.remove(filepath)
+                    removed += 1
+            except OSError:
+                logger.warning(
+                    "Failed to remove old log file: %s", filepath
+                )
+
+        return removed
 
 
 async def _cleanup_abandoned_guests() -> int:
@@ -57,31 +81,34 @@ async def _cleanup_abandoned_guests() -> int:
 
     Returns the number of accounts removed.
     """
-    # Lazy imports to avoid circular dependencies at module load time
-    from api.dependencies.database import SessionFactory
-    from models.tables import User
-    from sqlmodel import select
+    async with advisory_lock(LOCK_CLEANUP_GUESTS) as acquired:
+        if not acquired:
+            return 0
 
-    cutoff = datetime.now(UTC) - timedelta(
-        days=config.GUEST_ACCOUNT_TTL_DAYS,
-    )
+        from api.dependencies.database import SessionFactory
+        from models.tables import User
+        from sqlmodel import select
 
-    async with SessionFactory() as db:
-        result = await db.exec(
-            select(User).where(
-                User.is_guest.is_(True),
-                User.created_at < cutoff,
-            )
+        cutoff = datetime.now(UTC) - timedelta(
+            days=config.GUEST_ACCOUNT_TTL_DAYS,
         )
-        guests = list(result.all())
 
-        for guest in guests:
-            await db.delete(guest)
+        async with SessionFactory() as db:
+            result = await db.exec(
+                select(User).where(
+                    User.is_guest.is_(True),
+                    User.created_at < cutoff,
+                )
+            )
+            guests = list(result.all())
 
-        if guests:
-            await db.commit()
+            for guest in guests:
+                await db.delete(guest)
 
-    return len(guests)
+            if guests:
+                await db.commit()
+
+        return len(guests)
 
 
 async def _cleanup_unverified_accounts() -> int:
@@ -92,31 +119,35 @@ async def _cleanup_unverified_accounts() -> int:
 
     Returns the number of accounts removed.
     """
-    from api.dependencies.database import SessionFactory
-    from models.tables import User
-    from sqlmodel import select
+    async with advisory_lock(LOCK_CLEANUP_UNVERIFIED) as acquired:
+        if not acquired:
+            return 0
 
-    cutoff = datetime.now(UTC) - timedelta(
-        days=config.REGISTER_LINK_EXPIRY_DAYS,
-    )
+        from api.dependencies.database import SessionFactory
+        from models.tables import User
+        from sqlmodel import select
 
-    async with SessionFactory() as db:
-        result = await db.exec(
-            select(User).where(
-                User.verified.is_(False),
-                User.is_guest.is_(False),
-                User.created_at < cutoff,
-            )
+        cutoff = datetime.now(UTC) - timedelta(
+            days=config.REGISTER_LINK_EXPIRY_DAYS,
         )
-        users = list(result.all())
 
-        for user in users:
-            await db.delete(user)
+        async with SessionFactory() as db:
+            result = await db.exec(
+                select(User).where(
+                    User.verified.is_(False),
+                    User.is_guest.is_(False),
+                    User.created_at < cutoff,
+                )
+            )
+            users = list(result.all())
 
-        if users:
-            await db.commit()
+            for user in users:
+                await db.delete(user)
 
-    return len(users)
+            if users:
+                await db.commit()
+
+        return len(users)
 
 
 async def periodic_cleanup_loop(
@@ -127,14 +158,20 @@ async def periodic_cleanup_loop(
     Executes immediately on first call, then sleeps for
     *interval_hours* between runs.  All exceptions are caught
     and logged so the loop never dies unexpectedly.
+
+    Each sub-task acquires its own advisory lock so it runs in
+    only one worker at a time.
     """
     while True:
         try:
             logger.info("[Cleanup] Starting periodic cleanup cycle")
 
-            removed_logs = _cleanup_old_logs()
+            removed_logs = await _cleanup_old_logs()
             if removed_logs:
-                logger.info("[Cleanup] Removed %d old log file(s)", removed_logs)
+                logger.info(
+                    "[Cleanup] Removed %d old log file(s)",
+                    removed_logs,
+                )
 
             removed_guests = await _cleanup_abandoned_guests()
             if removed_guests:
@@ -143,7 +180,9 @@ async def periodic_cleanup_loop(
                     removed_guests,
                 )
 
-            removed_unverified = await _cleanup_unverified_accounts()
+            removed_unverified = (
+                await _cleanup_unverified_accounts()
+            )
             if removed_unverified:
                 logger.info(
                     "[Cleanup] Removed %d unverified account(s)",
