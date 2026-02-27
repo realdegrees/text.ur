@@ -20,7 +20,7 @@ from alembic import command as alembic_command
 from alembic.config import Config
 from api.dependencies.database import SessionFactory, session
 from api.dependencies.events import EventManager
-from api.dependencies.s3 import S3Manager
+from api.dependencies.storage import StorageManager
 from core.auth import parse_jwt
 from core.config import DATABASE_URL, DB_CONNECTION_TIMEOUT
 from core.logger import get_logger
@@ -51,9 +51,9 @@ async def override_session_user(db: SQLModelAsyncSession) -> AsyncGenerator[Sess
     
 
 @pytest.fixture(scope="function")
-def s3_client() -> Generator:
-    """S3 client fixture for tests using the real S3/MinIO service."""
-    client = S3Manager()
+def storage_client() -> Generator:
+    """Storage client fixture for tests using local filesystem."""
+    client = StorageManager()
     yield client
     
 @pytest.fixture(scope="function")

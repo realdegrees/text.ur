@@ -94,7 +94,7 @@ class Document {
     - group_id : string [FK, NULLABLE]
     - name : string
     - description : string [NULLABLE]
-    - s3_key : string [UNIQUE, INDEXED]
+    - storage_key : string [UNIQUE, INDEXED]
     - size_bytes : int
     - visibility : Visibility
     - view_mode : ViewMode

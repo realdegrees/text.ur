@@ -23,7 +23,7 @@ class DocumentCreate(SQLModel):
 
 class DocumentRead(BaseModel):
     id: str
-    s3_key: str
+    storage_key: str
     name: str
     group_id: str
     visibility: DocumentVisibility

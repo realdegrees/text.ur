@@ -2,13 +2,14 @@
 import logging
 import os
 import sys
-import time
 
 # Add app directory to Python path so we can import core.logger
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "app"))
 
 from api.dependencies.startup import verify_all_dependencies_sync
 from core.logger import setup_queue_listener, stop_queue_listener
+from util.advisory_lock import LOCK_MIGRATION, advisory_lock_sync
+
 
 # Get gunicorn logger
 gunicorn_logger = logging.getLogger("gunicorn.error")
@@ -41,23 +42,80 @@ group = None
 tmp_upload_dir = None
 
 
+def _run_migrations(server) -> None:  # noqa: ANN001
+    """Apply Alembic migrations while holding an advisory lock.
+
+    Uses psycopg2 (sync) directly — safe to call from the
+    gunicorn master before any workers are forked.  The lock
+    connects directly to PostgreSQL (bypassing PgBouncer).
+    """
+    with advisory_lock_sync(LOCK_MIGRATION) as acquired:
+        if acquired:
+            server.log.info(
+                "Migration lock acquired — running Alembic upgrade"
+            )
+            from alembic import command as alembic_command
+            from alembic.config import Config
+            from core.config import SYNC_DATABASE_URL
+
+            database_dir = os.path.join(
+                os.path.dirname(__file__), "database"
+            )
+            alembic_ini = os.path.join(database_dir, "alembic.ini")
+            alembic_cfg = Config(alembic_ini)
+            alembic_cfg.set_main_option(
+                "sqlalchemy.url",
+                SYNC_DATABASE_URL.replace("%", "%%"),
+            )
+            alembic_cfg.set_main_option(
+                "script_location",
+                os.path.abspath(database_dir),
+            )
+            # Override prepend_sys_path so Alembic resolves
+            # imports correctly regardless of CWD.
+            alembic_cfg.set_main_option(
+                "prepend_sys_path",
+                os.path.abspath(os.path.dirname(__file__)),
+            )
+
+            alembic_command.upgrade(alembic_cfg, "head")
+            server.log.info("Migrations complete")
+        else:
+            server.log.info(
+                "Migration lock held by another process — "
+                "skipping migrations"
+            )
+
+
 def on_starting(server) -> None:  # noqa: ANN001
     """Call just before the master process is initialized.
 
     This runs ONCE in the master process before workers are forked.
-    Perfect place to set up the queue listener for multi-process logging.
+    Sets up logging, verifies dependencies, and applies migrations.
     """
     server.log.info("Setting up queue listener for multi-process logging")
     setup_queue_listener()
-    
-    server.log.info("Starting workers with sequential startup coordination")
-    # Run lightweight dependency checks in the master process to avoid forking
-    # many workers that will all fail when dependencies are down. These checks
-    # use synchronous operations to avoid event loop conflicts with async workers.
+
+    # Verify external dependencies (DB, Redis, Storage, Mail)
     try:
         verify_all_dependencies_sync()
     except Exception as e:
-        server.log.critical("External dependency verification failed in master; aborting startup: %s", e, exc_info=True)
+        server.log.critical(
+            "Dependency verification failed; aborting: %s",
+            e,
+            exc_info=True,
+        )
+        sys.exit(1)
+
+    # Apply database migrations under advisory lock
+    try:
+        _run_migrations(server)
+    except Exception as e:
+        server.log.critical(
+            "Database migration failed; aborting: %s",
+            e,
+            exc_info=True,
+        )
         sys.exit(1)
 
 

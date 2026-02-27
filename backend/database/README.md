@@ -42,7 +42,7 @@ alembic history
 
 ### Automatic Migrations in Production
 
-When the backend Docker container starts, `docker-entrypoint.sh` automatically applies pending migrations using a PostgreSQL advisory lock to prevent concurrent execution across multiple container replicas. See [Deployment: Automatic Migrations](../../docs/deployment.md#-automatic-migrations).
+When the backend starts, the Gunicorn master process automatically applies pending migrations using a PostgreSQL advisory lock to prevent concurrent execution across multiple replicas. See [Deployment: Automatic Migrations](../../docs/deployment.md#-automatic-migrations).
 
 ---
 
@@ -58,12 +58,12 @@ alembic upgrade head
 
 ### Seeding with existing data
 
-[`init.py`](init.py) is a utility script that wraps the above and additionally seeds the database from a SQL dump file and uploads files to S3. This is useful for restoring a backup or setting up a demo environment.
+[`init.py`](init.py) is a utility script that wraps the above and additionally seeds the database from a SQL dump file and uploads files to local storage. This is useful for restoring a backup or setting up a demo environment.
 
 First follow the [development setup instructions](../../docs/deployment.md#-development-setup) to create a virtual environment and activate it, then navigate to this directory and run:
 
 ```bash
-python init.py --sql-dump dumps/dump.sql --s3-upload-dir dumps/s3
+python init.py --sql-dump dumps/dump.sql --storage-upload-dir dumps/storage
 ```
 
 By default this backs up the database content before applying any changes. If the backup fails the script does not start touching the database.

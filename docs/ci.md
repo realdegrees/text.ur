@@ -110,7 +110,7 @@ Runs `pnpm build` to verify the SvelteKit application compiles successfully. Thi
 **Job**: `test-backend`
 **Runs when**: Backend files changed
 **Depends on**: `lint-backend`, `validate-migrations`
-**Services**: PostgreSQL 16, MinIO
+**Services**: PostgreSQL 16
 
 Runs `pytest --cov=app --cov-report=html:coverage --cov-report=term` with full service dependencies. The test database is auto-created by `conftest.py`. Coverage reports are uploaded as artifacts (retained for 7 days).
 

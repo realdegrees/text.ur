@@ -63,6 +63,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         # Await the async verification in lifespan to avoid blocking the event loop
         mgrs = await verify_all_dependencies_async()
         await mgrs["event_manager"].connect()
+
+        # One-time S3 -> local storage migration (if enabled)
+        if config.MIGRATE_FROM_S3:
+            from util.migrate_storage import migrate_from_s3
+
+            db_manager = mgrs["database_manager"]
+            await migrate_from_s3(db_manager.engine)
     except Exception as e:
         app_logger.critical("One or more critical dependencies failed verification. Check logs for details and restart the service.")
         app_logger.error("Error during dependency verification: %s", e, exc_info=True)
@@ -85,6 +92,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         cleanup_task.cancel()
         with contextlib.suppress(asyncio.CancelledError):
             await cleanup_task
+
+        # Dispose the direct-connect engine used by advisory locks
+        from util.advisory_lock import dispose_direct_engine
+
+        await dispose_direct_engine()
 
         await mgrs["event_manager"].disconnect()
 
