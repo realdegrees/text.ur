@@ -7,7 +7,7 @@ from sqlalchemy import Boolean, Column, DateTime, String, UniqueConstraint
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.ext.hybrid import hybrid_property
-from sqlalchemy.orm import aliased, column_property, declared_attr
+from sqlalchemy.orm import aliased, column_property
 from sqlalchemy.sql.elements import ColumnElement
 from sqlmodel import Field, Relationship, func, select
 
@@ -84,7 +84,7 @@ class Membership(BaseModel, table=True):
     def is_expired(cls) -> select:
         """Return SQL expression returning whether the share link associated with this membership is expired."""
         return func.coalesce(
-            select(ShareLink.is_expired).where(ShareLink.id == cls.sharelink_id).correlate_except(ShareLink).scalar_subquery(),
+            select(ShareLink.is_expired).where(ShareLink.id == cls.sharelink_id).correlate(Membership).scalar_subquery(),
             False,  # Default to False if ShareLink.is_expired is NULL
         )
 
@@ -129,22 +129,7 @@ class Group(BaseModel, table=True):
     secret: str = Field(default_factory=func.gen_random_uuid)
     default_permissions: list[Permission] = Field(default_factory=list, sa_column=Column(ARRAY(String)))
     member_count: ClassVar[int]
-
-    @declared_attr
-    def member_count(self) -> int:
-        """Count of members in the group."""
-        return column_property(
-            select(func.count(Membership.user_id)).where(Membership.group_id == self.id).correlate_except(Membership).scalar_subquery()
-        )
-
     document_count: ClassVar[int]
-
-    @declared_attr
-    def document_count(self) -> int:
-        """Count of documents in the group."""
-        return column_property(
-            select(func.count(Document.id)).where(Document.group_id == self.id).correlate_except(Document).scalar_subquery()
-        )
 
     _owners: list["User"] = Relationship(
         sa_relationship_kwargs={
@@ -176,6 +161,22 @@ class Group(BaseModel, table=True):
     def rotate_secret(self) -> None:
         """Rotate the group secret to invalidate existing tokens."""
         self.secret = str(uuid4())
+
+
+# Define count column properties after class creation so Group is a fully
+# mapped class and can be passed to correlate() directly.
+Group.member_count = column_property(
+    select(func.count(Membership.user_id))
+    .where(Membership.group_id == Group.id)
+    .correlate(Group)
+    .scalar_subquery()
+)
+Group.document_count = column_property(
+    select(func.count(Document.id))
+    .where(Document.group_id == Group.id)
+    .correlate(Group)
+    .scalar_subquery()
+)
 
 
 class ScoreConfig(BaseModel, table=True):
@@ -428,7 +429,7 @@ class ShareLink(BaseModel, table=True):
         # Now that the class is mapped, reference Membership to build a
         # DB-level expression used in queries.
         return (
-            select(func.count(Membership.user_id)).where(Membership.sharelink_id == cls.id).correlate_except(Membership).scalar_subquery()
+            select(func.count(Membership.user_id)).where(Membership.sharelink_id == cls.id).correlate(ShareLink).scalar_subquery()
         )
 
     def rotate_token(self) -> None:
@@ -440,5 +441,5 @@ class ShareLink(BaseModel, table=True):
 # We need to use an alias for the inner query to distinguish it from the outer row
 _CommentAlias = aliased(Comment)
 Comment.num_replies = column_property(
-    select(func.count(_CommentAlias.id)).where(_CommentAlias.parent_id == Comment.id).correlate_except(_CommentAlias).scalar_subquery()
+    select(func.count(_CommentAlias.id)).where(_CommentAlias.parent_id == Comment.id).correlate(Comment).scalar_subquery()
 )

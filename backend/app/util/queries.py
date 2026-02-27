@@ -266,6 +266,7 @@ class Guard:
         *,
         only_owner: bool = False,
         exclude_fields: list[ColumnElement] | None = None,
+        filter_column: ColumnElement | None = None,
     ) -> EndpointGuard[Group]:
         """User can access a group if they have at least min_role in it.
 
@@ -273,6 +274,10 @@ class Guard:
             require_permissions: Set of permissions required to access groups
             only_owner: If True, restrict access to group owners only
             exclude_fields: List of model fields to exclude from responses
+            filter_column: Column to filter on in multi-mode (defaults to
+                Group.id). Pass e.g. Membership.group_id when the main
+                query targets a different table to avoid introducing an
+                unjoined FROM element.
 
         """
 
@@ -296,9 +301,13 @@ class Guard:
                         )
                     )
 
+            col = filter_column if filter_column is not None else Group.id
+
             if multi and group_id is None:
-                # For multi-group queries (filtering Group table directly)
-                return Group.id.in_(select(Membership.group_id).where(Membership.user_id == user.id, build_permission_clause()))
+                # For multi-item queries — use the caller-supplied column
+                # (defaults to Group.id for group queries, but should be
+                # e.g. Membership.group_id for membership queries).
+                return col.in_(select(Membership.group_id).where(Membership.user_id == user.id, build_permission_clause()))
             elif not multi:
                 # For single group access checks - use EXISTS to avoid cross join
                 return (

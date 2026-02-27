@@ -539,8 +539,7 @@
 									{$LL.points()}
 								</span>
 								<span class="rounded bg-text/10 px-2 py-0.5 text-xs text-text/70">
-									{task.max_attempts}
-									{task.max_attempts === 1 ? 'try' : 'tries'}
+									{$LL.tasks.triesCount({ count: task.max_attempts })}
 								</span>
 							</div>
 						</div>

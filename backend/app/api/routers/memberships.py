@@ -63,7 +63,7 @@ async def list_memberships(
         Membership,
         MembershipFilter,
         key_columns=[Membership.user_id, Membership.group_id],
-        guards=[Guard.group_access()],
+        guards=[Guard.group_access(filter_column=Membership.group_id)],
     ),
 ) -> Paginated[MembershipRead]:
     """Get all group memberships. By default only returns memberships for groups the user is a member of."""

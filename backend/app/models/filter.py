@@ -283,7 +283,7 @@ class FilterMeta:
                 .select_from(target_mapper)
                 .where(where_clause)
                 .where(parent_col == rel_attr.property.primaryjoin.right)
-                .correlate_except(target_mapper)
+                .correlate(parent_col.table)
             )
             return ~clause if operator == "!=" else clause
         else:

@@ -1735,6 +1735,24 @@ type RootTranslation = {
 		 */
 		submitAnswer: string
 		/**
+		 * T​y​p​e​ ​y​o​u​r​ ​a​n​s​w​e​r​.​.​.
+		 */
+		textPlaceholder: string
+		/**
+		 * E​n​t​e​r​ ​a​ ​n​u​m​b​e​r​.​.​.
+		 */
+		numberPlaceholder: string
+		/**
+		 * {​c​o​u​n​t​}​ ​{​{​p​t​|​p​t​s​}​}
+		 * @param {number} count
+		 */
+		pointsShort: RequiredParams<'count'>
+		/**
+		 * {​c​o​u​n​t​}​ ​{​{​t​r​y​|​t​r​i​e​s​}​}
+		 * @param {number} count
+		 */
+		triesCount: RequiredParams<'count'>
+		/**
 		 * C​o​m​m​e​n​t​s
 		 */
 		comments: string
@@ -3967,6 +3985,22 @@ export type TranslationFunctions = {
 		 * Submit Answer
 		 */
 		submitAnswer: () => LocalizedString
+		/**
+		 * Type your answer...
+		 */
+		textPlaceholder: () => LocalizedString
+		/**
+		 * Enter a number...
+		 */
+		numberPlaceholder: () => LocalizedString
+		/**
+		 * {count} {{pt|pts}}
+		 */
+		pointsShort: (arg: { count: number }) => LocalizedString
+		/**
+		 * {count} {{try|tries}}
+		 */
+		triesCount: (arg: { count: number }) => LocalizedString
 		/**
 		 * Comments
 		 */

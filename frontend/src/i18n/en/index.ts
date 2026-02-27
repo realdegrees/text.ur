@@ -567,6 +567,10 @@ const en = {
 		answeredCorrectly: 'Answered correctly',
 		taskScore: 'Tasks',
 		submitAnswer: 'Submit Answer',
+		textPlaceholder: 'Type your answer...',
+		numberPlaceholder: 'Enter a number...',
+		pointsShort: '{count:number} {{pt|pts}}',
+		triesCount: '{count:number} {{try|tries}}',
 		comments: 'Comments',
 		editAnswerWarning:
 			'Changing the answer type, correct answer, or options will reset all existing member responses for this task.'

@@ -616,6 +616,10 @@ const de = {
 		answeredCorrectly: 'Richtig beantwortet',
 		taskScore: 'Aufgaben',
 		submitAnswer: 'Antwort abgeben',
+		textPlaceholder: 'Antwort eingeben...',
+		numberPlaceholder: 'Zahl eingeben...',
+		pointsShort: '{count} {{Pkt.|Pkt.}}',
+		triesCount: '{count} Versuch{{|e}}',
 		comments: 'Kommentare',
 		editAnswerWarning:
 			'Das Ändern des Antworttyps, der richtigen Antwort oder der Optionen setzt alle bestehenden Antworten der Mitglieder für diese Aufgabe zurück.'

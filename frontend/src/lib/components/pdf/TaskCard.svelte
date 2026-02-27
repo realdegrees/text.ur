@@ -146,8 +146,7 @@
 		<div class="flex items-center gap-2">
 			<span class="text-xs font-bold text-text/50">#{index + 1}</span>
 			<span class="rounded bg-primary/15 px-1.5 py-0.5 text-xs font-semibold text-primary">
-				{task.points}
-				{task.points === 1 ? 'pt' : 'pts'}
+				{$LL.tasks.pointsShort({ count: task.points })}
 			</span>
 		</div>
 		<div class="flex items-center gap-1.5">
@@ -215,7 +214,7 @@
 					type="text"
 					bind:value={textAnswer}
 					disabled={isLocked}
-					placeholder="Type your answer..."
+					placeholder={$LL.tasks.textPlaceholder()}
 					class="form-input w-full"
 				/>
 				{#if task.string_match_mode === 'exact'}
@@ -237,7 +236,7 @@
 					step="any"
 					bind:value={numberAnswer}
 					disabled={isLocked}
-					placeholder="Enter a number..."
+					placeholder={$LL.tasks.numberPlaceholder()}
 					class="form-input w-full"
 				/>
 			</div>

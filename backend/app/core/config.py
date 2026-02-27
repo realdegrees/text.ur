@@ -73,19 +73,8 @@ REDIS_HOST: str = os.getenv("REDIS_HOST", "localhost")
 # Storage
 STORAGE_DIR = os.getenv("STORAGE_DIR", os.path.join(backend_path, "storage"))
 
-# Legacy S3 settings — only needed during migration (MIGRATE_FROM_S3=true)
-MIGRATE_FROM_S3 = os.getenv("MIGRATE_FROM_S3", "False").lower() == "true"
-AWS_ACCESS_KEY = os.getenv("AWS_ACCESS_KEY")
-AWS_ENDPOINT_PORT = os.getenv("AWS_ENDPOINT_PORT")
-_aws_endpoint_base = os.getenv("AWS_ENDPOINT_URL")
-AWS_ENDPOINT_URL = f"{_aws_endpoint_base}:{AWS_ENDPOINT_PORT}" if AWS_ENDPOINT_PORT else _aws_endpoint_base
-AWS_REGION = os.getenv("AWS_REGION")
-AWS_SECRET_KEY = os.getenv("AWS_SECRET_KEY")
-S3_BUCKET = os.getenv("S3_BUCKET", "default")
-
 if IS_TEST_ENV:
     STORAGE_DIR = os.path.join(backend_path, "storage-test")
-    S3_BUCKET = S3_BUCKET + "-test"
 
 JWT_ACCESS_EXPIRATION_MINUTES = float(os.getenv("JWT_ACCESS_EXPIRATION_MINUTES", 30))
 JWT_REFRESH_EXPIRATION_DAYS = float(os.getenv("JWT_REFRESH_EXPIRATION_DAYS", 7))
