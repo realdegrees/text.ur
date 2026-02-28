@@ -16,6 +16,10 @@
 	import { documentStore } from '$lib/runes/document.svelte.js';
 	import type { Annotation, BoundingBox } from '$api/types';
 	import { BOX_MERGE_MARGIN, BOX_VERTICAL_OVERLAP_THRESHOLD } from './constants';
+	import { hasHoverCapability } from '$lib/util/responsive.svelte';
+
+	/** True on devices with a mouse/trackpad (desktop); false on touch-only devices. */
+	const isDesktop = hasHoverCapability();
 
 	interface Props {
 		viewerContainer: HTMLDivElement | null;
@@ -260,6 +264,26 @@
 		const lastRect = rects[rects.length - 1];
 		const containerRect = viewerContainer.getBoundingClientRect();
 
+		let buttonX: number;
+		let buttonY: number;
+
+		if (isDesktop) {
+			// Desktop: position to the right of the selection end
+			buttonX = lastRect.right - containerRect.left + 10;
+			buttonY = lastRect.bottom - containerRect.top + 10;
+		} else {
+			// Mobile: center horizontally over the selection, below the last line
+			// with extra vertical offset to clear native teardrop handles
+			const selectionMidX = (firstRect.left + lastRect.right) / 2 - containerRect.left;
+			const containerWidth = containerRect.width;
+			const buttonWidth = 180; // approximate button width
+			buttonX = Math.max(
+				8,
+				Math.min(selectionMidX - buttonWidth / 2, containerWidth - buttonWidth - 8)
+			);
+			buttonY = lastRect.bottom - containerRect.top + 28;
+		}
+
 		selectionUI = {
 			handles: {
 				start: {
@@ -273,10 +297,7 @@
 					height: lastRect.height
 				}
 			},
-			buttonPosition: {
-				x: lastRect.right - containerRect.left + 10,
-				y: lastRect.bottom - containerRect.top + 10
-			}
+			buttonPosition: { x: buttonX, y: buttonY }
 		};
 
 		return true;
@@ -452,6 +473,18 @@
 		isSelecting = true;
 	};
 
+	/**
+	 * Suppress the native context menu on touch devices when a text selection
+	 * is active inside the viewer. This prevents the OS copy/paste menu from
+	 * overlapping the "Create Annotation" button.  Desktop is left untouched
+	 * so right-click still works normally.
+	 */
+	const onContextMenu = (e: Event) => {
+		if (!isDesktop && (selectionUI || pendingSelection)) {
+			e.preventDefault();
+		}
+	};
+
 	// Container-specific event listeners for selection start/end detection and scrolling
 	$effect(() => {
 		if (!viewerContainer) return;
@@ -468,6 +501,7 @@
 		viewerContainer.addEventListener('mouseup', updateSelectionState);
 		viewerContainer.addEventListener('touchend', updateSelectionState);
 		viewerContainer.addEventListener('scroll', onScroll, { passive: true });
+		viewerContainer.addEventListener('contextmenu', onContextMenu);
 
 		return () => {
 			viewerContainer.removeEventListener('mousedown', onContainerMouseDown);
@@ -475,6 +509,7 @@
 			viewerContainer.removeEventListener('mouseup', updateSelectionState);
 			viewerContainer.removeEventListener('touchend', updateSelectionState);
 			viewerContainer.removeEventListener('scroll', onScroll);
+			viewerContainer.removeEventListener('contextmenu', onContextMenu);
 		};
 	});
 
@@ -507,19 +542,27 @@
 		};
 
 		document.addEventListener('selectionchange', handleSelectionChange);
-		window.addEventListener('mousemove', onWindowMove);
-		window.addEventListener('touchmove', onWindowMove, { passive: false });
-		window.addEventListener('mouseup', onWindowUp);
-		window.addEventListener('touchend', onWindowUp);
 		window.addEventListener('resize', onResize, { passive: true });
+
+		// Handle-drag listeners are only needed on desktop where custom handles
+		// are rendered.  On touch devices the native OS teardrops manage this.
+		if (isDesktop) {
+			window.addEventListener('mousemove', onWindowMove);
+			window.addEventListener('touchmove', onWindowMove, { passive: false });
+			window.addEventListener('mouseup', onWindowUp);
+			window.addEventListener('touchend', onWindowUp);
+		}
 
 		return () => {
 			document.removeEventListener('selectionchange', handleSelectionChange);
-			window.removeEventListener('mousemove', onWindowMove);
-			window.removeEventListener('touchmove', onWindowMove);
-			window.removeEventListener('mouseup', onWindowUp);
-			window.removeEventListener('touchend', onWindowUp);
 			window.removeEventListener('resize', onResize);
+
+			if (isDesktop) {
+				window.removeEventListener('mousemove', onWindowMove);
+				window.removeEventListener('touchmove', onWindowMove);
+				window.removeEventListener('mouseup', onWindowUp);
+				window.removeEventListener('touchend', onWindowUp);
+			}
 		};
 	});
 
@@ -547,52 +590,56 @@
 </script>
 
 {#if selectionUI}
-	<div
-		class="absolute z-1000 w-0.5 cursor-pointer bg-blue-500 {draggingHandle
-			? 'pointer-events-none'
-			: ''}"
-		style="top: {selectionUI.handles.start.y}px; left: {selectionUI.handles.start
-			.x}px; height: {selectionUI.handles.start.height}px;"
-		onmousedown={(e) => onHandleDown('start', e)}
-		use:nonPassiveTouchStart={(e) => onHandleDown('start', e)}
-		role="button"
-		tabindex="0"
-		aria-label="Drag to adjust selection start"
-	>
+	<!-- Desktop only: custom selection handles with drag-to-adjust.
+	     On touch devices the native OS teardrops are used instead. -->
+	{#if isDesktop}
 		<div
-			class="absolute top-0 animate-ping rounded-l-full bg-blue-500 opacity-75"
-			style="left: -{selectionUI.handles.start.height / 2}px; height: {selectionUI.handles.start
-				.height}px; width: {selectionUI.handles.start.height / 2}px;"
-		></div>
+			class="absolute z-1000 w-0.5 cursor-pointer bg-blue-500 {draggingHandle
+				? 'pointer-events-none'
+				: ''}"
+			style="top: {selectionUI.handles.start.y}px; left: {selectionUI.handles.start
+				.x}px; height: {selectionUI.handles.start.height}px;"
+			onmousedown={(e) => onHandleDown('start', e)}
+			use:nonPassiveTouchStart={(e) => onHandleDown('start', e)}
+			role="button"
+			tabindex="0"
+			aria-label="Drag to adjust selection start"
+		>
+			<div
+				class="absolute top-0 animate-ping rounded-l-full bg-blue-500 opacity-75"
+				style="left: -{selectionUI.handles.start.height / 2}px; height: {selectionUI.handles.start
+					.height}px; width: {selectionUI.handles.start.height / 2}px;"
+			></div>
+			<div
+				class="absolute top-0 rounded-l-full bg-blue-500 shadow-lg"
+				style="left: -{selectionUI.handles.start.height / 2}px; height: {selectionUI.handles.start
+					.height}px; width: {selectionUI.handles.start.height / 2}px;"
+			></div>
+		</div>
 		<div
-			class="absolute top-0 rounded-l-full bg-blue-500 shadow-lg"
-			style="left: -{selectionUI.handles.start.height / 2}px; height: {selectionUI.handles.start
-				.height}px; width: {selectionUI.handles.start.height / 2}px;"
-		></div>
-	</div>
-	<div
-		class="absolute z-1000 w-0.5 cursor-pointer bg-blue-500 {draggingHandle
-			? 'pointer-events-none'
-			: ''}"
-		style="top: {selectionUI.handles.end.y}px; left: {selectionUI.handles.end
-			.x}px; height: {selectionUI.handles.end.height}px;"
-		onmousedown={(e) => onHandleDown('end', e)}
-		use:nonPassiveTouchStart={(e) => onHandleDown('end', e)}
-		role="button"
-		tabindex="0"
-		aria-label="Drag to adjust selection end"
-	>
-		<div
-			class="absolute bottom-0 animate-ping rounded-r-full bg-blue-500 opacity-75"
-			style="right: -{selectionUI.handles.end.height / 2}px; height: {selectionUI.handles.end
-				.height}px; width: {selectionUI.handles.end.height / 2}px;"
-		></div>
-		<div
-			class="absolute bottom-0 rounded-r-full bg-blue-500 shadow-lg"
-			style="right: -{selectionUI.handles.end.height / 2}px; height: {selectionUI.handles.end
-				.height}px; width: {selectionUI.handles.end.height / 2}px;"
-		></div>
-	</div>
+			class="absolute z-1000 w-0.5 cursor-pointer bg-blue-500 {draggingHandle
+				? 'pointer-events-none'
+				: ''}"
+			style="top: {selectionUI.handles.end.y}px; left: {selectionUI.handles.end
+				.x}px; height: {selectionUI.handles.end.height}px;"
+			onmousedown={(e) => onHandleDown('end', e)}
+			use:nonPassiveTouchStart={(e) => onHandleDown('end', e)}
+			role="button"
+			tabindex="0"
+			aria-label="Drag to adjust selection end"
+		>
+			<div
+				class="absolute bottom-0 animate-ping rounded-r-full bg-blue-500 opacity-75"
+				style="right: -{selectionUI.handles.end.height / 2}px; height: {selectionUI.handles.end
+					.height}px; width: {selectionUI.handles.end.height / 2}px;"
+			></div>
+			<div
+				class="absolute bottom-0 rounded-r-full bg-blue-500 shadow-lg"
+				style="right: -{selectionUI.handles.end.height / 2}px; height: {selectionUI.handles.end
+					.height}px; width: {selectionUI.handles.end.height / 2}px;"
+			></div>
+		</div>
+	{/if}
 
 	<button
 		class="absolute z-1000 flex items-center justify-center gap-2 rounded border border-blue-600 bg-blue-500 px-3 py-2 text-white shadow-lg transition-all duration-100 hover:scale-105 hover:bg-blue-600 active:scale-95"
