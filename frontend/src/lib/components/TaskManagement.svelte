@@ -13,6 +13,7 @@
 	import ConfirmButton from '$lib/components/ConfirmButton.svelte';
 	import Select from '$lib/components/Select.svelte';
 	import { sortable } from '$lib/actions/sortable';
+	import { onMount } from 'svelte';
 
 	interface Props {
 		document: DocumentRead;
@@ -54,12 +55,7 @@
 	}
 
 	// Fetch tasks on mount
-	$effect(() => {
-		loadTasks();
-	});
-
-	async function loadTasks() {
-		isLoading = true;
+	onMount(async () => {
 		const result = await api.get<TaskAdminRead[]>(`/documents/${document.id}/tasks`);
 		if (result.success) {
 			tasks = result.data;
@@ -67,7 +63,7 @@
 			notification(result.error);
 		}
 		isLoading = false;
-	}
+	});
 
 	async function createTask() {
 		if (!newTask.question.trim()) {
@@ -108,7 +104,7 @@
 
 		notification('success', $LL.tasks.createSuccess());
 		resetNewTaskForm();
-		await loadTasks();
+		if (result.data) tasks = [...tasks, result.data];
 		await invalidate('app:document');
 	}
 
@@ -149,8 +145,40 @@
 		}
 
 		notification('success', $LL.tasks.updateSuccess());
+		tasks = tasks.map((t) =>
+			t.id === taskId
+				? {
+						...t,
+						question: editTask.question.trim(),
+						answer_type: editTask.answer_type,
+						points: editTask.points,
+						max_attempts: editCustomAttempts
+							? editTask.max_attempts
+							: document.default_max_attempts,
+						string_match_mode: editTask.string_match_mode,
+						correct_string_answer:
+							editTask.answer_type === 'string'
+								? editTask.correct_string_answer
+								: t.correct_string_answer,
+						correct_number_answer:
+							editTask.answer_type === 'number'
+								? editTask.correct_number_answer
+								: t.correct_number_answer,
+						number_tolerance:
+							editTask.answer_type === 'number' ? editTask.number_tolerance : t.number_tolerance,
+						options:
+							editTask.answer_type === 'multiple_choice'
+								? editTask.options.map((o, i) => ({
+										id: t.options[i]?.id ?? 0,
+										label: o.label,
+										is_correct: o.is_correct ?? false,
+										order: i
+									}))
+								: t.options
+					}
+				: t
+		);
 		editingTaskId = null;
-		await loadTasks();
 		await invalidate('app:document');
 	}
 
@@ -163,7 +191,7 @@
 		}
 
 		notification('success', $LL.tasks.deleteSuccess());
-		await loadTasks();
+		tasks = tasks.filter((t) => t.id !== taskId);
 		await invalidate('app:document');
 	}
 
@@ -185,6 +213,8 @@
 		if (!result.success) {
 			tasks = oldTasks;
 			notification(result.error);
+		} else {
+			notification('success', $LL.tasks.reorderSuccess());
 		}
 	}
 

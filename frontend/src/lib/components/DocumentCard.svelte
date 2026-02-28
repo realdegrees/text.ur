@@ -47,7 +47,7 @@
 	<!-- Main card content -->
 	<button
 		onclick={() => goto(`/documents/${document.id}`)}
-		class="flex min-w-0 flex-1 flex-col gap-2 p-3 text-left transition-colors hover:bg-text/5"
+		class="flex min-w-0 flex-1 cursor-pointer flex-col gap-2 p-3 text-left transition-colors hover:bg-text/5"
 	>
 		<!-- Row 1: Name + visibility -->
 		<div class="flex items-center gap-2">

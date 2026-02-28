@@ -6,7 +6,6 @@
 	import { sessionStore } from '$lib/runes/session.svelte.js';
 	import TagManagement from '$lib/components/TagManagement.svelte';
 	import TaskManagement from '$lib/components/TaskManagement.svelte';
-	import TabContainer from '$lib/components/TabContainer.svelte';
 	import ConfirmButton from '$lib/components/ConfirmButton.svelte';
 	import DangerZone from '$lib/components/DangerZone.svelte';
 	import MarkdownTextEditor from '$lib/components/pdf/MarkdownTextEditor.svelte';
@@ -15,10 +14,36 @@
 	import DeleteIcon from '~icons/material-symbols/delete-outline';
 	import type { DocumentVisibility } from '$api/types';
 	import { env } from '$env/dynamic/public';
+	import { breadcrumbOverride } from '$lib/stores/breadcrumb.svelte';
+	import { onDestroy } from 'svelte';
 
 	let { data } = $props();
 	let document = $derived(data.document);
 	let group = $derived(data.membership.group);
+	let activeTab = $state(0);
+
+	const tabDefs = $derived([
+		{ id: 'general', label: $LL.documentSettings.general() },
+		{ id: 'tags', label: $LL.documentSettings.tagsTab() },
+		{ id: 'tasks', label: $LL.documentSettings.tasksTab() }
+	]);
+
+	// Update breadcrumbs to include the active tab
+	$effect(() => {
+		const tab = tabDefs[activeTab];
+		if (!tab) return;
+
+		const baseCrumbs = data.breadcrumbs.filter((b: { href?: string }) => b.href);
+		breadcrumbOverride.set([
+			...baseCrumbs,
+			{ label: $LL.documentSettings.title(), href: `#general` },
+			{ label: tab.label }
+		]);
+	});
+
+	onDestroy(() => {
+		breadcrumbOverride.clear();
+	});
 
 	let documentName = $state(data.document.name);
 	let documentDescription = $state(data.document.description ?? '');
@@ -252,29 +277,45 @@
 	<TaskManagement {document} />
 {/snippet}
 
-<div class="flex h-full w-full flex-col gap-6 p-6">
-	<!-- Header -->
-	<div class="flex items-center gap-3">
-		<button
-			onclick={() => goto(`/dashboard/groups/${group.id}/documents`)}
-			class="btn-ghost p-2"
-			aria-label={$LL.documentSettings.backToDocuments()}
-		>
-			<BackIcon class="h-5 w-5" />
-		</button>
-		<h1 class="text-2xl font-bold">{$LL.documentSettings.title()}</h1>
+<div class="flex h-full w-full flex-col">
+	<!-- Document name + settings heading -->
+	<div class="px-4 py-3">
+		<h1 class="text-lg font-semibold">
+			{document.name} - {$LL.documentSettings.title()}
+		</h1>
 	</div>
 
-	<!-- Tabbed Content -->
+	<!-- Tab bar with back button -->
 	{#if sessionStore.validatePermissions(['administrator'])}
-		<TabContainer
-			tabs={[
-				{ label: $LL.documentSettings.general(), snippet: generalTab },
-				{ label: $LL.documentSettings.tagsTab(), snippet: tagsTab },
-				{ label: $LL.documentSettings.tasksTab(), snippet: tasksTab }
-			]}
-		/>
+		<nav class="flex flex-row items-center border-b border-text/20">
+			<button
+				onclick={() => goto(`/dashboard/groups/${group.id}/documents`)}
+				class="px-3 py-2 text-text/70 transition-colors hover:text-text"
+				aria-label={$LL.documentSettings.backToDocuments()}
+			>
+				<BackIcon class="h-5 w-5" />
+			</button>
+			{#each tabDefs as tab, index (tab.id)}
+				<button
+					onclick={() => {
+						activeTab = index;
+						history.replaceState(null, '', `#${tab.id}`);
+					}}
+					class="border-b-2 px-4 py-2 transition-all {activeTab === index
+						? 'border-primary text-primary'
+						: 'border-transparent text-text/70 hover:border-text/30 hover:text-text'}"
+				>
+					{tab.label}
+				</button>
+			{/each}
+		</nav>
+
+		<div class="flex-1 overflow-auto p-6">
+			{@render [generalTab, tagsTab, tasksTab][activeTab]()}
+		</div>
 	{:else}
-		{@render generalTab()}
+		<div class="flex-1 overflow-auto p-6">
+			{@render generalTab()}
+		</div>
 	{/if}
 </div>

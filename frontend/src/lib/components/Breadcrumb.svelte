@@ -2,9 +2,12 @@
 	import { page } from '$app/stores';
 	import ChevronRight from '~icons/material-symbols/chevron-right';
 	import type { BreadcrumbItem } from '$types/breadcrumb';
+	import { breadcrumbOverride } from '$lib/stores/breadcrumb.svelte';
 
-	// Read breadcrumbs from current page data
-	const breadcrumbs = $derived($page.data.breadcrumbs as BreadcrumbItem[] | undefined);
+	// Prefer the override (set by pages with dynamic breadcrumbs) over load-function data
+	const breadcrumbs = $derived(
+		breadcrumbOverride.items ?? ($page.data.breadcrumbs as BreadcrumbItem[] | undefined)
+	);
 </script>
 
 {#if breadcrumbs && breadcrumbs.length > 0}

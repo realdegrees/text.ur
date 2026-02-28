@@ -6,6 +6,7 @@
 	import { api } from '$api/client';
 	import { sessionStore } from '$lib/runes/session.svelte';
 	import { notification } from '$lib/stores/notificationStore';
+	import { invalidate } from '$app/navigation';
 	import DocumentCard from '$lib/components/DocumentCard.svelte';
 	import { sortable } from '$lib/actions/sortable';
 	import { infiniteScroll } from '$lib/util/infiniteScroll.svelte';
@@ -59,6 +60,9 @@
 			// Revert on failure
 			scroll.data = { ...scroll.data, data: oldItems };
 			notification(result.error);
+		} else {
+			notification('success', $LL.documents.reorderSuccess());
+			await invalidate('app:documents');
 		}
 	}
 </script>
@@ -68,9 +72,9 @@
 		{#if isAdmin}
 			<a
 				href="/dashboard/groups/{group.id}/documents/create"
-				class="flex flex-row items-center gap-2 rounded bg-green-500/30 px-3 py-2.5 font-semibold shadow-inner shadow-black/30 transition hover:cursor-pointer hover:bg-green-500/40"
+				class="flex btn-primary items-center gap-2 text-sm"
 			>
-				<AddIcon class="h-5 w-5" />
+				<AddIcon class="h-4 w-4" />
 				{$LL.documents.uploadDocument()}
 			</a>
 		{/if}
