@@ -22,7 +22,7 @@
 	import PermissionSelector from '$lib/components/permissionSelector.svelte';
 	import { slide } from 'svelte/transition';
 	import AdvancedInput from '$lib/components/advancedInput.svelte';
-	import { invalidate } from '$app/navigation';
+	import { invalidate, goto } from '$app/navigation';
 	import ConfirmButton from '$lib/components/ConfirmButton.svelte';
 	import PromoteIcon from '~icons/mdi/chevron-double-up';
 	import KickIcon from '~icons/ic/sharp-person-remove';
@@ -500,8 +500,12 @@
 								? $LL.memberships.leftGroup()
 								: $LL.memberships.removedFromGroup({ username: membership.user.username })
 						);
-						invalidate('app:group-memberships');
-						if (showLeaveButton) invalidate('app:memberships');
+						if (showLeaveButton) {
+							invalidate('app:memberships');
+							goto('/dashboard');
+						} else {
+							invalidate('app:group-memberships');
+						}
 					}
 				}}
 				slideoutDirection="left"
