@@ -36,7 +36,11 @@ root_router = APIRouter(
 )
 
 
-@router.get("/", response_model=Paginated[ShareLinkRead], response_class=ExcludableFieldsJSONResponse)
+@router.get(
+    "/",
+    response_model=Paginated[ShareLinkRead],
+    response_class=ExcludableFieldsJSONResponse,
+)
 async def list_share_links(
     _: BasicAuthentication,
     share_links: Paginated[ShareLink] = PaginatedResource(ShareLink, ShareLinkFilter, guards=[Guard.sharelink_access()]),
@@ -149,14 +153,27 @@ async def use_sharelink_token(
     share_link: ShareLink | None = result.first()
 
     if not share_link:
-        raise AppException(status_code=404, error_code=AppErrorCode.NOT_FOUND, detail="Share link not found")
+        raise AppException(
+            status_code=404,
+            error_code=AppErrorCode.NOT_FOUND,
+            detail="Share link not found",
+        )
 
     # Check if expired
     if share_link.is_expired:
-        raise AppException(status_code=403, error_code=AppErrorCode.SHARELINK_EXPIRED, detail="Share link has expired")
+        raise AppException(
+            status_code=403,
+            error_code=AppErrorCode.SHARELINK_EXPIRED,
+            detail="Share link has expired",
+        )
 
     # Check if membership already exists
-    result = await db.exec(select(Membership).where(Membership.user_id == user.id, Membership.group_id == share_link.group_id))
+    result = await db.exec(
+        select(Membership).where(
+            Membership.user_id == user.id,
+            Membership.group_id == share_link.group_id,
+        )
+    )
     existing_membership: Membership | None = result.first()
 
     if existing_membership:

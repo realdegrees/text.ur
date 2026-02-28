@@ -30,7 +30,7 @@ from core import config
 from core.app_exception import AppException
 from core.logger import get_current_user, get_logger
 from fastapi import FastAPI, Request
-from fastapi.exceptions import ResponseValidationError
+from fastapi.exceptions import RequestValidationError, ResponseValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.responses import (
@@ -185,6 +185,28 @@ async def app_exception_handler(request: Request, exc: AppException) -> JSONResp
             error_code=exc.error_code, 
             detail=exc.detail
         ).model_dump()
+    )
+
+@app.exception_handler(RequestValidationError)
+async def request_validation_error_handler(
+    request: Request, exc: RequestValidationError
+) -> JSONResponse:
+    """Convert Pydantic/FastAPI 422 errors into the AppError format."""
+    messages: list[str] = []
+    for err in exc.errors():
+        msg = err.get("msg", "")
+        # Pydantic prefixes validator messages with "Value error, "
+        if msg.startswith("Value error, "):
+            msg = msg[len("Value error, ") :]
+        messages.append(msg)
+    detail = "; ".join(messages) if messages else "Validation failed."
+    return JSONResponse(
+        status_code=422,
+        content=AppError(
+            status_code=422,
+            error_code=AppErrorCode.VALIDATION_ERROR,
+            detail=detail,
+        ).model_dump(),
     )
 
 @app.exception_handler(ValueError)

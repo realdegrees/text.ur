@@ -7,7 +7,7 @@ export const filterToSearchParam = (
 	value: string;
 } => {
 	return {
-		key: `filter[[${filter.field}][${filter.operator}]]`,
+		key: `filter[${filter.field}][${filter.operator}]`,
 		value: filter.value
 	};
 };
@@ -18,7 +18,7 @@ export const sortToSearchParam = (
 	value: string;
 } => {
 	return {
-		key: 'sort',
-		value: `${sort.direction === 'desc' ? '-' : ''}${sort.field}`
+		key: `sort[${sort.field}]`,
+		value: sort.direction
 	};
 };

@@ -208,6 +208,7 @@ const en = {
 			'Failed to send email. Please try again later.',
 		task_already_correct: 'You have already answered this question correctly',
 		task_no_attempts_left: 'No attempts remaining for this question',
+		document_limit_exceeded: 'This group has reached the maximum number of documents',
 		already_verified: 'This account is already verified'
 	},
 
@@ -414,6 +415,9 @@ const en = {
 		updated: 'Updated: {date:string}',
 		editSettings: 'Edit document settings',
 		deleteConfirm: 'Delete?',
+		noDocuments: 'No documents yet',
+		reorderSuccess: 'Documents reordered successfully',
+		documentCount: '{count:number}/{max:number} documents',
 		tagInfo: {
 			title: 'Document Tags',
 			description:

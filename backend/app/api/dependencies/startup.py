@@ -59,12 +59,8 @@ def verify_all_dependencies_sync() -> None:
         get_storage_manager()
         app_logger.info("Storage configuration validated")
     except Exception as e:
-        app_logger.error(
-            "Storage configuration validation failed: %s", e
-        )
-        raise RuntimeError(
-            f"Storage configuration invalid: {e}"
-        ) from e
+        app_logger.error("Storage configuration validation failed: %s", e)
+        raise RuntimeError(f"Storage configuration invalid: {e}") from e
 
     # Mail - validate configuration, then attempt connection
     # Config errors (missing vars, bad credentials) are fatal.

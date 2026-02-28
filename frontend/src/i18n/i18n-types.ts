@@ -657,6 +657,10 @@ type RootTranslation = {
 		 */
 		task_no_attempts_left: string
 		/**
+		 * T​h​i​s​ ​g​r​o​u​p​ ​h​a​s​ ​r​e​a​c​h​e​d​ ​t​h​e​ ​m​a​x​i​m​u​m​ ​n​u​m​b​e​r​ ​o​f​ ​d​o​c​u​m​e​n​t​s
+		 */
+		document_limit_exceeded: string
+		/**
 		 * T​h​i​s​ ​a​c​c​o​u​n​t​ ​i​s​ ​a​l​r​e​a​d​y​ ​v​e​r​i​f​i​e​d
 		 */
 		already_verified: string
@@ -1239,6 +1243,20 @@ type RootTranslation = {
 		 * D​e​l​e​t​e​?
 		 */
 		deleteConfirm: string
+		/**
+		 * N​o​ ​d​o​c​u​m​e​n​t​s​ ​y​e​t
+		 */
+		noDocuments: string
+		/**
+		 * D​o​c​u​m​e​n​t​s​ ​r​e​o​r​d​e​r​e​d​ ​s​u​c​c​e​s​s​f​u​l​l​y
+		 */
+		reorderSuccess: string
+		/**
+		 * {​c​o​u​n​t​}​/​{​m​a​x​}​ ​d​o​c​u​m​e​n​t​s
+		 * @param {number} count
+		 * @param {number} max
+		 */
+		documentCount: RequiredParams<'count' | 'max'>
 		tagInfo: {
 			/**
 			 * D​o​c​u​m​e​n​t​ ​T​a​g​s
@@ -2936,6 +2954,10 @@ export type TranslationFunctions = {
 		 */
 		task_no_attempts_left: () => LocalizedString
 		/**
+		 * This group has reached the maximum number of documents
+		 */
+		document_limit_exceeded: () => LocalizedString
+		/**
 		 * This account is already verified
 		 */
 		already_verified: () => LocalizedString
@@ -3503,6 +3525,18 @@ export type TranslationFunctions = {
 		 * Delete?
 		 */
 		deleteConfirm: () => LocalizedString
+		/**
+		 * No documents yet
+		 */
+		noDocuments: () => LocalizedString
+		/**
+		 * Documents reordered successfully
+		 */
+		reorderSuccess: () => LocalizedString
+		/**
+		 * {count}/{max} documents
+		 */
+		documentCount: (arg: { count: number, max: number }) => LocalizedString
 		tagInfo: {
 			/**
 			 * Document Tags

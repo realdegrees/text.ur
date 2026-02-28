@@ -83,7 +83,9 @@ class FilterMeta:
     exclude: bool | str | ColumnElement | InstrumentedAttribute | None = None
 
     @staticmethod
-    def _extract_field_name(attr: ColumnElement | InstrumentedAttribute | str) -> str:
+    def _extract_field_name(
+        attr: ColumnElement | InstrumentedAttribute | str,
+    ) -> str:
         """Extract field name from a ColumnElement, InstrumentedAttribute, or return string as-is."""
         if isinstance(attr, str):
             return attr
@@ -181,7 +183,12 @@ class FilterMeta:
             inferred_type=inferred_type,
         )
 
-    def _convert_value(self, value: Any, inferred_type: type, operator: Operator) -> Any:  # noqa: ANN401, C901
+    def _convert_value(  # noqa: C901
+        self,
+        value: Any,  # noqa: ANN401
+        inferred_type: type,
+        operator: Operator,
+    ) -> Any:  # noqa: ANN401
         """Convert value to the appropriate type based on inferred_type."""
         try:
             if inferred_type is bool or operator == "exists":
@@ -228,7 +235,11 @@ class FilterMeta:
         except Exception as e:
             raise ValueError(f"Invalid value '{value}' for type '{inferred_type.__name__}': {e}") from e
 
-    def _get_base_where_clause(self, operator: Operator, value: Any) -> ColumnElement[bool]:  # noqa: ANN401, C901
+    def _get_base_where_clause(  # noqa: C901
+        self,
+        operator: Operator,
+        value: Any,  # noqa: ANN401
+    ) -> ColumnElement[bool]:
         """Build base where clause for a given operator and value."""
         if operator == "==":
             return self.field == value
@@ -258,7 +269,12 @@ class FilterMeta:
         raise ValueError(f"Unknown operator: {operator}")
 
     def _build_clause(
-        self, operator: Operator, value: object, filter_type: str, inferred_type: type, user: User | None = None
+        self,
+        operator: Operator,
+        value: object,
+        filter_type: str,
+        inferred_type: type,
+        user: User | None = None,
     ) -> ColumnElement[bool]:
         """Return a SQLAlchemy clause based on the filter type and value."""
         converted_value = self._convert_value(value, inferred_type, operator)
@@ -328,6 +344,8 @@ class GroupFilter(BaseFilterModel):
 class DocumentFilter(BaseFilterModel):
     size_bytes: int = Field()
     group_id: str = Field()
+    order: int = Field()
+    created_at: datetime = Field()
 
     @classmethod
     def get_filter_metadata(cls) -> dict[str, FilterMeta]:
@@ -335,6 +353,8 @@ class DocumentFilter(BaseFilterModel):
         return {
             "size_bytes": FilterMeta(field=Document.size_bytes),
             "group_id": FilterMeta(field=Document.group_id, exclude=Document.group),
+            "order": FilterMeta(field=Document.order, allow_sorting=True),
+            "created_at": FilterMeta(field=Document.created_at, allow_sorting=True),
         }
 
 
@@ -380,7 +400,11 @@ class CommentFilter(BaseFilterModel):
             "visibility": FilterMeta(field=Comment.visibility),
             "user_id": FilterMeta(field=Comment.user_id, exclude=Comment.user),
             "document_id": FilterMeta(field=Comment.document_id, exclude=Comment.document),
-            "parent_id": FilterMeta(field=Comment.parent_id, exclude=Comment.parent, include_operators={"exists"}),
+            "parent_id": FilterMeta(
+                field=Comment.parent_id,
+                exclude=Comment.parent,
+                include_operators={"exists"},
+            ),
             "has_annotations": FilterMeta(
                 field=Comment.annotation,
                 include_operators={"exists"},

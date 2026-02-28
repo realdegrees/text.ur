@@ -173,6 +173,9 @@ class AppErrorCode(StrEnum):
     TASK_ALREADY_CORRECT = "task_already_correct"  # use when user already answered the task correctly
     TASK_NO_ATTEMPTS_LEFT = "task_no_attempts_left"  # use when user has exhausted all attempts for a task
 
+    # Document Errors
+    DOCUMENT_LIMIT_EXCEEDED = "document_limit_exceeded"  # use when group has reached the maximum number of documents
+
     # Account Errors
     ALREADY_VERIFIED = "already_verified"  # use when a user is already verified
     MUST_TRANSFER_OWNERSHIP = "must_transfer_ownership"  # use when user must transfer group ownership before deleting account

@@ -36,7 +36,11 @@ router = APIRouter(
 # ======= Comment Endpoints ==============
 
 
-@router.get("/", response_model=Paginated[CommentRead], response_class=ExcludableFieldsJSONResponse)
+@router.get(
+    "/",
+    response_model=Paginated[CommentRead],
+    response_class=ExcludableFieldsJSONResponse,
+)
 async def list_comments(
     _: BasicAuthentication,
     comments: Paginated[Comment] = PaginatedResource(
@@ -75,7 +79,10 @@ async def create_comment(
         type="create",
         originating_connection_id=x_connection_id,  # Don't echo to originating connection
     )
-    await events.publish(event.model_dump(mode="json"), channel=f"documents:{comment.document_id}:comments")
+    await events.publish(
+        event.model_dump(mode="json"),
+        channel=f"documents:{comment.document_id}:comments",
+    )
 
     return comment
 
@@ -155,7 +162,10 @@ async def delete_comment(
         type="delete",
         originating_connection_id=x_connection_id,  # Don't echo to originating connection
     )
-    await events.publish(event.model_dump(mode="json"), channel=f"documents:{document_id}:comments")
+    await events.publish(
+        event.model_dump(mode="json"),
+        channel=f"documents:{document_id}:comments",
+    )
 
     return Response(status_code=204)
 
@@ -183,7 +193,11 @@ async def update_comment_tags(
         tags = tag_result.all()
 
         if len(tags) != len(tag_ids):
-            raise AppException(status_code=404, error_code=AppErrorCode.NOT_FOUND, detail="One or more tags not found")
+            raise AppException(
+                status_code=404,
+                error_code=AppErrorCode.NOT_FOUND,
+                detail="One or more tags not found",
+            )
 
         for tag in tags:
             if tag.document_id != comment.document_id:
@@ -230,7 +244,10 @@ async def update_comment_tags(
         type="update",
         originating_connection_id=x_connection_id,
     )
-    await events.publish(event.model_dump(mode="json"), channel=f"documents:{comment.document_id}:comments")
+    await events.publish(
+        event.model_dump(mode="json"),
+        channel=f"documents:{comment.document_id}:comments",
+    )
 
     return Response(status_code=204)
 

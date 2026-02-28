@@ -28,9 +28,7 @@ class StorageManager:
         """Initialize the StorageManager and verify the directory."""
         self._storage_dir = storage_dir or STORAGE_DIR
         if not self._storage_dir:
-            raise RuntimeError(
-                "STORAGE_DIR is not configured."
-            )
+            raise RuntimeError("STORAGE_DIR is not configured.")
         self.verify_connection()
 
     def verify_connection(self) -> None:
@@ -42,13 +40,8 @@ class StorageManager:
                 f.write("ok")
             os.remove(test_path)
         except OSError as e:
-            raise RuntimeError(
-                f"Storage directory {self._storage_dir} is not"
-                f" writable: {e}"
-            ) from e
-        storage_logger.info(
-            "Storage configured (dir: %s)", self._storage_dir
-        )
+            raise RuntimeError(f"Storage directory {self._storage_dir} is not writable: {e}") from e
+        storage_logger.info("Storage configured (dir: %s)", self._storage_dir)
 
     def _path(self, key: str) -> str:
         """Return the full filesystem path for a storage key."""
@@ -69,20 +62,15 @@ class StorageManager:
                     return json.load(f)
             except (json.JSONDecodeError, OSError):
                 storage_logger.warning(
-                    "Corrupt .meta sidecar for %s, "
-                    "falling back to defaults",
+                    "Corrupt .meta sidecar for %s, falling back to defaults",
                     key,
                 )
         return {}
 
-    def _write_meta(
-        self, key: str, content_type: str
-    ) -> None:
+    def _write_meta(self, key: str, content_type: str) -> None:
         """Write the sidecar metadata file atomically."""
         meta_path = self._meta_path(key)
-        fd, tmp_path = tempfile.mkstemp(
-            dir=self._storage_dir, suffix=".meta.tmp"
-        )
+        fd, tmp_path = tempfile.mkstemp(dir=self._storage_dir, suffix=".meta.tmp")
         try:
             with os.fdopen(fd, "w") as f:
                 json.dump({"content_type": content_type}, f)
@@ -111,13 +99,9 @@ class StorageManager:
 
         return {
             "ContentLength": stat.st_size,
-            "LastModified": datetime.fromtimestamp(
-                stat.st_mtime, tz=UTC
-            ),
+            "LastModified": datetime.fromtimestamp(stat.st_mtime, tz=UTC),
             "ETag": f'"{etag}"',
-            "ContentType": meta.get(
-                "content_type", "application/octet-stream"
-            ),
+            "ContentType": meta.get("content_type", "application/octet-stream"),
         }
 
     def exists(self, key: str) -> bool:
@@ -143,14 +127,10 @@ class StorageManager:
             storage_logger.info("Deleted object: %s", key)
             return True
         except OSError as e:
-            storage_logger.error(
-                "Failed to delete object %s: %s", key, e
-            )
+            storage_logger.error("Failed to delete object %s: %s", key, e)
             return False
 
-    def upload(
-        self, key: str, data: BinaryIO, content_type: str
-    ) -> None:
+    def upload(self, key: str, data: BinaryIO, content_type: str) -> None:
         """Upload a file to storage atomically.
 
         Writes to a temporary file first, then renames to the
@@ -158,9 +138,7 @@ class StorageManager:
         """
         file_path = self._path(key)
         try:
-            fd, tmp_path = tempfile.mkstemp(
-                dir=self._storage_dir, suffix=".tmp"
-            )
+            fd, tmp_path = tempfile.mkstemp(dir=self._storage_dir, suffix=".tmp")
             try:
                 with os.fdopen(fd, "wb") as f:
                     while chunk := data.read(8192):
@@ -172,9 +150,7 @@ class StorageManager:
                     os.remove(tmp_path)
                 raise
         except OSError as e:
-            storage_logger.error(
-                "Upload failed for %s: %s", key, e
-            )
+            storage_logger.error("Upload failed for %s: %s", key, e)
             raise AppException(
                 status_code=502,
                 error_code=AppErrorCode.STORAGE_UNAVAILABLE,
@@ -202,18 +178,14 @@ class StorageManager:
             storage_logger.debug("Downloaded object: %s", key)
             return open(file_path, "rb")
         except OSError as e:
-            storage_logger.error(
-                "Download failed for %s: %s", key, e
-            )
+            storage_logger.error("Download failed for %s: %s", key, e)
             raise AppException(
                 status_code=502,
                 error_code=AppErrorCode.STORAGE_UNAVAILABLE,
                 detail="File storage is temporarily unavailable.",
             ) from e
 
-    def download_stream(
-        self, key: str, chunk_size: int = 8192
-    ) -> Iterator[bytes]:
+    def download_stream(self, key: str, chunk_size: int = 8192) -> Iterator[bytes]:
         """Return an iterator of bytes, streaming in chunks.
 
         Callers can forward the iterator directly to
@@ -241,13 +213,8 @@ class StorageManager:
                 )
                 raise AppException(
                     status_code=502,
-                    error_code=(
-                        AppErrorCode.STORAGE_UNAVAILABLE
-                    ),
-                    detail=(
-                        "File storage is temporarily"
-                        " unavailable."
-                    ),
+                    error_code=(AppErrorCode.STORAGE_UNAVAILABLE),
+                    detail=("File storage is temporarily unavailable."),
                 ) from e
 
         return _reader()

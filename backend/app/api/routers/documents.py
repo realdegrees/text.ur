@@ -49,11 +49,19 @@ from models.enums import (
 from models.event import Event
 from models.filter import DocumentFilter
 from models.pagination import Paginated
-from models.tables import Comment, Document, Group, Membership, User
+from models.tables import (
+    Comment,
+    Document,
+    Group,
+    Membership,
+    Task,
+    TaskResponse,
+    User,
+)
 from models.task import TasksUpdatedEvent
-from sqlalchemy import delete
+from sqlalchemy import case, delete
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import select
+from sqlmodel import col, func, select
 from starlette.responses import StreamingResponse
 from util.api_router import APIRouter
 from util.queries import Guard
@@ -92,15 +100,27 @@ def can_user_see_comment(
     # to be an iterable of Membership-like objects.
     memberships = [membership] if membership is not None else []
     group_obj = SimpleNamespace(memberships=memberships)
-    document_obj = SimpleNamespace(view_mode=document.view_mode if document is not None else None, group=group_obj)
-    comment_obj = SimpleNamespace(user_id=comment_user_id, visibility=comment_visibility, document=document_obj)
+    document_obj = SimpleNamespace(
+        view_mode=document.view_mode if document is not None else None,
+        group=group_obj,
+    )
+    comment_obj = SimpleNamespace(
+        user_id=comment_user_id,
+        visibility=comment_visibility,
+        document=document_obj,
+    )
 
     # Delegate to the guard predicate (single source of truth)
     guard = Guard.comment_access()
     return guard.predicate(comment_obj, user)
 
 
-async def _setup_document_comment_connection(websocket: WebSocket, related_resource: Document, user: User, session: AsyncSession) -> None:
+async def _setup_document_comment_connection(
+    websocket: WebSocket,
+    related_resource: Document,
+    user: User,
+    session: AsyncSession,
+) -> None:
     """Set up connection state for document comment channel.
 
     Verifies the user has access to the document, then attaches
@@ -187,7 +207,11 @@ def _comment_visibility_transform(event_data: dict, websocket: WebSocket) -> dic
     if can_see and not could_see_before:
         return {**event_data, "type": "create"}
     if not can_see and could_see_before:
-        return {**event_data, "type": "delete", "payload": {"id": payload.get("id")}}
+        return {
+            **event_data,
+            "type": "delete",
+            "payload": {"id": payload.get("id")},
+        }
 
     return None
 
@@ -328,11 +352,33 @@ async def create_document(
     )
     membership = result.first()
     if not membership:
-        raise AppException(status_code=403, error_code=AppErrorCode.NOT_IN_GROUP, detail="User is not a member of the group.")
+        raise AppException(
+            status_code=403,
+            error_code=AppErrorCode.NOT_IN_GROUP,
+            detail="User is not a member of the group.",
+        )
     if not membership.is_owner and Permission.ADMINISTRATOR not in membership.permissions:
         raise AppException(
-            status_code=403, error_code=AppErrorCode.NOT_AUTHORIZED, detail="User does not have permission to add documents."
+            status_code=403,
+            error_code=AppErrorCode.NOT_AUTHORIZED,
+            detail="User does not have permission to add documents.",
         )
+
+    # Enforce document-per-group limit
+    count_result = await db.exec(select(func.count(Document.id)).where(Document.group_id == document_create.group_id))
+    doc_count = count_result.one()
+    if doc_count >= cfg.MAX_DOCUMENTS_PER_GROUP:
+        raise AppException(
+            status_code=409,
+            error_code=AppErrorCode.DOCUMENT_LIMIT_EXCEEDED,
+            detail=(f"Maximum of {cfg.MAX_DOCUMENTS_PER_GROUP} documents per group reached."),
+        )
+
+    # Determine next order value for the group
+    max_order_result = await db.exec(
+        select(func.coalesce(func.max(Document.order), -1)).where(Document.group_id == document_create.group_id)
+    )
+    next_order = max_order_result.one() + 1
 
     # Generate unique storage key
     storage_key = f"document-{uuid4()}.pdf"
@@ -341,7 +387,12 @@ async def create_document(
     storage.upload(storage_key, file.file, content_type=file.content_type)
 
     # Create document entry; delete stored file if DB commit fails
-    document = Document(storage_key=storage_key, size_bytes=file.size, **document_create.model_dump(exclude_unset=True))
+    document = Document(
+        storage_key=storage_key,
+        size_bytes=file.size,
+        order=next_order,
+        **document_create.model_dump(exclude_unset=True),
+    )
     db.add(document)
     try:
         await db.commit()
@@ -400,13 +451,61 @@ async def get_document_file(
     return StreamingResponse(iterator, media_type="application/pdf", headers=headers)
 
 
-@router.get("/", response_model=Paginated[DocumentRead], response_class=ExcludableFieldsJSONResponse)
+async def _enrich_with_user_stats(
+    payload: Paginated[Document],
+    user: User | None,
+    db: AsyncSession,
+) -> Paginated[Document]:
+    """Enrich documents with per-user task progression stats."""
+    # Convert ORM objects to DocumentRead (which has the extra fields)
+    enriched = [DocumentRead.model_validate(d) for d in payload.data]
+
+    if user and enriched:
+        doc_ids = [d.id for d in enriched]
+
+        # Single batch query: for each document, count total
+        # responses and correct responses for the session user.
+        stmt = (
+            select(
+                Task.document_id,
+                func.count(TaskResponse.user_id).label("responded"),
+                func.count(
+                    case(
+                        (TaskResponse.is_correct.is_(True), 1),  # type: ignore[union-attr]
+                    )
+                ).label("completed"),
+            )
+            .outerjoin(
+                TaskResponse,
+                (TaskResponse.task_id == Task.id) & (TaskResponse.user_id == user.id),
+            )
+            .where(col(Task.document_id).in_(doc_ids))
+            .group_by(Task.document_id)
+        )
+        result = await db.execute(stmt)
+        stats = {row.document_id: (row.completed, row.responded) for row in result.all()}
+
+        for doc in enriched:
+            completed, responded = stats.get(doc.id, (0, 0))
+            doc.user_completed_task_count = completed
+            doc.user_responded_task_count = responded
+
+    payload.data = enriched  # type: ignore[assignment]
+    return payload
+
+
+@router.get(
+    "/",
+    response_model=Paginated[DocumentRead],
+    response_class=ExcludableFieldsJSONResponse,
+)
 async def list_documents(
     _: BasicAuthentication,
     documents: Paginated[Document] = PaginatedResource(
         Document,
         DocumentFilter,
         guards=[Guard.document_access()],
+        validate=_enrich_with_user_stats,
     ),
 ) -> Paginated[DocumentRead]:
     """Get all documents matching the filter for the authenticated user.
@@ -440,7 +539,9 @@ async def update_document(
 
         if not guard.predicate(document, user):
             raise AppException(
-                status_code=403, error_code=AppErrorCode.NOT_AUTHORIZED, detail="You do not have access to this document after the update."
+                status_code=403,
+                error_code=AppErrorCode.NOT_AUTHORIZED,
+                detail="You do not have access to this document after the update.",
             )
 
     document.sqlmodel_update(document_update.model_dump(exclude_unset=True))
@@ -460,7 +561,10 @@ async def update_document(
             resource="document",
             type="view_mode_changed",
         )
-        await events.publish(view_mode_event.model_dump(mode="json"), channel=f"documents:{document.id}:comments")
+        await events.publish(
+            view_mode_event.model_dump(mode="json"),
+            channel=f"documents:{document.id}:comments",
+        )
 
     return document
 

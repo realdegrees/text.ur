@@ -1,6 +1,6 @@
 """Handle paginated resource queries with advanced filtering and sorting."""
 
-from collections.abc import Callable, Sequence
+from collections.abc import Awaitable, Callable, Sequence
 from typing import Any
 
 from api.dependencies.authentication import Authenticate
@@ -18,6 +18,7 @@ from models.pagination import Paginated, PaginatedBase, Pagination
 from models.sort import Sort
 from models.tables import User
 from sqlalchemy import ColumnElement, func
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import tuple_
 from sqlmodel import SQLModel, select
 from sqlmodel.orm.session import SelectOfScalar
@@ -56,7 +57,11 @@ def PaginatedResource[Model: SQLModel, FilterModel: SQLModel](  # noqa: C901
     filter_model: type[FilterModel],
     *,
     key_columns: list[ColumnElement] | None = None,
-    validate: Callable[[Paginated[Model], User | None], Paginated[Model]] | None = None,
+    validate: Callable[
+        [Paginated[Model], User | None, AsyncSession],
+        Awaitable[Paginated[Model]],
+    ]
+    | None = None,
     guards: Sequence[EndpointGuard] = (),
 ) -> Callable[..., Paginated[Model]]:
     """Generate an advanced filter+sort query dependency with pagination.
@@ -65,7 +70,7 @@ def PaginatedResource[Model: SQLModel, FilterModel: SQLModel](  # noqa: C901
         base_model: The SQLModel class to query
         filter_model: The filter model class defining available filters
         key_columns: Custom primary key columns (defaults to base_model.id)
-        validate: Optional validator function to transform results
+        validate: Optional async enrichment function (payload, user, db)
         guards: Sequence of EndpointGuard instances for access control
 
     """
@@ -80,7 +85,10 @@ def PaginatedResource[Model: SQLModel, FilterModel: SQLModel](  # noqa: C901
         conditions: list[ColumnElement[bool]] = []
 
         for filter_item in filters:
-            field_data = next((f for f in filterable_field_data if f.name == filter_item.field), None)
+            field_data = next(
+                (f for f in filterable_field_data if f.name == filter_item.field),
+                None,
+            )
 
             if field_data is None:
                 continue
@@ -89,7 +97,11 @@ def PaginatedResource[Model: SQLModel, FilterModel: SQLModel](  # noqa: C901
 
         return conditions
 
-    def apply_joins(query: SelectOfScalar[Model], fields: list[str], filterable_field_data: list[FilterableField]) -> SelectOfScalar[Model]:
+    def apply_joins(
+        query: SelectOfScalar[Model],
+        fields: list[str],
+        filterable_field_data: list[FilterableField],
+    ) -> SelectOfScalar[Model]:
         """Apply necessary joins to the query based on the filters."""
         for field in fields:
             filterable_field = next((f for f in filterable_field_data if f.name == field), None)
@@ -105,7 +117,8 @@ def PaginatedResource[Model: SQLModel, FilterModel: SQLModel](  # noqa: C901
 
     # Build order expressions
     def build_order_expressions(
-        sorts: list[Sort], filterable_field_data: list[FilterableField] = filterable_field_data
+        sorts: list[Sort],
+        filterable_field_data: list[FilterableField] = filterable_field_data,
     ) -> tuple[list[ColumnElement], list[ColumnElement]]:
         """Turn Sort objects into SQLAlchemy order expressions and labeled columns."""
         columns: list[ColumnElement] = []
@@ -143,7 +156,10 @@ def PaginatedResource[Model: SQLModel, FilterModel: SQLModel](  # noqa: C901
         for filter_item in filters:
             # Only exclude fields when using the equality operator
             if filter_item.operator == "==":
-                field_data = next((f for f in filterable_field_data if f.name == filter_item.field), None)
+                field_data = next(
+                    (f for f in filterable_field_data if f.name == filter_item.field),
+                    None,
+                )
                 if field_data and field_data.exclude_field:
                     excluded_fields.append(field_data.exclude_field)
 
@@ -171,7 +187,7 @@ def PaginatedResource[Model: SQLModel, FilterModel: SQLModel](  # noqa: C901
         # Add query parameters from request (excluding filters)
         if isinstance(request.query_params, QueryParams):
             for key, value in request.query_params.multi_items():
-                if key not in params and not key.startswith("filter[["):
+                if key not in params and not key.startswith("filter[") and not key.startswith("sort["):
                     params[key] = value
 
         # Add path parameters from request
@@ -225,12 +241,12 @@ def PaginatedResource[Model: SQLModel, FilterModel: SQLModel](  # noqa: C901
             offset=pagination.offset,
             limit=pagination.limit,
             filters=filters,
-            order_by=sorts,
+            order_by=[f"{'-' if s.direction == 'desc' else ''}{s.field}" for s in sorts],
             excluded_fields=excluded_fields,
         )
 
         if validate:
-            paginated_payload = validate(paginated_payload, session_user)
+            paginated_payload = await validate(paginated_payload, session_user, db)
 
         return paginated_payload
 

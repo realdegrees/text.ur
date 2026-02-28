@@ -30,7 +30,18 @@ class DocumentRead(BaseModel):
     description: str | None
     view_mode: ViewMode
     default_max_attempts: int
+    order: int
+    task_count: int
+    root_comment_count: int
     tags: list["TagRead"]
+    user_completed_task_count: int = 0
+    user_responded_task_count: int = 0
+
+
+class DocumentReorder(SQLModel):
+    """Payload for reordering documents within a group."""
+
+    document_ids: list[str]
 
 
 class DocumentUpdate(SQLModel):

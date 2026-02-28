@@ -60,10 +60,7 @@ SYNC_DATABASE_URL: str = f"postgresql+psycopg2://{quote(user)}:{quote(password)}
 # Postgres connection, not the PgBouncer client connection.
 _direct_host = POSTGRES_HOST
 _direct_port = POSTGRES_PORT
-DIRECT_DATABASE_URL: str = (
-    f"postgresql+asyncpg://{quote(user)}:{quote(password)}"
-    f"@{_direct_host}:{_direct_port}/{db}"
-)
+DIRECT_DATABASE_URL: str = f"postgresql+asyncpg://{quote(user)}:{quote(password)}@{_direct_host}:{_direct_port}/{db}"
 
 # REDIS
 REDIS_PASSWORD: str = os.getenv("REDIS_PASSWORD")
@@ -96,7 +93,10 @@ SMTP_SSL = os.getenv("SMTP_SSL", "False").lower() == "true"
 SMTP_FROM_EMAIL = os.getenv("SMTP_FROM_EMAIL")
 
 # APP
-JINJA_ENV = Environment(loader=FileSystemLoader(os.path.join(backend_path, "templates")), autoescape=select_autoescape(["html"]))
+JINJA_ENV = Environment(
+    loader=FileSystemLoader(os.path.join(backend_path, "templates")),
+    autoescape=select_autoescape(["html"]),
+)
 FRONTEND_BASEURL: str | None = os.getenv("ORIGIN")
 if not FRONTEND_BASEURL and not IS_TEST_ENV:
     print(
@@ -123,6 +123,9 @@ MAX_DOCUMENT_DESCRIPTION_LENGTH = int(os.getenv("PUBLIC_MAX_DOCUMENT_DESCRIPTION
 LOG_RETENTION_DAYS = int(os.getenv("LOG_RETENTION_DAYS", 90))
 GUEST_ACCOUNT_TTL_DAYS = float(os.getenv("GUEST_ACCOUNT_TTL_DAYS", 90))
 CLEANUP_INTERVAL_HOURS = float(os.getenv("CLEANUP_INTERVAL_HOURS", 24))
+
+# DOCUMENTS
+MAX_DOCUMENTS_PER_GROUP = int(os.getenv("PUBLIC_MAX_DOCUMENTS_PER_GROUP", 200))
 
 # TAGS
 MAX_TAGS_PER_DOCUMENT = int(os.getenv("PUBLIC_MAX_TAGS_PER_DOCUMENT", 50))

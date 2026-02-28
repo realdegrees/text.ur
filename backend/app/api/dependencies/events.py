@@ -103,7 +103,10 @@ class EventManager:
         """
         key = self._active_users_key(channel_key)
         user_data = ConnectedUser(
-            user_id=user_id, username=username, connection_id=connection_id, connected_at=datetime.now(UTC).isoformat()
+            user_id=user_id,
+            username=username,
+            connection_id=connection_id,
+            connected_at=datetime.now(UTC).isoformat(),
         )
 
         # Cache and merge to avoid race condition
@@ -142,7 +145,13 @@ class EventManager:
         await self._redis.expire(key, USER_KEY_EXPIRY)
 
     # ---------------- WebSocket client management ----------------
-    async def register_client(self, websocket: WebSocket, *, channel: str, on_event: Callable[[dict], Any]) -> None:
+    async def register_client(
+        self,
+        websocket: WebSocket,
+        *,
+        channel: str,
+        on_event: Callable[[dict], Any],
+    ) -> None:
         """Register a WebSocket client. on_event can be sync or async."""
         websocket.state.channel = channel
         websocket.state.on_event = on_event

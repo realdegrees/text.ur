@@ -73,7 +73,11 @@ async def get_tag(
     """
     # Verify tag belongs to the document
     if tag.document_id != document.id:
-        raise AppException(status_code=404, error_code=AppErrorCode.NOT_FOUND, detail="Tag not found in this document")
+        raise AppException(
+            status_code=404,
+            error_code=AppErrorCode.NOT_FOUND,
+            detail="Tag not found in this document",
+        )
     return tag
 
 
@@ -91,7 +95,11 @@ async def update_tag(
     """
     # Verify tag belongs to the document
     if tag.document_id != document.id:
-        raise AppException(status_code=404, error_code=AppErrorCode.NOT_FOUND, detail="Tag not found in this document")
+        raise AppException(
+            status_code=404,
+            error_code=AppErrorCode.NOT_FOUND,
+            detail="Tag not found in this document",
+        )
 
     tag = await db.merge(tag)
     tag.sqlmodel_update(tag_update.model_dump(exclude_unset=True))
@@ -114,7 +122,11 @@ async def delete_tag(
     """
     # Verify tag belongs to the document
     if tag.document_id != document.id:
-        raise AppException(status_code=404, error_code=AppErrorCode.NOT_FOUND, detail="Tag not found in this document")
+        raise AppException(
+            status_code=404,
+            error_code=AppErrorCode.NOT_FOUND,
+            detail="Tag not found in this document",
+        )
 
     await db.delete(tag)
     await db.commit()

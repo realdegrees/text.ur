@@ -4,7 +4,9 @@ from fastapi import Depends, Query, Request
 from models.filter import Filter, FilterableField, Operator
 
 
-def get_filters_dependency(filterable_field_data: list[FilterableField]) -> Callable[[], Depends]:  # noqa: C901
+def get_filters_dependency(  # noqa: C901
+    filterable_field_data: list[FilterableField],
+) -> Callable[[], Depends]:
     """Generate a FastAPI dependency to parse filters from query parameters."""
 
     def format_field_description(field: FilterableField) -> str:

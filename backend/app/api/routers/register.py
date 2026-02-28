@@ -31,14 +31,22 @@ router = APIRouter(prefix="/register", tags=["Register"])
 async def _upgrade_guest_account(db: Database, mail: Mail, user: User, user_create: UserCreate) -> None:
     """Upgrade a guest account to a permanent account with email verification."""
     if not user.is_guest:
-        raise AppException(status_code=400, detail="Account is already a permanent account", error_code=AppErrorCode.INVALID_INPUT)
+        raise AppException(
+            status_code=400,
+            detail="Account is already a permanent account",
+            error_code=AppErrorCode.INVALID_INPUT,
+        )
 
     # Check if email is already taken
     result = await db.exec(select(User).where(User.email == user_create.email))
     existing_user = result.first()
 
     if existing_user and existing_user.id != user.id:
-        raise AppException(status_code=400, detail="Email already registered", error_code=AppErrorCode.EMAIL_TAKEN)
+        raise AppException(
+            status_code=400,
+            detail="Email already registered",
+            error_code=AppErrorCode.EMAIL_TAKEN,
+        )
 
     # Update user with email and password
     user.email = user_create.email
@@ -107,9 +115,17 @@ async def _register_regular_user(db: Database, mail: Mail, user_create: UserCrea
             await db.delete(existing_user)
             await db.commit()
         elif existing_user.username == user_create.username:
-            raise AppException(status_code=400, detail="Username already registered", error_code=AppErrorCode.USERNAME_TAKEN)
+            raise AppException(
+                status_code=400,
+                detail="Username already registered",
+                error_code=AppErrorCode.USERNAME_TAKEN,
+            )
         else:
-            raise AppException(status_code=400, detail="Email already registered", error_code=AppErrorCode.EMAIL_TAKEN)
+            raise AppException(
+                status_code=400,
+                detail="Email already registered",
+                error_code=AppErrorCode.EMAIL_TAKEN,
+            )
 
     user = User(**user_create.model_dump(exclude={"token"}))
     user.password = hash_password(user_create.password)
@@ -120,7 +136,11 @@ async def _register_regular_user(db: Database, mail: Mail, user_create: UserCrea
         await db.commit()
         await db.refresh(user)
     except IntegrityError as e:
-        raise AppException(status_code=409, error_code=AppErrorCode.ALREADY_EXISTS, detail="Username or email already exists") from e
+        raise AppException(
+            status_code=409,
+            error_code=AppErrorCode.ALREADY_EXISTS,
+            detail="Username or email already exists",
+        ) from e
 
     # Send verification email
     verification_link = mail.generate_verification_link(
@@ -161,7 +181,11 @@ async def _register_regular_user(db: Database, mail: Mail, user_create: UserCrea
 
 
 async def _register_anonymous_user(
-    request: Request, db: Database, response: Response, user_create: UserCreate, sharelink_token: str
+    request: Request,
+    db: Database,
+    response: Response,
+    user_create: UserCreate,
+    sharelink_token: str,
 ) -> Token:
     """Handle anonymous user registration with sharelink token."""
     # Find the sharelink by token
@@ -169,11 +193,19 @@ async def _register_anonymous_user(
     share_link: ShareLink | None = result.first()
 
     if not share_link:
-        raise AppException(status_code=401, detail="Invalid sharelink token", error_code=AppErrorCode.INVALID_TOKEN)
+        raise AppException(
+            status_code=401,
+            detail="Invalid sharelink token",
+            error_code=AppErrorCode.INVALID_TOKEN,
+        )
 
     # Check if expired
     if share_link.expires_at and share_link.expires_at < datetime.now(UTC):
-        raise AppException(status_code=403, detail="Share link has expired", error_code=AppErrorCode.SHARELINK_EXPIRED)
+        raise AppException(
+            status_code=403,
+            detail="Share link has expired",
+            error_code=AppErrorCode.SHARELINK_EXPIRED,
+        )
 
     # Check if anonymous access is allowed
     if not share_link.allow_anonymous_access:
@@ -187,7 +219,11 @@ async def _register_anonymous_user(
     result = await db.exec(select(User).where(User.username == user_create.username))
     existing_user = result.first()
     if existing_user:
-        raise AppException(status_code=400, detail="Username already registered", error_code=AppErrorCode.USERNAME_TAKEN)
+        raise AppException(
+            status_code=400,
+            detail="Username already registered",
+            error_code=AppErrorCode.USERNAME_TAKEN,
+        )
 
     # Create anonymous user
     user = User(
@@ -294,18 +330,32 @@ async def verify(request: Request, token: str, db: Database) -> RedirectResponse
     """Verify the user's email address."""
     try:
         email = URLSafeTimedSerializer(cfg.EMAIL_PRESIGN_SECRET).loads(
-            token, max_age=int(cfg.REGISTER_LINK_EXPIRY_DAYS * 24 * 60 * 60), salt="email-verification"
+            token,
+            max_age=int(cfg.REGISTER_LINK_EXPIRY_DAYS * 24 * 60 * 60),
+            salt="email-verification",
         )
     except (BadSignature, SignatureExpired) as e:
-        raise AppException(status_code=403, error_code=AppErrorCode.INVALID_TOKEN, detail="Invalid or expired token") from e
+        raise AppException(
+            status_code=403,
+            error_code=AppErrorCode.INVALID_TOKEN,
+            detail="Invalid or expired token",
+        ) from e
 
     query = select(User).filter(User.email == email)
     result = await db.exec(query)
     user: User | None = result.first()
     if not user:
-        raise AppException(status_code=404, error_code=AppErrorCode.NOT_FOUND, detail="User not found")
+        raise AppException(
+            status_code=404,
+            error_code=AppErrorCode.NOT_FOUND,
+            detail="User not found",
+        )
     if user.verified:
-        raise AppException(status_code=400, error_code=AppErrorCode.ALREADY_VERIFIED, detail="User is already verified")
+        raise AppException(
+            status_code=400,
+            error_code=AppErrorCode.ALREADY_VERIFIED,
+            detail="User is already verified",
+        )
 
     user.verified = True
 

@@ -36,7 +36,10 @@ class User(BaseModel, table=True):
     # TODO this can probably just be removed and inferred from presence of password/email, can also be dropped from existing db entries
     is_guest: bool = Field(default=False, sa_column=Column(Boolean, server_default="false"))
     # For personally signed URLs, JWT encryption etc.
-    secret: str = Field(default_factory=func.gen_random_uuid, sa_column=Column(String, server_default=func.gen_random_uuid()))
+    secret: str = Field(
+        default_factory=func.gen_random_uuid,
+        sa_column=Column(String, server_default=func.gen_random_uuid()),
+    )
 
     memberships: list["Membership"] = Relationship(back_populates="user", sa_relationship_kwargs={"lazy": "noload"})
     comments: list["Comment"] = Relationship(back_populates="user", sa_relationship_kwargs={"lazy": "noload"})
@@ -65,11 +68,25 @@ class Membership(BaseModel, table=True):
     group_id: str = Field(foreign_key="group.id", ondelete="CASCADE", primary_key=True)
     permissions: list[Permission] = Field(default_factory=list, sa_column=Column(ARRAY(String)))
     is_owner: bool = Field(default=False)
-    sharelink_id: int | None = Field(foreign_key="sharelink.id", nullable=True, default=None, ondelete="SET NULL")
+    sharelink_id: int | None = Field(
+        foreign_key="sharelink.id",
+        nullable=True,
+        default=None,
+        ondelete="SET NULL",
+    )
     accepted: bool = Field(default=False)
-    user: User = Relationship(back_populates="memberships", sa_relationship_kwargs={"lazy": "selectin"})
-    group: "Group" = Relationship(back_populates="memberships", sa_relationship_kwargs={"lazy": "selectin"})
-    share_link: Optional["ShareLink"] = Relationship(back_populates="memberships", sa_relationship_kwargs={"lazy": "selectin"})
+    user: User = Relationship(
+        back_populates="memberships",
+        sa_relationship_kwargs={"lazy": "selectin"},
+    )
+    group: "Group" = Relationship(
+        back_populates="memberships",
+        sa_relationship_kwargs={"lazy": "selectin"},
+    )
+    share_link: Optional["ShareLink"] = Relationship(
+        back_populates="memberships",
+        sa_relationship_kwargs={"lazy": "selectin"},
+    )
 
     is_expired: ClassVar[bool]
 
@@ -98,26 +115,52 @@ class Document(BaseModel, table=True):
     storage_key: str = Field(index=True, unique=True)
     size_bytes: int = Field(default=0)
     visibility: DocumentVisibility = Field(
-        default=DocumentVisibility.PRIVATE, sa_column=Column(String, server_default=DocumentVisibility.PRIVATE.value)
+        default=DocumentVisibility.PRIVATE,
+        sa_column=Column(String, server_default=DocumentVisibility.PRIVATE.value),
     )
-    view_mode: ViewMode = Field(default=ViewMode.PUBLIC, sa_column=Column(String, server_default=ViewMode.PUBLIC.value))
-    secret: UUID = Field(default_factory=func.gen_random_uuid, sa_column=Column(PGUUID(as_uuid=True)))
+    view_mode: ViewMode = Field(
+        default=ViewMode.PUBLIC,
+        sa_column=Column(String, server_default=ViewMode.PUBLIC.value),
+    )
+    secret: UUID = Field(
+        default_factory=func.gen_random_uuid,
+        sa_column=Column(PGUUID(as_uuid=True)),
+    )
 
     default_max_attempts: int = Field(default=1, ge=1)
+    order: int = Field(default=0, ge=0)
 
     group_id: str = Field(foreign_key="group.id", nullable=False, ondelete="CASCADE", index=True)
 
     group: "Group" = Relationship(back_populates="documents", sa_relationship_kwargs={"lazy": "selectin"})
 
     comments: list["Comment"] = Relationship(
-        back_populates="document", sa_relationship_kwargs={"lazy": "noload", "cascade": "all, delete-orphan", "passive_deletes": True}
+        back_populates="document",
+        sa_relationship_kwargs={
+            "lazy": "noload",
+            "cascade": "all, delete-orphan",
+            "passive_deletes": True,
+        },
     )
     tags: list["Tag"] = Relationship(
-        back_populates="document", sa_relationship_kwargs={"lazy": "selectin", "cascade": "all, delete-orphan", "passive_deletes": True}
+        back_populates="document",
+        sa_relationship_kwargs={
+            "lazy": "selectin",
+            "cascade": "all, delete-orphan",
+            "passive_deletes": True,
+        },
     )
     tasks: list["Task"] = Relationship(
-        back_populates="document", sa_relationship_kwargs={"lazy": "noload", "cascade": "all, delete-orphan", "passive_deletes": True}
+        back_populates="document",
+        sa_relationship_kwargs={
+            "lazy": "noload",
+            "cascade": "all, delete-orphan",
+            "passive_deletes": True,
+        },
     )
+
+    task_count: ClassVar[int]
+    root_comment_count: ClassVar[int]
 
 
 class Group(BaseModel, table=True):
@@ -149,13 +192,28 @@ class Group(BaseModel, table=True):
         return self._owners[0] if self._owners else None
 
     documents: list["Document"] = Relationship(
-        back_populates="group", sa_relationship_kwargs={"lazy": "noload", "cascade": "all, delete-orphan", "passive_deletes": True}
+        back_populates="group",
+        sa_relationship_kwargs={
+            "lazy": "noload",
+            "cascade": "all, delete-orphan",
+            "passive_deletes": True,
+        },
     )
     memberships: list["Membership"] = Relationship(
-        back_populates="group", sa_relationship_kwargs={"lazy": "selectin", "cascade": "all, delete-orphan", "passive_deletes": True}
+        back_populates="group",
+        sa_relationship_kwargs={
+            "lazy": "selectin",
+            "cascade": "all, delete-orphan",
+            "passive_deletes": True,
+        },
     )
     share_links: list["ShareLink"] = Relationship(
-        back_populates="group", sa_relationship_kwargs={"lazy": "noload", "cascade": "all, delete-orphan", "passive_deletes": True}
+        back_populates="group",
+        sa_relationship_kwargs={
+            "lazy": "noload",
+            "cascade": "all, delete-orphan",
+            "passive_deletes": True,
+        },
     )
 
     def rotate_secret(self) -> None:
@@ -166,16 +224,10 @@ class Group(BaseModel, table=True):
 # Define count column properties after class creation so Group is a fully
 # mapped class and can be passed to correlate() directly.
 Group.member_count = column_property(
-    select(func.count(Membership.user_id))
-    .where(Membership.group_id == Group.id)
-    .correlate(Group)
-    .scalar_subquery()
+    select(func.count(Membership.user_id)).where(Membership.group_id == Group.id).correlate(Group).scalar_subquery()
 )
 Group.document_count = column_property(
-    select(func.count(Document.id))
-    .where(Document.group_id == Group.id)
-    .correlate(Group)
-    .scalar_subquery()
+    select(func.count(Document.id)).where(Document.group_id == Group.id).correlate(Group).scalar_subquery()
 )
 
 
@@ -225,27 +277,57 @@ class Comment(BaseModel, table=True):
     visibility: Visibility = Field()
     document_id: str = Field(foreign_key="document.id", ondelete="CASCADE", index=True)
     user_id: int = Field(foreign_key="user.id", ondelete="CASCADE", index=True)
-    parent_id: int | None = Field(foreign_key="comment.id", nullable=True, default=None, ondelete="CASCADE", index=True)
+    parent_id: int | None = Field(
+        foreign_key="comment.id",
+        nullable=True,
+        default=None,
+        ondelete="CASCADE",
+        index=True,
+    )
     content: str | None = Field(nullable=True, default=None)
     annotation: dict = Field(default_factory=dict, sa_column=Column(JSONB))
 
     document: Document = Relationship(back_populates="comments", sa_relationship_kwargs={"lazy": "selectin"})
     user: User | None = Relationship(back_populates="comments", sa_relationship_kwargs={"lazy": "selectin"})
     parent: Optional["Comment"] = Relationship(
-        back_populates="replies", sa_relationship_kwargs={"remote_side": "Comment.id", "lazy": "selectin"}
+        back_populates="replies",
+        sa_relationship_kwargs={
+            "remote_side": "Comment.id",
+            "lazy": "selectin",
+        },
     )
     replies: list["Comment"] = Relationship(
-        back_populates="parent", sa_relationship_kwargs={"lazy": "noload", "cascade": "all, delete-orphan", "passive_deletes": True}
+        back_populates="parent",
+        sa_relationship_kwargs={
+            "lazy": "noload",
+            "cascade": "all, delete-orphan",
+            "passive_deletes": True,
+        },
     )
     reactions: list["Reaction"] = Relationship(
-        back_populates="comment", sa_relationship_kwargs={"lazy": "selectin", "cascade": "all, delete-orphan", "passive_deletes": True}
+        back_populates="comment",
+        sa_relationship_kwargs={
+            "lazy": "selectin",
+            "cascade": "all, delete-orphan",
+            "passive_deletes": True,
+        },
     )
     comment_tags: list["CommentTag"] = Relationship(
-        back_populates="comment", sa_relationship_kwargs={"lazy": "selectin", "cascade": "all, delete-orphan", "passive_deletes": True}
+        back_populates="comment",
+        sa_relationship_kwargs={
+            "lazy": "selectin",
+            "cascade": "all, delete-orphan",
+            "passive_deletes": True,
+        },
     )
     tags: list["Tag"] = Relationship(
         back_populates=None,
-        sa_relationship_kwargs={"secondary": "commenttag", "viewonly": True, "lazy": "selectin", "order_by": "CommentTag.order"},
+        sa_relationship_kwargs={
+            "secondary": "commenttag",
+            "viewonly": True,
+            "lazy": "selectin",
+            "order_by": "CommentTag.order",
+        },
     )
 
     num_replies: ClassVar[int]
@@ -278,10 +360,20 @@ class Tag(BaseModel, table=True):
 
     document: "Document" = Relationship(back_populates="tags", sa_relationship_kwargs={"lazy": "noload"})
     comment_tags: list["CommentTag"] = Relationship(
-        back_populates="tag", sa_relationship_kwargs={"lazy": "noload", "cascade": "all, delete-orphan", "passive_deletes": True}
+        back_populates="tag",
+        sa_relationship_kwargs={
+            "lazy": "noload",
+            "cascade": "all, delete-orphan",
+            "passive_deletes": True,
+        },
     )
     comments: list["Comment"] = Relationship(
-        back_populates=None, sa_relationship_kwargs={"secondary": "commenttag", "viewonly": True, "lazy": "noload"}
+        back_populates=None,
+        sa_relationship_kwargs={
+            "secondary": "commenttag",
+            "viewonly": True,
+            "lazy": "noload",
+        },
     )
 
 
@@ -380,7 +472,10 @@ class ShareLink(BaseModel, table=True):
     permissions: list[Permission] = Field(default_factory=list, sa_column=Column(ARRAY(String)))
     allow_anonymous_access: bool = Field(default=False, sa_column=Column(Boolean, server_default="false"))
 
-    token: str = Field(default_factory=lambda: str(uuid4())[:8], sa_column=Column(String, unique=True, index=True))
+    token: str = Field(
+        default_factory=lambda: str(uuid4())[:8],
+        sa_column=Column(String, unique=True, index=True),
+    )
 
     expires_at: datetime | None = Field(
         default=None,
@@ -390,8 +485,14 @@ class ShareLink(BaseModel, table=True):
     # e.g. "Link for review team"
     label: str | None = Field(default=None, nullable=True)
 
-    group: "Group" = Relationship(back_populates="share_links", sa_relationship_kwargs={"lazy": "selectin"})
-    author: Optional["User"] = Relationship(back_populates="share_links", sa_relationship_kwargs={"lazy": "selectin"})
+    group: "Group" = Relationship(
+        back_populates="share_links",
+        sa_relationship_kwargs={"lazy": "selectin"},
+    )
+    author: Optional["User"] = Relationship(
+        back_populates="share_links",
+        sa_relationship_kwargs={"lazy": "selectin"},
+    )
 
     is_expired: ClassVar[bool]
 
@@ -411,7 +512,12 @@ class ShareLink(BaseModel, table=True):
     # ! WARNING additional checks need to be made in an group guard to validate if the user link is expired
     # ! WARNING but this check is also required to not leave orphaned memberships
     memberships: list["Membership"] = Relationship(
-        back_populates="share_link", sa_relationship_kwargs={"lazy": "selectin", "cascade": "all, delete-orphan", "passive_deletes": True}
+        back_populates="share_link",
+        sa_relationship_kwargs={
+            "lazy": "selectin",
+            "cascade": "all, delete-orphan",
+            "passive_deletes": True,
+        },
     )
 
     num_memberships: ClassVar[int]
@@ -428,14 +534,27 @@ class ShareLink(BaseModel, table=True):
         """Return SQL expression returning number of memberships created via this share link."""
         # Now that the class is mapped, reference Membership to build a
         # DB-level expression used in queries.
-        return (
-            select(func.count(Membership.user_id)).where(Membership.sharelink_id == cls.id).correlate(ShareLink).scalar_subquery()
-        )
+        return select(func.count(Membership.user_id)).where(Membership.sharelink_id == cls.id).correlate(ShareLink).scalar_subquery()
 
     def rotate_token(self) -> None:
         """Invalidate this share link by rotating its token."""
         self.token = str(uuid4())[:8]
 
+
+# Document aggregate column properties (defined here because Task and
+# Comment are declared after Document).
+Document.task_count = column_property(
+    select(func.count(Task.id)).where(Task.document_id == Document.id).correlate(Document).scalar_subquery()
+)
+Document.root_comment_count = column_property(
+    select(func.count(Comment.id))
+    .where(
+        Comment.document_id == Document.id,
+        Comment.parent_id.is_(None),  # type: ignore[union-attr]
+    )
+    .correlate(Document)
+    .scalar_subquery()
+)
 
 # Define num_replies column property after class creation to allow aliasing
 # We need to use an alias for the inner query to distinguish it from the outer row

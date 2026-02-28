@@ -411,4 +411,12 @@
 		image-rendering: crisp-edges;
 		image-rendering: pixelated;
 	}
+
+	/* Touch-friendly defaults for the PDF text layer:
+	   - Remove the tap-highlight flash on mobile browsers
+	   - Prevent iOS callout menu on long-press of links/images in the text layer */
+	:global(.pdf-viewer-container .textLayer) {
+		-webkit-tap-highlight-color: transparent;
+		-webkit-touch-callout: none;
+	}
 </style>

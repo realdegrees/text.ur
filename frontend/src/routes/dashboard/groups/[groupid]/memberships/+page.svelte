@@ -22,7 +22,7 @@
 	import PermissionSelector from '$lib/components/permissionSelector.svelte';
 	import { slide } from 'svelte/transition';
 	import AdvancedInput from '$lib/components/advancedInput.svelte';
-	import { invalidate } from '$app/navigation';
+	import { invalidate, goto } from '$app/navigation';
 	import ConfirmButton from '$lib/components/ConfirmButton.svelte';
 	import PromoteIcon from '~icons/mdi/chevron-double-up';
 	import KickIcon from '~icons/ic/sharp-person-remove';
@@ -30,6 +30,7 @@
 	import { formatDateTime } from '$lib/util/dateFormat';
 	import ExpandablePermissionBadge from '$lib/components/expandablePermissionBadge.svelte';
 	import { SvelteMap, SvelteSet } from 'svelte/reactivity';
+	import { untrack } from 'svelte';
 
 	let { data } = $props();
 	let memberships = $derived(data.memberships);
@@ -43,25 +44,29 @@
 	const scoresFetching = new SvelteSet<number>();
 
 	$effect(() => {
-		const items = memberships.data;
-		const toFetch = items
-			.map((m) => m.user.id)
-			.filter((id) => !scores.has(id) && !scoresFetching.has(id));
-		if (toFetch.length === 0) return;
+		const items = memberships.data; // tracked — re-runs when memberships change
+		untrack(() => {
+			const toFetch = items
+				.map((m) => m.user.id)
+				.filter((id) => !scores.has(id) && !scoresFetching.has(id));
+			if (toFetch.length === 0) return;
 
-		toFetch.forEach((id) => scoresFetching.add(id));
-		Promise.all(
-			toFetch.map(async (userId) => {
-				const result = await api.get<ScoreRead>(`/groups/${group.id}/memberships/${userId}/score`);
-				if (result.success) {
-					scores.set(userId, result.data.total);
-				} else {
-					notification(result.error);
-				}
-			})
-		).catch(() => {
-			// Individual errors are already handled above;
-			// this prevents unhandled promise rejections.
+			toFetch.forEach((id) => scoresFetching.add(id));
+			Promise.all(
+				toFetch.map(async (userId) => {
+					const result = await api.get<ScoreRead>(
+						`/groups/${group.id}/memberships/${userId}/score`
+					);
+					if (result.success) {
+						scores.set(userId, result.data.total);
+					} else {
+						notification(result.error);
+					}
+				})
+			).catch(() => {
+				// Individual errors are already handled above;
+				// this prevents unhandled promise rejections.
+			});
 		});
 	});
 
@@ -500,8 +505,12 @@
 								? $LL.memberships.leftGroup()
 								: $LL.memberships.removedFromGroup({ username: membership.user.username })
 						);
-						invalidate('app:group-memberships');
-						if (showLeaveButton) invalidate('app:memberships');
+						if (showLeaveButton) {
+							invalidate('app:memberships');
+							goto('/dashboard');
+						} else {
+							invalidate('app:group-memberships');
+						}
 					}
 				}}
 				slideoutDirection="left"

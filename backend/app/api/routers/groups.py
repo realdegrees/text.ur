@@ -10,6 +10,7 @@ from api.routers.sharelinks import router as ShareLinkRouter
 from core.app_exception import AppException
 from core.logger import get_logger
 from fastapi import Body, Response
+from models.document import DocumentRead, DocumentReorder
 from models.enums import AppErrorCode, Permission
 from models.filter import GroupFilter
 from models.group import (
@@ -23,6 +24,7 @@ from models.group import (
 from models.pagination import Paginated
 from models.reaction import DEFAULT_REACTIONS
 from models.tables import (
+    Document,
     Group,
     GroupReaction,
     Membership,
@@ -154,7 +156,11 @@ async def transfer_ownership(
     transfer_user = result.first()
 
     if not transfer_user:
-        raise AppException(status_code=404, error_code=AppErrorCode.NOT_FOUND, detail="Target user not found")
+        raise AppException(
+            status_code=404,
+            error_code=AppErrorCode.NOT_FOUND,
+            detail="Target user not found",
+        )
 
     # Check if the new owner is a member of the group
     result = await db.exec(
@@ -204,6 +210,66 @@ async def delete_group(
     cleanup_storage_keys(storage, storage_keys, groups_logger, f"group {group.id}")
 
     return Response(status_code=204)
+
+
+# endregion
+
+# region Document Reorder
+
+
+@router.put(
+    "/{group_id}/documents/reorder",
+    response_model=list[DocumentRead],
+)
+async def reorder_documents(
+    db: Database,
+    reorder: DocumentReorder = Body(...),
+    session_user: User = Authenticate([Guard.group_access({Permission.ADMINISTRATOR})]),
+    group: Group = Resource(Group, param_alias="group_id"),
+) -> list[DocumentRead]:
+    """Reorder a subset of documents within a group.
+
+    Accepts a partial list of document IDs in the desired order.
+    Only the submitted documents are reordered — all others keep
+    their current positions. The submitted documents swap into
+    each other's order slots.
+    """
+    result = await db.exec(
+        select(Document).where(
+            Document.group_id == group.id,
+            Document.id.in_(reorder.document_ids),
+        )
+    )
+    docs_by_id = {d.id: d for d in result.all()}
+
+    # Validate all submitted IDs exist in this group
+    unknown = set(reorder.document_ids) - set(docs_by_id.keys())
+    if unknown:
+        raise AppException(
+            status_code=400,
+            error_code=AppErrorCode.VALIDATION_ERROR,
+            detail=f"Unknown document IDs: {sorted(unknown)}",
+        )
+
+    # Slot reassignment: collect current order values, sort them,
+    # then assign them in the new sequence.
+    slots = sorted(docs_by_id[did].order for did in reorder.document_ids)
+    for slot, doc_id in zip(slots, reorder.document_ids, strict=True):
+        doc = await db.merge(docs_by_id[doc_id])
+        doc.order = slot
+
+    await db.commit()
+
+    # Return the reordered subset
+    result = await db.exec(
+        select(Document)
+        .where(
+            Document.group_id == group.id,
+            Document.id.in_(reorder.document_ids),
+        )
+        .order_by(Document.order)
+    )
+    return [DocumentRead.model_validate(d) for d in result.all()]
 
 
 # endregion

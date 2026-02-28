@@ -44,14 +44,32 @@ def validate_password(user: User, password: str) -> bool:
 
 
 @overload
-async def parse_jwt(token: str, db: Database, *, for_type: TokenType | None = None, strict: Literal[True] = True) -> User: ...
+async def parse_jwt(
+    token: str,
+    db: Database,
+    *,
+    for_type: TokenType | None = None,
+    strict: Literal[True] = True,
+) -> User: ...
 
 
 @overload
-async def parse_jwt(token: str, db: Database, *, for_type: TokenType | None = None, strict: Literal[False] = False) -> User | None: ...
+async def parse_jwt(
+    token: str,
+    db: Database,
+    *,
+    for_type: TokenType | None = None,
+    strict: Literal[False] = False,
+) -> User | None: ...
 
 
-async def parse_jwt(token: str, db: Database, *, for_type: TokenType | None = None, strict: bool = True) -> User | None:
+async def parse_jwt(
+    token: str,
+    db: Database,
+    *,
+    for_type: TokenType | None = None,
+    strict: bool = True,
+) -> User | None:
     """Validate a nested JWT and return the user if valid."""
     try:
         outer_payload: dict[str, Any] = decode(token, JWT_SECRET, algorithms=[ALGORITHM])  # Automatically checks expiry
@@ -85,7 +103,11 @@ async def parse_jwt(token: str, db: Database, *, for_type: TokenType | None = No
             return user
         else:
             if strict:
-                raise AppException(status_code=401, error_code=AppErrorCode.INVALID_TOKEN, detail=error or "Invalid token")
+                raise AppException(
+                    status_code=401,
+                    error_code=AppErrorCode.INVALID_TOKEN,
+                    detail=error or "Invalid token",
+                )
             return None
     except (InvalidTokenError, Exception) as e:
         if strict:
@@ -103,7 +125,11 @@ def refresh_token(user: User, db: Database) -> Token:
     return Token(access_token=token, token_type="bearer")
 
 
-def generate_token(user: User, token_type: Literal["access", "refresh"], scopes: list[str] | None = None) -> str:
+def generate_token(
+    user: User,
+    token_type: Literal["access", "refresh"],
+    scopes: list[str] | None = None,
+) -> str:
     """Generate a nested JWT: inner signed with user secret, outer with global secret."""
     if token_type == "access":
         expire = datetime.now(UTC) + timedelta(minutes=JWT_ACCESS_EXPIRATION_MINUTES)

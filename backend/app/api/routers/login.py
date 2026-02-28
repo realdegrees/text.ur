@@ -34,9 +34,19 @@ router = APIRouter(
 
 @router.post("/")
 @limiter.limit("5/minute", key_func=get_remote_address)
-async def login(request: Request, form_data: Annotated[OAuth2PasswordRequestForm, Depends()], db: Database, response: Response) -> Token:
+async def login(
+    request: Request,
+    form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
+    db: Database,
+    response: Response,
+) -> Token:
     """Return a JWT if the user is authenticated successfully."""
-    query = select(User).where(or_(User.username == form_data.username, User.email == form_data.username))
+    query = select(User).where(
+        or_(
+            User.username == form_data.username,
+            User.email == form_data.username,
+        )
+    )
     result = await db.exec(query)
     user = result.first()
     if user is None or not validate_password(user, form_data.password):
@@ -47,7 +57,11 @@ async def login(request: Request, form_data: Annotated[OAuth2PasswordRequestForm
         )
 
     if not user.verified:
-        raise AppException(status_code=403, detail="Forbidden: Email not verified", error_code=AppErrorCode.EMAIL_NOT_VERIFIED)
+        raise AppException(
+            status_code=403,
+            detail="Forbidden: Email not verified",
+            error_code=AppErrorCode.EMAIL_NOT_VERIFIED,
+        )
 
     token = Token(
         access_token=generate_token(user, "access"),
@@ -75,7 +89,12 @@ async def login(request: Request, form_data: Annotated[OAuth2PasswordRequestForm
 
 @router.post("/refresh")
 @limiter.limit("10/minute", key_func=get_remote_address)
-async def refresh(request: Request, response: Response, db: Database, user: User = Authenticate(token_type="refresh")) -> Token:
+async def refresh(
+    request: Request,
+    response: Response,
+    db: Database,
+    user: User = Authenticate(token_type="refresh"),
+) -> Token:
     """Refresh the access token given a valid refresh token."""
     token = Token(
         access_token=generate_token(user, "access"),
@@ -109,7 +128,12 @@ async def refresh(request: Request, response: Response, db: Database, user: User
 
 @router.post("/reset")
 @limiter.limit("3/minute", key_func=get_remote_address)
-async def reset_password(request: Request, db: Database, mail: Mail, email: str = Body(..., embed=True)) -> None:
+async def reset_password(
+    request: Request,
+    db: Database,
+    mail: Mail,
+    email: str = Body(..., embed=True),
+) -> None:
     """Send a password reset email with a presigned URL."""
     query = select(User).where(User.email == email)
     result = await db.exec(query)
@@ -156,12 +180,21 @@ async def reset_password(request: Request, db: Database, mail: Mail, email: str 
 
 @router.put("/reset/verify/{token}")
 @limiter.limit("5/minute", key_func=get_remote_address)
-async def reset_verify(request: Request, token: str, db: Database, body: PasswordResetVerify = Body(...)) -> None:
+async def reset_verify(
+    request: Request,
+    token: str,
+    db: Database,
+    body: PasswordResetVerify = Body(...),
+) -> None:
     """Confirm password reset using the presigned URL and update the user's password."""
     try:
         # Deserialize token to get token data (email + password hash for one-time use)
         serializer = URLSafeTimedSerializer(cfg.EMAIL_PRESIGN_SECRET)
-        token_data = serializer.loads(token, max_age=int(cfg.PASSWORD_RESET_LINK_EXPIRY_MINUTES * 60), salt="password-reset")
+        token_data = serializer.loads(
+            token,
+            max_age=int(cfg.PASSWORD_RESET_LINK_EXPIRY_MINUTES * 60),
+            salt="password-reset",
+        )
 
         # Handle both old tokens (string) and new tokens (dict) for backwards compatibility
         if isinstance(token_data, str):
@@ -172,17 +205,29 @@ async def reset_verify(request: Request, token: str, db: Database, body: Passwor
             pwd_hash_check = token_data.get("pwd")
 
     except (BadSignature, SignatureExpired) as e:
-        raise AppException(status_code=403, error_code=AppErrorCode.INVALID_TOKEN, detail="Invalid or expired token") from e
+        raise AppException(
+            status_code=403,
+            error_code=AppErrorCode.INVALID_TOKEN,
+            detail="Invalid or expired token",
+        ) from e
 
     query = select(User).where(User.email == email)
     result = await db.exec(query)
     user: User | None = result.first()
     if not user:
-        raise AppException(status_code=404, error_code=AppErrorCode.NOT_FOUND, detail="User not found")
+        raise AppException(
+            status_code=404,
+            error_code=AppErrorCode.NOT_FOUND,
+            detail="User not found",
+        )
 
     # Check if token has already been used (password changed since token was issued)
     if pwd_hash_check and user.password[:16] != pwd_hash_check:
-        raise AppException(status_code=403, error_code=AppErrorCode.TOKEN_ALREADY_USED, detail="Reset link has already been used")
+        raise AppException(
+            status_code=403,
+            error_code=AppErrorCode.TOKEN_ALREADY_USED,
+            detail="Reset link has already been used",
+        )
 
     # Update password and rotate user secret to invalidate all sessions
     user.password = hash_password(body.password)

@@ -232,6 +232,7 @@ const de = {
 			'E-Mail konnte nicht gesendet werden. Bitte versuchen Sie es später erneut.',
 		task_already_correct: 'Sie haben diese Frage bereits richtig beantwortet',
 		task_no_attempts_left: 'Keine Versuche mehr für diese Frage übrig',
+		document_limit_exceeded: 'Diese Gruppe hat die maximale Anzahl an Dokumenten erreicht',
 		already_verified: 'Dieses Konto ist bereits verifiziert'
 	},
 
@@ -458,6 +459,9 @@ const de = {
 		updated: 'Aktualisiert: {date}',
 		editSettings: 'Dokumenteinstellungen bearbeiten',
 		deleteConfirm: 'Löschen?',
+		noDocuments: 'Noch keine Dokumente',
+		reorderSuccess: 'Dokumente erfolgreich neu geordnet',
+		documentCount: '{count}/{max} Dokumente',
 		tagInfo: {
 			title: 'Dokument-Tags',
 			description:

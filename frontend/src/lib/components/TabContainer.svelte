@@ -1,18 +1,33 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
+	import { browser } from '$app/environment';
 
 	let {
 		tabs,
-		activeTab = 0,
+		activeTab = $bindable(0),
 		variant = 'default'
 	}: {
-		tabs: { label: string; snippet: Snippet<[]> }[];
+		tabs: { label: string; snippet: Snippet<[]>; id?: string }[];
 		activeTab?: number;
 		variant?: 'default' | 'compact';
 	} = $props();
 
+	// On mount, sync activeTab from the URL hash if tabs have ids
+	if (browser) {
+		const hash = window.location.hash.slice(1);
+		if (hash) {
+			const idx = tabs.findIndex((t) => t.id === hash);
+			if (idx >= 0) activeTab = idx;
+		}
+	}
+
 	function selectTab(index: number) {
 		activeTab = index;
+		// Update URL hash when tabs have ids
+		const id = tabs[index]?.id;
+		if (browser && id) {
+			history.replaceState(null, '', `#${id}`);
+		}
 	}
 
 	const isCompact = $derived(variant === 'compact');

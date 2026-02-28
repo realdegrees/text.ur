@@ -21,7 +21,10 @@ def custom_openapi(app: FastAPI) -> None:  # noqa: C901
         openapi_schema["components"]["schemas"][name] = schema
 
     # Inject custom schemas
-    add_schema("DocumentCreate", DocumentCreate.model_json_schema(ref_template="#/components/schemas/{model}"))
+    add_schema(
+        "DocumentCreate",
+        DocumentCreate.model_json_schema(ref_template="#/components/schemas/{model}"),
+    )
 
     # Build the tags section dynamically if missing
     if "tags" not in openapi_schema:
@@ -33,7 +36,13 @@ def custom_openapi(app: FastAPI) -> None:  # noqa: C901
 
     # Sorts tags: Login first, Register second, WebSocket Events last, then alphabetically
     openapi_schema["tags"].sort(
-        key=lambda x: (x["name"] != "Register", x["name"] != "Login", x["name"] != "Logout", x["name"] == "WebSocket Events", x["name"])
+        key=lambda x: (
+            x["name"] != "Register",
+            x["name"] != "Login",
+            x["name"] != "Logout",
+            x["name"] == "WebSocket Events",
+            x["name"],
+        )
     )
 
     # Inject the websocket testing route into the OpenAPI schema dynamically

@@ -45,7 +45,12 @@ from util.queries import Guard
     ],
 )
 async def test_comment_access_predicate_and_sql(
-    db: SQLModelAsyncSession, user_has_perm: bool, view_mode: ViewMode, comment_visibility: Visibility, is_author: bool, expected: bool
+    db: SQLModelAsyncSession,
+    user_has_perm: bool,
+    view_mode: ViewMode,
+    comment_visibility: Visibility,
+    is_author: bool,
+    expected: bool,
 ) -> None:
     """Test the comment_access predicate and SQL clause against the truth table.
 

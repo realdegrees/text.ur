@@ -132,9 +132,7 @@ def advisory_lock_sync(
     conn.autocommit = True
     try:
         with conn.cursor() as cur:
-            cur.execute(
-                "SELECT pg_try_advisory_lock(%s)", (lock_id,)
-            )
+            cur.execute("SELECT pg_try_advisory_lock(%s)", (lock_id,))
             acquired: bool = cur.fetchone()[0]
         try:
             yield acquired

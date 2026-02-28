@@ -5,7 +5,9 @@ from models.filter import Filter, FilterableField
 from models.sort import Sort
 
 
-def get_sorts_dependency(filterable_field_data: list[FilterableField]) -> Callable[[], Depends]:
+def get_sorts_dependency(
+    filterable_field_data: list[FilterableField],
+) -> Callable[[], Depends]:
     """Generate a FastAPI dependency to parse sorts from query parameters."""
 
     async def sorts(
