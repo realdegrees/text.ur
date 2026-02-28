@@ -36,6 +36,15 @@ class ApiClient {
 	private refreshPromise: Promise<boolean> | null = null;
 	/** ETag cache for download() — maps URL to { etag, data } */
 	private etagCache = new Map<string, { etag: string; data: ArrayBuffer }>();
+	/**
+	 * When true, GET requests bypass the browser HTTP cache (`cache: 'reload'`).
+	 * Set after a successful mutation so that SvelteKit `invalidate()` re-fetches
+	 * see fresh data instead of a stale `max-age` / `stale-while-revalidate`
+	 * response.  Reset on the next client-side navigation via
+	 * `resetCacheBypass()`, which is called from the root layout's
+	 * `afterNavigate` hook.
+	 */
+	private forceReload = false;
 
 	/**
 	 * Get the configured base URL.
@@ -49,6 +58,25 @@ class ApiClient {
 	 */
 	getConnectionId(): string {
 		return this.connectionId;
+	}
+
+	/**
+	 * Mark that a mutation just succeeded.  All subsequent GET requests will
+	 * use `cache: 'reload'` to bypass the browser HTTP cache until
+	 * `resetCacheBypass()` is called (typically on the next navigation).
+	 */
+	private markMutation() {
+		this.forceReload = true;
+	}
+
+	/**
+	 * Re-enable normal browser HTTP caching for GET requests.
+	 *
+	 * Call this from the root layout's `afterNavigate` callback so that
+	 * mutation-triggered cache bypass does not persist across navigations.
+	 */
+	resetCacheBypass() {
+		this.forceReload = false;
 	}
 
 	/**
@@ -231,8 +259,14 @@ class ApiClient {
 		const actualFetch = fetchFnOverride ?? fetch!;
 		const url = this.buildUrl(input, { filters, sort });
 
+		const method = init.method ?? 'GET';
+
 		const requestInit: RequestInit = {
 			...init,
+			cache:
+				method === 'GET' && this.forceReload
+					? 'reload'
+					: init.cache,
 			credentials: init.credentials || 'include',
 			headers: {
 				...init.headers,
@@ -271,6 +305,13 @@ class ApiClient {
 		// Handle error responses
 		if (!response.ok) {
 			return this.handleErrorResponse(response);
+		}
+
+		// After a successful mutation, mark the client so that subsequent
+		// GET requests (e.g. from SvelteKit invalidate) bypass the browser
+		// HTTP cache and receive fresh data.
+		if (method !== 'GET' && method !== 'HEAD') {
+			this.markMutation();
 		}
 
 		// Parse successful response

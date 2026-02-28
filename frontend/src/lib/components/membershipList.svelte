@@ -2,6 +2,7 @@
 	import type { MembershipRead, UserRead } from '$api/types';
 	import type { Paginated } from '$api/pagination';
 	import { api } from '$api/client.js';
+	import { invalidate } from '$app/navigation';
 	import LL from '$i18n/i18n-svelte';
 	import { notification } from '$lib/stores/notificationStore';
 	import InfiniteScrollList from '$lib/components/infiniteScrollList.svelte';
@@ -79,7 +80,7 @@
 		}
 
 		notification('success', $LL.memberships.invitationAccepted());
-		window.location.reload();
+		await invalidate('app:memberships');
 	}
 
 	/**
@@ -96,7 +97,7 @@
 		}
 
 		notification('success', $LL.memberships.invitationRejected());
-		window.location.reload();
+		await invalidate('app:memberships');
 	}
 
 	/**
