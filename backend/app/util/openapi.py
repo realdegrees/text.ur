@@ -17,11 +17,18 @@ def custom_openapi(app: FastAPI) -> None:  # noqa: C901
 
     def add_schema(name: str, schema: dict) -> None:
         if name in openapi_schema["components"]["schemas"]:
-            logger.warning(f"Schema {name} already exists in OpenAPI schema. Overwriting.")
+            logger.warning(
+                f"Schema {name} already exists in OpenAPI schema. Overwriting."
+            )
         openapi_schema["components"]["schemas"][name] = schema
 
     # Inject custom schemas
-    add_schema("DocumentCreate", DocumentCreate.model_json_schema(ref_template="#/components/schemas/{model}"))
+    add_schema(
+        "DocumentCreate",
+        DocumentCreate.model_json_schema(
+            ref_template="#/components/schemas/{model}"
+        ),
+    )
 
     # Build the tags section dynamically if missing
     if "tags" not in openapi_schema:
@@ -33,7 +40,13 @@ def custom_openapi(app: FastAPI) -> None:  # noqa: C901
 
     # Sorts tags: Login first, Register second, WebSocket Events last, then alphabetically
     openapi_schema["tags"].sort(
-        key=lambda x: (x["name"] != "Register", x["name"] != "Login", x["name"] != "Logout", x["name"] == "WebSocket Events", x["name"])
+        key=lambda x: (
+            x["name"] != "Register",
+            x["name"] != "Login",
+            x["name"] != "Logout",
+            x["name"] == "WebSocket Events",
+            x["name"],
+        )
     )
 
     # Inject the websocket testing route into the OpenAPI schema dynamically
@@ -74,7 +87,10 @@ def custom_openapi(app: FastAPI) -> None:  # noqa: C901
                 # Find the corresponding route to extract guards
                 for route in app.routes:
                     if hasattr(route, "path") and hasattr(route, "methods"):
-                        if route.path == path and method_name.upper() in route.methods:
+                        if (
+                            route.path == path
+                            and method_name.upper() in route.methods
+                        ):
                             # Check if route uses PaginatedResource with guards
                             guards = _extract_guards_from_route(route)
                             if guards:
@@ -86,12 +102,16 @@ def custom_openapi(app: FastAPI) -> None:  # noqa: C901
                                             guard_exclusions.extend(excluded)
 
                                 if guard_exclusions:
-                                    excluded_fields = "', '".join(sorted(set(guard_exclusions)))
+                                    excluded_fields = "', '".join(
+                                        sorted(set(guard_exclusions))
+                                    )
                                     exclusion_notice = (
                                         f"<br/><br/><strong>Field Exclusions:</strong> The following fields are always excluded from this endpoint's "
                                         f"responses due to access control rules: <code>{excluded_fields}</code>"
                                     )
-                                    method["description"] = method["description"] + exclusion_notice
+                                    method["description"] = (
+                                        method["description"] + exclusion_notice
+                                    )
                             break
 
     return openapi_schema
@@ -108,7 +128,10 @@ def _extract_guards_from_route(route: object) -> list:  # noqa: C901
     def search_dependencies(dependant: object) -> None:
         if hasattr(dependant, "call"):
             # Check if this is a PaginatedResource by inspecting closure
-            if hasattr(dependant.call, "__closure__") and dependant.call.__closure__:
+            if (
+                hasattr(dependant.call, "__closure__")
+                and dependant.call.__closure__
+            ):
                 for cell in dependant.call.__closure__:
                     try:
                         if isinstance(cell.cell_contents, (list, tuple)):

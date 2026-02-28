@@ -30,11 +30,21 @@ async def _make_scenario(
     document = await db.run_sync(lambda s: f.DocumentFactory(group=group))
 
     # user is a regular member
-    await db.run_sync(lambda s: f.MembershipFactory(user=user, group=group, accepted=True))
+    await db.run_sync(
+        lambda s: f.MembershipFactory(user=user, group=group, accepted=True)
+    )
     # other_user is a regular member
-    await db.run_sync(lambda s: f.MembershipFactory(user=other_user, group=group, accepted=True))
+    await db.run_sync(
+        lambda s: f.MembershipFactory(
+            user=other_user, group=group, accepted=True
+        )
+    )
     # admin_user is owner (admin-level)
-    await db.run_sync(lambda s: f.MembershipFactory(user=admin_user, group=group, is_owner=True, accepted=True))
+    await db.run_sync(
+        lambda s: f.MembershipFactory(
+            user=admin_user, group=group, is_owner=True, accepted=True
+        )
+    )
 
     # Create ScoreConfig with defaults
     await db.run_sync(lambda s: f.ScoreConfigFactory(group=group))
@@ -50,7 +60,11 @@ async def _make_scenario(
     ]
     group_reactions = {}
     for emoji, order in emojis:
-        gr = await db.run_sync(lambda s, e=emoji, o=order: f.GroupReactionFactory(group=group, emoji=e, order=o))
+        gr = await db.run_sync(
+            lambda s, e=emoji, o=order: f.GroupReactionFactory(
+                group=group, emoji=e, order=o
+            )
+        )
         group_reactions[emoji] = gr
 
     await db.flush()
@@ -128,7 +142,9 @@ class TestScoreHighlightsAndComments:
         assert score.breakdown.comment_points == 5
         assert score.total == 5
 
-    async def test_highlight_plus_comment(self, db: SQLModelAsyncSession) -> None:
+    async def test_highlight_plus_comment(
+        self, db: SQLModelAsyncSession
+    ) -> None:
         """A root comment with BOTH annotation and content gives 6 pt."""
         s = await _make_scenario(db)
 
@@ -208,7 +224,9 @@ class TestScoreReactions:
         assert score.breakdown.reactions_given == 1
         assert score.breakdown.reaction_given_points == 2
 
-    async def test_reaction_received_from_normal(self, db: SQLModelAsyncSession) -> None:
+    async def test_reaction_received_from_normal(
+        self, db: SQLModelAsyncSession
+    ) -> None:
         """Receiving a reaction from a normal user earns points (2)."""
         s = await _make_scenario(db)
         gr = s["group_reactions"][Emoji.THUMBS_UP]
@@ -236,7 +254,9 @@ class TestScoreReactions:
         assert score.breakdown.reactions_received_from_admin == 0
         assert score.breakdown.reaction_received_points == 2
 
-    async def test_reaction_received_from_admin(self, db: SQLModelAsyncSession) -> None:
+    async def test_reaction_received_from_admin(
+        self, db: SQLModelAsyncSession
+    ) -> None:
         """Receiving a reaction from an admin/owner earns admin_points (4)."""
         s = await _make_scenario(db)
         gr = s["group_reactions"][Emoji.FIRE]
@@ -321,7 +341,9 @@ class TestScoreDocumentFilter:
         s = await _make_scenario(db)
 
         # Create a second document in the same group
-        doc2 = await db.run_sync(lambda sess: f.DocumentFactory(group=s["group"]))
+        doc2 = await db.run_sync(
+            lambda sess: f.DocumentFactory(group=s["group"])
+        )
         await db.flush()
 
         # Comment on doc1
@@ -348,20 +370,28 @@ class TestScoreDocumentFilter:
         assert score_all.total == 10  # 2 * 5
 
         # Filtered to doc1
-        score_doc1 = await _compute_score(db, s["group"].id, s["user"].id, document_id=s["document"].id)
+        score_doc1 = await _compute_score(
+            db, s["group"].id, s["user"].id, document_id=s["document"].id
+        )
         assert score_doc1.breakdown.comments == 1
         assert score_doc1.total == 5
 
         # Filtered to doc2
-        score_doc2 = await _compute_score(db, s["group"].id, s["user"].id, document_id=doc2.id)
+        score_doc2 = await _compute_score(
+            db, s["group"].id, s["user"].id, document_id=doc2.id
+        )
         assert score_doc2.breakdown.comments == 1
         assert score_doc2.total == 5
 
-    async def test_filter_empty_document(self, db: SQLModelAsyncSession) -> None:
+    async def test_filter_empty_document(
+        self, db: SQLModelAsyncSession
+    ) -> None:
         """Filtering to a document with no activity gives zero score."""
         s = await _make_scenario(db)
 
-        doc_empty = await db.run_sync(lambda sess: f.DocumentFactory(group=s["group"]))
+        doc_empty = await db.run_sync(
+            lambda sess: f.DocumentFactory(group=s["group"])
+        )
         await db.flush()
 
         # Activity only on the original document
@@ -374,17 +404,23 @@ class TestScoreDocumentFilter:
         )
         await db.flush()
 
-        score = await _compute_score(db, s["group"].id, s["user"].id, document_id=doc_empty.id)
+        score = await _compute_score(
+            db, s["group"].id, s["user"].id, document_id=doc_empty.id
+        )
         assert score.total == 0
         assert score.breakdown.comments == 0
 
-    async def test_filter_reactions_scoped(self, db: SQLModelAsyncSession) -> None:
+    async def test_filter_reactions_scoped(
+        self, db: SQLModelAsyncSession
+    ) -> None:
         """Reaction counts are scoped to the specified document."""
         s = await _make_scenario(db)
         gr_heart = s["group_reactions"][Emoji.HEART]
         gr_fire = s["group_reactions"][Emoji.FIRE]
 
-        doc2 = await db.run_sync(lambda sess: f.DocumentFactory(group=s["group"]))
+        doc2 = await db.run_sync(
+            lambda sess: f.DocumentFactory(group=s["group"])
+        )
         await db.flush()
 
         # Comment + reaction on doc1
@@ -421,7 +457,9 @@ class TestScoreDocumentFilter:
         await db.flush()
 
         # Filter to doc1: 1 comment (5) + 1 reaction received (2) = 7
-        score = await _compute_score(db, s["group"].id, s["user"].id, document_id=s["document"].id)
+        score = await _compute_score(
+            db, s["group"].id, s["user"].id, document_id=s["document"].id
+        )
         assert score.breakdown.comments == 1
         assert score.breakdown.reactions_received == 1
         assert score.total == 7

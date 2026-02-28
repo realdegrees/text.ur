@@ -17,7 +17,9 @@ SCORE_CACHE_TTL = 300  # 5 minutes
 
 def _build_redis_url() -> str:
     """Build Redis URL for cache database (db 2)."""
-    password_part = f":{quote(cfg.REDIS_PASSWORD, safe='')}@" if cfg.REDIS_PASSWORD else ""
+    password_part = (
+        f":{quote(cfg.REDIS_PASSWORD, safe='')}@" if cfg.REDIS_PASSWORD else ""
+    )
     return f"redis://{password_part}{cfg.REDIS_HOST}:{cfg.REDIS_PORT}/2"
 
 

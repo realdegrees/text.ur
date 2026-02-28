@@ -44,17 +44,37 @@ def validate_password(user: User, password: str) -> bool:
 
 
 @overload
-async def parse_jwt(token: str, db: Database, *, for_type: TokenType | None = None, strict: Literal[True] = True) -> User: ...
+async def parse_jwt(
+    token: str,
+    db: Database,
+    *,
+    for_type: TokenType | None = None,
+    strict: Literal[True] = True,
+) -> User: ...
 
 
 @overload
-async def parse_jwt(token: str, db: Database, *, for_type: TokenType | None = None, strict: Literal[False] = False) -> User | None: ...
+async def parse_jwt(
+    token: str,
+    db: Database,
+    *,
+    for_type: TokenType | None = None,
+    strict: Literal[False] = False,
+) -> User | None: ...
 
 
-async def parse_jwt(token: str, db: Database, *, for_type: TokenType | None = None, strict: bool = True) -> User | None:
+async def parse_jwt(
+    token: str,
+    db: Database,
+    *,
+    for_type: TokenType | None = None,
+    strict: bool = True,
+) -> User | None:
     """Validate a nested JWT and return the user if valid."""
     try:
-        outer_payload: dict[str, Any] = decode(token, JWT_SECRET, algorithms=[ALGORITHM])  # Automatically checks expiry
+        outer_payload: dict[str, Any] = decode(
+            token, JWT_SECRET, algorithms=[ALGORITHM]
+        )  # Automatically checks expiry
         user_id: str | None = outer_payload.get("sub")
         inner_token: str | None = outer_payload.get("inner")
         token_type: str | None = outer_payload.get("type")
@@ -72,7 +92,9 @@ async def parse_jwt(token: str, db: Database, *, for_type: TokenType | None = No
             if not user:
                 return None, "User not found"
 
-            inner_payload: dict[str, Any] = decode(inner_token, user.secret, algorithms=[ALGORITHM])
+            inner_payload: dict[str, Any] = decode(
+                inner_token, user.secret, algorithms=[ALGORITHM]
+            )
             sub: str | None = inner_payload.get("sub")
 
             if sub is None or str(sub) != str(user_id):
@@ -85,14 +107,20 @@ async def parse_jwt(token: str, db: Database, *, for_type: TokenType | None = No
             return user
         else:
             if strict:
-                raise AppException(status_code=401, error_code=AppErrorCode.INVALID_TOKEN, detail=error or "Invalid token")
+                raise AppException(
+                    status_code=401,
+                    error_code=AppErrorCode.INVALID_TOKEN,
+                    detail=error or "Invalid token",
+                )
             return None
     except (InvalidTokenError, Exception) as e:
         if strict:
             raise AppException(
                 status_code=401,
                 error_code=AppErrorCode.INVALID_TOKEN,
-                detail=str(e) if isinstance(e, InvalidTokenError) else "Invalid token",
+                detail=str(e)
+                if isinstance(e, InvalidTokenError)
+                else "Invalid token",
             ) from e
         return None
 
@@ -103,12 +131,22 @@ def refresh_token(user: User, db: Database) -> Token:
     return Token(access_token=token, token_type="bearer")
 
 
-def generate_token(user: User, token_type: Literal["access", "refresh"], scopes: list[str] | None = None) -> str:
+def generate_token(
+    user: User,
+    token_type: Literal["access", "refresh"],
+    scopes: list[str] | None = None,
+) -> str:
     """Generate a nested JWT: inner signed with user secret, outer with global secret."""
     if token_type == "access":
-        expire = datetime.now(UTC) + timedelta(minutes=JWT_ACCESS_EXPIRATION_MINUTES)
+        expire = datetime.now(UTC) + timedelta(
+            minutes=JWT_ACCESS_EXPIRATION_MINUTES
+        )
     elif token_type == "refresh":
-        days = GUEST_ACCOUNT_TTL_DAYS if user.is_guest else JWT_REFRESH_EXPIRATION_DAYS
+        days = (
+            GUEST_ACCOUNT_TTL_DAYS
+            if user.is_guest
+            else JWT_REFRESH_EXPIRATION_DAYS
+        )
         expire = datetime.now(UTC) + timedelta(days=days)
 
     # Inner JWT (personal)
@@ -118,7 +156,9 @@ def generate_token(user: User, token_type: Literal["access", "refresh"], scopes:
         iat=datetime.now(UTC),
     )
     # Optionally add roles/permissions if available
-    inner_token = encode(inner_payload.model_dump(), user.secret, algorithm=ALGORITHM)
+    inner_token = encode(
+        inner_payload.model_dump(), user.secret, algorithm=ALGORITHM
+    )
 
     # Outer JWT (global)
     outer_payload = GlobalJWTPayload(
@@ -129,5 +169,7 @@ def generate_token(user: User, token_type: Literal["access", "refresh"], scopes:
         type=token_type,
         scopes=scopes,
     )
-    outer_token = encode(outer_payload.model_dump(), JWT_SECRET, algorithm=ALGORITHM)
+    outer_token = encode(
+        outer_payload.model_dump(), JWT_SECRET, algorithm=ALGORITHM
+    )
     return outer_token

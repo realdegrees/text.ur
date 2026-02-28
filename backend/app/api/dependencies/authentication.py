@@ -46,7 +46,9 @@ def Authenticate(  # noqa: C901
         if not token:
             if strict:
                 raise AppException(
-                    status_code=401, detail="Unauthorized: No access token provided", error_code=AppErrorCode.NOT_AUTHENTICATED
+                    status_code=401,
+                    detail="Unauthorized: No access token provided",
+                    error_code=AppErrorCode.NOT_AUTHENTICATED,
                 )
             return None
 
@@ -56,7 +58,11 @@ def Authenticate(  # noqa: C901
             return None
 
         if not user.verified and not user.is_guest:
-            raise AppException(status_code=403, detail="Forbidden: Email not verified", error_code=AppErrorCode.EMAIL_NOT_VERIFIED)
+            raise AppException(
+                status_code=403,
+                detail="Forbidden: Email not verified",
+                error_code=AppErrorCode.EMAIL_NOT_VERIFIED,
+            )
 
         context_path_params: dict[str, Any] = context.path_params
         context_query_params: QueryParams = context.query_params
@@ -72,7 +78,11 @@ def Authenticate(  # noqa: C901
                 body_data = {}
 
         # merge context_path_params and body_data, path takes precedence
-        merged_params = {**body_data, **context_path_params, **context_query_params}
+        merged_params = {
+            **body_data,
+            **context_path_params,
+            **context_query_params,
+        }
 
         if guards:
             query = select(User).where(User.id == int(user.id))
@@ -82,7 +92,11 @@ def Authenticate(  # noqa: C901
             result = await db.exec(query)
             user = result.first()
             if not user:
-                raise AppException(status_code=403, detail="Forbidden: Insufficient permissions", error_code=AppErrorCode.NOT_AUTHORIZED)
+                raise AppException(
+                    status_code=403,
+                    detail="Forbidden: Insufficient permissions",
+                    error_code=AppErrorCode.NOT_AUTHORIZED,
+                )
         else:
             q = await db.exec(select(User).where(User.id == int(user.id)))
             user = q.first()
@@ -97,7 +111,9 @@ def Authenticate(  # noqa: C901
     ) -> User | None:
         # Use cookies for authentication (consistent with HTTP endpoints)
         token: str | None = ws.cookies.get(f"{token_type}_token")
-        logger.info(f"[WS Auth] Token type: {token_type}, Token present: {token is not None}, Source: cookie")
+        logger.info(
+            f"[WS Auth] Token type: {token_type}, Token present: {token is not None}, Source: cookie"
+        )
         return await dependency(db, ws, token)
 
     async def dependency_http(

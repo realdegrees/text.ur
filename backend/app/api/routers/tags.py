@@ -20,7 +20,9 @@ router = APIRouter(
 @router.post("/", response_model=TagRead)
 async def create_tag(
     db: Database,
-    _: User = Authenticate(guards=[Guard.document_access({Permission.ADMINISTRATOR})]),
+    _: User = Authenticate(
+        guards=[Guard.document_access({Permission.ADMINISTRATOR})]
+    ),
     tag_create: TagCreate = Body(...),
     document: Document = Resource(Document, param_alias="document_id"),
 ) -> TagRead:
@@ -29,7 +31,9 @@ async def create_tag(
     Requires MANAGE_TAGS permission in the document's group.
     """
     # Check if document has reached max tag limit
-    result = await db.exec(select(func.count(Tag.id)).where(Tag.document_id == document.id))
+    result = await db.exec(
+        select(func.count(Tag.id)).where(Tag.document_id == document.id)
+    )
     tag_count = result.one()
     if tag_count >= config.MAX_TAGS_PER_DOCUMENT:
         raise AppException(
@@ -73,14 +77,20 @@ async def get_tag(
     """
     # Verify tag belongs to the document
     if tag.document_id != document.id:
-        raise AppException(status_code=404, error_code=AppErrorCode.NOT_FOUND, detail="Tag not found in this document")
+        raise AppException(
+            status_code=404,
+            error_code=AppErrorCode.NOT_FOUND,
+            detail="Tag not found in this document",
+        )
     return tag
 
 
 @router.put("/{tag_id}", response_model=TagRead)
 async def update_tag(
     db: Database,
-    _: User = Authenticate(guards=[Guard.document_access({Permission.ADMINISTRATOR})]),
+    _: User = Authenticate(
+        guards=[Guard.document_access({Permission.ADMINISTRATOR})]
+    ),
     tag_update: TagUpdate = Body(...),
     document: Document = Resource(Document, param_alias="document_id"),
     tag: Tag = Resource(Tag, param_alias="tag_id"),
@@ -91,7 +101,11 @@ async def update_tag(
     """
     # Verify tag belongs to the document
     if tag.document_id != document.id:
-        raise AppException(status_code=404, error_code=AppErrorCode.NOT_FOUND, detail="Tag not found in this document")
+        raise AppException(
+            status_code=404,
+            error_code=AppErrorCode.NOT_FOUND,
+            detail="Tag not found in this document",
+        )
 
     tag = await db.merge(tag)
     tag.sqlmodel_update(tag_update.model_dump(exclude_unset=True))
@@ -103,7 +117,9 @@ async def update_tag(
 @router.delete("/{tag_id}")
 async def delete_tag(
     db: Database,
-    _: User = Authenticate(guards=[Guard.document_access({Permission.ADMINISTRATOR})]),
+    _: User = Authenticate(
+        guards=[Guard.document_access({Permission.ADMINISTRATOR})]
+    ),
     document: Document = Resource(Document, param_alias="document_id"),
     tag: Tag = Resource(Tag, param_alias="tag_id"),
 ) -> dict[str, bool]:
@@ -114,7 +130,11 @@ async def delete_tag(
     """
     # Verify tag belongs to the document
     if tag.document_id != document.id:
-        raise AppException(status_code=404, error_code=AppErrorCode.NOT_FOUND, detail="Tag not found in this document")
+        raise AppException(
+            status_code=404,
+            error_code=AppErrorCode.NOT_FOUND,
+            detail="Tag not found in this document",
+        )
 
     await db.delete(tag)
     await db.commit()

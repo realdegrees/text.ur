@@ -61,7 +61,9 @@ async def _publish_reaction_event(
 async def add_reaction(
     db: Database,
     events: Events,
-    user: User = Authenticate(guards=[Guard.comment_access({Permission.ADD_REACTIONS})]),
+    user: User = Authenticate(
+        guards=[Guard.comment_access({Permission.ADD_REACTIONS})]
+    ),
     reaction_create: ReactionCreate = Body(...),
     comment: Comment = Resource(Comment, param_alias="comment_id"),
     x_connection_id: str | None = Header(None, alias="X-Connection-ID"),
@@ -145,7 +147,9 @@ async def add_reaction(
 async def remove_reaction(
     db: Database,
     events: Events,
-    user: User = Authenticate(guards=[Guard.comment_access({Permission.ADD_REACTIONS})]),
+    user: User = Authenticate(
+        guards=[Guard.comment_access({Permission.ADD_REACTIONS})]
+    ),
     comment: Comment = Resource(Comment, param_alias="comment_id"),
     x_connection_id: str | None = Header(None, alias="X-Connection-ID"),
 ) -> Response:
@@ -171,7 +175,9 @@ async def remove_user_reaction(
     db: Database,
     events: Events,
     user_id: int,
-    admin: User = Authenticate(guards=[Guard.comment_access({Permission.ADMINISTRATOR})]),
+    admin: User = Authenticate(
+        guards=[Guard.comment_access({Permission.ADMINISTRATOR})]
+    ),
     comment: Comment = Resource(Comment, param_alias="comment_id"),
     x_connection_id: str | None = Header(None, alias="X-Connection-ID"),
 ) -> Response:

@@ -24,7 +24,9 @@ class Event[Payload: PydanticBaseModel](PydanticBaseModel):
     resource_id: int | str | None
     resource: str | None
     type: str
-    originating_connection_id: str | None = None  # Connection that triggered this event (to avoid echo)
+    originating_connection_id: str | None = (
+        None  # Connection that triggered this event (to avoid echo)
+    )
 
 
 # Concrete event types for type generation

@@ -911,7 +911,7 @@ const createDocumentStore = () => {
 	// --- Task methods ---
 
 	const setTasks = (taskList: TaskRead[]) => {
-		_tasks = taskList.sort((a, b) => a.order - b.order);
+		_tasks = taskList.sort((a, b) => a.order - b.order || a.id - b.id);
 	};
 
 	const setTaskResponses = (responses: TaskResponseRead[]) => {
@@ -923,7 +923,7 @@ const createDocumentStore = () => {
 
 	/** Set tasks and responses atomically to avoid brief mismatched state on doc switch. */
 	const setTaskData = (taskList: TaskRead[], responses: TaskResponseRead[]) => {
-		_tasks = taskList.sort((a, b) => a.order - b.order);
+		_tasks = taskList.sort((a, b) => a.order - b.order || a.id - b.id);
 		_taskResponses.clear();
 		for (const r of responses) {
 			_taskResponses.set(r.task_id, r);

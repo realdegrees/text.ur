@@ -11,7 +11,9 @@ from typing import Literal
 from core.config import LOG_FILE_DIR
 
 # Context variable to store the current user for request-scoped logging
-current_user_context: ContextVar[str | None] = ContextVar("current_user", default=None)
+current_user_context: ContextVar[str | None] = ContextVar(
+    "current_user", default=None
+)
 
 # Global queue and listener for multi-process safe logging
 _log_queue: Queue | None = None
@@ -28,7 +30,9 @@ def get_current_user() -> str | None:
     return current_user_context.get()
 
 
-default_log_dir = log_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "logs"))
+default_log_dir = log_dir = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "..", "logs")
+)
 
 
 class LoggerExtra(dict):
@@ -88,11 +92,20 @@ def setup_queue_listener() -> None:
 
     # Console handler (always enabled)
     console_handler = logging.StreamHandler()
-    console_handler.setFormatter(logging.Formatter("[%(asctime)s][%(name)s][%(levelname)s] %(message)s"))
+    console_handler.setFormatter(
+        logging.Formatter("[%(asctime)s][%(name)s][%(levelname)s] %(message)s")
+    )
     handlers.append(console_handler)
 
     # File handlers (one per logger name)
-    for logger_name in ["requests", "database", "app", "mails", "events", "storage"]:
+    for logger_name in [
+        "requests",
+        "database",
+        "app",
+        "mails",
+        "events",
+        "storage",
+    ]:
         file_handler = RotatingFileHandler(
             os.path.join(log_directory, f"{logger_name}.log"),
             maxBytes=5 * 1024 * 1024,
@@ -100,12 +113,16 @@ def setup_queue_listener() -> None:
         )
         file_handler.setFormatter(JSONFormatter())
         # Add filter to only handle records from this logger
-        file_handler.addFilter(lambda record, name=logger_name: record.name == name)
+        file_handler.addFilter(
+            lambda record, name=logger_name: record.name == name
+        )
         handlers.append(file_handler)
 
     # Create queue and listener
     _log_queue = Queue(-1)  # Unlimited size
-    _queue_listener = QueueListener(_log_queue, *handlers, respect_handler_level=True)
+    _queue_listener = QueueListener(
+        _log_queue, *handlers, respect_handler_level=True
+    )
     _queue_listener.start()
 
 
@@ -120,7 +137,9 @@ def stop_queue_listener() -> None:
         _queue_listener = None
 
 
-def get_logger(name: Literal["requests", "database", "app", "mails", "events", "storage"]) -> logging.Logger:
+def get_logger(
+    name: Literal["requests", "database", "app", "mails", "events", "storage"],
+) -> logging.Logger:
     """Return a logger with the specified name.
 
     When using multiple workers, logs are sent through a queue to a listener
@@ -149,7 +168,11 @@ def get_logger(name: Literal["requests", "database", "app", "mails", "events", "
         file_handler.setFormatter(JSONFormatter())
 
         console_handler = logging.StreamHandler()
-        console_handler.setFormatter(logging.Formatter("[%(asctime)s][%(name)s][%(levelname)s] %(message)s"))
+        console_handler.setFormatter(
+            logging.Formatter(
+                "[%(asctime)s][%(name)s][%(levelname)s] %(message)s"
+            )
+        )
 
         logger.addHandler(file_handler)
         logger.addHandler(console_handler)

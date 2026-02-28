@@ -9,7 +9,7 @@ export const load: LayoutLoad = async ({ depends, fetch, params, parent }) => {
 	depends('app:documents');
 	const data = await parent();
 
-	// Fetch documents for this group
+	// Fetch first page of documents for this group, sorted by order
 	const results = await api.get<Paginated<DocumentRead>>(`/documents`, {
 		fetch,
 		filters: [
@@ -18,7 +18,8 @@ export const load: LayoutLoad = async ({ depends, fetch, params, parent }) => {
 				operator: '==',
 				value: params.groupid
 			}
-		]
+		],
+		sort: [{ field: 'order', direction: 'asc' }]
 	});
 	if (!results.success) {
 		notification(results.error);

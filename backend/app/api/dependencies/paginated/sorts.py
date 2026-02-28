@@ -5,7 +5,9 @@ from models.filter import Filter, FilterableField
 from models.sort import Sort
 
 
-def get_sorts_dependency(filterable_field_data: list[FilterableField]) -> Callable[[], Depends]:
+def get_sorts_dependency(
+    filterable_field_data: list[FilterableField],
+) -> Callable[[], Depends]:
     """Generate a FastAPI dependency to parse sorts from query parameters."""
 
     async def sorts(
@@ -15,7 +17,11 @@ def get_sorts_dependency(filterable_field_data: list[FilterableField]) -> Callab
             alias="sort",
             description=(
                 "<details><summary>Expand to view available sorting fields</summary>"
-                "<pre>" + "\n".join(f"❖ {field.name}" for field in filterable_field_data) + "</pre></details>"
+                "<pre>"
+                + "\n".join(
+                    f"❖ {field.name}" for field in filterable_field_data
+                )
+                + "</pre></details>"
             ),
         ),
     ) -> list[Sort]:
@@ -26,7 +32,9 @@ def get_sorts_dependency(filterable_field_data: list[FilterableField]) -> Callab
             if not key.startswith("sort[") or value not in ("asc", "desc"):
                 continue
             field = key[len("sort") :].replace("[", "").replace("]", "")
-            is_valid_field = next((f for f in filterable_field_data if f.name == field), None)
+            is_valid_field = next(
+                (f for f in filterable_field_data if f.name == field), None
+            )
             if is_valid_field:
                 sorts.append(Sort(field=field, direction=value))
 

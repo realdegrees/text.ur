@@ -45,9 +45,13 @@ class EmailManager:
         }
         missing = [k for k, v in required.items() if not v]
         if missing and not DEBUG:
-            raise RuntimeError("Missing SMTP configuration: " + ", ".join(missing))
+            raise RuntimeError(
+                "Missing SMTP configuration: " + ", ".join(missing)
+            )
         if SMTP_FROM_EMAIL and "@" not in SMTP_FROM_EMAIL:
-            raise RuntimeError(f"Invalid SMTP_FROM_EMAIL: '{SMTP_FROM_EMAIL}' is missing '@'")
+            raise RuntimeError(
+                f"Invalid SMTP_FROM_EMAIL: '{SMTP_FROM_EMAIL}' is missing '@'"
+            )
 
         self._smtp_available = False
         mail_logger.info(
@@ -93,7 +97,9 @@ class EmailManager:
             self._smtp_available = True
             return True
         except smtplib.SMTPAuthenticationError as e:
-            raise RuntimeError(f"SMTP authentication failed for user '{SMTP_USER}': {e}") from e
+            raise RuntimeError(
+                f"SMTP authentication failed for user '{SMTP_USER}': {e}"
+            ) from e
         except Exception as e:
             mail_logger.warning(
                 "SMTP connection failed: %s. Email sending will be unavailable — email content will be logged on send attempts.",
@@ -102,28 +108,48 @@ class EmailManager:
             self._smtp_available = False
             return False
 
-    def generate_verification_link(self, email: str, router: APIRouter, *, salt: str, confirm_route: str) -> str:
+    def generate_verification_link(
+        self, email: str, router: APIRouter, *, salt: str, confirm_route: str
+    ) -> str:
         """Generate a signed verification link."""
         serializer = URLSafeTimedSerializer(EMAIL_PRESIGN_SECRET)
         token = serializer.dumps(email, salt=salt)
         return f"{BACKEND_BASEURL}/api{router.url_path_for(confirm_route, token=token)}"
 
-    def send_email(self, target_email: str, subject: str, template: str, template_vars: dict[str, Any]) -> None:
+    def send_email(
+        self,
+        target_email: str,
+        subject: str,
+        template: str,
+        template_vars: dict[str, Any],
+    ) -> None:
         """Send an email with templated HTML and plain text bodies."""
         # Render HTML email body
         try:
             html_body = JINJA_ENV.get_template(template).render(**template_vars)
         except TemplateNotFound as e:
-            mail_logger.error("Email template '%s' not found. Ensure templates directory exists and contains the template.", template)
-            raise HTTPException(status_code=500, detail=f"Email template '{template}' not found") from e
+            mail_logger.error(
+                "Email template '%s' not found. Ensure templates directory exists and contains the template.",
+                template,
+            )
+            raise HTTPException(
+                status_code=500, detail=f"Email template '{template}' not found"
+            ) from e
 
         # Render plain text email body
         # Try to load .txt version, fall back to stripping HTML if not found
-        text_template_name = template.replace(".jinja", ".txt").replace(".html", ".txt")
+        text_template_name = template.replace(".jinja", ".txt").replace(
+            ".html", ".txt"
+        )
         try:
-            plain_text_body = JINJA_ENV.get_template(text_template_name).render(**template_vars)
+            plain_text_body = JINJA_ENV.get_template(text_template_name).render(
+                **template_vars
+            )
         except TemplateNotFound:
-            mail_logger.warning("Plain text template '%s' not found, falling back to HTML stripping", text_template_name)
+            mail_logger.warning(
+                "Plain text template '%s' not found, falling back to HTML stripping",
+                text_template_name,
+            )
             soup: BeautifulSoup = BeautifulSoup(html_body, "html.parser")
             plain_text_body = soup.get_text()
 
@@ -137,7 +163,9 @@ class EmailManager:
         msg["X-Mailer"] = "text.ur"
         msg["X-Auto-Response-Suppress"] = "OOF, DR, RN, NRN, AutoReply"
 
-        mail_logger.debug(f"\n[To: {target_email}]\n[Subject: {subject}]\n[Template: {template}]\n[Vars: {template_vars}]")
+        mail_logger.debug(
+            f"\n[To: {target_email}]\n[Subject: {subject}]\n[Template: {template}]\n[Vars: {template_vars}]"
+        )
 
         msg.attach(MIMEText(plain_text_body, "plain", "utf-8"))
         msg.attach(MIMEText(html_body, "html", "utf-8"))

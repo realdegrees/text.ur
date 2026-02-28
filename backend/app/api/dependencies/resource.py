@@ -24,7 +24,8 @@ def Resource[ResourceModel: BaseModel](
     key_column: ColumnElement | None = None,
     param_alias: str = DEFAULT_ID_ALIAS,
     index_field_type: type = int,
-    model_validator: Callable[[ResourceModel, User | None], ResourceModel] | None = None,
+    model_validator: Callable[[ResourceModel, User | None], ResourceModel]
+    | None = None,
     raise_on_not_found: bool = True,
 ) -> Callable[..., ResourceModel]: ...
 
@@ -36,7 +37,8 @@ def Resource[ResourceModel: BaseModel](
     key_column: ColumnElement | None = None,
     param_alias: str = DEFAULT_ID_ALIAS,
     index_field_type: type = int,
-    model_validator: Callable[[ResourceModel, User | None], ResourceModel] | None = None,
+    model_validator: Callable[[ResourceModel, User | None], ResourceModel]
+    | None = None,
     raise_on_not_found: bool = False,
 ) -> Callable[..., ResourceModel | None]: ...
 
@@ -47,7 +49,8 @@ def Resource[ResourceModel: BaseModel](
     key_column: ColumnElement | None = None,
     param_alias: str = DEFAULT_ID_ALIAS,
     index_field_type: type = int,
-    model_validator: Callable[[ResourceModel, User | None], ResourceModel] | None = None,
+    model_validator: Callable[[ResourceModel, User | None], ResourceModel]
+    | None = None,
     raise_on_not_found: bool = True,
 ) -> Callable[..., ResourceModel] | Callable[..., ResourceModel | None]:
     """Customizable resource dependency."""
@@ -56,7 +59,9 @@ def Resource[ResourceModel: BaseModel](
 
     async def resource_dependency(
         db: Database,
-        resource_id: int | str = Path(alias=param_alias, description=f"{resource.__name__} identifier"),  # type: ignore[valid-type]
+        resource_id: int | str = Path(
+            alias=param_alias, description=f"{resource.__name__} identifier"
+        ),  # type: ignore[valid-type]
     ) -> ResourceModel | None:
         """Load a single resource instance."""
         typed_resource_id = resource_id
@@ -73,7 +78,9 @@ def Resource[ResourceModel: BaseModel](
         result = await db.exec(query)
         res = result.first()
         if res is None and raise_on_not_found:
-            raise HTTPException(status_code=404, detail=f"{resource.__name__} not found")
+            raise HTTPException(
+                status_code=404, detail=f"{resource.__name__} not found"
+            )
         return cast(ResourceModel, res) if res else None
 
     async def dependency(

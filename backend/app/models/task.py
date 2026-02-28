@@ -57,7 +57,9 @@ def _validate_answer_type_fields(
     if answer_type == AnswerType.MULTIPLE_CHOICE:
         resolved = options or []
         if len(resolved) < 2:
-            raise ValueError("Multiple choice tasks require at least 2 options.")
+            raise ValueError(
+                "Multiple choice tasks require at least 2 options."
+            )
         if not any(o.is_correct for o in resolved):
             raise ValueError("At least one option must be marked as correct.")
     elif answer_type == AnswerType.STRING:

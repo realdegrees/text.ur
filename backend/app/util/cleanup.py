@@ -56,19 +56,14 @@ async def _cleanup_old_logs() -> int:
             if not os.path.isfile(filepath):
                 continue
             # Only touch .log files and their rotated backups
-            if (
-                not filename.endswith(".log")
-                and ".log." not in filename
-            ):
+            if not filename.endswith(".log") and ".log." not in filename:
                 continue
             try:
                 if os.path.getmtime(filepath) < cutoff:
                     os.remove(filepath)
                     removed += 1
             except OSError:
-                logger.warning(
-                    "Failed to remove old log file: %s", filepath
-                )
+                logger.warning("Failed to remove old log file: %s", filepath)
 
         return removed
 
@@ -180,9 +175,7 @@ async def periodic_cleanup_loop(
                     removed_guests,
                 )
 
-            removed_unverified = (
-                await _cleanup_unverified_accounts()
-            )
+            removed_unverified = await _cleanup_unverified_accounts()
             if removed_unverified:
                 logger.info(
                     "[Cleanup] Removed %d unverified account(s)",

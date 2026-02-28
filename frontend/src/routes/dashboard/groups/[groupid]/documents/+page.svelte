@@ -1,32 +1,71 @@
 <script lang="ts">
-	import InfiniteTable from '$lib/components/infiniteScrollTable.svelte';
 	import type { DocumentRead } from '$api/types';
-	import LL from '$i18n/i18n-svelte';
-	import DocumentIcon from '~icons/material-symbols/description-outline';
-	import AddIcon from '~icons/material-symbols/add-2-rounded';
-	import EditIcon from '~icons/material-symbols/edit-outline';
-	import { api } from '$api/client';
 	import type { Paginated } from '$api/pagination';
-	import { sessionStore } from '$lib/runes/session.svelte.js';
+	import LL from '$i18n/i18n-svelte';
+	import AddIcon from '~icons/material-symbols/add-2-rounded';
+	import { api } from '$api/client';
+	import { sessionStore } from '$lib/runes/session.svelte';
 	import { notification } from '$lib/stores/notificationStore';
-	import { goto, invalidate } from '$app/navigation';
-	import { formatDateTime } from '$lib/util/dateFormat';
-	import ConfirmButton from '$lib/components/ConfirmButton.svelte';
-	import DocumentVisibility from '$lib/components/DocumentVisibility.svelte';
-	import DeleteIcon from '~icons/material-symbols/delete-outline';
+	import DocumentCard from '$lib/components/DocumentCard.svelte';
+	import { sortable } from '$lib/actions/sortable';
+	import { infiniteScroll } from '$lib/util/infiniteScroll.svelte';
 
 	let { data } = $props();
-	let documents = $derived(data.documents);
 	let group = $derived(data.membership.group);
+	let isAdmin = $derived(sessionStore.validatePermissions(['administrator']));
 
-	function handleDocumentClick(document: DocumentRead): void {
-		goto(`/documents/${document.id}`);
+	const scroll = infiniteScroll<DocumentRead>(
+		() => data.documents,
+		async (offset, limit) => {
+			const result = await api.get<Paginated<DocumentRead>>(
+				`/documents?offset=${offset}&limit=${limit}`,
+				{
+					sort: [{ field: 'order', direction: 'asc' }],
+					filters: [
+						{
+							field: 'group_id',
+							operator: '==',
+							value: group?.id
+						}
+					]
+				}
+			);
+			if (!result.success) {
+				notification(result.error);
+				return undefined;
+			}
+			return result.data;
+		},
+		25,
+		true
+	);
+
+	async function handleReorder(fromIndex: number, toIndex: number) {
+		const oldItems = [...scroll.items];
+
+		// Optimistically reorder the local list immediately
+		const newItems = [...oldItems];
+		const [moved] = newItems.splice(fromIndex, 1);
+		newItems.splice(toIndex, 0, moved);
+		scroll.data = { ...scroll.data, data: newItems };
+
+		// Persist to backend
+		const ids = newItems.map((d) => d.id);
+		const result = await api.update(`/groups/${group.id}/documents/reorder`, {
+			document_ids: ids
+		});
+
+		if (!result.success) {
+			// Revert on failure
+			scroll.data = { ...scroll.data, data: oldItems };
+			notification(result.error);
+		}
 	}
 </script>
 
 <div class="p-4">
 	<div class="mb-4 flex w-full flex-row items-center justify-between gap-2">
-		{#if sessionStore.validatePermissions(['administrator'])}
+		{#if isAdmin}
 			<a
 				href="/dashboard/groups/{group.id}/documents/create"
 				class="flex flex-row items-center gap-2 rounded bg-green-500/30 px-3 py-2.5 font-semibold shadow-inner shadow-black/30 transition hover:cursor-pointer hover:bg-green-500/40"
@@ -37,124 +76,24 @@
 		{/if}
 	</div>
 
-	{#key documents}
-		<InfiniteTable
-			columns={[
-				{
-					label: $LL.documents.documentName(),
-					width: '1fr',
-					snippet: nameSnippet
-				},
-				...(sessionStore.validatePermissions(['administrator'])
-					? [
-							{
-								label: $LL.visibility.label(),
-								width: '1fr',
-								snippet: visibilitySnippet
-							}
-						]
-					: []),
-				{
-					label: $LL.documents.created(),
-					width: '1fr',
-					snippet: dateSnippet
-				},
-				...(sessionStore.validatePermissions(['administrator'])
-					? [
-							{
-								label: $LL.actions(),
-								width: 'auto',
-								snippet: actionsSnippet
-							}
-						]
-					: [])
-			]}
-			data={documents}
-			loadMore={async (offset, limit) => {
-				const result = await api.get<Paginated<DocumentRead>>(
-					`/documents?offset=${offset}&limit=${limit}`,
-					{
-						sort: [{ field: 'created_at', direction: 'desc' }],
-						filters: [
-							{
-								field: 'group_id',
-								operator: '==',
-								value: group?.id
-							}
-						]
-					}
-				);
-				if (!result.success) {
-					notification(result.error);
-					return undefined;
-				}
-				return result.data;
-			}}
-			step={20}
-			rowBgClass="bg-inset/90"
-		/>
-	{/key}
+	{#if scroll.items.length === 0 && !scroll.hasMore}
+		<p class="py-8 text-center text-text/50">{$LL.documents.noDocuments()}</p>
+	{:else}
+		<div
+			bind:this={scroll.scrollContainer.node}
+			class="h-full custom-scrollbar flex-1 overflow-y-auto"
+		>
+			<div
+				class="flex flex-col gap-2"
+				use:sortable={{ onReorder: handleReorder, enabled: isAdmin && scroll.items.length > 1 }}
+			>
+				{#each scroll.items as document (document.id)}
+					<DocumentCard {document} groupId={group.id} {isAdmin} />
+				{/each}
+			</div>
+
+			<!-- Infinite scroll sentinel -->
+			<div bind:this={scroll.sentinel.node} class="h-4 w-full"></div>
+		</div>
+	{/if}
 </div>
-
-{#snippet nameSnippet(document: DocumentRead)}
-	<button
-		onclick={() => handleDocumentClick(document)}
-		class="flex w-full flex-row items-center gap-2 text-left text-text transition-colors hover:text-primary"
-	>
-		<DocumentIcon class="h-5 w-5" />
-		<p class="text-sm font-semibold">{document.name}</p>
-	</button>
-{/snippet}
-
-{#snippet visibilitySnippet(document: DocumentRead)}
-	<div class="flex w-full items-center justify-start">
-		<DocumentVisibility {document} canEdit={sessionStore.validatePermissions(['administrator'])} />
-	</div>
-{/snippet}
-
-{#snippet dateSnippet(document: DocumentRead)}
-	<div class="flex flex-col gap-0.5">
-		<p class="text-sm text-text/90">{formatDateTime(document.created_at)}</p>
-		{#if document.updated_at && document.updated_at !== document.created_at}
-			<p class="text-xs text-text/60">
-				{$LL.documents.updated({ date: formatDateTime(document.updated_at) })}
-			</p>
-		{/if}
-	</div>
-{/snippet}
-
-{#snippet actionsSnippet(document: DocumentRead)}
-	<div class="flex w-full flex-row items-center justify-end gap-2">
-		{#if sessionStore.validatePermissions(['administrator'])}
-			<button
-				onclick={() => goto(`/dashboard/groups/${group.id}/documents/${document.id}/settings`)}
-				class="cursor-pointer text-text/80 transition hover:text-primary"
-				aria-label={$LL.documents.editSettings()}
-			>
-				<EditIcon class="h-5 w-5" />
-			</button>
-		{/if}
-		{#if sessionStore.validatePermissions(['administrator'])}
-			<ConfirmButton
-				onConfirm={async () => {
-					const result = await api.delete(`/documents/${document.id}`);
-					if (!result.success) {
-						notification(result.error);
-						return;
-					}
-					notification('success', $LL.documents.deleteSuccess());
-					invalidate('app:documents');
-				}}
-			>
-				{#snippet button()}
-					<DeleteIcon class="h-5 w-5 cursor-pointer text-text/80 hover:text-red-400/80" />
-				{/snippet}
-				{#snippet slideout()}
-					<div class="px-1 py-2 whitespace-nowrap text-red-600 dark:text-red-400">
-						{$LL.documents.deleteConfirm()}
-					</div>
-				{/snippet}
-			</ConfirmButton>
-		{/if}
-	</div>
-{/snippet}

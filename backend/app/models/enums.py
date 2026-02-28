@@ -120,22 +120,30 @@ class AppErrorCode(StrEnum):
     INVALID_INPUT = "invalid_input"  # use when user input is faulty e.g. a value error when hitting db constraints like string length
 
     # Database Errors
-    DATABASE_UNAVAILABLE = "database_unavailable"  # use when the database is down or unreachable
+    DATABASE_UNAVAILABLE = (
+        "database_unavailable"  # use when the database is down or unreachable
+    )
 
     # Authentication & Authorization Errors
     INVALID_TOKEN = "invalid_token"  # use when JWT is invalid/expired
-    NOT_AUTHENTICATED = "not_authenticated"  # use when user is not logged in (no bearer token)
-    NOT_AUTHORIZED = "not_authorized"  # use when user lacks necessary permissions
-    INVALID_CREDENTIALS = "invalid_credentials"  # use when username/password is incorrect
+    NOT_AUTHENTICATED = (
+        "not_authenticated"  # use when user is not logged in (no bearer token)
+    )
+    NOT_AUTHORIZED = (
+        "not_authorized"  # use when user lacks necessary permissions
+    )
+    INVALID_CREDENTIALS = (
+        "invalid_credentials"  # use when username/password is incorrect
+    )
     NOT_IN_GROUP = "not_in_group"  # use when user is not a member of the group they are trying to access
     EMAIL_NOT_VERIFIED = "email_not_verified"  # use when user has not verified their email address
-    SHARELINK_INVALID = "sharelink_invalid"  # use when sharelink token is invalid
+    SHARELINK_INVALID = (
+        "sharelink_invalid"  # use when sharelink token is invalid
+    )
     SHARELINK_EXPIRED = "sharelink_expired"  # use when sharelink has
 
     # Group Membership Errors
-    MEMBERSHIP_NOT_FOUND = (
-        "membership_not_found"  # use when membership invite is not found or has been revoked or user is not a member of the group
-    )
+    MEMBERSHIP_NOT_FOUND = "membership_not_found"  # use when membership invite is not found or has been revoked or user is not a member of the group
     OWNER_CANNOT_LEAVE_GROUP = "owner_cannot_leave_group"  # use when the owner tries to leave the group instead of deleting it
     CANNOT_REMOVE_PERMISSION_REASON_DEFAULT_GROUP = "cannot_remove_permission_reason_default_group"  # use when trying to remove a permission that is included in the group's default permission reason
     CANNOT_REMOVE_PERMISSION_REASON_SHARELINK = "cannot_remove_permission_reason_sharelink"  # use when trying to remove a permission that is included in the related sharelink's permission reason
@@ -145,14 +153,20 @@ class AppErrorCode(StrEnum):
     NOT_FOUND = "not_found"  # use when a requested resource does not exist
 
     # Reactions
-    SELF_REACTION = "self_reaction"  # use when a user tries to react to their own comment
+    SELF_REACTION = (
+        "self_reaction"  # use when a user tries to react to their own comment
+    )
     REPLY_REACTION = "reply_reaction"  # use when a user tries to react to a reply (only root comments allowed)
 
     # Rate Limiting
-    RATE_LIMITED = "rate_limited"  # use when a client has exceeded the request rate limit
+    RATE_LIMITED = (
+        "rate_limited"  # use when a client has exceeded the request rate limit
+    )
 
     # Registration Errors
-    USERNAME_TAKEN = "username_taken"  # use when the username is already registered
+    USERNAME_TAKEN = (
+        "username_taken"  # use when the username is already registered
+    )
     EMAIL_TAKEN = "email_taken"  # use when the email is already registered
     SHARELINK_ANONYMOUS_DISABLED = "sharelink_anonymous_disabled"  # use when sharelink does not allow anonymous access
 
@@ -167,11 +181,16 @@ class AppErrorCode(StrEnum):
     TOKEN_ALREADY_USED = "token_already_used"  # use when a reset/verification token has already been consumed
 
     # Mail Errors
-    MAIL_SEND_FAILED = "mail_send_failed"  # use when server fails to send an email
+    MAIL_SEND_FAILED = (
+        "mail_send_failed"  # use when server fails to send an email
+    )
 
     # Task Errors
     TASK_ALREADY_CORRECT = "task_already_correct"  # use when user already answered the task correctly
     TASK_NO_ATTEMPTS_LEFT = "task_no_attempts_left"  # use when user has exhausted all attempts for a task
+
+    # Document Errors
+    DOCUMENT_LIMIT_EXCEEDED = "document_limit_exceeded"  # use when group has reached the maximum number of documents
 
     # Account Errors
     ALREADY_VERIFIED = "already_verified"  # use when a user is already verified

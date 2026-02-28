@@ -9,10 +9,10 @@
 	import DeleteIcon from '~icons/material-symbols/delete-outline';
 	import SaveIcon from '~icons/material-symbols/save-outline';
 	import CancelIcon from '~icons/material-symbols/cancel-outline';
-	import UpIcon from '~icons/material-symbols/arrow-upward';
-	import DownIcon from '~icons/material-symbols/arrow-downward';
+	import DragIcon from '~icons/material-symbols/drag-indicator';
 	import ConfirmButton from '$lib/components/ConfirmButton.svelte';
 	import Select from '$lib/components/Select.svelte';
+	import { sortable } from '$lib/actions/sortable';
 
 	interface Props {
 		document: DocumentRead;
@@ -167,26 +167,25 @@
 		await invalidate('app:document');
 	}
 
-	async function moveTask(taskId: number, direction: -1 | 1) {
-		const idx = tasks.findIndex((t) => t.id === taskId);
-		if (idx < 0) return;
-		const newIdx = idx + direction;
-		if (newIdx < 0 || newIdx >= tasks.length) return;
+	async function handleReorder(fromIndex: number, toIndex: number) {
+		const oldTasks = [...tasks];
 
-		const ids = tasks.map((t) => t.id);
-		[ids[idx], ids[newIdx]] = [ids[newIdx], ids[idx]];
+		// Optimistically reorder locally
+		const newTasks = [...oldTasks];
+		const [moved] = newTasks.splice(fromIndex, 1);
+		newTasks.splice(toIndex, 0, moved);
+		tasks = newTasks;
 
+		// Persist to backend
+		const ids = newTasks.map((t) => t.id);
 		const result = await api.update(`/documents/${document.id}/tasks/reorder`, {
 			task_ids: ids
 		});
 
 		if (!result.success) {
+			tasks = oldTasks;
 			notification(result.error);
-			return;
 		}
-
-		notification('success', $LL.tasks.reorderSuccess());
-		await loadTasks();
 	}
 
 	function startEditingTask(task: TaskAdminRead) {
@@ -470,16 +469,22 @@
 	{/if}
 
 	<!-- Tasks List -->
-	<div class="flex flex-col gap-2">
+	<div
+		class="flex flex-col gap-2"
+		use:sortable={{ onReorder: handleReorder, enabled: tasks.length > 1 }}
+	>
 		{#if isLoading}
 			<p class="text-muted">{$LL.loading()}</p>
 		{:else if tasks.length === 0}
 			<p class="text-muted">{$LL.tasks.noTasks()}</p>
 		{:else}
-			{#each tasks as task, idx (task.id)}
+			{#each tasks as task (task.id)}
 				{#if editingTaskId === task.id}
 					<!-- Edit Form -->
-					<div class="flex flex-col gap-3 rounded-md border border-text/20 bg-text/5 p-4">
+					<div
+						data-sortable-id={task.id}
+						class="flex flex-col gap-3 rounded-md border border-text/20 bg-text/5 p-4"
+					>
 						<div class="text-sm font-semibold">{$LL.tasks.editTask()}</div>
 						{@render taskForm(
 							editTask,
@@ -510,24 +515,15 @@
 				{:else}
 					<!-- Task Display -->
 					<div
+						data-sortable-id={task.id}
 						class="flex items-center gap-3 rounded-md border border-text/20 bg-text/5 p-3 transition hover:border-text/30"
 					>
-						<div class="flex flex-col gap-0.5">
-							<button
-								onclick={() => moveTask(task.id, -1)}
-								disabled={idx === 0}
-								class="btn-ghost disabled:opacity-30"
-							>
-								<UpIcon class="h-3 w-3" />
-							</button>
-							<button
-								onclick={() => moveTask(task.id, 1)}
-								disabled={idx === tasks.length - 1}
-								class="btn-ghost disabled:opacity-30"
-							>
-								<DownIcon class="h-3 w-3" />
-							</button>
-						</div>
+						<span
+							data-drag-handle
+							class="flex cursor-grab items-center text-text/40 hover:text-text/70"
+						>
+							<DragIcon class="h-5 w-5" />
+						</span>
 						<div class="flex-1">
 							<p class="text-sm font-semibold">{task.question}</p>
 							<div class="mt-1 flex flex-wrap gap-2">

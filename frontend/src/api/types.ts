@@ -40,6 +40,7 @@ export type AppErrorCode =
   | "mail_send_failed"
   | "task_already_correct"
   | "task_no_attempts_left"
+  | "document_limit_exceeded"
   | "already_verified"
   | "must_transfer_ownership";
 /**
@@ -248,6 +249,7 @@ export interface Document {
   view_mode?: ViewMode;
   secret?: string;
   default_max_attempts?: number;
+  order?: number;
   group_id: string;
 }
 export interface DocumentCreate {
@@ -260,6 +262,8 @@ export interface DocumentCreate {
 export interface DocumentFilter {
   size_bytes: number;
   group_id: string;
+  order: number;
+  created_at: string;
 }
 export interface DocumentRead {
   created_at?: string;
@@ -272,7 +276,18 @@ export interface DocumentRead {
   description: string | null;
   view_mode: ViewMode;
   default_max_attempts: number;
+  order: number;
+  task_count: number;
+  root_comment_count: number;
   tags: TagRead[];
+  user_completed_task_count?: number;
+  user_responded_task_count?: number;
+}
+/**
+ * Payload for reordering documents within a group.
+ */
+export interface DocumentReorder {
+  document_ids: string[];
 }
 /**
  * The payload of a client facing JWT, signed with the global secret.

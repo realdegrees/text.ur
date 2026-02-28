@@ -16,7 +16,9 @@ if TYPE_CHECKING:
 class DocumentCreate(SQLModel):
     visibility: DocumentVisibility
     name: str = Field(max_length=MAX_DOCUMENT_NAME_LENGTH)
-    description: str | None = Field(default=None, max_length=MAX_DOCUMENT_DESCRIPTION_LENGTH)
+    description: str | None = Field(
+        default=None, max_length=MAX_DOCUMENT_DESCRIPTION_LENGTH
+    )
     group_id: str
     default_max_attempts: int = Field(default=1, ge=1)
 
@@ -30,13 +32,26 @@ class DocumentRead(BaseModel):
     description: str | None
     view_mode: ViewMode
     default_max_attempts: int
+    order: int
+    task_count: int
+    root_comment_count: int
     tags: list["TagRead"]
+    user_completed_task_count: int = 0
+    user_responded_task_count: int = 0
+
+
+class DocumentReorder(SQLModel):
+    """Payload for reordering documents within a group."""
+
+    document_ids: list[str]
 
 
 class DocumentUpdate(SQLModel):
     visibility: DocumentVisibility | None = None
     view_mode: ViewMode | None = None
-    description: str | None = Field(default=None, max_length=MAX_DOCUMENT_DESCRIPTION_LENGTH)
+    description: str | None = Field(
+        default=None, max_length=MAX_DOCUMENT_DESCRIPTION_LENGTH
+    )
     name: str | None = Field(default=None, max_length=MAX_DOCUMENT_NAME_LENGTH)
     default_max_attempts: int | None = Field(default=None, ge=1)
 

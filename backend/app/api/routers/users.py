@@ -74,7 +74,9 @@ async def list_users(
 
 
 @router.get("/{user_id}", response_model=UserRead)
-async def read_user(_: BasicAuthentication, user: User = Resource(User, param_alias="user_id")) -> User:
+async def read_user(
+    _: BasicAuthentication, user: User = Resource(User, param_alias="user_id")
+) -> User:
     """Get a user by ID."""
     return user
 
@@ -97,7 +99,11 @@ async def update_user(
                 detail="Invalid old password",
             )
         user.password = hash_password(user_update.new_password)
-    user.sqlmodel_update(user_update.model_dump(exclude_unset=True, exclude={"old_password", "new_password"}))
+    user.sqlmodel_update(
+        user_update.model_dump(
+            exclude_unset=True, exclude={"old_password", "new_password"}
+        )
+    )
     await db.commit()
     await db.refresh(user)
 
@@ -120,7 +126,11 @@ async def export_user_data(
     user_id = user.id
 
     # Memberships with group names
-    result = await db.exec(select(Membership, Group.name).join(Group, Membership.group_id == Group.id).where(Membership.user_id == user_id))
+    result = await db.exec(
+        select(Membership, Group.name)
+        .join(Group, Membership.group_id == Group.id)
+        .where(Membership.user_id == user_id)
+    )
     memberships = [
         ExportMembership(
             group_name=group_name,
@@ -165,7 +175,11 @@ async def export_user_data(
     reactions = [
         ExportReaction(
             emoji=str(emoji),
-            comment_content_preview=(content[:80] + "..." if content and len(content) > 80 else content),
+            comment_content_preview=(
+                content[:80] + "..."
+                if content and len(content) > 80
+                else content
+            ),
             created_at=r.created_at,
         )
         for r, emoji, content in result.all()
@@ -202,7 +216,9 @@ async def export_user_data(
     return JSONResponse(
         content=export.model_dump(mode="json"),
         headers={
-            "Content-Disposition": ('attachment; filename="text-ur-data-export.json"'),
+            "Content-Disposition": (
+                'attachment; filename="text-ur-data-export.json"'
+            ),
         },
     )
 
@@ -240,7 +256,9 @@ async def delete_user(
                 Membership.group_id == group_id,
                 Membership.user_id != user.id,
                 Membership.accepted.is_(True),
-                Membership.permissions.contains([Permission.ADMINISTRATOR.value]),
+                Membership.permissions.contains(
+                    [Permission.ADMINISTRATOR.value]
+                ),
             )
         )
         next_admin = result.first()
@@ -251,7 +269,9 @@ async def delete_user(
             db.add(next_admin)
         else:
             # No admin available — stage group for deletion
-            storage_keys_to_delete.extend(await prepare_group_deletion(db, group_id))
+            storage_keys_to_delete.extend(
+                await prepare_group_deletion(db, group_id)
+            )
 
     await db.delete(user)
     await db.commit()

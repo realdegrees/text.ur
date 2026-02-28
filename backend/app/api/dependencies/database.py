@@ -140,7 +140,10 @@ def _handle_db_exception(e: Exception) -> None:
         status_code = 504
         detail = "Database query timed out"
     # Check for statement_timeout in OperationalError (psycopg2 raises this for timeouts)
-    elif isinstance(e, OperationalError) and "statement timeout" in str(e).lower():
+    elif (
+        isinstance(e, OperationalError)
+        and "statement timeout" in str(e).lower()
+    ):
         status_code = 504
         detail = "Database query timed out"
     # Database availability issues (503 Service Unavailable)

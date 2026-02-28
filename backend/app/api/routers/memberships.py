@@ -188,20 +188,28 @@ async def update_member_permissions(
         )
 
     current_permissions = set(membership.permissions)
-    target_permissions = set(membership_update.permissions or current_permissions)
+    target_permissions = set(
+        membership_update.permissions or current_permissions
+    )
 
     added_permissions = target_permissions - current_permissions
     removed_permissions = current_permissions - target_permissions
 
     # Only the group owner can grant or revoke ADMINISTRATOR
-    if Permission.ADMINISTRATOR in added_permissions and not session_user_membership.is_owner:
+    if (
+        Permission.ADMINISTRATOR in added_permissions
+        and not session_user_membership.is_owner
+    ):
         raise AppException(
             status_code=403,
             error_code=AppErrorCode.NOT_AUTHORIZED,
             detail="Only the owner can grant the ADMINISTRATOR permission",
         )
 
-    if Permission.ADMINISTRATOR in removed_permissions and not session_user_membership.is_owner:
+    if (
+        Permission.ADMINISTRATOR in removed_permissions
+        and not session_user_membership.is_owner
+    ):
         raise AppException(
             status_code=403,
             error_code=AppErrorCode.NOT_AUTHORIZED,
@@ -215,7 +223,9 @@ async def update_member_permissions(
             error_code=AppErrorCode.CANNOT_REMOVE_PERMISSION_REASON_DEFAULT_GROUP,
         )
 
-    if membership.share_link and any(p in removed_permissions for p in membership.share_link.permissions):
+    if membership.share_link and any(
+        p in removed_permissions for p in membership.share_link.permissions
+    ):
         raise AppException(
             status_code=403,
             detail="Cannot remove permissions that are included in the related sharelink's permissions",
@@ -329,7 +339,10 @@ async def remove_member(
         )
 
     # users with ADMINISTRATOR and the owner cannot be removed
-    if membership.is_owner or (Permission.ADMINISTRATOR in membership.permissions and not session_user_membership.is_owner):
+    if membership.is_owner or (
+        Permission.ADMINISTRATOR in membership.permissions
+        and not session_user_membership.is_owner
+    ):
         raise AppException(
             status_code=403,
             error_code=AppErrorCode.NOT_AUTHORIZED,
@@ -429,7 +442,11 @@ async def _compute_score(
             Comment.document_id == document_id,  # type: ignore[union-attr]
         )
     else:
-        group_docs = select(Document.id).where(Document.group_id == group_id).scalar_subquery()
+        group_docs = (
+            select(Document.id)
+            .where(Document.group_id == group_id)
+            .scalar_subquery()
+        )
         doc_filter = (
             Comment.document_id.in_(group_docs),  # type: ignore[union-attr]
         )
@@ -477,7 +494,9 @@ async def _compute_score(
     tags: int = tag_result.one()
 
     # Load per-group scoring configuration
-    cfg_result = await db.exec(select(ScoreConfig).where(ScoreConfig.group_id == group_id))
+    cfg_result = await db.exec(
+        select(ScoreConfig).where(ScoreConfig.group_id == group_id)
+    )
     score_cfg = cfg_result.first()
 
     # Fall back to defaults if no config row exists
@@ -489,13 +508,17 @@ async def _compute_score(
     #    A reactor is admin if they are owner or have ADMINISTRATOR
     #    in their membership permissions for this group.
     #    Points now come from GroupReaction per-emoji config.
-    reactor_membership = select(Membership).where(Membership.group_id == group_id).subquery()
+    reactor_membership = (
+        select(Membership).where(Membership.group_id == group_id).subquery()
+    )
 
     is_admin_case = case(
         (
             or_(
                 reactor_membership.c.is_owner.is_(True),
-                reactor_membership.c.permissions.contains([Permission.ADMINISTRATOR.value]),
+                reactor_membership.c.permissions.contains(
+                    [Permission.ADMINISTRATOR.value]
+                ),
             ),
             1,
         ),
@@ -507,7 +530,9 @@ async def _compute_score(
         (
             or_(
                 reactor_membership.c.is_owner.is_(True),
-                reactor_membership.c.permissions.contains([Permission.ADMINISTRATOR.value]),
+                reactor_membership.c.permissions.contains(
+                    [Permission.ADMINISTRATOR.value]
+                ),
             ),
             GroupReaction.admin_points,
         ),
@@ -628,7 +653,9 @@ async def _compute_score(
         (Task.document_id == document_id)
         if document_id is not None
         else Task.document_id.in_(  # type: ignore[union-attr]
-            select(Document.id).where(Document.group_id == group_id).scalar_subquery()
+            select(Document.id)
+            .where(Document.group_id == group_id)
+            .scalar_subquery()
         )
     )
 
@@ -649,11 +676,17 @@ async def _compute_score(
     tasks_completed: int = task_row[0]
     task_points_total: int = int(task_row[1])
 
-    total_tasks_result = await db.exec(select(func.count(Task.id)).where(task_doc_filter))
+    total_tasks_result = await db.exec(
+        select(func.count(Task.id)).where(task_doc_filter)
+    )
     tasks_total: int = total_tasks_result.one()
 
     # Build per-reaction breakdown for all group reactions
-    all_gr_result = await db.exec(select(GroupReaction).where(GroupReaction.group_id == group_id).order_by(GroupReaction.order))
+    all_gr_result = await db.exec(
+        select(GroupReaction)
+        .where(GroupReaction.group_id == group_id)
+        .order_by(GroupReaction.order)
+    )
     reaction_breakdown: list[ReactionBreakdownItem] = []
     for gr in all_gr_result.all():
         rcvd = received_per_emoji.get(gr.id, (gr.emoji, 0, 0, 0))
@@ -675,7 +708,14 @@ async def _compute_score(
     comment_points = comments * cfg_comment
     tag_points = tags * cfg_tag
 
-    total = highlight_points + comment_points + tag_points + reaction_received_points + reaction_given_points + task_points_total
+    total = (
+        highlight_points
+        + comment_points
+        + tag_points
+        + reaction_received_points
+        + reaction_given_points
+        + task_points_total
+    )
 
     breakdown = ScoreBreakdown(
         highlights=highlights,

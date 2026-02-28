@@ -4,7 +4,9 @@ from fastapi import Depends, Query, Request
 from models.filter import Filter, FilterableField, Operator
 
 
-def get_filters_dependency(filterable_field_data: list[FilterableField]) -> Callable[[], Depends]:  # noqa: C901
+def get_filters_dependency(  # noqa: C901
+    filterable_field_data: list[FilterableField],
+) -> Callable[[], Depends]:
     """Generate a FastAPI dependency to parse filters from query parameters."""
 
     def format_field_description(field: FilterableField) -> str:
@@ -21,7 +23,12 @@ def get_filters_dependency(filterable_field_data: list[FilterableField]) -> Call
             alias="filter",
             description=(
                 "<details><summary>Expand to view available filter fields</summary>"
-                "<pre>" + "\n".join(format_field_description(field) for field in filterable_field_data) + "</pre></details>"
+                "<pre>"
+                + "\n".join(
+                    format_field_description(field)
+                    for field in filterable_field_data
+                )
+                + "</pre></details>"
             ),
         ),
     ) -> list[Filter]:
@@ -45,7 +52,9 @@ def get_filters_dependency(filterable_field_data: list[FilterableField]) -> Call
             if not field or not operator:
                 continue
 
-            is_valid_field = next((f for f in filterable_field_data if f.name == field), None)
+            is_valid_field = next(
+                (f for f in filterable_field_data if f.name == field), None
+            )
             if not is_valid_field:
                 continue
 
@@ -54,7 +63,9 @@ def get_filters_dependency(filterable_field_data: list[FilterableField]) -> Call
                 continue
 
             try:
-                filters.append(Filter(field=field, operator=operator, value=value))
+                filters.append(
+                    Filter(field=field, operator=operator, value=value)
+                )
             except Exception as e:
                 print(f"Error processing filter '{key}': {e}")
 

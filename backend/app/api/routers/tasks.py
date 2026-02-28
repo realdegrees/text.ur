@@ -29,7 +29,7 @@ from models.task import (
     TasksUpdatedEvent,
     TaskUpdate,
 )
-from sqlmodel import delete, func, select
+from sqlmodel import delete, func, select, update
 from util.api_router import APIRouter
 from util.cache import invalidate_group_scores
 from util.queries import Guard
@@ -55,7 +55,9 @@ def _is_admin(user: User, document: Document) -> bool:
     ADMINISTRATOR permission.
     """
     return any(
-        m.user_id == user.id and m.accepted and (m.is_owner or Permission.ADMINISTRATOR in (m.permissions or []))
+        m.user_id == user.id
+        and m.accepted
+        and (m.is_owner or Permission.ADMINISTRATOR in (m.permissions or []))
         for m in document.group.memberships
     )
 
@@ -78,7 +80,11 @@ def check_task_answer(task: Task, answer: dict) -> bool:
         value = answer.get("value")
         if value is None or task.correct_number_answer is None:
             return False
-        tolerance = task.number_tolerance if task.number_tolerance is not None else _NUMBER_EPSILON
+        tolerance = (
+            task.number_tolerance
+            if task.number_tolerance is not None
+            else _NUMBER_EPSILON
+        )
         return abs(float(value) - task.correct_number_answer) <= tolerance
 
     return False
@@ -151,20 +157,35 @@ async def create_task(
     db: Database,
     events: Events,
     request: Request,
-    session_user: User = Authenticate(guards=[Guard.document_access({Permission.ADMINISTRATOR})]),
+    session_user: User = Authenticate(
+        guards=[Guard.document_access({Permission.ADMINISTRATOR})]
+    ),
     task_create: TaskCreate = Body(...),
     document: Document = Resource(Document, param_alias="document_id"),
 ) -> TaskAdminRead:
     """Create a new task for the document."""
     # Check max tasks limit
-    result = await db.exec(select(func.count(Task.id)).where(Task.document_id == document.id))
+    result = await db.exec(
+        select(func.count(Task.id)).where(Task.document_id == document.id)
+    )
     task_count = result.one()
     if task_count >= MAX_TASKS_PER_DOCUMENT:
         raise AppException(
             status_code=400,
             error_code=AppErrorCode.VALIDATION_ERROR,
-            detail=(f"Document has reached the maximum of {MAX_TASKS_PER_DOCUMENT} tasks."),
+            detail=(
+                f"Document has reached the maximum of {MAX_TASKS_PER_DOCUMENT} tasks."
+            ),
         )
+
+    # Compute order server-side to prevent collisions from gaps
+    # left by deleted tasks.
+    max_order_result = await db.exec(
+        select(func.coalesce(func.max(Task.order), -1)).where(
+            Task.document_id == document.id
+        )
+    )
+    next_order = max_order_result.one() + 1
 
     task = Task(
         document_id=document.id,
@@ -175,7 +196,7 @@ async def create_task(
         number_tolerance=task_create.number_tolerance,
         string_match_mode=task_create.string_match_mode,
         points=task_create.points,
-        order=task_create.order,
+        order=next_order,
         max_attempts=task_create.max_attempts,
     )
     db.add(task)
@@ -210,7 +231,11 @@ async def list_tasks(
 
     Admins see correct answers; members do not.
     """
-    result = await db.exec(select(Task).where(Task.document_id == document.id).order_by(Task.order))
+    result = await db.exec(
+        select(Task)
+        .where(Task.document_id == document.id)
+        .order_by(Task.order, Task.id)
+    )
     tasks = result.all()
 
     if _is_admin(session_user, document):
@@ -228,39 +253,51 @@ async def reorder_tasks(
     db: Database,
     events: Events,
     request: Request,
-    session_user: User = Authenticate(guards=[Guard.document_access({Permission.ADMINISTRATOR})]),
+    session_user: User = Authenticate(
+        guards=[Guard.document_access({Permission.ADMINISTRATOR})]
+    ),
     reorder: TaskReorder = Body(...),
     document: Document = Resource(Document, param_alias="document_id"),
 ) -> list[TaskAdminRead]:
-    """Bulk reorder tasks by providing ordered task IDs."""
-    result = await db.exec(select(Task).where(Task.document_id == document.id))
+    """Reorder a subset of tasks within a document.
+
+    Accepts a partial list of task IDs in the desired order.
+    Only the submitted tasks are reordered — all others keep
+    their current positions. The submitted tasks swap into
+    each other's order slots.
+    """
+    result = await db.exec(
+        select(Task).where(
+            Task.document_id == document.id,
+            Task.id.in_(reorder.task_ids),
+        )
+    )
     tasks_by_id = {t.id: t for t in result.all()}
 
-    # Validate completeness: must include every task for this document
-    submitted = set(reorder.task_ids)
-    existing = set(tasks_by_id.keys())
-    if submitted != existing:
-        missing = existing - submitted
-        extra = submitted - existing
-        parts = []
-        if missing:
-            parts.append(f"Missing task IDs: {sorted(missing)}")
-        if extra:
-            parts.append(f"Unknown task IDs: {sorted(extra)}")
+    # Validate all submitted IDs exist in this document
+    unknown = set(reorder.task_ids) - set(tasks_by_id.keys())
+    if unknown:
         raise AppException(
             status_code=400,
             error_code=AppErrorCode.VALIDATION_ERROR,
-            detail=(f"Reorder must include all task IDs for this document. {'; '.join(parts)}"),
+            detail=f"Unknown task IDs: {sorted(unknown)}",
         )
 
-    for idx, tid in enumerate(reorder.task_ids):
+    # Slot reassignment: collect current order values, sort them,
+    # then assign them in the new sequence.
+    slots = sorted(tasks_by_id[tid].order for tid in reorder.task_ids)
+    for slot, tid in zip(slots, reorder.task_ids, strict=True):
         t = await db.merge(tasks_by_id[tid])
-        t.order = idx
+        t.order = slot
 
     await db.commit()
 
-    # Re-fetch ordered
-    result = await db.exec(select(Task).where(Task.document_id == document.id).order_by(Task.order))
+    # Re-fetch all tasks ordered (full list for the event broadcast)
+    result = await db.exec(
+        select(Task)
+        .where(Task.document_id == document.id)
+        .order_by(Task.order, Task.id)
+    )
     tasks = result.all()
 
     await _publish_tasks_updated(events, document.id, request)
@@ -276,7 +313,9 @@ async def list_task_responses(
 ) -> list[TaskResponseRead]:
     """Get the current user's responses for all tasks in the document."""
     # Get all tasks for the document (for correct answer revelation)
-    task_result = await db.exec(select(Task).where(Task.document_id == document.id))
+    task_result = await db.exec(
+        select(Task).where(Task.document_id == document.id)
+    )
     tasks_by_id = {t.id: t for t in task_result.all()}
 
     resp_result = await db.exec(
@@ -338,7 +377,9 @@ async def update_task(
     db: Database,
     events: Events,
     request: Request,
-    session_user: User = Authenticate(guards=[Guard.document_access({Permission.ADMINISTRATOR})]),
+    session_user: User = Authenticate(
+        guards=[Guard.document_access({Permission.ADMINISTRATOR})]
+    ),
     task_update: TaskUpdate = Body(...),
     document: Document = Resource(Document, param_alias="document_id"),
     task: Task = Resource(Task, param_alias="task_id"),
@@ -402,7 +443,9 @@ async def update_task(
     # Delete all existing responses if answer changed so members
     # can re-answer the updated task with a clean slate.
     if answer_changed:
-        await db.exec(delete(TaskResponse).where(TaskResponse.task_id == task.id))
+        await db.exec(
+            delete(TaskResponse).where(TaskResponse.task_id == task.id)
+        )
 
     await db.commit()
     await db.refresh(task)
@@ -418,7 +461,9 @@ async def delete_task(
     db: Database,
     events: Events,
     request: Request,
-    session_user: User = Authenticate(guards=[Guard.document_access({Permission.ADMINISTRATOR})]),
+    session_user: User = Authenticate(
+        guards=[Guard.document_access({Permission.ADMINISTRATOR})]
+    ),
     document: Document = Resource(Document, param_alias="document_id"),
     task: Task = Resource(Task, param_alias="task_id"),
 ) -> Response:
@@ -430,7 +475,19 @@ async def delete_task(
             detail="Task not found in this document",
         )
 
+    deleted_order = task.order
     await db.delete(task)
+
+    # Close the gap: shift down all tasks that were after the deleted one.
+    await db.exec(
+        update(Task)
+        .where(
+            Task.document_id == document.id,
+            Task.order > deleted_order,
+        )
+        .values(order=Task.order - 1)
+    )
+
     await db.commit()
 
     await invalidate_group_scores(document.group_id)
