@@ -28,9 +28,7 @@ register_logger = get_logger("app")
 router = APIRouter(prefix="/register", tags=["Register"])
 
 
-async def _upgrade_guest_account(
-    db: Database, mail: Mail, user: User, user_create: UserCreate
-) -> None:
+async def _upgrade_guest_account(db: Database, mail: Mail, user: User, user_create: UserCreate) -> None:
     """Upgrade a guest account to a permanent account with email verification."""
     if not user.is_guest:
         raise AppException(
@@ -72,9 +70,7 @@ async def _upgrade_guest_account(
         salt="email-verification",
         confirm_route="verify",
     )
-    expiry_time = datetime.now(UTC) + timedelta(
-        days=cfg.REGISTER_LINK_EXPIRY_DAYS
-    )
+    expiry_time = datetime.now(UTC) + timedelta(days=cfg.REGISTER_LINK_EXPIRY_DAYS)
     try:
         mail.send_email(
             user.email,
@@ -109,16 +105,9 @@ async def _upgrade_guest_account(
     await db.refresh(user)
 
 
-async def _register_regular_user(
-    db: Database, mail: Mail, user_create: UserCreate
-) -> None:
+async def _register_regular_user(db: Database, mail: Mail, user_create: UserCreate) -> None:
     """Handle regular user registration with email verification."""
-    result = await db.exec(
-        select(User).where(
-            (User.email == user_create.email)
-            | (User.username == user_create.username)
-        )
-    )
+    result = await db.exec(select(User).where((User.email == user_create.email) | (User.username == user_create.username)))
     existing_user = result.first()
 
     if existing_user:
@@ -160,9 +149,7 @@ async def _register_regular_user(
         salt="email-verification",
         confirm_route="verify",
     )
-    expiry_time = datetime.now(UTC) + timedelta(
-        days=cfg.REGISTER_LINK_EXPIRY_DAYS
-    )
+    expiry_time = datetime.now(UTC) + timedelta(days=cfg.REGISTER_LINK_EXPIRY_DAYS)
     try:
         mail.send_email(
             user.email,
@@ -202,9 +189,7 @@ async def _register_anonymous_user(
 ) -> Token:
     """Handle anonymous user registration with sharelink token."""
     # Find the sharelink by token
-    result = await db.exec(
-        select(ShareLink).where(ShareLink.token == sharelink_token)
-    )
+    result = await db.exec(select(ShareLink).where(ShareLink.token == sharelink_token))
     share_link: ShareLink | None = result.first()
 
     if not share_link:
@@ -231,9 +216,7 @@ async def _register_anonymous_user(
         )
 
     # Check if username already exists
-    result = await db.exec(
-        select(User).where(User.username == user_create.username)
-    )
+    result = await db.exec(select(User).where(User.username == user_create.username))
     existing_user = result.first()
     if existing_user:
         raise AppException(
@@ -312,12 +295,7 @@ async def register(
     If user is authenticated and is_guest=True with email+password, upgrade the account.
     """
     # Check if this is a guest account upgrade
-    if (
-        authenticated_user
-        and authenticated_user.is_guest
-        and user_create.email
-        and user_create.password
-    ):
+    if authenticated_user and authenticated_user.is_guest and user_create.email and user_create.password:
         await _upgrade_guest_account(db, mail, authenticated_user, user_create)
         return None
 
@@ -333,9 +311,7 @@ async def register(
     is_anonymous = not user_create.email and user_create.token
 
     if is_anonymous:
-        return await _register_anonymous_user(
-            request, db, response, user_create, user_create.token
-        )
+        return await _register_anonymous_user(request, db, response, user_create, user_create.token)
     else:
         # Regular registration requires password
         if not user_create.password:
@@ -350,9 +326,7 @@ async def register(
 
 @router.get("/verify/{token}")
 @limiter.limit("10/minute", key_func=get_remote_address)
-async def verify(
-    request: Request, token: str, db: Database
-) -> RedirectResponse:
+async def verify(request: Request, token: str, db: Database) -> RedirectResponse:
     """Verify the user's email address."""
     try:
         email = URLSafeTimedSerializer(cfg.EMAIL_PRESIGN_SECRET).loads(
@@ -400,9 +374,7 @@ async def verify(
 
     # Create the redirect response to login page with verified param
     # Login page will redirect authenticated users to dashboard while preserving the param
-    redirect_response = RedirectResponse(
-        url=f"{cfg.FRONTEND_BASEURL}/login?verified=true", status_code=303
-    )
+    redirect_response = RedirectResponse(url=f"{cfg.FRONTEND_BASEURL}/login?verified=true", status_code=303)
 
     # Set cookies on that response
     redirect_response.set_cookie(

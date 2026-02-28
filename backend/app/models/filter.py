@@ -23,9 +23,7 @@ from models.tables import (
 )
 
 Base = default_registry.generate_base()
-Operator = Literal[
-    "==", ">=", "<=", ">", "<", "ilike", "like", "exists", "!=", "in", "notin"
-]
+Operator = Literal["==", ">=", "<=", ">", "<", "ilike", "like", "exists", "!=", "in", "notin"]
 OperatorMap = {
     "equals": {"==", "!=", "in", "notin"},
     "contains": {"ilike", "like", "==", "!=", "in", "notin"},
@@ -114,9 +112,7 @@ class FilterMeta:
             if not filter_meta:
                 continue
 
-            filterable_field = filter_meta.to_filterable_field(
-                field_name, model_field
-            )
+            filterable_field = filter_meta.to_filterable_field(field_name, model_field)
             if filterable_field:
                 fields.append(filterable_field)
         return fields
@@ -133,15 +129,11 @@ class FilterMeta:
                 if arg is type(None):
                     continue
                 return FilterMeta.infer_type(arg)
-            raise ValueError(
-                f"Cannot infer filter type from annotation: {annotation}"
-            )
+            raise ValueError(f"Cannot infer filter type from annotation: {annotation}")
         if isinstance(annotation, type):
             if issubclass(annotation, SQLModel):
                 return bool, "exists"
-            if issubclass(annotation, enum.Enum) or issubclass(
-                annotation, bool
-            ):
+            if issubclass(annotation, enum.Enum) or issubclass(annotation, bool):
                 return annotation, "equals"
             if issubclass(annotation, int | datetime):
                 return annotation, "numeric"
@@ -150,9 +142,7 @@ class FilterMeta:
 
             if annotation == None.__class__:
                 return bool, "exists"
-        raise ValueError(
-            f"Cannot infer filter type from annotation: {annotation}"
-        )
+        raise ValueError(f"Cannot infer filter type from annotation: {annotation}")
 
     def _allowed_operators(self, filter_type: str) -> list[Operator]:
         """Return allowed operators for this filter type, minus any excluded."""
@@ -163,24 +153,16 @@ class FilterMeta:
             ops |= set(self.include_operators)
         return list(ops)
 
-    def to_filterable_field(
-        self, field_name: str, field_info: FieldInfo
-    ) -> FilterableField | None:
+    def to_filterable_field(self, field_name: str, field_info: FieldInfo) -> FilterableField | None:
         """Get FilterableField instance for this filter metadata."""
         field_annotation = field_info.annotation
         inferred_type, filter_type = FilterMeta.infer_type(field_annotation)
         allowed_operators = self._allowed_operators(filter_type)
 
-        def validate_clause(
-            operator: Operator, value: str, user: User | None = None
-        ) -> ColumnElement[bool]:
+        def validate_clause(operator: Operator, value: str, user: User | None = None) -> ColumnElement[bool]:
             if operator not in allowed_operators:
-                raise ValueError(
-                    f"Operator '{operator}' not allowed for field '{field_name}'. Allowed: {allowed_operators}"
-                )
-            return self._build_clause(
-                operator, value, filter_type, inferred_type, user
-            )
+                raise ValueError(f"Operator '{operator}' not allowed for field '{field_name}'. Allowed: {allowed_operators}")
+            return self._build_clause(operator, value, filter_type, inferred_type, user)
 
         # Resolve exclude parameter
         exclude_field: str | None = None
@@ -222,9 +204,7 @@ class FilterMeta:
                         raise ValueError("Parsed JSON is not a list")
                     items = parsed
                 except Exception as e:
-                    raise ValueError(
-                        "Value for 'in'/'notin' operator must be a JSON array"
-                    ) from e
+                    raise ValueError("Value for 'in'/'notin' operator must be a JSON array") from e
 
                 # Only support string and numeric inferred types
                 if inferred_type is str:
@@ -233,9 +213,7 @@ class FilterMeta:
                         if isinstance(elem, (str, int, float)):
                             converted.append(str(elem))
                         else:
-                            raise ValueError(
-                                f"Invalid array element type: {type(elem)}"
-                            )
+                            raise ValueError(f"Invalid array element type: {type(elem)}")
                     return converted
                 elif inferred_type in (int, float):
                     converted: list[Any] = []
@@ -246,24 +224,16 @@ class FilterMeta:
                             try:
                                 converted.append(inferred_type(elem))
                             except Exception as exc:
-                                raise ValueError(
-                                    f"Invalid numeric value '{elem}': {exc}"
-                                ) from exc
+                                raise ValueError(f"Invalid numeric value '{elem}': {exc}") from exc
                         else:
-                            raise ValueError(
-                                f"Invalid array element type: {type(elem)}"
-                            )
+                            raise ValueError(f"Invalid array element type: {type(elem)}")
                     return converted
                 else:
-                    raise ValueError(
-                        "Only string and numeric types supported for 'in'/'notin' operator"
-                    )
+                    raise ValueError("Only string and numeric types supported for 'in'/'notin' operator")
             else:
                 return inferred_type(value)
         except Exception as e:
-            raise ValueError(
-                f"Invalid value '{value}' for type '{inferred_type.__name__}': {e}"
-            ) from e
+            raise ValueError(f"Invalid value '{value}' for type '{inferred_type.__name__}': {e}") from e
 
     def _get_base_where_clause(  # noqa: C901
         self,
@@ -308,9 +278,7 @@ class FilterMeta:
     ) -> ColumnElement[bool]:
         """Return a SQLAlchemy clause based on the filter type and value."""
         converted_value = self._convert_value(value, inferred_type, operator)
-        base_where_clause = self._get_base_where_clause(
-            operator, converted_value
-        )
+        base_where_clause = self._get_base_where_clause(operator, converted_value)
 
         if self.join:
             rel_attr: InstrumentedAttribute = self.join.target
@@ -362,9 +330,7 @@ class GroupFilter(BaseFilterModel):
             "accepted": FilterMeta(
                 field=Membership.accepted,
                 join=JoinInfo(target=Group.memberships),
-                user_condition=lambda user: (
-                    Membership.user_id == user.id if user else None
-                ),
+                user_condition=lambda user: Membership.user_id == user.id if user else None,
                 exclude=True,
             ),
         }
@@ -386,13 +352,9 @@ class DocumentFilter(BaseFilterModel):
         """Return filter metadata for DocumentFilter fields."""
         return {
             "size_bytes": FilterMeta(field=Document.size_bytes),
-            "group_id": FilterMeta(
-                field=Document.group_id, exclude=Document.group
-            ),
+            "group_id": FilterMeta(field=Document.group_id, exclude=Document.group),
             "order": FilterMeta(field=Document.order, allow_sorting=True),
-            "created_at": FilterMeta(
-                field=Document.created_at, allow_sorting=True
-            ),
+            "created_at": FilterMeta(field=Document.created_at, allow_sorting=True),
         }
 
 
@@ -411,16 +373,10 @@ class MembershipFilter(BaseFilterModel):
     def get_filter_metadata(cls) -> dict[str, FilterMeta]:
         """Return filter metadata for MembershipFilter fields."""
         return {
-            "user_id": FilterMeta(
-                field=Membership.user_id, exclude=Membership.user
-            ),
-            "group_id": FilterMeta(
-                field=Membership.group_id, exclude=Membership.group
-            ),
+            "user_id": FilterMeta(field=Membership.user_id, exclude=Membership.user),
+            "group_id": FilterMeta(field=Membership.group_id, exclude=Membership.group),
             "accepted": FilterMeta(field=Membership.accepted),
-            "sharelink_id": FilterMeta(
-                field=Membership.sharelink_id, exclude=Membership.share_link
-            ),
+            "sharelink_id": FilterMeta(field=Membership.sharelink_id, exclude=Membership.share_link),
         }
 
 
@@ -443,9 +399,7 @@ class CommentFilter(BaseFilterModel):
         return {
             "visibility": FilterMeta(field=Comment.visibility),
             "user_id": FilterMeta(field=Comment.user_id, exclude=Comment.user),
-            "document_id": FilterMeta(
-                field=Comment.document_id, exclude=Comment.document
-            ),
+            "document_id": FilterMeta(field=Comment.document_id, exclude=Comment.document),
             "parent_id": FilterMeta(
                 field=Comment.parent_id,
                 exclude=Comment.parent,
@@ -500,7 +454,5 @@ class ShareLinkFilter(BaseFilterModel):
         return {
             "label": FilterMeta(field=ShareLink.label),
             "expires_at": FilterMeta(field=ShareLink.expires_at),
-            "author_id": FilterMeta(
-                field=ShareLink.author_id, exclude=ShareLink.author
-            ),
+            "author_id": FilterMeta(field=ShareLink.author_id, exclude=ShareLink.author),
         }

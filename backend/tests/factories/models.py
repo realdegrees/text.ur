@@ -141,7 +141,5 @@ class ShareLinkFactory(BaseFactory):
     created_by = factory.SubFactory(UserFactory)
     permissions = factory.LazyFunction(lambda: [])
     token = factory.LazyFunction(lambda: str(uuid4()))
-    expires_at = factory.LazyFunction(
-        lambda: datetime.now(UTC) + timedelta(days=7)
-    )
+    expires_at = factory.LazyFunction(lambda: datetime.now(UTC) + timedelta(days=7))
     label = factory.Faker("sentence")

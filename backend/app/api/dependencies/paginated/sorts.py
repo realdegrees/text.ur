@@ -17,11 +17,7 @@ def get_sorts_dependency(
             alias="sort",
             description=(
                 "<details><summary>Expand to view available sorting fields</summary>"
-                "<pre>"
-                + "\n".join(
-                    f"❖ {field.name}" for field in filterable_field_data
-                )
-                + "</pre></details>"
+                "<pre>" + "\n".join(f"❖ {field.name}" for field in filterable_field_data) + "</pre></details>"
             ),
         ),
     ) -> list[Sort]:
@@ -32,9 +28,7 @@ def get_sorts_dependency(
             if not key.startswith("sort[") or value not in ("asc", "desc"):
                 continue
             field = key[len("sort") :].replace("[", "").replace("]", "")
-            is_valid_field = next(
-                (f for f in filterable_field_data if f.name == field), None
-            )
+            is_valid_field = next((f for f in filterable_field_data if f.name == field), None)
             if is_valid_field:
                 sorts.append(Sort(field=field, direction=value))
 

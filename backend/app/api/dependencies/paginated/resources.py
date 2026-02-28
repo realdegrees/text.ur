@@ -25,9 +25,7 @@ from sqlmodel.orm.session import SelectOfScalar
 from util.queries import EndpointGuard
 
 
-def build_paginated_description(
-    base_description: str, guards: Sequence[EndpointGuard]
-) -> str:
+def build_paginated_description(base_description: str, guards: Sequence[EndpointGuard]) -> str:
     """Build endpoint description with guard exclusion information.
 
     Args:
@@ -88,22 +86,14 @@ def PaginatedResource[Model: SQLModel, FilterModel: SQLModel](  # noqa: C901
 
         for filter_item in filters:
             field_data = next(
-                (
-                    f
-                    for f in filterable_field_data
-                    if f.name == filter_item.field
-                ),
+                (f for f in filterable_field_data if f.name == filter_item.field),
                 None,
             )
 
             if field_data is None:
                 continue
 
-            conditions.append(
-                field_data.clause(
-                    filter_item.operator, filter_item.value, session_user
-                )
-            )
+            conditions.append(field_data.clause(filter_item.operator, filter_item.value, session_user))
 
         return conditions
 
@@ -114,9 +104,7 @@ def PaginatedResource[Model: SQLModel, FilterModel: SQLModel](  # noqa: C901
     ) -> SelectOfScalar[Model]:
         """Apply necessary joins to the query based on the filters."""
         for field in fields:
-            filterable_field = next(
-                (f for f in filterable_field_data if f.name == field), None
-            )
+            filterable_field = next((f for f in filterable_field_data if f.name == field), None)
             if filterable_field and filterable_field.join:
                 join_target = filterable_field.join.target
                 join_type = filterable_field.join.join_type.lower()
@@ -137,20 +125,12 @@ def PaginatedResource[Model: SQLModel, FilterModel: SQLModel](  # noqa: C901
         order_expressions: list[ColumnElement] = []
 
         for sort in sorts:
-            field_data = next(
-                (f for f in filterable_field_data if f.name == sort.field), None
-            )
+            field_data = next((f for f in filterable_field_data if f.name == sort.field), None)
             if field_data is None:
                 continue
             column = field_data.field
-            columns.append(
-                column.label(f"order_{len(columns)}")
-            )  # Labeled column for SELECT
-            order_expressions.append(
-                column.desc()
-                if sort.direction.lower() == "desc"
-                else column.asc()
-            )  # Direction for ORDER BY
+            columns.append(column.label(f"order_{len(columns)}"))  # Labeled column for SELECT
+            order_expressions.append(column.desc() if sort.direction.lower() == "desc" else column.asc())  # Direction for ORDER BY
 
         return columns, order_expressions
 
@@ -163,9 +143,7 @@ def PaginatedResource[Model: SQLModel, FilterModel: SQLModel](  # noqa: C901
         session_user: User | None = Authenticate(strict=False),
     ) -> Paginated[Model]:
         # Resolve primary key(s)
-        resolved_key_columns: list[ColumnElement] = (
-            key_columns if key_columns else [base_model.id]
-        )
+        resolved_key_columns: list[ColumnElement] = key_columns if key_columns else [base_model.id]
 
         # Collect fields to exclude from response
         excluded_fields: list[str] = []
@@ -179,11 +157,7 @@ def PaginatedResource[Model: SQLModel, FilterModel: SQLModel](  # noqa: C901
             # Only exclude fields when using the equality operator
             if filter_item.operator == "==":
                 field_data = next(
-                    (
-                        f
-                        for f in filterable_field_data
-                        if f.name == filter_item.field
-                    ),
+                    (f for f in filterable_field_data if f.name == filter_item.field),
                     None,
                 )
                 if field_data and field_data.exclude_field:
@@ -193,14 +167,10 @@ def PaginatedResource[Model: SQLModel, FilterModel: SQLModel](  # noqa: C901
         filter_conditions = build_conditions(filters, session_user=session_user)
 
         # Map Sort -> Column
-        labeled_order_columns, order_expressions = build_order_expressions(
-            sorts
-        )
+        labeled_order_columns, order_expressions = build_order_expressions(sorts)
 
         # Base query with filters (distinct primary keys + order columns)
-        base_query = select(
-            *resolved_key_columns, *labeled_order_columns
-        ).distinct()
+        base_query = select(*resolved_key_columns, *labeled_order_columns).distinct()
         base_query = apply_joins(
             base_query,
             [*[f.field for f in filters], *[s.field for s in sorts]],
@@ -217,11 +187,7 @@ def PaginatedResource[Model: SQLModel, FilterModel: SQLModel](  # noqa: C901
         # Add query parameters from request (excluding filters)
         if isinstance(request.query_params, QueryParams):
             for key, value in request.query_params.multi_items():
-                if (
-                    key not in params
-                    and not key.startswith("filter[")
-                    and not key.startswith("sort[")
-                ):
+                if key not in params and not key.startswith("filter[") and not key.startswith("sort["):
                     params[key] = value
 
         # Add path parameters from request
@@ -232,31 +198,21 @@ def PaginatedResource[Model: SQLModel, FilterModel: SQLModel](  # noqa: C901
         # Add custom query modifications
         if guards:
             for guard in guards:
-                base_query = base_query.where(
-                    guard.clause(session_user, params, multi=True)
-                )
+                base_query = base_query.where(guard.clause(session_user, params, multi=True))
 
         # Ensure GROUP BY includes all selected columns
         group_by_columns = resolved_key_columns + list(labeled_order_columns)
         base_query = base_query.group_by(*group_by_columns)
 
         # Apply sorting before pagination
-        sorted_query = base_query.order_by(
-            *order_expressions, *resolved_key_columns
-        )
+        sorted_query = base_query.order_by(*order_expressions, *resolved_key_columns)
 
         # Count total results after filtering and sorting
-        count_result = await db.exec(
-            select(func.count()).select_from(sorted_query.subquery())
-        )
+        count_result = await db.exec(select(func.count()).select_from(sorted_query.subquery()))
         total_count = count_result.first()
 
         # Apply pagination after sorting
-        paginated_subq = (
-            sorted_query.offset(pagination.offset)
-            .limit(pagination.limit)
-            .subquery("paginated_subq")
-        )
+        paginated_subq = sorted_query.offset(pagination.offset).limit(pagination.limit).subquery("paginated_subq")
 
         # Build ordering expressions using the labeled columns
         subq_order_cols = [
@@ -271,19 +227,10 @@ def PaginatedResource[Model: SQLModel, FilterModel: SQLModel](  # noqa: C901
             pk_col = resolved_key_columns[0]
             join_condition = pk_col == getattr(paginated_subq.c, pk_col.name)
         else:
-            join_condition = tuple_(*resolved_key_columns) == tuple_(
-                *[
-                    getattr(paginated_subq.c, col.name)
-                    for col in resolved_key_columns
-                ]
-            )
+            join_condition = tuple_(*resolved_key_columns) == tuple_(*[getattr(paginated_subq.c, col.name) for col in resolved_key_columns])
 
         # Final selection with ordering
-        selection = (
-            select(base_model)
-            .join(paginated_subq, join_condition)
-            .order_by(*subq_order_cols)
-        )
+        selection = select(base_model).join(paginated_subq, join_condition).order_by(*subq_order_cols)
         result = await db.exec(selection)
         rows = result.all()
 
@@ -294,17 +241,12 @@ def PaginatedResource[Model: SQLModel, FilterModel: SQLModel](  # noqa: C901
             offset=pagination.offset,
             limit=pagination.limit,
             filters=filters,
-            order_by=[
-                f"{'-' if s.direction == 'desc' else ''}{s.field}"
-                for s in sorts
-            ],
+            order_by=[f"{'-' if s.direction == 'desc' else ''}{s.field}" for s in sorts],
             excluded_fields=excluded_fields,
         )
 
         if validate:
-            paginated_payload = await validate(
-                paginated_payload, session_user, db
-            )
+            paginated_payload = await validate(paginated_payload, session_user, db)
 
         return paginated_payload
 

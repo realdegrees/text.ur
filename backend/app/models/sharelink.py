@@ -19,9 +19,7 @@ def _validate_tz_aware(
 ) -> datetime | None:
     """Reject naive datetimes — requires timezone info."""
     if v is not None and v.tzinfo is None:
-        raise ValueError(
-            "expires_at must include timezone info (e.g. '2025-09-13T14:30:00Z')"
-        )
+        raise ValueError("expires_at must include timezone info (e.g. '2025-09-13T14:30:00Z')")
     return v
 
 

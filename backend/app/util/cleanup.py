@@ -42,9 +42,7 @@ async def _cleanup_old_logs() -> int:
         if not acquired:
             return 0
 
-        log_dir = config.LOG_FILE_DIR or os.path.join(
-            config.backend_path, "logs"
-        )
+        log_dir = config.LOG_FILE_DIR or os.path.join(config.backend_path, "logs")
         if not os.path.isdir(log_dir):
             return 0
 

@@ -36,9 +36,5 @@ class APIRouter(FastAPIRouter):
             path = path[:-1]
 
         # Register both versions of the route
-        super().add_api_route(
-            path, endpoint, include_in_schema=include_in_schema, **kwargs
-        )
-        super().add_api_route(
-            path + "/", endpoint, include_in_schema=False, **kwargs
-        )
+        super().add_api_route(path, endpoint, include_in_schema=include_in_schema, **kwargs)
+        super().add_api_route(path + "/", endpoint, include_in_schema=False, **kwargs)

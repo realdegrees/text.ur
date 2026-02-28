@@ -20,9 +20,7 @@ router = APIRouter(
 @router.post("/", response_model=TagRead)
 async def create_tag(
     db: Database,
-    _: User = Authenticate(
-        guards=[Guard.document_access({Permission.ADMINISTRATOR})]
-    ),
+    _: User = Authenticate(guards=[Guard.document_access({Permission.ADMINISTRATOR})]),
     tag_create: TagCreate = Body(...),
     document: Document = Resource(Document, param_alias="document_id"),
 ) -> TagRead:
@@ -31,9 +29,7 @@ async def create_tag(
     Requires MANAGE_TAGS permission in the document's group.
     """
     # Check if document has reached max tag limit
-    result = await db.exec(
-        select(func.count(Tag.id)).where(Tag.document_id == document.id)
-    )
+    result = await db.exec(select(func.count(Tag.id)).where(Tag.document_id == document.id))
     tag_count = result.one()
     if tag_count >= config.MAX_TAGS_PER_DOCUMENT:
         raise AppException(
@@ -88,9 +84,7 @@ async def get_tag(
 @router.put("/{tag_id}", response_model=TagRead)
 async def update_tag(
     db: Database,
-    _: User = Authenticate(
-        guards=[Guard.document_access({Permission.ADMINISTRATOR})]
-    ),
+    _: User = Authenticate(guards=[Guard.document_access({Permission.ADMINISTRATOR})]),
     tag_update: TagUpdate = Body(...),
     document: Document = Resource(Document, param_alias="document_id"),
     tag: Tag = Resource(Tag, param_alias="tag_id"),
@@ -117,9 +111,7 @@ async def update_tag(
 @router.delete("/{tag_id}")
 async def delete_tag(
     db: Database,
-    _: User = Authenticate(
-        guards=[Guard.document_access({Permission.ADMINISTRATOR})]
-    ),
+    _: User = Authenticate(guards=[Guard.document_access({Permission.ADMINISTRATOR})]),
     document: Document = Resource(Document, param_alias="document_id"),
     tag: Tag = Resource(Tag, param_alias="tag_id"),
 ) -> dict[str, bool]:

@@ -55,9 +55,7 @@ router = APIRouter(
 )
 async def list_groups(
     _: BasicAuthentication,
-    groups: Paginated[Group] = PaginatedResource(
-        Group, GroupFilter, guards=[Guard.group_access()]
-    ),
+    groups: Paginated[Group] = PaginatedResource(Group, GroupFilter, guards=[Guard.group_access()]),
 ) -> Paginated[GroupRead]:
     """Get all groups the user is a member of."""
     return groups
@@ -117,9 +115,7 @@ async def read_group(
 @router.put("/{group_id}", response_model=GroupRead)
 async def update_group(
     db: Database,
-    session_user: User = Authenticate(
-        [Guard.group_access({Permission.ADMINISTRATOR})]
-    ),
+    session_user: User = Authenticate([Guard.group_access({Permission.ADMINISTRATOR})]),
     group: Group = Resource(Group, param_alias="group_id"),
     group_update: GroupUpdate = Body(...),
 ) -> Group:
@@ -134,18 +130,12 @@ async def update_group(
         result = await db.exec(
             select(Membership).where(
                 Membership.group_id == group.id,
-                ~Membership.permissions.contains(
-                    group_update.default_permissions
-                ),
+                ~Membership.permissions.contains(group_update.default_permissions),
             )
         )
         memberships_missing_permissions = result.all()
         for membership in memberships_missing_permissions:
-            membership.permissions = list(
-                set(membership.permissions).union(
-                    set(group_update.default_permissions)
-                )
-            )
+            membership.permissions = list(set(membership.permissions).union(set(group_update.default_permissions)))
             db.add(membership)
         await db.commit()
 
@@ -157,9 +147,7 @@ async def update_group(
 async def transfer_ownership(
     db: Database,
     transfer: GroupTransfer = Body(...),
-    session_user: User = Authenticate(
-        [Guard.group_access(None, only_owner=True)]
-    ),
+    session_user: User = Authenticate([Guard.group_access(None, only_owner=True)]),
     group: Group = Resource(Group, param_alias="group_id"),
 ) -> None:
     """Transfer group ownership."""
@@ -219,9 +207,7 @@ async def delete_group(
     storage_keys = await prepare_group_deletion(db, group.id)
     await db.commit()
 
-    cleanup_storage_keys(
-        storage, storage_keys, groups_logger, f"group {group.id}"
-    )
+    cleanup_storage_keys(storage, storage_keys, groups_logger, f"group {group.id}")
 
     return Response(status_code=204)
 
@@ -238,9 +224,7 @@ async def delete_group(
 async def reorder_documents(
     db: Database,
     reorder: DocumentReorder = Body(...),
-    session_user: User = Authenticate(
-        [Guard.group_access({Permission.ADMINISTRATOR})]
-    ),
+    session_user: User = Authenticate([Guard.group_access({Permission.ADMINISTRATOR})]),
     group: Group = Resource(Group, param_alias="group_id"),
 ) -> list[DocumentRead]:
     """Reorder a subset of documents within a group.

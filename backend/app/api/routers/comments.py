@@ -57,9 +57,7 @@ async def list_comments(
 async def create_comment(
     db: Database,
     events: Events,
-    user: User = Authenticate(
-        [Guard.document_access({Permission.ADD_COMMENTS})]
-    ),
+    user: User = Authenticate([Guard.document_access({Permission.ADD_COMMENTS})]),
     create: CommentCreate = Body(...),
     x_connection_id: str | None = Header(None, alias="X-Connection-ID"),
 ) -> Comment:
@@ -128,13 +126,9 @@ async def update_comment(
         originating_connection_id=x_connection_id,  # Don't echo to originating connection
     )
     event_data = event.model_dump(mode="json")
-    event_data["old_visibility"] = (
-        old_visibility  # Include old visibility for filtering
-    )
+    event_data["old_visibility"] = old_visibility  # Include old visibility for filtering
 
-    await events.publish(
-        event_data, channel=f"documents:{comment.document_id}:comments"
-    )
+    await events.publish(event_data, channel=f"documents:{comment.document_id}:comments")
 
     return comment
 
@@ -144,9 +138,7 @@ async def delete_comment(
     db: Database,
     events: Events,
     comment: Comment = Resource(Comment, param_alias="comment_id"),
-    user: User = Authenticate(
-        [Guard.comment_access({Permission.ADMINISTRATOR})]
-    ),
+    user: User = Authenticate([Guard.comment_access({Permission.ADMINISTRATOR})]),
     x_connection_id: str | None = Header(None, alias="X-Connection-ID"),
 ) -> Response:
     """Delete a comment."""
@@ -216,9 +208,7 @@ async def update_comment_tags(
                 )
 
     # Get existing comment-tag associations
-    existing_result = await db.exec(
-        select(CommentTag).where(CommentTag.comment_id == comment_id)
-    )
+    existing_result = await db.exec(select(CommentTag).where(CommentTag.comment_id == comment_id))
     existing_tags = {ct.tag_id: ct for ct in existing_result.all()}
 
     # Calculate diff
@@ -238,9 +228,7 @@ async def update_comment_tags(
             db.add(existing_tags[tag_id])
         else:
             # Insert new tag
-            comment_tag = CommentTag(
-                comment_id=comment_id, tag_id=tag_id, order=order
-            )
+            comment_tag = CommentTag(comment_id=comment_id, tag_id=tag_id, order=order)
             db.add(comment_tag)
 
     await db.commit()

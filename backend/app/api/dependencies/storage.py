@@ -40,9 +40,7 @@ class StorageManager:
                 f.write("ok")
             os.remove(test_path)
         except OSError as e:
-            raise RuntimeError(
-                f"Storage directory {self._storage_dir} is not writable: {e}"
-            ) from e
+            raise RuntimeError(f"Storage directory {self._storage_dir} is not writable: {e}") from e
         storage_logger.info("Storage configured (dir: %s)", self._storage_dir)
 
     def _path(self, key: str) -> str:
@@ -72,9 +70,7 @@ class StorageManager:
     def _write_meta(self, key: str, content_type: str) -> None:
         """Write the sidecar metadata file atomically."""
         meta_path = self._meta_path(key)
-        fd, tmp_path = tempfile.mkstemp(
-            dir=self._storage_dir, suffix=".meta.tmp"
-        )
+        fd, tmp_path = tempfile.mkstemp(dir=self._storage_dir, suffix=".meta.tmp")
         try:
             with os.fdopen(fd, "w") as f:
                 json.dump({"content_type": content_type}, f)
@@ -142,9 +138,7 @@ class StorageManager:
         """
         file_path = self._path(key)
         try:
-            fd, tmp_path = tempfile.mkstemp(
-                dir=self._storage_dir, suffix=".tmp"
-            )
+            fd, tmp_path = tempfile.mkstemp(dir=self._storage_dir, suffix=".tmp")
             try:
                 with os.fdopen(fd, "wb") as f:
                     while chunk := data.read(8192):
@@ -191,9 +185,7 @@ class StorageManager:
                 detail="File storage is temporarily unavailable.",
             ) from e
 
-    def download_stream(
-        self, key: str, chunk_size: int = 8192
-    ) -> Iterator[bytes]:
+    def download_stream(self, key: str, chunk_size: int = 8192) -> Iterator[bytes]:
         """Return an iterator of bytes, streaming in chunks.
 
         Callers can forward the iterator directly to

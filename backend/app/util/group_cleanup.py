@@ -26,9 +26,7 @@ async def prepare_group_deletion(
     Returns the list of storage keys that should be removed
     **after** the commit succeeds.
     """
-    result = await db.exec(
-        select(Document.storage_key).where(Document.group_id == group_id)
-    )
+    result = await db.exec(select(Document.storage_key).where(Document.group_id == group_id))
     storage_keys: list[str] = list(result.all())
 
     result = await db.exec(select(Group).where(Group.id == group_id))

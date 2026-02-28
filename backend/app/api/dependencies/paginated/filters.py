@@ -23,12 +23,7 @@ def get_filters_dependency(  # noqa: C901
             alias="filter",
             description=(
                 "<details><summary>Expand to view available filter fields</summary>"
-                "<pre>"
-                + "\n".join(
-                    format_field_description(field)
-                    for field in filterable_field_data
-                )
-                + "</pre></details>"
+                "<pre>" + "\n".join(format_field_description(field) for field in filterable_field_data) + "</pre></details>"
             ),
         ),
     ) -> list[Filter]:
@@ -52,9 +47,7 @@ def get_filters_dependency(  # noqa: C901
             if not field or not operator:
                 continue
 
-            is_valid_field = next(
-                (f for f in filterable_field_data if f.name == field), None
-            )
+            is_valid_field = next((f for f in filterable_field_data if f.name == field), None)
             if not is_valid_field:
                 continue
 
@@ -63,9 +56,7 @@ def get_filters_dependency(  # noqa: C901
                 continue
 
             try:
-                filters.append(
-                    Filter(field=field, operator=operator, value=value)
-                )
+                filters.append(Filter(field=field, operator=operator, value=value))
             except Exception as e:
                 print(f"Error processing filter '{key}': {e}")
 

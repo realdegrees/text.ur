@@ -29,11 +29,7 @@ async def _build_score_config_read(
     config: ScoreConfig,
 ) -> ScoreConfigRead:
     """Build a full ScoreConfigRead including the group's reactions."""
-    result = await db.exec(
-        select(GroupReaction)
-        .where(GroupReaction.group_id == config.group_id)
-        .order_by(GroupReaction.order)
-    )
+    result = await db.exec(select(GroupReaction).where(GroupReaction.group_id == config.group_id).order_by(GroupReaction.order))
     reactions = result.all()
 
     return ScoreConfigRead(
@@ -58,9 +54,7 @@ async def get_score_config(
     """Get the scoring configuration for a group."""
     response.headers["Cache-Control"] = "private, max-age=60"
 
-    result = await db.exec(
-        select(ScoreConfig).where(ScoreConfig.group_id == group.id)
-    )
+    result = await db.exec(select(ScoreConfig).where(ScoreConfig.group_id == group.id))
     config = result.first()
     if config is None:
         raise AppException(
@@ -76,18 +70,14 @@ async def get_score_config(
 async def update_score_config(
     db: Database,
     update: ScoreConfigUpdate = Body(...),
-    _: User = Authenticate(
-        guards=[Guard.group_access({Permission.ADMINISTRATOR})]
-    ),
+    _: User = Authenticate(guards=[Guard.group_access({Permission.ADMINISTRATOR})]),
     group: Group = Resource(Group, param_alias="group_id"),
 ) -> ScoreConfigRead:
     """Update the scoring configuration for a group.
 
     This retroactively affects all user scores.
     """
-    result = await db.exec(
-        select(ScoreConfig).where(ScoreConfig.group_id == group.id)
-    )
+    result = await db.exec(select(ScoreConfig).where(ScoreConfig.group_id == group.id))
     config = result.first()
     if config is None:
         raise AppException(
@@ -118,11 +108,7 @@ async def list_group_reactions(
     group: Group = Resource(Group, param_alias="group_id"),
 ) -> list[GroupReactionRead]:
     """List all available reaction emojis for a group."""
-    result = await db.exec(
-        select(GroupReaction)
-        .where(GroupReaction.group_id == group.id)
-        .order_by(GroupReaction.order)
-    )
+    result = await db.exec(select(GroupReaction).where(GroupReaction.group_id == group.id).order_by(GroupReaction.order))
     return [GroupReactionRead.model_validate(r) for r in result.all()]
 
 
@@ -134,9 +120,7 @@ async def list_group_reactions(
 async def create_group_reaction(
     db: Database,
     data: GroupReactionCreate = Body(...),
-    _: User = Authenticate(
-        guards=[Guard.group_access({Permission.ADMINISTRATOR})]
-    ),
+    _: User = Authenticate(guards=[Guard.group_access({Permission.ADMINISTRATOR})]),
     group: Group = Resource(Group, param_alias="group_id"),
 ) -> GroupReactionRead:
     """Add a new reaction emoji to a group."""
@@ -177,9 +161,7 @@ async def update_group_reaction(
     db: Database,
     reaction_id: int,
     update: GroupReactionUpdate = Body(...),
-    _: User = Authenticate(
-        guards=[Guard.group_access({Permission.ADMINISTRATOR})]
-    ),
+    _: User = Authenticate(guards=[Guard.group_access({Permission.ADMINISTRATOR})]),
     group: Group = Resource(Group, param_alias="group_id"),
 ) -> GroupReactionRead:
     """Update a group reaction's points or order."""
@@ -211,9 +193,7 @@ async def update_group_reaction(
 async def delete_group_reaction(
     db: Database,
     reaction_id: int,
-    _: User = Authenticate(
-        guards=[Guard.group_access({Permission.ADMINISTRATOR})]
-    ),
+    _: User = Authenticate(guards=[Guard.group_access({Permission.ADMINISTRATOR})]),
     group: Group = Resource(Group, param_alias="group_id"),
 ) -> Response:
     """Delete a group reaction.

@@ -43,9 +43,7 @@ root_router = APIRouter(
 )
 async def list_share_links(
     _: BasicAuthentication,
-    share_links: Paginated[ShareLink] = PaginatedResource(
-        ShareLink, ShareLinkFilter, guards=[Guard.sharelink_access()]
-    ),
+    share_links: Paginated[ShareLink] = PaginatedResource(ShareLink, ShareLinkFilter, guards=[Guard.sharelink_access()]),
 ) -> Paginated[ShareLinkRead]:
     """Get all share links for the group."""
     return share_links
@@ -53,9 +51,7 @@ async def list_share_links(
 
 @root_router.get("/{token}", response_model=ShareLinkReadFromToken)
 async def get_share_link_from_token(
-    share_link: ShareLink = Resource(
-        ShareLink, param_alias="token", key_column=ShareLink.token
-    ),
+    share_link: ShareLink = Resource(ShareLink, param_alias="token", key_column=ShareLink.token),
 ) -> ShareLinkReadFromToken:
     """Get a single share link by token."""
     return share_link
@@ -87,15 +83,9 @@ async def update_share_link(
     group: Group = Resource(Group, param_alias="group_id"),
 ) -> ShareLinkRead:
     """Update a share link."""
-    permissions_changed = share_link_update.permissions is not None and set(
-        share_link_update.permissions
-    ) != set(share_link.permissions)
+    permissions_changed = share_link_update.permissions is not None and set(share_link_update.permissions) != set(share_link.permissions)
     await db.merge(share_link)
-    share_link.sqlmodel_update(
-        share_link_update.model_dump(
-            exclude_unset=True, exclude={"rotate_token"}
-        )
-    )
+    share_link.sqlmodel_update(share_link_update.model_dump(exclude_unset=True, exclude={"rotate_token"}))
 
     share_link.author = user  # Update author to the user making the change
 
@@ -112,12 +102,8 @@ async def update_share_link(
     if permissions_changed:
         # Compute minimum permissions: group defaults plus the sharelink's new permissions.
         new_sharelink_permissions: set[Permission] = set(share_link.permissions)
-        group_default_permissions: set[Permission] = set(
-            group.default_permissions
-        )
-        updated_permissions: set[Permission] = (
-            group_default_permissions | new_sharelink_permissions
-        )
+        group_default_permissions: set[Permission] = set(group.default_permissions)
+        updated_permissions: set[Permission] = group_default_permissions | new_sharelink_permissions
 
         # Ensure each membership has at least the required permissions without removing existing ones.
         for membership in memberships:
@@ -141,9 +127,7 @@ async def update_share_link(
 @router.delete("/{share_link_id}")
 async def delete_share_link(
     db: Database,
-    _user: User = Authenticate(
-        [Guard.group_access({Permission.ADMINISTRATOR})]
-    ),
+    _user: User = Authenticate([Guard.group_access({Permission.ADMINISTRATOR})]),
     share_link: ShareLink = Resource(ShareLink, param_alias="share_link_id"),
     _group: Group = Resource(Group, param_alias="group_id"),
 ) -> Response:
@@ -200,8 +184,7 @@ async def use_sharelink_token(
     membership = Membership(
         user_id=user.id,
         group_id=share_link.group_id,
-        permissions=set(share_link.permissions)
-        | set(share_link.group.default_permissions),
+        permissions=set(share_link.permissions) | set(share_link.group.default_permissions),
         is_owner=False,
         accepted=True,  # Auto-accept for sharelink memberships
         share_link=share_link,

@@ -23,9 +23,7 @@ class UserCreate(SQLModel):
         max_length=MAX_PASSWORD_LENGTH,
     )
     email: str | None = Field(default=None, max_length=MAX_EMAIL_LENGTH)
-    first_name: str | None = Field(
-        default=None, max_length=MAX_FIRST_NAME_LENGTH
-    )
+    first_name: str | None = Field(default=None, max_length=MAX_FIRST_NAME_LENGTH)
     last_name: str | None = Field(default=None, max_length=MAX_LAST_NAME_LENGTH)
 
 
@@ -48,13 +46,9 @@ class UserUpdate(SQLModel):
         min_length=MIN_PASSWORD_LENGTH,
         max_length=MAX_PASSWORD_LENGTH,
     )
-    old_password: str | None = Field(
-        default=None, max_length=MAX_PASSWORD_LENGTH
-    )
+    old_password: str | None = Field(default=None, max_length=MAX_PASSWORD_LENGTH)
     email: str | None = Field(default=None, max_length=MAX_EMAIL_LENGTH)
-    first_name: str | None = Field(
-        default=None, max_length=MAX_FIRST_NAME_LENGTH
-    )
+    first_name: str | None = Field(default=None, max_length=MAX_FIRST_NAME_LENGTH)
     last_name: str | None = Field(default=None, max_length=MAX_LAST_NAME_LENGTH)
 
 

@@ -111,9 +111,7 @@ def Authenticate(  # noqa: C901
     ) -> User | None:
         # Use cookies for authentication (consistent with HTTP endpoints)
         token: str | None = ws.cookies.get(f"{token_type}_token")
-        logger.info(
-            f"[WS Auth] Token type: {token_type}, Token present: {token is not None}, Source: cookie"
-        )
+        logger.info(f"[WS Auth] Token type: {token_type}, Token present: {token is not None}, Source: cookie")
         return await dependency(db, ws, token)
 
     async def dependency_http(

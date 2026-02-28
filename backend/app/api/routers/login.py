@@ -146,9 +146,7 @@ async def reset_password(
     token_data = {"email": email, "pwd": user.password[:16]}
     token = serializer.dumps(token_data, salt="password-reset")
     reset_link = f"{cfg.FRONTEND_BASEURL}/password-reset/{token}"
-    expiry_time = datetime.now(UTC) + timedelta(
-        minutes=cfg.PASSWORD_RESET_LINK_EXPIRY_MINUTES
-    )
+    expiry_time = datetime.now(UTC) + timedelta(minutes=cfg.PASSWORD_RESET_LINK_EXPIRY_MINUTES)
     try:
         mail.send_email(
             target_email=email,

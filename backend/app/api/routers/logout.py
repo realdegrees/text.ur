@@ -32,9 +32,7 @@ async def logout(response: Response) -> None:
 
 
 @router.post("/all")
-async def logout_all_devices(
-    response: Response, user: BasicAuthentication, db: Database
-) -> None:
+async def logout_all_devices(response: Response, user: BasicAuthentication, db: Database) -> None:
     """Log the user out from all devices by rerolling the user secret."""
     # Use the logout method  to clear cookies on the response
     await logout(response)

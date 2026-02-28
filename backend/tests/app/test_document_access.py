@@ -110,15 +110,9 @@ async def test_document_access_predicate_and_sql(
     viewer = await db.run_sync(lambda session: f.UserFactory())
 
     group = await db.run_sync(lambda session: f.GroupFactory())
-    document = await db.run_sync(
-        lambda session: f.DocumentFactory(group=group, visibility=visibility)
-    )
+    document = await db.run_sync(lambda session: f.DocumentFactory(group=group, visibility=visibility))
 
-    await db.run_sync(
-        lambda session: f.MembershipFactory(
-            user=owner, group=group, is_owner=True, accepted=True
-        )
-    )
+    await db.run_sync(lambda session: f.MembershipFactory(user=owner, group=group, is_owner=True, accepted=True))
 
     perms = []
     if is_admin:
@@ -139,17 +133,11 @@ async def test_document_access_predicate_and_sql(
     from models.tables import Membership
 
     await db.flush()
-    memberships = (
-        await db.exec(select(Membership).where(Membership.group_id == group.id))
-    ).all()
+    memberships = (await db.exec(select(Membership).where(Membership.group_id == group.id))).all()
     group.memberships = list(memberships)
     document.group = group
 
-    guard = Guard.document_access(
-        require_permissions
-        if require_permissions is None
-        else set(require_permissions)
-    )
+    guard = Guard.document_access(require_permissions if require_permissions is None else set(require_permissions))
 
     pred_result = guard.predicate(document, viewer)
     assert pred_result is expected

@@ -63,46 +63,30 @@ async def test_comment_access_predicate_and_sql(
 
     # Create group and document
     group = await db.run_sync(lambda session: f.GroupFactory())
-    document = await db.run_sync(
-        lambda session: f.DocumentFactory(group=group, view_mode=view_mode)
-    )
+    document = await db.run_sync(lambda session: f.DocumentFactory(group=group, view_mode=view_mode))
 
     # Create memberships for author and viewer
     # Author should always be a member and accepted
-    await db.run_sync(
-        lambda session: f.MembershipFactory(
-            user=author, group=group, is_owner=False, accepted=True
-        )
-    )
+    await db.run_sync(lambda session: f.MembershipFactory(user=author, group=group, is_owner=False, accepted=True))
 
     # Viewer membership accepted by default; add permission flag if required.
     perms = []
     if user_has_perm:
         perms = [Permission.VIEW_RESTRICTED_COMMENTS]
 
-    await db.run_sync(
-        lambda session: f.MembershipFactory(
-            user=viewer, group=group, permissions=perms, accepted=True
-        )
-    )
+    await db.run_sync(lambda session: f.MembershipFactory(user=viewer, group=group, permissions=perms, accepted=True))
 
     # Create the comment as either the viewer (if is_author=True) or another user
     # is_author indicates whether the viewer is the comment author
     comment_user = viewer if is_author else author
-    comment = await db.run_sync(
-        lambda session: f.CommentFactory(
-            document=document, user=comment_user, visibility=comment_visibility
-        )
-    )
+    comment = await db.run_sync(lambda session: f.CommentFactory(document=document, user=comment_user, visibility=comment_visibility))
 
     # Ensure relationships are properly loaded for the predicate test
     # Manually load memberships from database and assign to group
     await db.flush()
 
     # Query memberships directly
-    memberships = (
-        await db.exec(select(Membership).where(Membership.group_id == group.id))
-    ).all()
+    memberships = (await db.exec(select(Membership).where(Membership.group_id == group.id))).all()
     group.memberships = list(memberships)
     document.group = group
 

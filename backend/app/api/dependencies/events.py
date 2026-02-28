@@ -40,9 +40,7 @@ class EventManager:
     def __init__(self) -> None:
         """Initialize the EventManager with Redis connection details."""
         if not all([cfg.REDIS_HOST, cfg.REDIS_PORT]):
-            raise RuntimeError(
-                "Not all required Redis configuration variables are set."
-            )
+            raise RuntimeError("Not all required Redis configuration variables are set.")
 
     # ---------------- Lifecycle ----------------
 
@@ -69,9 +67,7 @@ class EventManager:
     async def check_connection(self) -> None:
         """Check Redis connection and reconnect if necessary."""
         if self._redis is None:
-            events_logger.warning(
-                "Redis client is not initialised; cannot check connection"
-            )
+            events_logger.warning("Redis client is not initialised; cannot check connection")
             return
 
         await self._redis.ping()
@@ -98,9 +94,7 @@ class EventManager:
         # names and make keys easily identifiable in Redis.
         return f"active_users:{channel_key}"
 
-    async def add_active_user(
-        self, channel_key: str, user_id: int, username: str, connection_id: str
-    ) -> list[ConnectedUser]:
+    async def add_active_user(self, channel_key: str, user_id: int, username: str, connection_id: str) -> list[ConnectedUser]:
         """Add a user to the active users list for the given channel and return all active users.
 
         channel_key should be the same string used for EventManager.publish/subscribe
@@ -129,9 +123,7 @@ class EventManager:
         """Remove a user from the active users list for the provided channel key."""
         key = self._active_users_key(channel_key)
         await self._redis.hdel(key, str(user_id))
-        events_logger.info(
-            "Removed active user %s from channel %s", user_id, channel_key
-        )
+        events_logger.info("Removed active user %s from channel %s", user_id, channel_key)
 
     async def get_active_users(self, channel_key: str) -> list[ConnectedUser]:
         """Get all active users for a channel key."""
@@ -218,17 +210,13 @@ class EventManager:
                 subscribed_channels -= to_unsubscribe
 
             if to_subscribe:
-                events_logger.debug(
-                    "Subscribing to Redis channels: %s", ", ".join(to_subscribe)
-                )
+                events_logger.debug("Subscribing to Redis channels: %s", ", ".join(to_subscribe))
                 await pubsub.subscribe(*to_subscribe)
                 subscribed_channels |= to_subscribe
 
             try:
                 # Use get_message with timeout instead of blocking listen()
-                message = await pubsub.get_message(
-                    ignore_subscribe_messages=True, timeout=1.0
-                )
+                message = await pubsub.get_message(ignore_subscribe_messages=True, timeout=1.0)
                 if message:
                     await self._on_message(message)
             except Exception as e:
@@ -239,19 +227,13 @@ class EventManager:
                 pubsub = self._redis.pubsub()
                 subscribed_channels.clear()
 
-            await asyncio.sleep(
-                0.05
-            )  # Small sleep to prevent busy loop when messages arrive rapidly
+            await asyncio.sleep(0.05)  # Small sleep to prevent busy loop when messages arrive rapidly
 
     async def _on_message(self, message: dict) -> None:
         if message["type"] != "message":
             return
 
-        channel: str = (
-            message["channel"].decode()
-            if isinstance(message["channel"], bytes)
-            else message["channel"]
-        )
+        channel: str = message["channel"].decode() if isinstance(message["channel"], bytes) else message["channel"]
         data: dict = json.loads(message["data"])
         clients: set[WebSocket] = self._clients.get(channel, set())
         to_remove: set[WebSocket] = set()
@@ -266,22 +248,16 @@ class EventManager:
             except RuntimeError as e:
                 # Sending to a closed websocket is expected during
                 # disconnect race conditions — log at debug and clean up.
-                events_logger.debug(
-                    "WebSocket send failed (likely disconnected): %s", e
-                )
+                events_logger.debug("WebSocket send failed (likely disconnected): %s", e)
                 to_remove.add(ws)
             except Exception as e:
-                events_logger.error(
-                    "Error in on_event callback: %s", e, exc_info=True
-                )
+                events_logger.error("Error in on_event callback: %s", e, exc_info=True)
                 to_remove.add(ws)
 
         # Cleanup disconnected clients
         for ws in to_remove:
             await self.unregister_client(ws)
-            events_logger.debug(
-                "Removed disconnected client from channel %s", channel
-            )
+            events_logger.debug("Removed disconnected client from channel %s", channel)
 
 
 @lru_cache(maxsize=1)
