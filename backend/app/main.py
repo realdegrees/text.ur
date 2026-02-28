@@ -280,13 +280,23 @@ async def add_security_headers(request: Request, call_next: Callable) -> Respons
     if not request.url.path.startswith(("/api/docs", "/api/openapi.json")):
          response.headers["Content-Security-Policy"] = "default-src 'self'; frame-ancestors 'none';"
 
-    # Cache-Control: endpoints may override via their own headers
+    # Cache-Control: endpoints may override via their own headers.
+    # GET requests use a short browser-side cache so rapid repeated
+    # navigations (e.g. tab switching) are served instantly from the
+    # browser cache without hitting the backend at all.
+    # Mutations (POST/PUT/PATCH/DELETE) are never cached.
     if request.url.path == "/api/health":
         response.headers.setdefault("Cache-Control", "no-cache")
     elif request.url.path.startswith("/api/"):
-        response.headers.setdefault(
-            "Cache-Control", "private, no-store"
-        )
+        if request.method == "GET":
+            response.headers.setdefault(
+                "Cache-Control",
+                "private, max-age=5, stale-while-revalidate=30",
+            )
+        else:
+            response.headers.setdefault(
+                "Cache-Control", "private, no-store"
+            )
 
     return response
 
