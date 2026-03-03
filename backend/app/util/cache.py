@@ -100,9 +100,7 @@ async def invalidate_user_score(
         pattern = f"{base_key}:doc:*"
         cursor: int | str = 0
         while True:
-            cursor, keys = await r.scan(
-                cursor=cursor, match=pattern, count=200
-            )
+            cursor, keys = await r.scan(cursor=cursor, match=pattern, count=200)
             if keys:
                 await r.delete(*keys)
             if int(cursor) == 0:

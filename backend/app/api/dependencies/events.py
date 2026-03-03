@@ -59,18 +59,14 @@ class EventManager:
         cleared = 0
         cursor: int | str = 0
         while True:
-            cursor, keys = await self._redis.scan(
-                cursor=cursor, match="active_users:*", count=200
-            )
+            cursor, keys = await self._redis.scan(cursor=cursor, match="active_users:*", count=200)
             if keys:
                 await self._redis.delete(*keys)
                 cleared += len(keys)
             if int(cursor) == 0:
                 break
         if cleared:
-            events_logger.info(
-                "Cleared %d stale active user keys", cleared
-            )
+            events_logger.info("Cleared %d stale active user keys", cleared)
 
         self._subscriber_task = asyncio.create_task(self._subscriber_loop())
         events_logger.info("Started subscriber loop")

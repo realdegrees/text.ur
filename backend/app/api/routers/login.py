@@ -14,14 +14,13 @@ from core.auth import (
     validate_password,
 )
 from core.logger import get_logger
-from core.rate_limit import limiter
+from core.rate_limit import get_cache_key, limiter
 from fastapi import Body, Depends, Request, Response
 from fastapi.security import OAuth2PasswordRequestForm
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 from models.enums import AppErrorCode
 from models.tables import Membership, User
 from models.user import PasswordResetVerify
-from slowapi.util import get_remote_address
 from sqlmodel import or_, select
 from util.api_router import APIRouter
 
@@ -34,7 +33,7 @@ router = APIRouter(
 
 
 @router.post("/")
-@limiter.limit("5/minute", key_func=get_remote_address)
+@limiter.limit("30/minute", key_func=get_cache_key)
 async def login(
     request: Request,
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
@@ -90,7 +89,7 @@ async def login(
 
 
 @router.post("/refresh")
-@limiter.limit("10/minute", key_func=get_remote_address)
+@limiter.limit("30/minute", key_func=get_cache_key)
 async def refresh(
     request: Request,
     response: Response,
@@ -128,7 +127,7 @@ async def refresh(
 
 
 @router.post("/reset")
-@limiter.limit("3/minute", key_func=get_remote_address)
+@limiter.limit("10/minute", key_func=get_cache_key)
 async def reset_password(
     request: Request,
     db: Database,
@@ -182,7 +181,7 @@ async def reset_password(
 
 
 @router.put("/reset/verify/{token}")
-@limiter.limit("5/minute", key_func=get_remote_address)
+@limiter.limit("20/minute", key_func=get_cache_key)
 async def reset_verify(
     request: Request,
     token: str,

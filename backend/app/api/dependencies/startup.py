@@ -57,9 +57,7 @@ def verify_all_dependencies_sync() -> None:
             )
             r.ping()
             r.close()
-            app_logger.info(
-                "Redis db %d (%s) verified (sync)", db_num, db_label
-            )
+            app_logger.info("Redis db %d (%s) verified (sync)", db_num, db_label)
         except Exception as e:
             app_logger.error(
                 "Redis db %d (%s) verification failed (sync): %s",
@@ -67,10 +65,7 @@ def verify_all_dependencies_sync() -> None:
                 db_label,
                 e,
             )
-            raise RuntimeError(
-                f"Failed to connect to Redis db {db_num}"
-                f" ({db_label}): {e}"
-            ) from e
+            raise RuntimeError(f"Failed to connect to Redis db {db_num} ({db_label}): {e}") from e
 
     # Storage - validate configuration by instantiating
     try:
@@ -165,9 +160,7 @@ async def verify_all_dependencies_async() -> dict:
             )
             await r.ping()
             await r.aclose()
-            app_logger.info(
-                "Redis db %d (%s) verified", db_num, db_label
-            )
+            app_logger.info("Redis db %d (%s) verified", db_num, db_label)
         except Exception:
             app_logger.error(
                 "Redis db %d (%s) verification failed",
