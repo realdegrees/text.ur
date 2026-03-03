@@ -16,10 +16,7 @@
 	import { documentStore } from '$lib/runes/document.svelte.js';
 	import type { Annotation, BoundingBox } from '$api/types';
 	import { BOX_MERGE_MARGIN, BOX_VERTICAL_OVERLAP_THRESHOLD } from './constants';
-	import { hasHoverCapability } from '$lib/util/responsive.svelte';
-
-	/** True on devices with a mouse/trackpad (desktop); false on touch-only devices. */
-	const isDesktop = hasHoverCapability();
+	import { pointerState } from '$lib/util/responsive.svelte';
 
 	interface Props {
 		viewerContainer: HTMLDivElement | null;
@@ -267,12 +264,12 @@
 		let buttonX: number;
 		let buttonY: number;
 
-		if (isDesktop) {
-			// Desktop: position to the right of the selection end
+		if (pointerState.showCustomHandles) {
+			// Custom handles visible: position to the right of the selection end
 			buttonX = lastRect.right - containerRect.left + 10;
 			buttonY = lastRect.bottom - containerRect.top + 10;
 		} else {
-			// Mobile: center horizontally over the selection, below the last line
+			// Native teardrops visible: center horizontally, below the last line
 			// with extra vertical offset to clear native teardrop handles
 			const selectionMidX = (firstRect.left + lastRect.right) / 2 - containerRect.left;
 			const containerWidth = containerRect.width;
@@ -480,7 +477,7 @@
 	 * so right-click still works normally.
 	 */
 	const onContextMenu = (e: Event) => {
-		if (!isDesktop && (selectionUI || pendingSelection)) {
+		if (pointerState.isTouchInteraction && (selectionUI || pendingSelection)) {
 			e.preventDefault();
 		}
 	};
@@ -513,56 +510,72 @@
 		};
 	});
 
-	// Global event listeners for selection changes and handle dragging
+	/**
+	 * Handle external selection changes: native teardrop adjustments,
+	 * keyboard selection, or selection clearing/moving outside viewer.
+	 */
+	const handleSelectionChange = () => {
+		if (draggingHandle) return;
+
+		const selection = window.getSelection();
+		if (!selection || selection.isCollapsed) {
+			clearSelectionUI();
+			return;
+		}
+
+		if (
+			!viewerContainer ||
+			!selection.anchorNode ||
+			!viewerContainer.contains(selection.anchorNode)
+		) {
+			clearSelectionUI();
+			return;
+		}
+
+		// While actively selecting (mousedown held), skip full recalculation.
+		// The mouseup/touchend handler will trigger it when selection completes.
+		if (isSelecting) return;
+
+		// Full recalculation for external changes (native teardrops, keyboard, etc.)
+		updateSelectionState();
+	};
+
+	/**
+	 * Update handle positions on window resize
+	 */
+	const onResize = () => {
+		if (pendingSelection && !draggingHandle) {
+			updateHandlePositions();
+		}
+	};
+
+	// Global listeners: selection changes and resize (always active)
 	$effect(() => {
-		// Clear UI if selection moves outside viewer container
-		const handleSelectionChange = () => {
-			if (draggingHandle) return;
-
-			const selection = window.getSelection();
-			if (!selection || selection.isCollapsed) {
-				clearSelectionUI();
-				return;
-			}
-
-			if (
-				viewerContainer &&
-				selection.anchorNode &&
-				!viewerContainer.contains(selection.anchorNode)
-			) {
-				clearSelectionUI();
-			}
-		};
-
-		// Update handle positions on window resize (without recalculating bounding boxes)
-		const onResize = () => {
-			if (pendingSelection && !draggingHandle) {
-				updateHandlePositions();
-			}
-		};
-
 		document.addEventListener('selectionchange', handleSelectionChange);
 		window.addEventListener('resize', onResize, { passive: true });
-
-		// Handle-drag listeners are only needed on desktop where custom handles
-		// are rendered.  On touch devices the native OS teardrops manage this.
-		if (isDesktop) {
-			window.addEventListener('mousemove', onWindowMove);
-			window.addEventListener('touchmove', onWindowMove, { passive: false });
-			window.addEventListener('mouseup', onWindowUp);
-			window.addEventListener('touchend', onWindowUp);
-		}
 
 		return () => {
 			document.removeEventListener('selectionchange', handleSelectionChange);
 			window.removeEventListener('resize', onResize);
+		};
+	});
 
-			if (isDesktop) {
-				window.removeEventListener('mousemove', onWindowMove);
-				window.removeEventListener('touchmove', onWindowMove);
-				window.removeEventListener('mouseup', onWindowUp);
-				window.removeEventListener('touchend', onWindowUp);
-			}
+	// Handle-drag listeners: only active when custom handles are shown.
+	// Re-registers reactively when pointer type changes to ensure drag
+	// works correctly on hybrid devices switching between mouse and touch.
+	$effect(() => {
+		if (!pointerState.showCustomHandles) return;
+
+		window.addEventListener('mousemove', onWindowMove);
+		window.addEventListener('touchmove', onWindowMove, { passive: false });
+		window.addEventListener('mouseup', onWindowUp);
+		window.addEventListener('touchend', onWindowUp);
+
+		return () => {
+			window.removeEventListener('mousemove', onWindowMove);
+			window.removeEventListener('touchmove', onWindowMove);
+			window.removeEventListener('mouseup', onWindowUp);
+			window.removeEventListener('touchend', onWindowUp);
 		};
 	});
 
@@ -590,9 +603,10 @@
 </script>
 
 {#if selectionUI}
-	<!-- Desktop only: custom selection handles with drag-to-adjust.
-	     On touch devices the native OS teardrops are used instead. -->
-	{#if isDesktop}
+	<!-- Custom selection handles with drag-to-adjust.
+	     Shown on mouse/pen input, or on touch when native handles are unreliable.
+	     Hidden on iOS/Android touch where native OS teardrops are used instead. -->
+	{#if pointerState.showCustomHandles}
 		<div
 			class="absolute z-1000 w-0.5 cursor-pointer bg-blue-500 {draggingHandle
 				? 'pointer-events-none'

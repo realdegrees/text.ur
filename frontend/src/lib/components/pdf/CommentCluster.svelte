@@ -8,7 +8,7 @@
 	import type { CommentRead } from '$api/types';
 	import { preciseHover } from '$lib/actions/preciseHover';
 	import { longPress } from '$lib/actions/longPress';
-	import { hasHoverCapability } from '$lib/util/responsive.svelte';
+	import { pointerState } from '$lib/util/responsive.svelte';
 	import { DEFAULT_HIGHLIGHT_COLOR } from './constants';
 	import LL from '$i18n/i18n-svelte';
 
@@ -73,7 +73,7 @@
 			firstPinnedComment ||
 			firstEditingComment ||
 			firstReplyingComment ||
-			(!hasHoverCapability() && highlightHoveredComment)
+			(pointerState.isTouchInteraction && highlightHoveredComment)
 	);
 
 	/** Unpin every comment in this cluster. */
@@ -147,13 +147,13 @@
 		style="--tw-ring-color: {activeTagColor}{firstPinnedComment ? 'b3' : '4d'};"
 		use:longPress={{
 			onLongPress: () => {
-				if (!hasHoverCapability()) {
+				if (pointerState.isTouchInteraction) {
 					documentStore.activeCommentId = activeComment.id;
 					documentStore.longPressCommentId = activeComment.id;
 				}
 			},
 			onRelease: () => {
-				if (!hasHoverCapability()) {
+				if (pointerState.isTouchInteraction) {
 					documentStore.longPressCommentId = null;
 				}
 			},
@@ -185,9 +185,7 @@
 							onclick={(e) => {
 								e.stopPropagation();
 
-								const isMobile = !hasHoverCapability();
-
-								if (isMobile) {
+								if (pointerState.isTouchInteraction) {
 									if (state) {
 										const wasPinned = state.isPinned;
 										state.isPinned = !state.isPinned;
@@ -212,7 +210,7 @@
 								}
 							}}
 							oncontextmenu={(e) => {
-								if (!hasHoverCapability()) {
+								if (pointerState.isTouchInteraction) {
 									e.preventDefault();
 									e.stopPropagation();
 								}

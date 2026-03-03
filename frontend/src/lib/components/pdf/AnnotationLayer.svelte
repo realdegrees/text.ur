@@ -6,7 +6,7 @@
 	import { onMount } from 'svelte';
 	import { preciseHover } from '$lib/actions/preciseHover';
 	import { longPress } from '$lib/actions/longPress';
-	import { hasHoverCapability } from '$lib/util/responsive.svelte';
+	import { pointerState } from '$lib/util/responsive.svelte';
 
 	let { viewerContainer }: { viewerContainer: HTMLElement } = $props();
 
@@ -170,8 +170,6 @@
 				div.style.setProperty('-ms-user-select', 'none');
 				div.style.setProperty('user-select', 'none');
 
-				const isTouchDevice = !hasHoverCapability();
-
 				// Desktop: Use hover for connection line, click to pin
 				const hoverAction = preciseHover(div, {
 					onEnter: () => documentStore.setHighlightHovered(comment.id, true),
@@ -181,14 +179,14 @@
 				// Mobile: Use long press to show connection line
 				const longPressAction = longPress(div, {
 					onLongPress: () => {
-						if (isTouchDevice) {
+						if (pointerState.isTouchInteraction) {
 							// Set active and show connection line on long press start
 							documentStore.activeCommentId = comment.id;
 							documentStore.longPressCommentId = comment.id;
 						}
 					},
 					onRelease: () => {
-						if (isTouchDevice) {
+						if (pointerState.isTouchInteraction) {
 							// Clear long press state
 							documentStore.longPressCommentId = null;
 						}
@@ -203,11 +201,11 @@
 				// Add click listener
 				const clickListener = () => {
 					documentStore.activeTab = 'comments';
-					if (isTouchDevice) {
-						// Mobile: Set as active comment (will trigger scrolling)
+					if (pointerState.isTouchInteraction) {
+						// Touch: Set as active comment (will trigger scrolling)
 						documentStore.activeCommentId = comment.id;
 					} else {
-						// Desktop: Pin/unpin
+						// Mouse/pen: Pin/unpin
 						state.isPinned = !state.isPinned;
 					}
 				};
