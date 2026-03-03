@@ -35,11 +35,14 @@ def hash_password(password: str) -> str:
     ).decode("utf-8")
 
 
-def validate_password(user: User, password: str) -> bool:
+def validate_password(user: User, password: str | None) -> bool:
     """Validate password."""
+    if not user.password or not password:
+        return False
+    hashed: str = user.password
     return bcrypt.checkpw(
         password.encode("utf-8"),
-        user.password.encode("utf-8"),
+        hashed.encode("utf-8"),
     )
 
 

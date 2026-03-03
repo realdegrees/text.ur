@@ -1,30 +1,72 @@
+import re
 from datetime import datetime
 
-from pydantic import BaseModel as PydanticBaseModel
+from pydantic import (
+    BaseModel as PydanticBaseModel,
+)
+from pydantic import (
+    EmailStr,
+    field_validator,
+)
 from sqlmodel import Field, SQLModel
 
 from models.base import BaseModel
 
 # TODO maybe move these into config
 MAX_USERNAME_LENGTH = 20
+MIN_USERNAME_LENGTH = 3
 MAX_FIRST_NAME_LENGTH = 50
 MAX_LAST_NAME_LENGTH = 50
 MAX_EMAIL_LENGTH = 255
 MIN_PASSWORD_LENGTH = 8
 MAX_PASSWORD_LENGTH = 128
 
+_PASSWORD_RULES = [
+    (re.compile(r"[a-z]"), "lowercase letter"),
+    (re.compile(r"[A-Z]"), "uppercase letter"),
+    (re.compile(r"\d"), "digit"),
+    (re.compile(r"[^a-zA-Z0-9]"), "special character"),
+]
+
+
+def validate_password_policy(password: str) -> None:
+    """Raise ValueError if password does not meet complexity rules."""
+    missing = [name for pattern, name in _PASSWORD_RULES if not pattern.search(password)]
+    if missing:
+        raise ValueError("Password must contain at least one " + ", one ".join(missing))
+
 
 class UserCreate(SQLModel):
     token: str | None = None
-    username: str = Field(max_length=MAX_USERNAME_LENGTH)
+    username: str = Field(
+        min_length=MIN_USERNAME_LENGTH,
+        max_length=MAX_USERNAME_LENGTH,
+    )
     password: str | None = Field(
         default=None,
         min_length=MIN_PASSWORD_LENGTH,
         max_length=MAX_PASSWORD_LENGTH,
     )
-    email: str | None = Field(default=None, max_length=MAX_EMAIL_LENGTH)
+    email: EmailStr | None = Field(default=None, max_length=MAX_EMAIL_LENGTH)
     first_name: str | None = Field(default=None, max_length=MAX_FIRST_NAME_LENGTH)
     last_name: str | None = Field(default=None, max_length=MAX_LAST_NAME_LENGTH)
+
+    @field_validator("email", mode="before")
+    @classmethod
+    def normalize_email(cls, v: str | None) -> str | None:
+        """Normalize email to lowercase."""
+        if v is not None:
+            return v.lower().strip()
+        return v
+
+    @field_validator("password", mode="after")
+    @classmethod
+    def validate_password_strength(cls, v: str | None) -> str | None:
+        """Enforce password complexity requirements."""
+        if v is None:
+            return v
+        validate_password_policy(v)
+        return v
 
 
 class UserRead(BaseModel):
@@ -40,16 +82,28 @@ class UserPrivate(UserRead):
 
 
 class UserUpdate(SQLModel):
-    username: str | None = Field(default=None, max_length=MAX_USERNAME_LENGTH)
+    username: str | None = Field(
+        default=None,
+        min_length=MIN_USERNAME_LENGTH,
+        max_length=MAX_USERNAME_LENGTH,
+    )
     new_password: str | None = Field(
         default=None,
         min_length=MIN_PASSWORD_LENGTH,
         max_length=MAX_PASSWORD_LENGTH,
     )
     old_password: str | None = Field(default=None, max_length=MAX_PASSWORD_LENGTH)
-    email: str | None = Field(default=None, max_length=MAX_EMAIL_LENGTH)
     first_name: str | None = Field(default=None, max_length=MAX_FIRST_NAME_LENGTH)
     last_name: str | None = Field(default=None, max_length=MAX_LAST_NAME_LENGTH)
+
+    @field_validator("new_password", mode="after")
+    @classmethod
+    def validate_password_strength(cls, v: str | None) -> str | None:
+        """Enforce password complexity requirements."""
+        if v is None:
+            return v
+        validate_password_policy(v)
+        return v
 
 
 class PasswordResetVerify(SQLModel):
@@ -59,6 +113,13 @@ class PasswordResetVerify(SQLModel):
         min_length=MIN_PASSWORD_LENGTH,
         max_length=MAX_PASSWORD_LENGTH,
     )
+
+    @field_validator("password", mode="after")
+    @classmethod
+    def validate_password_strength(cls, v: str) -> str:
+        """Enforce password complexity requirements."""
+        validate_password_policy(v)
+        return v
 
 
 # GDPR data export models (Art. 20 — right to data portability)

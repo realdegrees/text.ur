@@ -629,6 +629,16 @@ const de = {
 			'Das Ändern des Antworttyps, der richtigen Antwort oder der Optionen setzt alle bestehenden Antworten der Mitglieder für diese Aufgabe zurück.'
 	},
 
+	// Password requirements
+	passwordRequirements: {
+		title: 'Passwort muss enthalten:',
+		minLength: 'Mindestens 8 Zeichen',
+		lowercase: 'Einen Kleinbuchstaben',
+		uppercase: 'Einen Großbuchstaben',
+		digit: 'Eine Ziffer',
+		special: 'Ein Sonderzeichen'
+	},
+
 	// Password reset
 	passwordReset: {
 		requestTitle: 'Passwort zurücksetzen',

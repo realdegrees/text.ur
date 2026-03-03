@@ -580,6 +580,16 @@ const en = {
 			'Changing the answer type, correct answer, or options will reset all existing member responses for this task.'
 	},
 
+	// Password requirements
+	passwordRequirements: {
+		title: 'Password must contain:',
+		minLength: 'At least 8 characters',
+		lowercase: 'A lowercase letter',
+		uppercase: 'An uppercase letter',
+		digit: 'A digit',
+		special: 'A special character'
+	},
+
 	// Password reset
 	passwordReset: {
 		requestTitle: 'Reset Password',

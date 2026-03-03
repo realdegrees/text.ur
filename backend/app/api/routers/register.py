@@ -28,6 +28,42 @@ register_logger = get_logger("app")
 router = APIRouter(prefix="/register", tags=["Register"])
 
 
+def _send_verification_email(mail: Mail, user: User, logger: object) -> None:
+    """Send a verification email for the given user."""
+    verification_link = mail.generate_verification_link(
+        user.email,
+        router,
+        salt="email-verification",
+        confirm_route="verify",
+    )
+    expiry_time = datetime.now(UTC) + timedelta(days=cfg.REGISTER_LINK_EXPIRY_DAYS)
+    try:
+        mail.send_email(
+            user.email,
+            subject="Verify Your Email - text.ur",
+            template="register.jinja",
+            template_vars={
+                "verification_link": verification_link,
+                "expiry_time": expiry_time.strftime("%B %d, %Y at %H:%M UTC"),
+                "username": user.username,
+                "email": user.email,
+                "current_year": datetime.now(UTC).year,
+            },
+        )
+    except Exception:
+        if cfg.DEBUG and cfg.DEBUG_ALLOW_REGISTRATION_WITHOUT_EMAIL:
+            register_logger.warning(
+                "Email delivery failed but"
+                " DEBUG_ALLOW_REGISTRATION_WITHOUT_EMAIL"
+                " is set. User '%s' verification email"
+                " not sent.\n[Verification link: %s]",
+                user.username,
+                verification_link,
+            )
+            return
+        raise
+
+
 async def _upgrade_guest_account(db: Database, mail: Mail, user: User, user_create: UserCreate) -> None:
     """Upgrade a guest account to a permanent account with email verification."""
     if not user.is_guest:
@@ -85,7 +121,7 @@ async def _upgrade_guest_account(db: Database, mail: Mail, user: User, user_crea
             },
         )
     except Exception as e:
-        if cfg.DEBUG_ALLOW_REGISTRATION_WITHOUT_EMAIL:
+        if cfg.DEBUG and cfg.DEBUG_ALLOW_REGISTRATION_WITHOUT_EMAIL:
             register_logger.warning(
                 "Email delivery failed but"
                 " DEBUG_ALLOW_REGISTRATION_WITHOUT_EMAIL"
@@ -111,9 +147,11 @@ async def _register_regular_user(db: Database, mail: Mail, user_create: UserCrea
     existing_user = result.first()
 
     if existing_user:
-        if not existing_user.verified and not existing_user.is_guest:
-            await db.delete(existing_user)
-            await db.commit()
+        if not existing_user.verified and not existing_user.is_guest and existing_user.email == user_create.email:
+            # Resend verification email for the existing
+            # unverified account instead of deleting it.
+            _send_verification_email(mail, existing_user, register_logger)
+            return
         elif existing_user.username == user_create.username:
             raise AppException(
                 status_code=400,
@@ -142,42 +180,12 @@ async def _register_regular_user(db: Database, mail: Mail, user_create: UserCrea
             detail="Username or email already exists",
         ) from e
 
-    # Send verification email
-    verification_link = mail.generate_verification_link(
-        user.email,
-        router,
-        salt="email-verification",
-        confirm_route="verify",
-    )
-    expiry_time = datetime.now(UTC) + timedelta(days=cfg.REGISTER_LINK_EXPIRY_DAYS)
     try:
-        mail.send_email(
-            user.email,
-            subject="Verify Your Email - text.ur",
-            template="register.jinja",
-            template_vars={
-                "verification_link": verification_link,
-                "expiry_time": expiry_time.strftime("%B %d, %Y at %H:%M UTC"),
-                "username": user.username,
-                "email": user.email,
-                "current_year": datetime.now(UTC).year,
-            },
-        )
-    except Exception as e:
-        if cfg.DEBUG_ALLOW_REGISTRATION_WITHOUT_EMAIL:
-            register_logger.warning(
-                "Email delivery failed but"
-                " DEBUG_ALLOW_REGISTRATION_WITHOUT_EMAIL"
-                " is set. User '%s' created without"
-                " verification email.\n"
-                "[Verification link: %s]",
-                user.username,
-                verification_link,
-            )
-            return
+        _send_verification_email(mail, user, register_logger)
+    except Exception:
         await db.delete(user)
         await db.commit()
-        raise e
+        raise
 
 
 async def _register_anonymous_user(

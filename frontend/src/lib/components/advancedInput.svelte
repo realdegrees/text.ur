@@ -64,7 +64,7 @@
 	let focused = $state(false);
 	let debouncing = $state(false);
 	let debounceTimeout: NodeJS.Timeout;
-	let searchElement = $state<HTMLDivElement | null>(null);
+	let searchElement = $state<HTMLDivElement | HTMLInputElement | null>(null);
 	let showPassword = $state(false);
 
 	const effectiveFetchOptions = $derived(hidden ? undefined : fetchOptions);
@@ -110,7 +110,9 @@
 	});
 
 	// Sync value to contenteditable div when value changes from outside
+	// (not needed for native <input> which uses bind:value directly)
 	$effect(() => {
+		if (!effectiveFetchOptions) return;
 		if (searchElement && searchElement.textContent !== value) {
 			if (value === '') {
 				// eslint-disable-next-line svelte/no-dom-manipulating
@@ -239,40 +241,68 @@
 			</div>
 		{/if}
 
-		<!-- hidden input to submit the value -->
-		<input class="hidden" type="hidden" {name} bind:value />
+		{#if hidden}
+			<!-- Native password input for proper browser autofill and accessibility -->
+			<input
+				type={showPassword ? 'text' : 'password'}
+				{name}
+				autocomplete="new-password"
+				spellcheck="false"
+				class="w-full border-none bg-transparent p-0 text-inherit focus:ring-0 focus:outline-none"
+				bind:this={searchElement}
+				bind:value
+				onfocus={() => (focused = true)}
+				onblur={() => (focused = false)}
+			/>
+		{:else if effectiveFetchOptions}
+			<!-- hidden input to submit the value (contenteditable can't submit) -->
+			<input class="hidden" type="hidden" {name} bind:value />
 
-		<div
-			role="textbox"
-			aria-multiline="false"
-			tabindex="0"
-			spellcheck="false"
-			data-suffix={suffix}
-			data-affix={prefix}
-			class="w-full overflow-hidden whitespace-nowrap before:opacity-40 before:content-[attr(data-affix)] after:opacity-40 after:content-[attr(data-suffix)] focus:outline-none"
-			style={hidden && !showPassword ? '-webkit-text-security: disc; text-security: disc;' : ''}
-			contenteditable="true"
-			bind:this={searchElement}
-			onfocus={() => (focused = true)}
-			onblur={() => (focused = false)}
-			oninput={() => {
-				// Read the value from the contenteditable element (textContent strips html)
-				value = searchElement?.textContent || '';
-				// Clear innerHTML when empty to prevent phantom line breaks
-				if (value === '' && searchElement) {
-					// eslint-disable-next-line svelte/no-dom-manipulating
-					searchElement.innerHTML = '';
-				}
-				onInput();
-			}}
-			onkeydown={(e) => {
-				if (e.key === 'ArrowRight' && effectiveFetchOptions && options[selectedIndex]) {
-					e.preventDefault();
-					doComplete();
-					return;
-				}
-			}}
-		></div>
+			<!-- Contenteditable with autocomplete hints -->
+			<div
+				role="textbox"
+				aria-multiline="false"
+				tabindex="0"
+				spellcheck="false"
+				data-suffix={suffix}
+				data-affix={prefix}
+				class="w-full overflow-hidden whitespace-nowrap before:opacity-40 before:content-[attr(data-affix)] after:opacity-40 after:content-[attr(data-suffix)] focus:outline-none"
+				contenteditable="true"
+				bind:this={searchElement}
+				onfocus={() => (focused = true)}
+				onblur={() => (focused = false)}
+				oninput={() => {
+					// Read the value from the contenteditable element (textContent strips html)
+					value = searchElement?.textContent || '';
+					// Clear innerHTML when empty to prevent phantom line breaks
+					if (value === '' && searchElement) {
+						// eslint-disable-next-line svelte/no-dom-manipulating
+						searchElement.innerHTML = '';
+					}
+					onInput();
+				}}
+				onkeydown={(e) => {
+					if (e.key === 'ArrowRight' && options[selectedIndex]) {
+						e.preventDefault();
+						doComplete();
+						return;
+					}
+				}}
+			></div>
+		{:else}
+			<!-- Native text input for plain fields (visible to password managers) -->
+			<input
+				type="text"
+				{name}
+				autocomplete="off"
+				spellcheck="false"
+				class="w-full border-none bg-transparent p-0 text-inherit focus:ring-0 focus:outline-none"
+				bind:this={searchElement}
+				bind:value
+				onfocus={() => (focused = true)}
+				onblur={() => (focused = false)}
+			/>
+		{/if}
 
 		{#if hidden}
 			<button

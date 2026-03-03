@@ -89,7 +89,12 @@ async def update_user(
     # Apply updates to the user fields
     await db.merge(user)
     if user_update.new_password:
-        # Re-validate the old password
+        if not user_update.old_password:
+            raise AppException(
+                status_code=400,
+                error_code=AppErrorCode.VALIDATION_ERROR,
+                detail="Old password is required",
+            )
         if not validate_password(user, user_update.old_password):
             raise AppException(
                 status_code=403,
@@ -97,6 +102,7 @@ async def update_user(
                 detail="Invalid old password",
             )
         user.password = hash_password(user_update.new_password)
+        user.rotate_secret()
     user.sqlmodel_update(user_update.model_dump(exclude_unset=True, exclude={"old_password", "new_password"}))
     await db.commit()
     await db.refresh(user)

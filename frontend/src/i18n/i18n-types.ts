@@ -1779,6 +1779,32 @@ type RootTranslation = {
 		 */
 		editAnswerWarning: string
 	}
+	passwordRequirements: {
+		/**
+		 * P​a​s​s​w​o​r​d​ ​m​u​s​t​ ​c​o​n​t​a​i​n​:
+		 */
+		title: string
+		/**
+		 * A​t​ ​l​e​a​s​t​ ​8​ ​c​h​a​r​a​c​t​e​r​s
+		 */
+		minLength: string
+		/**
+		 * A​ ​l​o​w​e​r​c​a​s​e​ ​l​e​t​t​e​r
+		 */
+		lowercase: string
+		/**
+		 * A​n​ ​u​p​p​e​r​c​a​s​e​ ​l​e​t​t​e​r
+		 */
+		uppercase: string
+		/**
+		 * A​ ​d​i​g​i​t
+		 */
+		digit: string
+		/**
+		 * A​ ​s​p​e​c​i​a​l​ ​c​h​a​r​a​c​t​e​r
+		 */
+		special: string
+	}
 	passwordReset: {
 		/**
 		 * R​e​s​e​t​ ​P​a​s​s​w​o​r​d
@@ -4043,6 +4069,32 @@ export type TranslationFunctions = {
 		 * Changing the answer type, correct answer, or options will reset all existing member responses for this task.
 		 */
 		editAnswerWarning: () => LocalizedString
+	}
+	passwordRequirements: {
+		/**
+		 * Password must contain:
+		 */
+		title: () => LocalizedString
+		/**
+		 * At least 8 characters
+		 */
+		minLength: () => LocalizedString
+		/**
+		 * A lowercase letter
+		 */
+		lowercase: () => LocalizedString
+		/**
+		 * An uppercase letter
+		 */
+		uppercase: () => LocalizedString
+		/**
+		 * A digit
+		 */
+		digit: () => LocalizedString
+		/**
+		 * A special character
+		 */
+		special: () => LocalizedString
 	}
 	passwordReset: {
 		/**

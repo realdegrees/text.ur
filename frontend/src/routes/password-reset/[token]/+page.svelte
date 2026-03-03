@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Field from '$lib/components/advancedInput.svelte';
+	import PasswordRequirements from '$lib/components/PasswordRequirements.svelte';
 	import InfoBanner from '$lib/components/InfoBanner.svelte';
 	import Loading from '~icons/svg-spinners/90-ring-with-bg';
 	import { api } from '$api/client';
@@ -67,6 +68,7 @@
 				<InfoBanner variant="error">{errorMessage}</InfoBanner>
 			{/if}
 			<Field bind:value={password} label={$LL.passwordReset.newPasswordLabel()} hidden required />
+			<PasswordRequirements {password} />
 			<Field
 				bind:value={confirmPassword}
 				label={$LL.passwordReset.confirmPasswordLabel()}

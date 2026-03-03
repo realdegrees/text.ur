@@ -579,7 +579,6 @@ export const userUpdateSchema = z.object({
     username: z.string().optional().nullable(),
     new_password: z.string().optional().nullable(),
     old_password: z.string().optional().nullable(),
-    email: z.string().optional().nullable(),
     first_name: z.string().optional().nullable(),
     last_name: z.string().optional().nullable()
 });

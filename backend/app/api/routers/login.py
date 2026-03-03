@@ -1,3 +1,4 @@
+import hashlib
 from datetime import UTC, datetime, timedelta
 from typing import Annotated
 
@@ -41,10 +42,11 @@ async def login(
     response: Response,
 ) -> Token:
     """Return a JWT if the user is authenticated successfully."""
+    login_input = form_data.username
     query = select(User).where(
         or_(
-            User.username == form_data.username,
-            User.email == form_data.username,
+            User.username == login_input,
+            User.email == login_input.lower().strip(),
         )
     )
     result = await db.exec(query)
@@ -98,7 +100,6 @@ async def refresh(
     """Refresh the access token given a valid refresh token."""
     token = Token(
         access_token=generate_token(user, "access"),
-        refresh_token=generate_token(user, "refresh"),
         token_type="bearer",
     )
 
@@ -135,6 +136,7 @@ async def reset_password(
     email: str = Body(..., embed=True),
 ) -> None:
     """Send a password reset email with a presigned URL."""
+    email = email.lower().strip()
     query = select(User).where(User.email == email)
     result = await db.exec(query)
     user: User | None = result.first()
@@ -143,7 +145,8 @@ async def reset_password(
         return
     # Generate token with email and password hash (for one-time use)
     serializer = URLSafeTimedSerializer(cfg.EMAIL_PRESIGN_SECRET)
-    token_data = {"email": email, "pwd": user.password[:16]}
+    pwd_hash = hashlib.sha256(user.password[:16].encode()).hexdigest()[:16]
+    token_data = {"email": email, "pwd": pwd_hash}
     token = serializer.dumps(token_data, salt="password-reset")
     reset_link = f"{cfg.FRONTEND_BASEURL}/password-reset/{token}"
     expiry_time = datetime.now(UTC) + timedelta(minutes=cfg.PASSWORD_RESET_LINK_EXPIRY_MINUTES)
@@ -161,7 +164,7 @@ async def reset_password(
             },
         )
     except Exception as e:
-        if cfg.DEBUG_ALLOW_REGISTRATION_WITHOUT_EMAIL:
+        if cfg.DEBUG and cfg.DEBUG_ALLOW_REGISTRATION_WITHOUT_EMAIL:
             login_logger.warning(
                 "Email delivery failed but"
                 " DEBUG_ALLOW_REGISTRATION_WITHOUT_EMAIL"
@@ -196,13 +199,8 @@ async def reset_verify(
             salt="password-reset",
         )
 
-        # Handle both old tokens (string) and new tokens (dict) for backwards compatibility
-        if isinstance(token_data, str):
-            email = token_data
-            pwd_hash_check = None
-        else:
-            email = token_data["email"]
-            pwd_hash_check = token_data.get("pwd")
+        email = token_data["email"]
+        pwd_hash_check = token_data.get("pwd")
 
     except (BadSignature, SignatureExpired) as e:
         raise AppException(
@@ -222,7 +220,8 @@ async def reset_verify(
         )
 
     # Check if token has already been used (password changed since token was issued)
-    if pwd_hash_check and user.password[:16] != pwd_hash_check:
+    current_pwd_hash = hashlib.sha256(user.password[:16].encode()).hexdigest()[:16]
+    if pwd_hash_check and current_pwd_hash != pwd_hash_check:
         raise AppException(
             status_code=403,
             error_code=AppErrorCode.TOKEN_ALREADY_USED,
