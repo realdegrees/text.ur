@@ -10,18 +10,8 @@
 	import { loadingBar } from '$lib/stores/loadingBar.svelte';
 	import { browser } from '$app/environment';
 	import { sessionStore } from '$lib/runes/session.svelte';
-	import { afterNavigate } from '$app/navigation';
-	import { api } from '$api/client';
 
 	let { children, data } = $props();
-
-	// After each client-side navigation completes, allow GET requests to use
-	// the browser HTTP cache again.  This pairs with ApiClient.markMutation()
-	// which forces cache bypass after mutations so that SvelteKit invalidate()
-	// re-fetches always see fresh data.
-	afterNavigate(() => {
-		api.resetCacheBypass();
-	});
 
 	// Track the search string reactively to ensure the effect triggers on URL changes
 	const verifiedParam = $derived(page.url.searchParams.get('verified'));

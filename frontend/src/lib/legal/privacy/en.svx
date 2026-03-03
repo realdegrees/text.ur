@@ -33,7 +33,7 @@ This application uses only technically necessary cookies. No tracking or analyti
 |------|---------|--------|
 | `access_token` | Authentication (session token) | 12 hours |
 | `refresh_token` | Session renewal | 3--30 days (depending on account type) |
-| `theme` | Dark/light mode preference | Session (browser) |
+| `theme` | Dark/light mode preference | 30 days |
 | `locale` | Language preference | 30 days |
 
 ## Server Logs

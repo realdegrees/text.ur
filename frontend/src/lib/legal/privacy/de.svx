@@ -33,7 +33,7 @@ Diese Anwendung verwendet ausschließlich technisch notwendige Cookies. Es werde
 |------|-------|------------|
 | `access_token` | Authentifizierung (Sitzungstoken) | 12 Stunden |
 | `refresh_token` | Sitzungserneuerung | 3--30 Tage (je nach Kontotyp) |
-| `theme` | Dunkel-/Hellmodus-Präferenz | Sitzung (Browser) |
+| `theme` | Dunkel-/Hellmodus-Präferenz | 30 Tage |
 | `locale` | Sprachpräferenz | 30 Tage |
 
 ## Server-Protokolle

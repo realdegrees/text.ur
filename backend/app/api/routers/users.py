@@ -38,6 +38,7 @@ from models.user import (
     UserRead,
     UserUpdate,
 )
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 from util.api_router import APIRouter
 from util.group_cleanup import cleanup_storage_keys, prepare_group_deletion
@@ -104,7 +105,22 @@ async def update_user(
         user.password = hash_password(user_update.new_password)
         user.rotate_secret()
     user.sqlmodel_update(user_update.model_dump(exclude_unset=True, exclude={"old_password", "new_password"}))
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError as e:
+        await db.rollback()
+        error_msg = str(e.orig) if e.orig else ""
+        if "ix_user_username" in error_msg:
+            raise AppException(
+                status_code=400,
+                error_code=AppErrorCode.USERNAME_TAKEN,
+                detail="Username already taken",
+            ) from e
+        raise AppException(
+            status_code=400,
+            error_code=AppErrorCode.ALREADY_EXISTS,
+            detail="A conflict occurred while updating the user",
+        ) from e
     await db.refresh(user)
 
     return user

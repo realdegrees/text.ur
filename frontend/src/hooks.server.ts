@@ -4,7 +4,6 @@ import { env } from '$env/dynamic/private';
 import { env as publicEnv } from '$env/dynamic/public';
 import { loadAllLocales } from '$i18n/i18n-util.sync';
 import { detectLocale } from '$i18n/i18n-util';
-import { userCache } from '$lib/server/cache';
 import { forwardCookies } from '$lib/server/cookies';
 
 const baseUrl = env.INTERNAL_BACKEND_BASEURL || publicEnv.PUBLIC_BACKEND_BASEURL;
@@ -124,34 +123,19 @@ export const handleFetch: HandleFetch = async ({ request, fetch, event }) => {
 /**
  * Fetches the user info from the backend and attaches it to the SvelteKit session store.
  */
-/** Allow ETag and Cache-Control headers to pass through to universal load functions during SSR. */
+/** Allow ETag and Retry-After headers to pass through to universal load functions during SSR. */
 const serializeOptions = {
 	filterSerializedResponseHeaders: (name: string) =>
-		['etag', 'cache-control', 'retry-after'].includes(name.toLowerCase())
+		['etag', 'retry-after'].includes(name.toLowerCase())
 };
 
 const user: Handle = async ({ event, resolve }) => {
 	if (event.url.pathname.startsWith('/api')) return resolve(event); // Only needed for server side requests
 
-	const accessToken = event.cookies.get('access_token');
-
-	// Check TTL cache first (keyed by access token)
-	if (accessToken) {
-		const cached = userCache.get(accessToken) as typeof event.locals.sessionUser;
-		if (cached) {
-			event.locals.sessionUser = cached;
-			return resolve(event, serializeOptions);
-		}
-	}
-
 	try {
 		const userResponse = await event.fetch(`${baseUrl}/api/users/me`);
 		if (userResponse.ok) {
-			const userData = await userResponse.json();
-			event.locals.sessionUser = userData;
-			if (accessToken) {
-				userCache.set(accessToken, userData);
-			}
+			event.locals.sessionUser = await userResponse.json();
 		}
 	} catch (e) {
 		// Failed to fetch user, continue without user

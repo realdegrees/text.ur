@@ -2,6 +2,7 @@ import asyncio
 
 import psycopg2
 import redis
+import redis.asyncio as aioredis
 from api.dependencies.database import get_database_manager
 from api.dependencies.events import get_event_manager
 from api.dependencies.mail import get_mail_manager
@@ -37,21 +38,39 @@ def verify_all_dependencies_sync() -> None:
         app_logger.error("Database verification failed (sync): %s", e)
         raise RuntimeError(f"Failed to connect to database: {e}") from e
 
-    # Redis - use sync redis client
-    try:
-        app_logger.debug("Checking Redis connection (sync)")
-        r = redis.Redis(
-            host=cfg.REDIS_HOST,
-            port=cfg.REDIS_PORT,
-            password=cfg.REDIS_PASSWORD,
-            decode_responses=True,
-            socket_connect_timeout=5,
-        )
-        r.ping()
-        app_logger.info("Redis connection verified (sync)")
-    except Exception as e:
-        app_logger.error("Redis verification failed (sync): %s", e)
-        raise RuntimeError(f"Failed to connect to Redis: {e}") from e
+    # Redis - verify all three databases (0=events, 1=rate-limit, 2=cache)
+    redis_dbs = {0: "events", 1: "rate-limit", 2: "cache"}
+    for db_num, db_label in redis_dbs.items():
+        try:
+            app_logger.debug(
+                "Checking Redis db %d (%s) connection (sync)",
+                db_num,
+                db_label,
+            )
+            r = redis.Redis(
+                host=cfg.REDIS_HOST,
+                port=cfg.REDIS_PORT,
+                password=cfg.REDIS_PASSWORD,
+                db=db_num,
+                decode_responses=True,
+                socket_connect_timeout=5,
+            )
+            r.ping()
+            r.close()
+            app_logger.info(
+                "Redis db %d (%s) verified (sync)", db_num, db_label
+            )
+        except Exception as e:
+            app_logger.error(
+                "Redis db %d (%s) verification failed (sync): %s",
+                db_num,
+                db_label,
+                e,
+            )
+            raise RuntimeError(
+                f"Failed to connect to Redis db {db_num}"
+                f" ({db_label}): {e}"
+            ) from e
 
     # Storage - validate configuration by instantiating
     try:
@@ -124,14 +143,38 @@ async def verify_all_dependencies_async() -> dict:
         app_logger.error("Mail verification failed")
         raise
 
-    # Redis (Event manager)
+    # Redis (Event manager — db 0)
     try:
         event_manager = get_event_manager()
         await event_manager.check_connection()
         result["event_manager"] = event_manager
     except Exception:
-        app_logger.error("Redis verification failed")
+        app_logger.error("Redis db 0 (events) verification failed")
         raise
+
+    # Redis — verify db 1 (rate-limit) and db 2 (cache)
+    for db_num, db_label in {1: "rate-limit", 2: "cache"}.items():
+        try:
+            r = aioredis.Redis(
+                host=cfg.REDIS_HOST,
+                port=cfg.REDIS_PORT,
+                password=cfg.REDIS_PASSWORD,
+                db=db_num,
+                decode_responses=True,
+                socket_connect_timeout=5,
+            )
+            await r.ping()
+            await r.aclose()
+            app_logger.info(
+                "Redis db %d (%s) verified", db_num, db_label
+            )
+        except Exception:
+            app_logger.error(
+                "Redis db %d (%s) verification failed",
+                db_num,
+                db_label,
+            )
+            raise
 
     app_logger.info("All dependencies verified successfully")
     return result

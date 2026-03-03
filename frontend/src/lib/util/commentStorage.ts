@@ -82,14 +82,6 @@ export function saveCommentStates(
 		if (Object.keys(persisted).length > 0) statesObj[commentId] = persisted;
 	}
 
-	console.log('[commentStorage] Saving states:', {
-		userId,
-		documentId,
-		key: getKey(userId, documentId),
-		stateCount: Object.keys(statesObj).length,
-		states: statesObj
-	});
-
 	try {
 		localStorage.setItem(
 			getKey(userId, documentId),
@@ -112,19 +104,11 @@ export function loadCommentStates(
 		const key = getKey(userId, documentId);
 		const stored = localStorage.getItem(key);
 
-		console.log('[commentStorage] Loading states:', {
-			userId,
-			documentId,
-			key,
-			hasStored: !!stored
-		});
-
 		if (!stored) return result;
 
 		const entry = JSON.parse(stored) as StorageEntry;
 
 		if (Date.now() - entry.lastAccessed > TTL_MS) {
-			console.log('[commentStorage] States expired, removing');
 			localStorage.removeItem(key);
 			return result;
 		}
@@ -134,11 +118,6 @@ export function loadCommentStates(
 
 		Object.entries(entry.states).forEach(([id, state]) => {
 			result.set(parseInt(id), state);
-		});
-
-		console.log('[commentStorage] Loaded states:', {
-			stateCount: result.size,
-			states: Object.fromEntries(result)
 		});
 	} catch (error) {
 		console.warn('Failed to load comment states:', error);

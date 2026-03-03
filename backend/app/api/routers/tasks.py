@@ -31,7 +31,7 @@ from models.task import (
 )
 from sqlmodel import delete, func, select, update
 from util.api_router import APIRouter
-from util.cache import invalidate_group_scores
+from util.cache import invalidate_group_scores, invalidate_user_score
 from util.queries import Guard
 
 router = APIRouter(
@@ -579,8 +579,8 @@ async def submit_task_response(  # noqa: C901
     await db.commit()
     await db.refresh(resp)
 
-    # Invalidate score cache for this user
-    await invalidate_group_scores(document.group_id)
+    # Invalidate score cache for this user only
+    await invalidate_user_score(document.group_id, session_user.id)
 
     # Build response with optional correct answer reveal
     correct_answer = None

@@ -34,17 +34,9 @@ class ApiClient {
 	private baseUrl: string = env.PUBLIC_BACKEND_BASEURL;
 	private connectionId: string = browser ? generateConnectionId() : '';
 	private refreshPromise: Promise<boolean> | null = null;
-	/** ETag cache for download() — maps URL to { etag, data } */
+	/** ETag cache for download() — maps URL to { etag, data } (LRU, max 10 entries) */
 	private etagCache = new Map<string, { etag: string; data: ArrayBuffer }>();
-	/**
-	 * When true, GET requests bypass the browser HTTP cache (`cache: 'reload'`).
-	 * Set after a successful mutation so that SvelteKit `invalidate()` re-fetches
-	 * see fresh data instead of a stale `max-age` / `stale-while-revalidate`
-	 * response.  Reset on the next client-side navigation via
-	 * `resetCacheBypass()`, which is called from the root layout's
-	 * `afterNavigate` hook.
-	 */
-	private forceReload = false;
+	private static readonly MAX_ETAG_CACHE_SIZE = 10;
 
 	/**
 	 * Get the configured base URL.
@@ -58,25 +50,6 @@ class ApiClient {
 	 */
 	getConnectionId(): string {
 		return this.connectionId;
-	}
-
-	/**
-	 * Mark that a mutation just succeeded.  All subsequent GET requests will
-	 * use `cache: 'reload'` to bypass the browser HTTP cache until
-	 * `resetCacheBypass()` is called (typically on the next navigation).
-	 */
-	private markMutation() {
-		this.forceReload = true;
-	}
-
-	/**
-	 * Re-enable normal browser HTTP caching for GET requests.
-	 *
-	 * Call this from the root layout's `afterNavigate` callback so that
-	 * mutation-triggered cache bypass does not persist across navigations.
-	 */
-	resetCacheBypass() {
-		this.forceReload = false;
 	}
 
 	/**
@@ -259,14 +232,8 @@ class ApiClient {
 		const actualFetch = fetchFnOverride ?? fetch!;
 		const url = this.buildUrl(input, { filters, sort });
 
-		const method = init.method ?? 'GET';
-
 		const requestInit: RequestInit = {
 			...init,
-			cache:
-				method === 'GET' && this.forceReload
-					? 'reload'
-					: init.cache,
 			credentials: init.credentials || 'include',
 			headers: {
 				...init.headers,
@@ -305,13 +272,6 @@ class ApiClient {
 		// Handle error responses
 		if (!response.ok) {
 			return this.handleErrorResponse(response);
-		}
-
-		// After a successful mutation, mark the client so that subsequent
-		// GET requests (e.g. from SvelteKit invalidate) bypass the browser
-		// HTTP cache and receive fresh data.
-		if (method !== 'GET' && method !== 'HEAD') {
-			this.markMutation();
 		}
 
 		// Parse successful response
@@ -432,8 +392,10 @@ class ApiClient {
 			}
 		}
 
-		// 304 Not Modified — return cached data
+		// 304 Not Modified — return cached data and refresh LRU position
 		if (response.status === 304 && cached) {
+			this.etagCache.delete(url);
+			this.etagCache.set(url, cached);
 			return { success: true, data: cached.data };
 		}
 
@@ -446,6 +408,11 @@ class ApiClient {
 		// Cache the response with its ETag for future conditional requests
 		const responseEtag = response.headers.get('ETag')?.replace(/"/g, '');
 		if (responseEtag) {
+			// Evict oldest entry if cache is full (Map preserves insertion order)
+			if (this.etagCache.size >= ApiClient.MAX_ETAG_CACHE_SIZE) {
+				const oldestKey = this.etagCache.keys().next().value!;
+				this.etagCache.delete(oldestKey);
+			}
 			this.etagCache.set(url, { etag: responseEtag, data: arrayBuffer });
 		}
 
