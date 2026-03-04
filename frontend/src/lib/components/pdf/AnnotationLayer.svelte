@@ -201,9 +201,9 @@
 				// Add click listener
 				const clickListener = () => {
 					documentStore.activeTab = 'comments';
+					documentStore.activeCommentId = comment.id;
 					if (pointerState.isTouchInteraction) {
 						// Touch: Set as active comment (will trigger scrolling)
-						documentStore.activeCommentId = comment.id;
 					} else {
 						// Mouse/pen: Pin/unpin
 						state.isPinned = !state.isPinned;

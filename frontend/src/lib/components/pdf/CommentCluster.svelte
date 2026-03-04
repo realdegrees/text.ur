@@ -76,6 +76,16 @@
 			(pointerState.isTouchInteraction && highlightHoveredComment)
 	);
 
+	// Clear the persistent connection line when this cluster collapses.
+	// Handles all collapse scenarios: tab unpin, close button, editing/replying end, etc.
+	$effect(() => {
+		if (showCard) return;
+		const activeId = documentStore.activeCommentId;
+		if (activeId != null && comments.some((c) => c.id === activeId)) {
+			documentStore.activeCommentId = null;
+		}
+	});
+
 	/** Unpin every comment in this cluster. */
 	function unpinAll() {
 		for (const c of comments) {
@@ -141,6 +151,7 @@
 >
 	<div
 		bind:this={clusterRef}
+		data-comment-cluster
 		class="relative z-50 overflow-hidden rounded bg-background shadow-lg hover:z-[60] {showCard
 			? 'ring-[2.5px]'
 			: 'ring-2'} shadow-black/20 transition-shadow"
@@ -202,14 +213,17 @@
 										state.isPinned = true;
 									}
 									selectedTabId = c.id;
+									documentStore.activeCommentId = c.id;
 								} else if (activeComment === c) {
 									// Expanded, clicking the active tab: toggle its pin
 									if (state) {
 										state.isPinned = !state.isPinned;
 									}
+									documentStore.activeCommentId = c.id;
 								} else {
 									// Expanded, clicking an inactive tab: just switch to it
 									selectedTabId = c.id;
+									documentStore.activeCommentId = c.id;
 								}
 							}}
 							oncontextmenu={(e) => {

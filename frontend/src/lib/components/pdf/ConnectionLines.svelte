@@ -92,11 +92,12 @@
 
 	/**
 	 * Derive which comments should have visible connection lines.
-	 * Purely reactive — a line shows when isCommentHovered || isHighlightHovered || longPress.
+	 * A line shows when hovered, long-pressed, or actively selected (last clicked tab/highlight).
 	 */
 	let activeLines: LineData[] = $derived.by(() => {
 		const lines: LineData[] = [];
 		const longPressId = documentStore.longPressCommentId;
+		const activeId = documentStore.activeCommentId;
 
 		for (const comment of documentStore.comments.topLevelComments) {
 			const state = documentStore.comments.getState(comment.id);
@@ -104,8 +105,9 @@
 
 			const isHovered = !!state.isCommentHovered || !!state.isHighlightHovered;
 			const isLongPressed = comment.id === longPressId;
+			const isActive = comment.id === activeId;
 
-			if (!isHovered && !isLongPressed) continue;
+			if (!isHovered && !isLongPressed && !isActive) continue;
 
 			const color =
 				comment.tags && comment.tags.length > 0 ? comment.tags[0].color : DEFAULT_HIGHLIGHT_COLOR;
@@ -219,6 +221,19 @@
 			scrollContainer.addEventListener('scroll', scheduleUpdate, { passive: true });
 		}
 
+		// Click-outside: clear activeCommentId when clicking outside clusters and highlights.
+		// Cluster tab clicks already call stopPropagation(), so they never reach this handler.
+		function handleClickOutside(e: MouseEvent) {
+			if (documentStore.activeCommentId == null) return;
+			const target = e.target as HTMLElement;
+			if (target.closest('[data-comment-cluster]') || target.closest('.annotation-highlight')) {
+				return;
+			}
+			documentStore.activeCommentId = null;
+		}
+
+		window.addEventListener('click', handleClickOutside);
+
 		return () => {
 			if (scrollContainer) {
 				scrollContainer.removeEventListener('scroll', scheduleUpdate);
@@ -226,6 +241,7 @@
 			if (rafId !== null) {
 				cancelAnimationFrame(rafId);
 			}
+			window.removeEventListener('click', handleClickOutside);
 		};
 	});
 </script>
