@@ -104,7 +104,16 @@ class TaskCreate(SQLModel):
 class TaskUpdate(SQLModel):
     """Update schema for a document task (all fields optional)."""
 
-    question: str | None = Field(default=None, max_length=500)
+    question: str | None = Field(default=None, min_length=1, max_length=500)
+
+    @field_validator("question", mode="before")
+    @classmethod
+    def strip_question(cls, v: str | None) -> str | None:
+        """Strip whitespace from question text."""
+        if v is not None:
+            return v.strip()
+        return v
+
     answer_type: AnswerType | None = None
     correct_string_answer: str | None = Field(default=None, max_length=255)
     correct_number_answer: float | None = None

@@ -1,3 +1,4 @@
+import secrets
 from datetime import UTC, datetime
 from typing import ClassVar, Optional
 from uuid import UUID, uuid4
@@ -468,7 +469,7 @@ class ShareLink(BaseModel, table=True):
     allow_anonymous_access: bool = Field(default=False, sa_column=Column(Boolean, server_default="false"))
 
     token: str = Field(
-        default_factory=lambda: str(uuid4())[:8],
+        default_factory=lambda: secrets.token_urlsafe(16),
         sa_column=Column(String, unique=True, index=True),
     )
 
@@ -533,7 +534,7 @@ class ShareLink(BaseModel, table=True):
 
     def rotate_token(self) -> None:
         """Invalidate this share link by rotating its token."""
-        self.token = str(uuid4())[:8]
+        self.token = secrets.token_urlsafe(16)
 
 
 # Document aggregate column properties (defined here because Task and

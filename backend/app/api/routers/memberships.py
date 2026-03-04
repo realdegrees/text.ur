@@ -376,6 +376,13 @@ async def promote_guest_to_member(
             detail="Target user is not a member of this group",
         )
 
+    if membership.sharelink_id is None:
+        raise AppException(
+            status_code=409,
+            error_code=AppErrorCode.NOT_A_GUEST,
+            detail="User is already a permanent member",
+        )
+
     db.add(membership)
 
     membership.sharelink_id = None
@@ -405,6 +412,21 @@ async def get_member_score(
     includes a ``cached_at`` timestamp so the frontend can
     show when the score was last computed.
     """
+    # Validate document belongs to this group when filtering
+    if document_id is not None:
+        result = await db.exec(
+            select(Document.id).where(
+                Document.id == document_id,
+                Document.group_id == group.id,
+            )
+        )
+        if not result.first():
+            raise AppException(
+                status_code=404,
+                error_code=AppErrorCode.NOT_FOUND,
+                detail="Document not found in this group",
+            )
+
     cache_key = score_cache_key(group.id, member.id, document_id)
     cached = await get_cached(cache_key)
     if cached is not None:

@@ -54,9 +54,19 @@ async def list_share_links(
 @limiter.limit("60/minute", key_func=get_cache_key)
 async def get_share_link_from_token(
     request: Request,
-    share_link: ShareLink = Resource(ShareLink, param_alias="token", key_column=ShareLink.token),
+    share_link: ShareLink = Resource(
+        ShareLink,
+        param_alias="token",
+        key_column=ShareLink.token,
+    ),
 ) -> ShareLinkReadFromToken:
     """Get a single share link by token."""
+    if share_link.is_expired:
+        raise AppException(
+            status_code=410,
+            error_code=AppErrorCode.SHARELINK_EXPIRED,
+            detail="This share link has expired",
+        )
     return share_link
 
 
@@ -110,10 +120,11 @@ async def update_share_link(
         group_default_permissions: set[Permission] = set(group.default_permissions)
         updated_permissions: set[Permission] = group_default_permissions | new_sharelink_permissions
 
-        # Ensure each membership has at least the required permissions without removing existing ones.
+        # Union new permissions with each member's existing
+        # permissions so admin-granted extras are preserved.
         for membership in memberships:
             await db.merge(membership)
-            membership.permissions = updated_permissions
+            membership.permissions = list(set(membership.permissions) | updated_permissions)
 
     # Handle token rotation and membership deletions
     if share_link_update.rotate_token:

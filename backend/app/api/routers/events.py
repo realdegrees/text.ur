@@ -33,9 +33,11 @@ from util.ip import anonymize_ip, get_client_ip
 
 logger = get_logger("app")
 
-# WebSocket message throttling — max messages per window (excluding exempt types)
+# WebSocket message throttling — sliding-window limits
 WS_THROTTLE_MAX_MESSAGES: int = 50
 WS_THROTTLE_WINDOW_SECONDS: float = 10.0
+# Separate higher limit for high-frequency event types (e.g. cursor)
+WS_THROTTLE_EXEMPT_MAX_MESSAGES: int = 200
 
 # Load the WebSocket description template
 WEBSOCKET_TEMPLATE_PATH = PathLibPath(__file__).parent.parent / "docs" / "websocket.jinja"
@@ -308,8 +310,11 @@ def get_events_router[RelatedResourceModel: BaseModel](  # noqa: C901
 
         async def client_event_loop() -> None:  # noqa: C901
             """Handle incoming events from the client."""
-            # Sliding-window throttle state for non-exempt messages
+            # Sliding-window throttle state — separate windows for
+            # normal and high-frequency (exempt) event types so that
+            # cursor updates don't consume the regular quota.
             throttle_timestamps: list[float] = []
+            exempt_timestamps: list[float] = []
             exempt_types = config.throttle_exempt_types or set()
 
             while True:
@@ -321,16 +326,25 @@ def get_events_router[RelatedResourceModel: BaseModel](  # noqa: C901
                     logger.warning("[WS] Received event without type")
                     continue
 
-                # Throttle non-exempt incoming messages
-                if event_type not in exempt_types:
-                    now = time.monotonic()
-                    # Purge timestamps outside the window
-                    cutoff = now - WS_THROTTLE_WINDOW_SECONDS
+                # Throttle incoming messages (separate limits per
+                # category so cursor events don't starve normal ones)
+                now = time.monotonic()
+                cutoff = now - WS_THROTTLE_WINDOW_SECONDS
+                if event_type in exempt_types:
+                    exempt_timestamps = [ts for ts in exempt_timestamps if ts > cutoff]
+                    if len(exempt_timestamps) >= WS_THROTTLE_EXEMPT_MAX_MESSAGES:
+                        continue
+                    exempt_timestamps.append(now)
+                else:
                     throttle_timestamps = [ts for ts in throttle_timestamps if ts > cutoff]
                     if len(throttle_timestamps) >= WS_THROTTLE_MAX_MESSAGES:
                         logger.warning(
                             "[WS] Throttling client (connection_id=%s): %d messages in %.1fs window",
-                            getattr(websocket.state, "connection_id", "?"),
+                            getattr(
+                                websocket.state,
+                                "connection_id",
+                                "?",
+                            ),
                             len(throttle_timestamps),
                             WS_THROTTLE_WINDOW_SECONDS,
                         )
@@ -359,17 +373,13 @@ def get_events_router[RelatedResourceModel: BaseModel](  # noqa: C901
                 # Frontend sends simplified format: {type, payload, resource_id?}
                 # Backend needs full Event format with event_id, published_at, etc.
                 try:
-                    # Auto-populate missing Event envelope fields
-                    if "event_id" not in event_data:
-                        event_data["event_id"] = str(uuid4())
-                    if "published_at" not in event_data:
-                        event_data["published_at"] = datetime.now(UTC).isoformat()
-                    if "resource" not in event_data:
-                        event_data["resource"] = None
-                    if "resource_id" not in event_data:
-                        event_data["resource_id"] = None
-                    if "originating_connection_id" not in event_data:
-                        event_data["originating_connection_id"] = websocket.state.connection_id
+                    # Set envelope fields server-side — always overwrite
+                    # to prevent clients from spoofing metadata.
+                    event_data["event_id"] = str(uuid4())
+                    event_data["published_at"] = datetime.now(UTC).isoformat()
+                    event_data["resource"] = None
+                    event_data["resource_id"] = None
+                    event_data["originating_connection_id"] = websocket.state.connection_id
 
                     # Validate payload against the configured model
                     event = Event[type_config.model].model_validate(event_data)
@@ -394,8 +404,15 @@ def get_events_router[RelatedResourceModel: BaseModel](  # noqa: C901
                         # TODO: Inform client with structured error event (internal error)
                         continue
                 else:
-                    # TODO: Send back an error event indicating no handler is configured
-                    pass
+                    # No handler configured — this event type is server-
+                    # originated only (published by REST endpoints).  Drop
+                    # the client message so untrusted payloads are never
+                    # broadcast.
+                    logger.warning(
+                        "[WS] Dropping client event type '%s' — no handle_incoming configured",
+                        event_type,
+                    )
+                    continue
 
                 # Publish the event to other clients
                 event_dict = event.model_dump(mode="json")

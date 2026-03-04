@@ -81,7 +81,9 @@ async def read_user(_: BasicAuthentication, user: User = Resource(User, param_al
 
 
 @router.put("/{user_id}", response_model=UserRead)
+@limiter.limit("5/minute")
 async def update_user(
+    request: Request,
     db: Database,
     user: User = Authenticate([Guard.is_account_owner()]),
     user_update: UserUpdate = Body(...),
@@ -230,7 +232,9 @@ async def export_user_data(
 
 
 @router.delete("/{user_id}")
+@limiter.limit("3/minute")
 async def delete_user(
+    request: Request,
     db: Database,
     storage: Storage,
     _: User = Authenticate([Guard.is_account_owner()]),

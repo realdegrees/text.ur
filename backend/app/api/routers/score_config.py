@@ -4,7 +4,8 @@ from api.dependencies.authentication import Authenticate
 from api.dependencies.database import Database
 from api.dependencies.resource import Resource
 from core.app_exception import AppException
-from fastapi import Body, Response
+from core.rate_limit import limiter
+from fastapi import Body, Request, Response
 from models.enums import AppErrorCode, Permission
 from models.reaction import (
     GroupReactionCreate,
@@ -64,7 +65,9 @@ async def get_score_config(
 
 
 @router.patch("/score-config", response_model=ScoreConfigRead)
+@limiter.limit("10/minute")
 async def update_score_config(
+    request: Request,
     db: Database,
     update: ScoreConfigUpdate = Body(...),
     _: User = Authenticate(guards=[Guard.group_access({Permission.ADMINISTRATOR})]),
@@ -114,7 +117,9 @@ async def list_group_reactions(
     response_model=GroupReactionRead,
     status_code=201,
 )
+@limiter.limit("10/minute")
 async def create_group_reaction(
+    request: Request,
     db: Database,
     data: GroupReactionCreate = Body(...),
     _: User = Authenticate(guards=[Guard.group_access({Permission.ADMINISTRATOR})]),
@@ -154,7 +159,9 @@ async def create_group_reaction(
     "/reactions/{reaction_id}",
     response_model=GroupReactionRead,
 )
+@limiter.limit("10/minute")
 async def update_group_reaction(
+    request: Request,
     db: Database,
     reaction_id: int,
     update: GroupReactionUpdate = Body(...),
@@ -187,7 +194,9 @@ async def update_group_reaction(
 
 
 @router.delete("/reactions/{reaction_id}")
+@limiter.limit("10/minute")
 async def delete_group_reaction(
+    request: Request,
     db: Database,
     reaction_id: int,
     _: User = Authenticate(guards=[Guard.group_access({Permission.ADMINISTRATOR})]),

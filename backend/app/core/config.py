@@ -92,6 +92,12 @@ SMTP_SSL = os.getenv("SMTP_SSL", "False").lower() == "true"
 # Sender email address
 SMTP_FROM_EMAIL = os.getenv("SMTP_FROM_EMAIL")
 
+if not EMAIL_PRESIGN_SECRET and not IS_TEST_ENV:
+    print(
+        "WARNING: EMAIL_PRESIGN_SECRET is not set. Email verification links will fail at runtime.",
+        file=sys.stderr,
+    )
+
 # APP
 JINJA_ENV = Environment(
     loader=FileSystemLoader(os.path.join(backend_path, "templates")),

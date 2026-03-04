@@ -126,7 +126,15 @@ async def update_group(
     await db.merge(group)
     group.sqlmodel_update(group_update.model_dump(exclude_unset=True))
 
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise AppException(
+            status_code=409,
+            error_code=AppErrorCode.ALREADY_EXISTS,
+            detail="Group with this name already exists.",
+        ) from None
 
     # if default permissions were changed, update all existing memberships to include at least those permissions
     if group_update.default_permissions is not None:

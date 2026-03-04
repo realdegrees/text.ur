@@ -12,6 +12,7 @@ from core.auth import (
     generate_token,
     hash_password,
     validate_password,
+    validate_password_dummy,
 )
 from core.logger import get_logger
 from core.rate_limit import get_cache_key, limiter
@@ -50,7 +51,18 @@ async def login(
     )
     result = await db.exec(query)
     user = result.first()
-    if user is None or not validate_password(user, form_data.password):
+
+    if user is None:
+        # Run a dummy bcrypt check to prevent timing-based
+        # user enumeration (equalize response time).
+        validate_password_dummy(form_data.password)
+        raise AppException(
+            status_code=401,
+            error_code=AppErrorCode.INVALID_CREDENTIALS,
+            detail="Incorrect username or password",
+        )
+
+    if not validate_password(user, form_data.password):
         raise AppException(
             status_code=401,
             error_code=AppErrorCode.INVALID_CREDENTIALS,
@@ -84,6 +96,7 @@ async def login(
         secure=cfg.COOKIE_SECURE,
         samesite=cfg.COOKIE_SAMESITE,
         max_age=int(cfg.JWT_REFRESH_EXPIRATION_DAYS * 24 * 60 * 60),
+        path="/api/login/refresh",
     )
     return token
 

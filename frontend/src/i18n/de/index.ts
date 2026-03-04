@@ -235,7 +235,9 @@ const de = {
 		task_already_correct: 'Sie haben diese Frage bereits richtig beantwortet',
 		task_no_attempts_left: 'Keine Versuche mehr für diese Frage übrig',
 		document_limit_exceeded: 'Diese Gruppe hat die maximale Anzahl an Dokumenten erreicht',
-		already_verified: 'Dieses Konto ist bereits verifiziert'
+		already_verified: 'Dieses Konto ist bereits verifiziert',
+		not_a_guest: 'Dieser Benutzer ist bereits ein permanentes Mitglied',
+		invalid_permissions: 'Die übermittelten Berechtigungen enthalten unzulässige Werte'
 	},
 
 	// Sharelink join page

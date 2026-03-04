@@ -21,6 +21,8 @@ MAX_EMAIL_LENGTH = 255
 MIN_PASSWORD_LENGTH = 8
 MAX_PASSWORD_LENGTH = 128
 
+_USERNAME_PATTERN = re.compile(r"^[a-zA-Z0-9_.\-]+$")
+
 _PASSWORD_RULES = [
     (re.compile(r"[a-z]"), "lowercase letter"),
     (re.compile(r"[A-Z]"), "uppercase letter"),
@@ -34,6 +36,15 @@ def validate_password_policy(password: str) -> None:
     missing = [name for pattern, name in _PASSWORD_RULES if not pattern.search(password)]
     if missing:
         raise ValueError("Password must contain at least one " + ", one ".join(missing))
+
+
+def _validate_username(v: str) -> str:
+    """Strip and validate username format."""
+    v = v.strip()
+    if not _USERNAME_PATTERN.match(v):
+        msg = "Username may only contain letters, digits, underscores, dots, and hyphens"
+        raise ValueError(msg)
+    return v
 
 
 class UserCreate(SQLModel):
@@ -50,6 +61,8 @@ class UserCreate(SQLModel):
     email: EmailStr | None = Field(default=None, max_length=MAX_EMAIL_LENGTH)
     first_name: str | None = Field(default=None, max_length=MAX_FIRST_NAME_LENGTH)
     last_name: str | None = Field(default=None, max_length=MAX_LAST_NAME_LENGTH)
+
+    _validate_username = field_validator("username", mode="before")(_validate_username)
 
     @field_validator("email", mode="before")
     @classmethod
@@ -95,6 +108,14 @@ class UserUpdate(SQLModel):
     old_password: str | None = Field(default=None, max_length=MAX_PASSWORD_LENGTH)
     first_name: str | None = Field(default=None, max_length=MAX_FIRST_NAME_LENGTH)
     last_name: str | None = Field(default=None, max_length=MAX_LAST_NAME_LENGTH)
+
+    @field_validator("username", mode="before")
+    @classmethod
+    def validate_username_format(cls, v: str | None) -> str | None:
+        """Strip and validate username format."""
+        if v is not None:
+            return _validate_username(v)
+        return v
 
     @field_validator("new_password", mode="after")
     @classmethod

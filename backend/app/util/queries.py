@@ -345,26 +345,40 @@ class Guard:
 
             col = filter_column if filter_column is not None else Group.id
 
+            accepted_check = Membership.accepted.is_(True)
+
             if multi and group_id is None:
                 # For multi-item queries — use the caller-supplied column
                 # (defaults to Group.id for group queries, but should be
                 # e.g. Membership.group_id for membership queries).
-                return col.in_(select(Membership.group_id).where(Membership.user_id == user.id, build_permission_clause()))
+                return col.in_(
+                    select(Membership.group_id).where(
+                        Membership.user_id == user.id,
+                        accepted_check,
+                        build_permission_clause(),
+                    )
+                )
             elif not multi:
                 # For single group access checks - use EXISTS to avoid cross join
                 return (
                     select(Membership)
-                    .where((Membership.user_id == user.id) & (Membership.group_id == group_id) & build_permission_clause())
+                    .where((Membership.user_id == user.id) & (Membership.group_id == group_id) & accepted_check & build_permission_clause())
                     .exists()
                 )
             else:
-                return select(Membership).where((Membership.user_id == user.id) & build_permission_clause()).exists()
+                return select(Membership).where((Membership.user_id == user.id) & accepted_check & build_permission_clause()).exists()
 
         def predicate(group: Group, user: User) -> bool:
             required_vals: list[str] = [] if require_permissions is None else [p.value for p in require_permissions]
 
             return any(
-                (m.user_id == user.id) and (m.is_owner if only_owner else True) and all(p in m.permissions for p in required_vals)
+                (m.user_id == user.id)
+                and m.accepted
+                and (
+                    m.is_owner
+                    if only_owner
+                    else (m.is_owner or Permission.ADMINISTRATOR.value in m.permissions or all(p in m.permissions for p in required_vals))
+                )
                 for m in group.memberships
             )
 

@@ -105,7 +105,7 @@ class GroupReactionCreate(SQLModel):
     emoji: Emoji
     points: int = 2
     admin_points: int = 4
-    giver_points: int = 2
+    giver_points: int = Field(default=2, ge=0)
     order: int = Field(default=0, ge=0)
 
 
@@ -114,7 +114,7 @@ class GroupReactionUpdate(SQLModel):
 
     points: int | None = None
     admin_points: int | None = None
-    giver_points: int | None = None
+    giver_points: int | None = Field(default=None, ge=0)
     order: int | None = Field(default=None, ge=0)
 
 

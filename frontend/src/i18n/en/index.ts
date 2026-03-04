@@ -211,7 +211,9 @@ const en = {
 		task_already_correct: 'You have already answered this question correctly',
 		task_no_attempts_left: 'No attempts remaining for this question',
 		document_limit_exceeded: 'This group has reached the maximum number of documents',
-		already_verified: 'This account is already verified'
+		already_verified: 'This account is already verified',
+		not_a_guest: 'This user is already a permanent member',
+		invalid_permissions: 'The submitted permissions contain disallowed values'
 	},
 
 	// Sharelink join page

@@ -245,7 +245,7 @@ class EventManager:
         clients: set[WebSocket] = self._clients.get(channel, set())
         to_remove: set[WebSocket] = set()
 
-        for ws in clients:
+        for ws in list(clients):
             on_event = getattr(ws.state, "on_event", None)
             try:
                 # Handle both sync and async callbacks

@@ -28,6 +28,8 @@ export type AppErrorCode =
   | "cannot_remove_permission_reason_default_group"
   | "cannot_remove_permission_reason_sharelink"
   | "cannot_promote_self"
+  | "not_a_guest"
+  | "invalid_permissions"
   | "not_found"
   | "self_reaction"
   | "reply_reaction"
