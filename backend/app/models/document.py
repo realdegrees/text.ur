@@ -23,7 +23,6 @@ class DocumentCreate(SQLModel):
 
 class DocumentRead(BaseModel):
     id: str
-    storage_key: str
     name: str
     group_id: str
     visibility: DocumentVisibility

@@ -1,3 +1,14 @@
+"""Local filesystem storage manager.
+
+Stores files in a directory structure under ``STORAGE_DIR``.
+Each file may have an accompanying ``.meta`` JSON sidecar that
+records ``content_type``.
+
+A :class:`StorageProtocol` defines the public interface so that
+alternative backends (e.g. S3 / MinIO) can be swapped in via
+configuration without changing application code.
+"""
+
 import hashlib
 import json
 import os
@@ -5,7 +16,7 @@ import tempfile
 from collections.abc import Iterator
 from datetime import UTC, datetime
 from functools import lru_cache
-from typing import Annotated, Any, BinaryIO
+from typing import Annotated, Any, BinaryIO, Protocol, runtime_checkable
 
 from core.app_exception import AppException
 from core.config import STORAGE_DIR
@@ -16,12 +27,62 @@ from models.enums import AppErrorCode
 storage_logger = get_logger("storage")
 
 
-class StorageManager:
-    """Local filesystem storage manager as a dependency.
+# ── Public protocol ─────────────────────────────────────────
+@runtime_checkable
+class StorageProtocol(Protocol):
+    """Interface that any storage backend must implement."""
 
-    Stores files in a flat directory structure under
-    ``STORAGE_DIR``.  Each file may have an accompanying
-    ``.meta`` JSON sidecar that records ``content_type``.
+    def verify_connection(self) -> None:
+        """Verify that the backend is reachable and writable."""
+        ...
+
+    def metadata(self, key: str) -> dict[str, Any] | None:
+        """Return metadata dict or *None* if the key does not exist.
+
+        Expected keys: ``ContentLength``, ``LastModified``,
+        ``ETag``, ``ContentType``.
+        """
+        ...
+
+    def exists(self, key: str) -> bool:
+        """Return whether *key* exists in storage."""
+        ...
+
+    def get_last_modified(self, key: str) -> datetime:
+        """Return the last-modified timestamp of *key*."""
+        ...
+
+    def delete(self, key: str) -> bool:
+        """Delete *key* (and any sidecar metadata).
+
+        Returns ``True`` on success, ``False`` on failure.
+        """
+        ...
+
+    def upload(self, key: str, data: BinaryIO, content_type: str) -> None:
+        """Store *data* under *key* with the given content type."""
+        ...
+
+    def download(self, key: str) -> BinaryIO:
+        """Return an open file-like object for *key*."""
+        ...
+
+    def download_stream(self, key: str, chunk_size: int = 8192) -> Iterator[bytes]:
+        """Yield the contents of *key* in chunks."""
+        ...
+
+    def list_keys(self) -> Iterator[str]:
+        """Yield every storage key currently stored."""
+        ...
+
+
+# ── Local filesystem implementation ─────────────────────────
+class StorageManager:
+    """Local filesystem storage manager.
+
+    Stores files in a directory tree under ``STORAGE_DIR``.
+    Each file may have an accompanying ``.meta`` JSON sidecar
+    that records ``content_type``.
     """
 
     def __init__(self, storage_dir: str | None = None) -> None:
@@ -43,11 +104,28 @@ class StorageManager:
             raise RuntimeError(f"Storage directory {self._storage_dir} is not writable: {e}") from e
         storage_logger.info("Storage configured (dir: %s)", self._storage_dir)
 
+    # ── path helpers ────────────────────────────────────────
     def _path(self, key: str) -> str:
-        """Return the full filesystem path for a storage key."""
-        # Prevent directory traversal
-        safe_key = os.path.basename(key)
-        return os.path.join(self._storage_dir, safe_key)
+        """Return the full filesystem path for a storage key.
+
+        Keys may contain forward slashes to denote subdirectories
+        (e.g. ``documents/abc123``).  Each path component is
+        validated to prevent directory traversal.
+        """
+        parts = key.split("/")
+        for part in parts:
+            if not part or part in (".", "..") or os.sep in part:
+                raise ValueError(f"Invalid storage key: {key!r}")
+
+        candidate = os.path.join(self._storage_dir, *parts)
+        # Belt-and-suspenders: ensure resolved path stays inside
+        # the storage root even if os.sep tricks slip through.
+        if not os.path.abspath(candidate).startswith(os.path.abspath(self._storage_dir) + os.sep) and os.path.abspath(
+            candidate
+        ) != os.path.abspath(self._storage_dir):
+            raise ValueError(f"Path traversal detected for key: {key!r}")
+
+        return candidate
 
     def _meta_path(self, key: str) -> str:
         """Return the path for the sidecar metadata file."""
@@ -70,7 +148,9 @@ class StorageManager:
     def _write_meta(self, key: str, content_type: str) -> None:
         """Write the sidecar metadata file atomically."""
         meta_path = self._meta_path(key)
-        fd, tmp_path = tempfile.mkstemp(dir=self._storage_dir, suffix=".meta.tmp")
+        parent = os.path.dirname(meta_path)
+        os.makedirs(parent, exist_ok=True)
+        fd, tmp_path = tempfile.mkstemp(dir=parent, suffix=".meta.tmp")
         try:
             with os.fdopen(fd, "w") as f:
                 json.dump({"content_type": content_type}, f)
@@ -87,7 +167,8 @@ class StorageManager:
         raw = f"{stat.st_mtime_ns}-{stat.st_size}"
         return hashlib.md5(raw.encode()).hexdigest()  # noqa: S324
 
-    def metadata(self, key: str) -> dict | None:
+    # ── public interface ────────────────────────────────────
+    def metadata(self, key: str) -> dict[str, Any] | None:
         """Return metadata for a stored file, or None if missing."""
         file_path = self._path(key)
         if not os.path.isfile(file_path):
@@ -134,11 +215,14 @@ class StorageManager:
         """Upload a file to storage atomically.
 
         Writes to a temporary file first, then renames to the
-        final path to prevent partial reads.
+        final path to prevent partial reads.  Subdirectories
+        are created on demand.
         """
         file_path = self._path(key)
+        parent = os.path.dirname(file_path)
+        os.makedirs(parent, exist_ok=True)
         try:
-            fd, tmp_path = tempfile.mkstemp(dir=self._storage_dir, suffix=".tmp")
+            fd, tmp_path = tempfile.mkstemp(dir=parent, suffix=".tmp")
             try:
                 with os.fdopen(fd, "wb") as f:
                     while chunk := data.read(8192):
@@ -213,11 +297,31 @@ class StorageManager:
                 )
                 raise AppException(
                     status_code=502,
-                    error_code=(AppErrorCode.STORAGE_UNAVAILABLE),
-                    detail=("File storage is temporarily unavailable."),
+                    error_code=AppErrorCode.STORAGE_UNAVAILABLE,
+                    detail="File storage is temporarily unavailable.",
                 ) from e
 
         return _reader()
+
+    def list_keys(self) -> Iterator[str]:
+        """Yield every storage key currently stored.
+
+        Walks the directory tree and yields keys relative to
+        the storage root, skipping ``.meta`` sidecars and
+        temporary files.
+        """
+        root = self._storage_dir
+        for dirpath, _dirs, filenames in os.walk(root):
+            for fname in filenames:
+                if fname.endswith((".meta", ".tmp", ".meta.tmp")):
+                    continue
+                # Hidden helper files (e.g. .write_test)
+                if fname.startswith("."):
+                    continue
+                full = os.path.join(dirpath, fname)
+                rel = os.path.relpath(full, root)
+                # Normalise to forward slashes (cross-platform)
+                yield rel.replace(os.sep, "/")
 
 
 @lru_cache(maxsize=1)

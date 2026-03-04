@@ -122,11 +122,6 @@ class Document(BaseModel, table=True):
         default=ViewMode.PUBLIC,
         sa_column=Column(String, server_default=ViewMode.PUBLIC.value),
     )
-    secret: UUID = Field(
-        default_factory=func.gen_random_uuid,
-        sa_column=Column(PGUUID(as_uuid=True)),
-    )
-
     default_max_attempts: int = Field(default=1, ge=1)
     order: int = Field(default=0, ge=0)
 

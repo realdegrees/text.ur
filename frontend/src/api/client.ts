@@ -23,6 +23,8 @@ interface FetchOptions extends Omit<RequestInit, 'body'> {
 	filters?: readonly TypedFilter<any>[];
 	sort?: Sort[];
 	_isRetry?: boolean;
+	/** Callback for download progress (bytes loaded, total bytes). */
+	onProgress?: (loaded: number, total: number) => void;
 }
 
 /**
@@ -352,8 +354,10 @@ class ApiClient {
 		const actualFetch = fetchFnOverride ?? fetch!;
 		const url = this.buildUrl(input);
 
-		// Attach If-None-Match header when we have a cached ETag
-		const cached = this.etagCache.get(url);
+		// Attach If-None-Match header when we have a cached ETag.
+		// Only use the cache in the browser to avoid accumulating
+		// large ArrayBuffers in the SSR Node process.
+		const cached = browser ? this.etagCache.get(url) : undefined;
 		const etagHeaders: Record<string, string> = {};
 		if (cached) {
 			etagHeaders['If-None-Match'] = `"${cached.etag}"`;
@@ -403,17 +407,52 @@ class ApiClient {
 			return this.handleErrorResponse(response);
 		}
 
-		const arrayBuffer = await response.arrayBuffer();
+		// Read the body — if Content-Length is available and an
+		// onProgress callback was provided, stream the response to
+		// report download progress.
+		let arrayBuffer: ArrayBuffer;
+		const contentLength = response.headers.get('Content-Length');
+		const onProgress = options?.onProgress;
 
-		// Cache the response with its ETag for future conditional requests
-		const responseEtag = response.headers.get('ETag')?.replace(/"/g, '');
-		if (responseEtag) {
-			// Evict oldest entry if cache is full (Map preserves insertion order)
-			if (this.etagCache.size >= ApiClient.MAX_ETAG_CACHE_SIZE) {
-				const oldestKey = this.etagCache.keys().next().value!;
-				this.etagCache.delete(oldestKey);
+		if (onProgress && contentLength && response.body) {
+			const total = parseInt(contentLength, 10);
+			const reader = response.body.getReader();
+			const chunks: Uint8Array[] = [];
+			let loaded = 0;
+
+			// eslint-disable-next-line no-constant-condition
+			while (true) {
+				const { done, value } = await reader.read();
+				if (done) break;
+				chunks.push(value);
+				loaded += value.byteLength;
+				onProgress(loaded, total);
 			}
-			this.etagCache.set(url, { etag: responseEtag, data: arrayBuffer });
+
+			// Assemble chunks into a single ArrayBuffer
+			const merged = new Uint8Array(loaded);
+			let offset = 0;
+			for (const chunk of chunks) {
+				merged.set(chunk, offset);
+				offset += chunk.byteLength;
+			}
+			arrayBuffer = merged.buffer as ArrayBuffer;
+		} else {
+			arrayBuffer = await response.arrayBuffer();
+		}
+
+		// Cache the response with its ETag for future conditional
+		// requests (browser only to avoid memory bloat in SSR).
+		if (browser) {
+			const responseEtag = response.headers.get('ETag')?.replace(/"/g, '');
+			if (responseEtag) {
+				// Evict oldest entry if cache is full (Map preserves insertion order)
+				if (this.etagCache.size >= ApiClient.MAX_ETAG_CACHE_SIZE) {
+					const oldestKey = this.etagCache.keys().next().value!;
+					this.etagCache.delete(oldestKey);
+				}
+				this.etagCache.set(url, { etag: responseEtag, data: arrayBuffer });
+			}
 		}
 
 		return { success: true, data: arrayBuffer };

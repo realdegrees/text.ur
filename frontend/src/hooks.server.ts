@@ -126,7 +126,7 @@ export const handleFetch: HandleFetch = async ({ request, fetch, event }) => {
 /** Allow ETag and Retry-After headers to pass through to universal load functions during SSR. */
 const serializeOptions = {
 	filterSerializedResponseHeaders: (name: string) =>
-		['etag', 'retry-after'].includes(name.toLowerCase())
+		['etag', 'retry-after', 'content-length'].includes(name.toLowerCase())
 };
 
 const user: Handle = async ({ event, resolve }) => {

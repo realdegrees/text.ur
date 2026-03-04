@@ -5,6 +5,7 @@ lifespan.  Handles:
 - Log file retention (default 90 days)
 - Abandoned guest account removal
 - Unverified account removal
+- Orphaned storage file removal
 
 Each sub-task acquires its own PostgreSQL advisory lock so that
 only one worker executes it at a time, while independent tasks
@@ -26,6 +27,7 @@ from core.logger import get_logger
 from util.advisory_lock import (
     LOCK_CLEANUP_GUESTS,
     LOCK_CLEANUP_LOGS,
+    LOCK_CLEANUP_ORPHANED_FILES,
     LOCK_CLEANUP_UNVERIFIED,
     advisory_lock,
 )
@@ -143,6 +145,53 @@ async def _cleanup_unverified_accounts() -> int:
         return len(users)
 
 
+async def _cleanup_orphaned_files() -> int:
+    """Delete storage files that have no matching ``Document`` row.
+
+    Only files whose modification time is older than 24 hours are
+    considered orphaned — recently created files may belong to an
+    in-flight upload that has not yet been committed to the DB.
+
+    Returns the number of files removed.
+    """
+    async with advisory_lock(LOCK_CLEANUP_ORPHANED_FILES) as acquired:
+        if not acquired:
+            return 0
+
+        from api.dependencies.database import SessionFactory
+        from api.dependencies.storage import get_storage_manager
+        from models.tables import Document
+        from sqlmodel import select
+
+        storage = get_storage_manager()
+        cutoff = time.time() - 86400  # 24 hours ago
+
+        # Collect all storage keys that exist in the database.
+        async with SessionFactory() as db:
+            result = await db.exec(select(Document.storage_key))
+            known_keys: set[str] = set(result.all())
+
+        removed = 0
+        for key in storage.list_keys():
+            if key in known_keys:
+                continue
+
+            # Only remove files older than the safety threshold
+            # to avoid deleting in-flight uploads.
+            file_path = storage._path(key)
+            try:
+                if os.path.getmtime(file_path) > cutoff:
+                    continue
+            except OSError:
+                continue
+
+            if storage.delete(key):
+                removed += 1
+                logger.info("[Cleanup] Deleted orphaned file: %s", key)
+
+        return removed
+
+
 async def periodic_cleanup_loop(
     interval_hours: float,
 ) -> None:
@@ -178,6 +227,13 @@ async def periodic_cleanup_loop(
                 logger.info(
                     "[Cleanup] Removed %d unverified account(s)",
                     removed_unverified,
+                )
+
+            removed_orphans = await _cleanup_orphaned_files()
+            if removed_orphans:
+                logger.info(
+                    "[Cleanup] Removed %d orphaned storage file(s)",
+                    removed_orphans,
                 )
 
             logger.info("[Cleanup] Cleanup cycle complete")

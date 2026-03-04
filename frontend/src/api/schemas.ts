@@ -104,7 +104,6 @@ export const documentSchema = z.object({
     size_bytes: z.number().optional(),
     visibility: documentVisibilitySchema.optional(),
     view_mode: viewModeSchema.optional(),
-    secret: z.string().optional(),
     default_max_attempts: z.number().optional(),
     order: z.number().optional(),
     group_id: z.string()
@@ -129,7 +128,6 @@ export const documentReadSchema = z.object({
     created_at: z.string().optional(),
     updated_at: z.string().optional(),
     id: z.string(),
-    storage_key: z.string(),
     name: z.string(),
     group_id: z.string(),
     visibility: documentVisibilitySchema,

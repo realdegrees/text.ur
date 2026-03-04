@@ -28,9 +28,7 @@ def get_cache_key(request: Request) -> str:
     token: str | None = request.cookies.get("access_token")
     if token:
         try:
-            payload: dict[str, Any] = decode(
-                token, JWT_SECRET, algorithms=[ALGORITHM]
-            )
+            payload: dict[str, Any] = decode(token, JWT_SECRET, algorithms=[ALGORITHM])
             user_id: str | None = payload.get("sub")
             if user_id:
                 return f"user:{user_id}"
@@ -42,9 +40,7 @@ def get_cache_key(request: Request) -> str:
 
 def _build_redis_uri() -> str:
     """Build the Redis URI from configuration."""
-    password_part = (
-        f":{quote(cfg.REDIS_PASSWORD, safe='')}@" if cfg.REDIS_PASSWORD else ""
-    )
+    password_part = f":{quote(cfg.REDIS_PASSWORD, safe='')}@" if cfg.REDIS_PASSWORD else ""
     return f"redis://{password_part}{cfg.REDIS_HOST}:{cfg.REDIS_PORT}/1"
 
 

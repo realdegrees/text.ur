@@ -1,5 +1,6 @@
 from datetime import UTC, datetime
 from types import SimpleNamespace
+from urllib.parse import quote
 from uuid import uuid4
 
 import core.config as cfg
@@ -16,6 +17,7 @@ from api.routers.events import (
 )
 from core.app_exception import AppException
 from core.logger import get_logger
+from core.rate_limit import limiter
 from fastapi import (
     Body,
     File,
@@ -64,6 +66,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import col, func, select
 from starlette.responses import StreamingResponse
 from util.api_router import APIRouter
+from util.file_validation import (
+    ALLOWED_DOCUMENT_TYPES,
+    extension_for_mime,
+    validate_file_type,
+)
 from util.queries import Guard
 from util.response import ExcludableFieldsJSONResponse
 
@@ -291,28 +298,24 @@ router.tags.append("Documents")
 
 
 @router.post("/", response_model=DocumentRead)
+@limiter.limit("5/minute")
 async def create_document(
+    request: Request,
     db: Database,
     storage: Storage,
-    session_user: BasicAuthentication,  # only basic auth because we need the validated form data for authorization in this case
+    session_user: BasicAuthentication,
     file: UploadFile = File(...),
     data: str = Form(..., description="JSON string of type `DocumentCreate`"),
 ) -> DocumentRead:
     """Create a new document entry and upload the file to storage."""
     document_create = DocumentCreate.model_validate_json(data)
 
-    # Validate file type and size
-    if file.content_type != "application/pdf":
-        raise AppException(
-            status_code=400,
-            error_code=AppErrorCode.INVALID_INPUT,
-            detail="Only PDF files are allowed.",
-        )
-    # Validate actual file size by reading in chunks (ignore Content-Length)
+    # Read the upload into a temp buffer, enforcing the size limit.
+    from tempfile import SpooledTemporaryFile
+
     max_size_bytes = cfg.MAX_UPLOAD_SIZE_MB * 1024 * 1024
     chunk_size = 64 * 1024  # 64 KB
     total_bytes = 0
-    from tempfile import SpooledTemporaryFile
 
     validated_file = SpooledTemporaryFile(max_size=1024 * 1024, mode="w+b")
     while chunk := await file.read(chunk_size):
@@ -327,22 +330,16 @@ async def create_document(
         validated_file.write(chunk)
     validated_file.seek(0)
 
-    # Validate PDF magic bytes
-    magic = validated_file.read(5)
-    if magic != b"%PDF-":
-        validated_file.close()
-        raise AppException(
-            status_code=400,
-            error_code=AppErrorCode.INVALID_INPUT,
-            detail="File is not a valid PDF.",
-        )
-    validated_file.seek(0)
+    # Content-based MIME detection via libmagic (replaces the
+    # client-supplied Content-Type header *and* manual magic-bytes
+    # checks).
+    detected_type = validate_file_type(validated_file, ALLOWED_DOCUMENT_TYPES)
 
     # Replace the file reference for the storage upload
     file.file = validated_file
     file.size = total_bytes
 
-    # Check if user is authorized if they are uploading to a group
+    # Check if user is authorized to upload to this group
     result = await db.exec(
         select(Membership).where(
             Membership.user_id == session_user.id,
@@ -361,7 +358,7 @@ async def create_document(
         raise AppException(
             status_code=403,
             error_code=AppErrorCode.NOT_AUTHORIZED,
-            detail="User does not have permission to add documents.",
+            detail=("User does not have permission to add documents."),
         )
 
     # Enforce document-per-group limit
@@ -380,11 +377,13 @@ async def create_document(
     )
     next_order = max_order_result.one() + 1
 
-    # Generate unique storage key
-    storage_key = f"document-{uuid4()}.pdf"
+    # Generate unique storage key grouped by the owning group
+    # (no file extension — the content type is tracked in the
+    # .meta sidecar).
+    storage_key = f"documents/{document_create.group_id}/{uuid4()}"
 
     # Upload to storage first so we don't create orphaned DB records
-    storage.upload(storage_key, file.file, content_type=file.content_type)
+    storage.upload(storage_key, file.file, content_type=detected_type)
 
     # Create document entry; delete stored file if DB commit fails
     document = Document(
@@ -412,13 +411,23 @@ async def get_document(
     return document
 
 
-def slugify(text: str) -> str:
-    """Generate a safe filename from a storage key."""
-    # Make the text safe for urls by replacing unsafe characters
-    return "".join(c if c.isalnum() or c in (" ", ".", "_") else "_" for c in text).rstrip()
+def _content_disposition(name: str, ext: str) -> str:
+    """Build a ``Content-Disposition`` header with RFC 5987 encoding.
+
+    Provides an ASCII-safe ``filename`` parameter *and* a UTF-8
+    ``filename*`` parameter so non-Latin filenames display
+    correctly in modern browsers while legacy clients still get a
+    usable fallback.
+    """
+    # ASCII-safe fallback: keep only safe chars
+    ascii_name = "".join(c if c.isalnum() or c in (" ", ".", "_") else "_" for c in name).strip() or "download"
+    # RFC 5987 UTF-8 encoded version
+    utf8_name = quote(name, safe="")
+    return f"attachment; filename=\"{ascii_name}{ext}\"; filename*=UTF-8''{utf8_name}{ext}"
 
 
 @router.get("/{document_id}/file")
+@limiter.limit("10/minute")
 async def get_document_file(
     request: Request,
     storage: Storage,
@@ -431,8 +440,9 @@ async def get_document_file(
     re-downloading unchanged files.
     """
     # Cheap metadata check (including ETag)
-    metadata = storage.metadata(document.storage_key)
-    etag = metadata.get("ETag", "").strip('"') if metadata else ""
+    meta = storage.metadata(document.storage_key)
+    etag = meta.get("ETag", "").strip('"') if meta else ""
+    content_type = meta.get("ContentType", "application/octet-stream") if meta else "application/octet-stream"
 
     # Check conditional request header
     if_none_match = request.headers.get("If-None-Match", "").strip('"')
@@ -440,15 +450,17 @@ async def get_document_file(
         return Response(status_code=304)
 
     # Stream the file from storage with caching headers
+    ext = extension_for_mime(content_type)
     iterator = storage.download_stream(document.storage_key)
-    headers = {
-        "Content-Disposition": (f'attachment; filename="{slugify(document.name)}.pdf"'),
+    headers: dict[str, str] = {
+        "Content-Disposition": _content_disposition(document.name, ext),
         "Cache-Control": "private, max-age=3600",
+        "Content-Length": str(document.size_bytes),
     }
     if etag:
         headers["ETag"] = f'"{etag}"'
 
-    return StreamingResponse(iterator, media_type="application/pdf", headers=headers)
+    return StreamingResponse(iterator, media_type=content_type, headers=headers)
 
 
 async def _enrich_with_user_stats(

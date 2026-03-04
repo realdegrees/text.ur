@@ -6,11 +6,9 @@
 	import { env } from '$env/dynamic/public';
 	import LL from '$i18n/i18n-svelte';
 	import UploadIcon from '~icons/material-symbols/upload-file-outline';
-	import DocumentIcon from '~icons/material-symbols/description-outline';
 	import Loading from '~icons/svg-spinners/90-ring-with-bg';
-	import DeleteIcon from '~icons/material-symbols/delete-outline';
-	import DragDropIcon from '~icons/material-symbols/upload-file';
 	import InfoBanner from '$lib/components/InfoBanner.svelte';
+	import FileUpload from '$lib/components/FileUpload.svelte';
 	import { notification } from '$lib/stores/notificationStore.js';
 	import { sessionStore } from '$lib/runes/session.svelte.js';
 	import MarkdownTextEditor from '$lib/components/pdf/MarkdownTextEditor.svelte';
@@ -28,7 +26,6 @@
 	let selectedVisibility: DocumentVisibility = $state('public');
 	let isLoading: boolean = $state(false);
 	let errorMessage: string = $state('');
-	let isDragging: boolean = $state(false);
 	let documentName: string = $state('');
 	let documentDescription: string = $state('');
 
@@ -40,82 +37,11 @@
 		}))
 	);
 
-	function validateFile(file: File): string | null {
-		if (file.type !== ALLOWED_FILE_TYPE) {
-			return $LL.documents.invalidFileType();
-		}
-		if (file.size > MAX_FILE_SIZE_BYTES) {
-			return $LL.documents.fileTooLarge({
-				max: MAX_FILE_SIZE_MB,
-				actual: (file.size / (1024 * 1024)).toFixed(2)
-			});
-		}
-		return null;
-	}
-
-	function handleFileSelect(event: Event): void {
-		const input = event.target as HTMLInputElement;
-		if (input.files && input.files.length > 0) {
-			const file = input.files[0];
-			const validationError = validateFile(file);
-			if (validationError) {
-				errorMessage = validationError;
-				selectedFile = null;
-			} else {
-				selectedFile = file;
-				errorMessage = '';
-			}
-		}
-	}
-
-	function handleDragOver(event: DragEvent): void {
-		event.preventDefault();
-		isDragging = true;
-	}
-
-	function handleDragLeave(event: DragEvent): void {
-		event.preventDefault();
-		isDragging = false;
-	}
-
-	function handleDrop(event: DragEvent): void {
-		event.preventDefault();
-		isDragging = false;
-
-		if (event.dataTransfer?.files && event.dataTransfer.files.length > 0) {
-			const file = event.dataTransfer.files[0];
-			const validationError = validateFile(file);
-			if (validationError) {
-				errorMessage = validationError;
-				selectedFile = null;
-			} else {
-				selectedFile = file;
-				errorMessage = '';
-			}
-		}
-	}
-
-	function clearFile(): void {
-		selectedFile = null;
-		errorMessage = '';
-	}
-
-	function formatFileSize(bytes: number): string {
-		const mb = bytes / (1024 * 1024);
-		return `${mb.toFixed(2)} MB`;
-	}
-
 	async function handleSubmit(event: Event): Promise<void> {
 		event.preventDefault();
 
 		if (!selectedFile) {
 			errorMessage = $LL.documents.selectFile();
-			return;
-		}
-
-		const validationError = validateFile(selectedFile);
-		if (validationError) {
-			errorMessage = validationError;
 			return;
 		}
 
@@ -170,57 +96,14 @@
 				{$LL.documents.documentFileHint({ size: MAX_FILE_SIZE_MB })}
 			</p>
 
-			{#if !selectedFile}
-				<!-- Drag and Drop Area -->
-				<div
-					role="button"
-					tabindex="0"
-					class="relative rounded-lg border-2 border-dashed transition-colors {isDragging
-						? 'border-primary bg-primary/10'
-						: 'border-text/20 bg-text/5'}"
-					ondragover={handleDragOver}
-					ondragleave={handleDragLeave}
-					ondrop={handleDrop}
-				>
-					<input
-						type="file"
-						id="fileInput"
-						accept={ALLOWED_FILE_TYPE}
-						onchange={handleFileSelect}
-						class="absolute inset-0 cursor-pointer opacity-0"
-						disabled={isLoading}
-					/>
-					<div class="flex flex-col items-center gap-4 p-8">
-						<DragDropIcon class="h-16 w-16 text-text/40" />
-						<div class="flex flex-col items-center gap-2">
-							<p class="text-lg font-semibold">{$LL.documents.dragDrop()}</p>
-							<p class="text-sm text-text/60">{$LL.documents.orClickBrowse()}</p>
-						</div>
-						<p class="text-xs text-text/50">
-							{$LL.documents.maxFileSize({ size: MAX_FILE_SIZE_MB })}
-						</p>
-					</div>
-				</div>
-			{:else}
-				<!-- Selected File Display -->
-				<div
-					class="flex flex-row items-center gap-4 rounded-lg border border-text/20 bg-text/5 p-4"
-				>
-					<DocumentIcon class="h-8 w-8 text-primary" />
-					<div class="flex flex-1 flex-col gap-1">
-						<p class="font-semibold">{selectedFile.name}</p>
-						<p class="text-sm text-text/60">{formatFileSize(selectedFile.size)}</p>
-					</div>
-					<button
-						type="button"
-						onclick={clearFile}
-						class="rounded-md bg-red-500/10 p-2 text-red-500 transition-all hover:bg-red-500/20"
-						disabled={isLoading}
-					>
-						<DeleteIcon class="h-5 w-5" />
-					</button>
-				</div>
-			{/if}
+			<FileUpload
+				bind:value={selectedFile}
+				bind:errorMessage
+				accept={ALLOWED_FILE_TYPE}
+				maxSizeBytes={MAX_FILE_SIZE_BYTES}
+				maxSizeMB={MAX_FILE_SIZE_MB}
+				disabled={isLoading}
+			/>
 		</div>
 
 		<!-- Document Name Field -->

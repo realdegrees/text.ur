@@ -247,7 +247,6 @@ export interface Document {
   size_bytes?: number;
   visibility?: DocumentVisibility;
   view_mode?: ViewMode;
-  secret?: string;
   default_max_attempts?: number;
   order?: number;
   group_id: string;
@@ -269,7 +268,6 @@ export interface DocumentRead {
   created_at?: string;
   updated_at?: string;
   id: string;
-  storage_key: string;
   name: string;
   group_id: string;
   visibility: DocumentVisibility;

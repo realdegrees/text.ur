@@ -25,7 +25,7 @@ from core.auth import parse_jwt
 from core.config import DATABASE_URL, DB_CONNECTION_TIMEOUT
 from core.logger import get_logger
 from factories import models as factory_models
-from httpx import AsyncClient
+from httpx import ASGITransport, AsyncClient
 from main import app
 from models.tables import User
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
@@ -89,7 +89,8 @@ async def client(request: SubRequest) -> AsyncGenerator[AsyncClient, None]:
         for dependency_fn_name, override_fn in marker.args[0].items():
             app.dependency_overrides[dependency_fn_name] = override_fn
 
-    async with AsyncClient(app=app, base_url="http://test") as ac:
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
         yield ac
 
     app.dependency_overrides.clear()
