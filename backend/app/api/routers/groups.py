@@ -9,7 +9,8 @@ from api.routers.memberships import (
 from api.routers.sharelinks import router as ShareLinkRouter
 from core.app_exception import AppException
 from core.logger import get_logger
-from fastapi import Body, Response
+from core.rate_limit import limiter
+from fastapi import Body, Request, Response
 from models.document import DocumentRead, DocumentReorder
 from models.enums import AppErrorCode, Permission
 from models.filter import GroupFilter
@@ -62,7 +63,9 @@ async def list_groups(
 
 
 @router.post("/", response_model=GroupRead)
+@limiter.limit("10/minute")
 async def create_group(
+    request: Request,
     db: Database,
     user: BasicAuthentication,
     group_create: GroupCreate = Body(...),
@@ -144,7 +147,9 @@ async def update_group(
 
 
 @router.post("/{group_id}/transfer")
+@limiter.limit("5/minute")
 async def transfer_ownership(
+    request: Request,
     db: Database,
     transfer: GroupTransfer = Body(...),
     session_user: User = Authenticate([Guard.group_access(None, only_owner=True)]),
@@ -197,7 +202,9 @@ async def transfer_ownership(
 
 
 @router.delete("/{group_id}")
+@limiter.limit("5/minute")
 async def delete_group(
+    request: Request,
     db: Database,
     storage: Storage,
     _: User = Authenticate([Guard.group_access(None, only_owner=True)]),

@@ -3,9 +3,15 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any, Literal
 
-from fastapi import HTTPException
+from core.app_exception import AppException
 from fastapi.datastructures import QueryParams
-from models.enums import DocumentVisibility, Permission, ViewMode, Visibility
+from models.enums import (
+    AppErrorCode,
+    DocumentVisibility,
+    Permission,
+    ViewMode,
+    Visibility,
+)
 from models.pagination import Paginated
 from models.tables import (
     Comment,
@@ -101,8 +107,9 @@ class Guard:
         def clause(user: User, params: dict[str, Any], multi: bool = False) -> ColumnElement[bool]:
             target_user_id = params.get("user_id", None)
             if not target_user_id and not multi:
-                raise HTTPException(
+                raise AppException(
                     status_code=500,
+                    error_code=AppErrorCode.INTERNAL_ERROR,
                     detail="Endpoint Guard misconfiguration: missing user_id parameter",
                 )
             # Convert user_id to int if it's a string (from path params)
@@ -110,8 +117,9 @@ class Guard:
                 try:
                     target_user_id = int(target_user_id)
                 except (ValueError, TypeError):
-                    raise HTTPException(
+                    raise AppException(
                         status_code=400,
+                        error_code=AppErrorCode.INVALID_INPUT,
                         detail="Invalid user_id: must be an integer",
                     ) from None
 
@@ -141,8 +149,9 @@ class Guard:
                     .exists()
                 )
             else:
-                raise HTTPException(
+                raise AppException(
                     status_code=500,
+                    error_code=AppErrorCode.INTERNAL_ERROR,
                     detail="Endpoint Guard misconfiguration: invalid configuration for multi parameter",
                 )
 
@@ -157,15 +166,16 @@ class Guard:
 
         def clause(user: User, params: dict[str, Any], multi: bool = False) -> ColumnElement[bool]:
             if multi:
-                raise HTTPException(
-                    # TODO: This should throw an internal error and print it to the logs
+                raise AppException(
                     status_code=500,
+                    error_code=AppErrorCode.INTERNAL_ERROR,
                     detail="Endpoint Guard misconfiguration: This Guard is not designed for use in PaginatedQueries!",
                 )
             target_user_id = params.get("user_id", None)
             if not target_user_id:
-                raise HTTPException(
+                raise AppException(
                     status_code=500,
+                    error_code=AppErrorCode.INTERNAL_ERROR,
                     detail="Endpoint Guard misconfiguration: missing user_id parameter",
                 )
             # Convert user_id to int if it's a string (from path params)
@@ -173,8 +183,9 @@ class Guard:
                 try:
                     target_user_id = int(target_user_id)
                 except (ValueError, TypeError):
-                    raise HTTPException(
+                    raise AppException(
                         status_code=400,
+                        error_code=AppErrorCode.INVALID_INPUT,
                         detail="Invalid user_id: must be an integer",
                     ) from None
             return (User.id == user.id) & (User.id == target_user_id)
@@ -204,8 +215,9 @@ class Guard:
         def clause(user: User, params: dict[str, Any], multi: bool = False) -> ColumnElement[bool]:
             document_id = params.get("document_id", None)
             if not document_id and not multi:
-                raise HTTPException(
+                raise AppException(
                     status_code=500,
+                    error_code=AppErrorCode.INTERNAL_ERROR,
                     detail="Endpoint Guard misconfiguration: missing document_id parameter",
                 )
 
@@ -310,8 +322,9 @@ class Guard:
         def clause(user: User, params: dict[str, Any], multi: bool = False) -> ColumnElement[bool]:
             group_id = params.get("group_id", None)
             if not group_id and not multi:
-                raise HTTPException(
+                raise AppException(
                     status_code=500,
+                    error_code=AppErrorCode.INTERNAL_ERROR,
                     detail="Endpoint Guard misconfiguration: missing group_id parameter",
                 )
 
@@ -376,8 +389,9 @@ class Guard:
             group_id = params.get("group_id", None)
 
             if (not share_link_id or not token) and not multi:
-                raise HTTPException(
+                raise AppException(
                     status_code=500,
+                    error_code=AppErrorCode.INTERNAL_ERROR,
                     detail="Endpoint Guard misconfiguration: missing share_link_id parameter",
                 )
             # Convert share_link_id to int if it's a string (from path params)
@@ -385,8 +399,9 @@ class Guard:
                 try:
                     share_link_id = int(share_link_id)
                 except (ValueError, TypeError):
-                    raise HTTPException(
+                    raise AppException(
                         status_code=400,
+                        error_code=AppErrorCode.INVALID_INPUT,
                         detail="Invalid share_link_id: must be an integer",
                     ) from None
 
@@ -438,8 +453,9 @@ class Guard:
                     .exists()
                 )
             else:
-                raise HTTPException(
+                raise AppException(
                     status_code=500,
+                    error_code=AppErrorCode.INTERNAL_ERROR,
                     detail="Endpoint Guard misconfiguration: invalid configuration for multi parameter",
                 )
 
@@ -515,8 +531,9 @@ class Guard:
             """Generate the SQLAlchemy clause for comment access, following the truth table exactly."""
             comment_id = params.get("comment_id", None)
             if not comment_id and not multi:
-                raise HTTPException(
+                raise AppException(
                     status_code=500,
+                    error_code=AppErrorCode.INTERNAL_ERROR,
                     detail="Endpoint Guard misconfiguration: missing comment_id parameter",
                 )
             # Convert comment_id to int if it's a string (from path params)
@@ -524,8 +541,9 @@ class Guard:
                 try:
                     comment_id = int(comment_id)
                 except (ValueError, TypeError):
-                    raise HTTPException(
+                    raise AppException(
                         status_code=400,
+                        error_code=AppErrorCode.INVALID_INPUT,
                         detail="Invalid comment_id: must be an integer",
                     ) from None
 
@@ -737,8 +755,9 @@ class Guard:
         def clause(user: User, params: dict[str, Any], multi: bool = False) -> ColumnElement[bool]:
             reaction_id = params.get("reaction_id", None)
             if not reaction_id and not multi:
-                raise HTTPException(
+                raise AppException(
                     status_code=500,
+                    error_code=AppErrorCode.INTERNAL_ERROR,
                     detail="Endpoint Guard misconfiguration: missing reaction_id parameter",
                 )
             # Convert reaction_id to int if it's a string (from path params)
@@ -746,8 +765,9 @@ class Guard:
                 try:
                     reaction_id = int(reaction_id)
                 except (ValueError, TypeError):
-                    raise HTTPException(
+                    raise AppException(
                         status_code=400,
+                        error_code=AppErrorCode.INVALID_INPUT,
                         detail="Invalid reaction_id: must be an integer",
                     ) from None
 

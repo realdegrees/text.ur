@@ -150,7 +150,7 @@ async def reset_password(
     reset_link = f"{cfg.FRONTEND_BASEURL}/password-reset/{token}"
     expiry_time = datetime.now(UTC) + timedelta(minutes=cfg.PASSWORD_RESET_LINK_EXPIRY_MINUTES)
     try:
-        mail.send_email(
+        await mail.send_email(
             target_email=email,
             subject="Reset Your Password - text.ur",
             template="reset_password.jinja",

@@ -234,19 +234,17 @@
 </script>
 
 <div class="relative h-full" bind:this={containerElement}>
-	{#key repositionedClusters.length}
-		{#each repositionedClusters as cluster, idx (idx)}
-			{@const clusterY = cluster[0].highlightPosition.y}
-			<div class="absolute right-3" style="top: {clusterY}px; left: 12px;">
-				<CommentCluster
-					comments={cluster}
-					onHeightChange={(height: number) => {
-						clusterHeights.set(cluster[0].id.toString(), height);
-					}}
-				/>
-			</div>
-		{/each}
-	{/key}
+	{#each repositionedClusters as cluster (cluster[0].id)}
+		{@const clusterY = cluster[0].highlightPosition.y}
+		<div class="absolute right-3" style="top: {clusterY}px; left: 12px;">
+			<CommentCluster
+				comments={cluster}
+				onHeightChange={(height: number) => {
+					clusterHeights.set(cluster[0].id.toString(), height);
+				}}
+			/>
+		</div>
+	{/each}
 
 	{#if !repositionedClusters.length}
 		<div class="flex h-full items-center justify-center p-4">

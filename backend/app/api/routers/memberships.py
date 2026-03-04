@@ -7,7 +7,8 @@ from api.dependencies.paginated.resources import (
 )
 from api.dependencies.resource import Resource
 from core.app_exception import AppException
-from fastapi import Body, Query, Response
+from core.rate_limit import limiter
+from fastapi import Body, Query, Request, Response
 from models.enums import AppErrorCode, Permission
 from models.filter import MembershipFilter
 from models.group import (
@@ -99,7 +100,9 @@ async def get_membership(
 
 
 @groupmembership_router.post("/")
+@limiter.limit("10/minute")
 async def invite_member(
+    request: Request,
     db: Database,
     group: Group = Resource(Group, param_alias="group_id"),
     _: User = Authenticate([Guard.group_access({Permission.ADMINISTRATOR})]),
@@ -381,7 +384,9 @@ async def promote_guest_to_member(
 
 
 @groupmembership_router.get("/{user_id}/score", response_model=ScoreRead)
+@limiter.limit("20/minute")
 async def get_member_score(
+    request: Request,
     db: Database,
     session_user: User = Authenticate(
         [Guard.group_access()],

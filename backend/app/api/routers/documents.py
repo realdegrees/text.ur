@@ -282,6 +282,7 @@ events_router = get_events_router(
         },
         setup_connection=_setup_document_comment_connection,
         track_active_users=True,
+        throttle_exempt_types={"mouse_position"},
     ),
 )
 

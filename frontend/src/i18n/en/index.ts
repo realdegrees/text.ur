@@ -166,7 +166,9 @@ const en = {
 		unknown_error: 'An unknown error occurred',
 		validation_error: 'Validation error',
 		invalid_input: 'Invalid input provided',
+		internal_error: 'An internal server error occurred. Please try again later.',
 		database_unavailable: 'Database is currently unavailable',
+		database_timeout: 'The database request timed out. Please try again.',
 		invalid_token: 'Your session token is invalid or expired',
 		not_authenticated:
 			'You must be logged in to perform this action',

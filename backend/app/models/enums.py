@@ -119,8 +119,12 @@ class AppErrorCode(StrEnum):
     VALIDATION_ERROR = "validation_error"
     INVALID_INPUT = "invalid_input"  # use when user input is faulty e.g. a value error when hitting db constraints like string length
 
+    # Internal / Server Errors
+    INTERNAL_ERROR = "internal_error"  # use when an unexpected server-side error occurs (guard misconfiguration, etc.)
+
     # Database Errors
     DATABASE_UNAVAILABLE = "database_unavailable"  # use when the database is down or unreachable
+    DATABASE_TIMEOUT = "database_timeout"  # use when a database query exceeds the statement timeout
 
     # Authentication & Authorization Errors
     INVALID_TOKEN = "invalid_token"  # use when JWT is invalid/expired

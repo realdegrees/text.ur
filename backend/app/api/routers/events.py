@@ -1,5 +1,6 @@
 import asyncio
 import contextlib
+import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -31,6 +32,10 @@ from util.api_router import APIRouter
 from util.ip import anonymize_ip, get_client_ip
 
 logger = get_logger("app")
+
+# WebSocket message throttling — max messages per window (excluding exempt types)
+WS_THROTTLE_MAX_MESSAGES: int = 50
+WS_THROTTLE_WINDOW_SECONDS: float = 10.0
 
 # Load the WebSocket description template
 WEBSOCKET_TEMPLATE_PATH = PathLibPath(__file__).parent.parent / "docs" / "websocket.jinja"
@@ -78,6 +83,8 @@ class EventRouterConfig(dict):
     setup_connection: Callable[[WebSocket, BaseModel, User, AsyncSession], None] | None = None
     # Whether to track active users for this channel (default: True)
     track_active_users: bool = True
+    # Event types exempt from incoming message throttling (e.g., high-frequency cursor updates)
+    throttle_exempt_types: set[str] | None = None
 
 
 def get_events_router[RelatedResourceModel: BaseModel](  # noqa: C901
@@ -301,6 +308,10 @@ def get_events_router[RelatedResourceModel: BaseModel](  # noqa: C901
 
         async def client_event_loop() -> None:  # noqa: C901
             """Handle incoming events from the client."""
+            # Sliding-window throttle state for non-exempt messages
+            throttle_timestamps: list[float] = []
+            exempt_types = config.throttle_exempt_types or set()
+
             while True:
                 event_data = await websocket.receive_json()
 
@@ -309,6 +320,22 @@ def get_events_router[RelatedResourceModel: BaseModel](  # noqa: C901
                 if not event_type:
                     logger.warning("[WS] Received event without type")
                     continue
+
+                # Throttle non-exempt incoming messages
+                if event_type not in exempt_types:
+                    now = time.monotonic()
+                    # Purge timestamps outside the window
+                    cutoff = now - WS_THROTTLE_WINDOW_SECONDS
+                    throttle_timestamps = [ts for ts in throttle_timestamps if ts > cutoff]
+                    if len(throttle_timestamps) >= WS_THROTTLE_MAX_MESSAGES:
+                        logger.warning(
+                            "[WS] Throttling client (connection_id=%s): %d messages in %.1fs window",
+                            getattr(websocket.state, "connection_id", "?"),
+                            len(throttle_timestamps),
+                            WS_THROTTLE_WINDOW_SECONDS,
+                        )
+                        continue
+                    throttle_timestamps.append(now)
 
                 # Get event configuration (quick lookup) and fallback to scanning the
                 # configured keys if the dict lookup fails for any reason.

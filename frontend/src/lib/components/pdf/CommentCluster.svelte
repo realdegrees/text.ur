@@ -190,7 +190,10 @@
 										const wasPinned = state.isPinned;
 										state.isPinned = !state.isPinned;
 										if (!wasPinned) {
+											selectedTabId = c.id;
 											documentStore.activeCommentId = c.id;
+										} else if (selectedTabId === c.id) {
+											selectedTabId = null;
 										}
 									}
 								} else if (!showCard) {

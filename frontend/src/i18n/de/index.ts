@@ -179,8 +179,10 @@ const de = {
 		unknown_error: 'Ein unbekannter Fehler ist aufgetreten',
 		validation_error: 'Validierungsfehler',
 		invalid_input: 'Ungültige Eingabe',
+		internal_error: 'Ein interner Serverfehler ist aufgetreten. Bitte versuchen Sie es später erneut.',
 		database_unavailable:
 			'Datenbank ist derzeit nicht verfügbar',
+		database_timeout: 'Die Datenbankanfrage hat das Zeitlimit überschritten. Bitte versuchen Sie es erneut.',
 		invalid_token:
 			'Ihr Sitzungstoken ist ungültig oder abgelaufen',
 		not_authenticated:

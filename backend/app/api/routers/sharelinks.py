@@ -9,7 +9,8 @@ from api.dependencies.database import Database
 from api.dependencies.paginated.resources import PaginatedResource
 from api.dependencies.resource import Resource
 from core.app_exception import AppException
-from fastapi import Body, Response
+from core.rate_limit import get_cache_key, limiter
+from fastapi import Body, Request, Response
 from models.enums import AppErrorCode, Permission
 from models.filter import ShareLinkFilter
 from models.pagination import Paginated
@@ -50,7 +51,9 @@ async def list_share_links(
 
 
 @root_router.get("/{token}", response_model=ShareLinkReadFromToken)
+@limiter.limit("60/minute", key_func=get_cache_key)
 async def get_share_link_from_token(
+    request: Request,
     share_link: ShareLink = Resource(ShareLink, param_alias="token", key_column=ShareLink.token),
 ) -> ShareLinkReadFromToken:
     """Get a single share link by token."""
@@ -58,7 +61,9 @@ async def get_share_link_from_token(
 
 
 @router.post("/", response_model=ShareLinkRead)
+@limiter.limit("5/minute")
 async def create_share_link(
+    request: Request,
     db: Database,
     group: Group = Resource(Group, param_alias="group_id"),
     user: User = Authenticate([Guard.group_access({Permission.ADMINISTRATOR})]),
@@ -138,7 +143,9 @@ async def delete_share_link(
 
 
 @root_router.post("/{token}/use")
+@limiter.limit("60/minute", key_func=get_cache_key)
 async def use_sharelink_token(
+    request: Request,
     db: Database,
     token: str,
     user: User = Authenticate(),

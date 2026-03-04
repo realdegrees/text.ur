@@ -27,7 +27,7 @@ register_logger = get_logger("app")
 router = APIRouter(prefix="/register", tags=["Register"])
 
 
-def _send_verification_email(mail: Mail, user: User, logger: object) -> None:
+async def _send_verification_email(mail: Mail, user: User, logger: object) -> None:
     """Send a verification email for the given user."""
     verification_link = mail.generate_verification_link(
         user.email,
@@ -37,7 +37,7 @@ def _send_verification_email(mail: Mail, user: User, logger: object) -> None:
     )
     expiry_time = datetime.now(UTC) + timedelta(days=cfg.REGISTER_LINK_EXPIRY_DAYS)
     try:
-        mail.send_email(
+        await mail.send_email(
             user.email,
             subject="Verify Your Email - text.ur",
             template="register.jinja",
@@ -107,7 +107,7 @@ async def _upgrade_guest_account(db: Database, mail: Mail, user: User, user_crea
     )
     expiry_time = datetime.now(UTC) + timedelta(days=cfg.REGISTER_LINK_EXPIRY_DAYS)
     try:
-        mail.send_email(
+        await mail.send_email(
             user.email,
             subject="Email Verification - Upgrade Your Account",
             template="register.jinja",
@@ -149,7 +149,7 @@ async def _register_regular_user(db: Database, mail: Mail, user_create: UserCrea
         if not existing_user.verified and not existing_user.is_guest and existing_user.email == user_create.email:
             # Resend verification email for the existing
             # unverified account instead of deleting it.
-            _send_verification_email(mail, existing_user, register_logger)
+            await _send_verification_email(mail, existing_user, register_logger)
             return
         elif existing_user.username == user_create.username:
             raise AppException(
@@ -180,7 +180,7 @@ async def _register_regular_user(db: Database, mail: Mail, user_create: UserCrea
         ) from e
 
     try:
-        _send_verification_email(mail, user, register_logger)
+        await _send_verification_email(mail, user, register_logger)
     except Exception:
         await db.delete(user)
         await db.commit()

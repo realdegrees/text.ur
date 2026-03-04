@@ -9,7 +9,8 @@ from api.dependencies.resource import Resource
 from api.routers.reactions import router as ReactionRouter
 from core import config
 from core.app_exception import AppException
-from fastapi import Body, Header, Response
+from core.rate_limit import limiter
+from fastapi import Body, Header, Request, Response
 from models.comment import (
     CommentCreate,
     CommentRead,
@@ -54,7 +55,9 @@ async def list_comments(
 
 
 @router.post("/", response_model=CommentRead)
+@limiter.limit("30/minute")
 async def create_comment(
+    request: Request,
     db: Database,
     events: Events,
     user: User = Authenticate([Guard.document_access({Permission.ADD_COMMENTS})]),
@@ -134,7 +137,9 @@ async def update_comment(
 
 
 @router.delete("/{comment_id}")
+@limiter.limit("20/minute")
 async def delete_comment(
+    request: Request,
     db: Database,
     events: Events,
     comment: Comment = Resource(Comment, param_alias="comment_id"),
