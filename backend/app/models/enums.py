@@ -119,8 +119,12 @@ class AppErrorCode(StrEnum):
     VALIDATION_ERROR = "validation_error"
     INVALID_INPUT = "invalid_input"  # use when user input is faulty e.g. a value error when hitting db constraints like string length
 
+    # Internal / Server Errors
+    INTERNAL_ERROR = "internal_error"  # use when an unexpected server-side error occurs (guard misconfiguration, etc.)
+
     # Database Errors
     DATABASE_UNAVAILABLE = "database_unavailable"  # use when the database is down or unreachable
+    DATABASE_TIMEOUT = "database_timeout"  # use when a database query exceeds the statement timeout
 
     # Authentication & Authorization Errors
     INVALID_TOKEN = "invalid_token"  # use when JWT is invalid/expired
@@ -140,6 +144,8 @@ class AppErrorCode(StrEnum):
     CANNOT_REMOVE_PERMISSION_REASON_DEFAULT_GROUP = "cannot_remove_permission_reason_default_group"  # use when trying to remove a permission that is included in the group's default permission reason
     CANNOT_REMOVE_PERMISSION_REASON_SHARELINK = "cannot_remove_permission_reason_sharelink"  # use when trying to remove a permission that is included in the related sharelink's permission reason
     CANNOT_PROMOTE_SELF = "cannot_promote_self"  # use when a user tries to promote their own guest membership to permanent
+    NOT_A_GUEST = "not_a_guest"  # use when trying to promote a member who is not a guest (no sharelink_id)
+    INVALID_PERMISSIONS = "invalid_permissions"  # use when submitted permissions contain disallowed values
 
     # Resource Not Found
     NOT_FOUND = "not_found"  # use when a requested resource does not exist

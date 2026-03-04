@@ -41,6 +41,15 @@ user = None
 group = None
 tmp_upload_dir = None
 
+# Derive the request body limit from the same env var the
+# application uses for file-size validation.  The extra 10 MB
+# headroom accounts for multipart framing, form fields, and
+# boundary overhead.  Without this, gunicorn's default of 0
+# (unlimited) would accept arbitrarily large request bodies
+# before the application-level check can reject them.
+_max_upload_mb = int(os.getenv("PUBLIC_MAX_UPLOAD_SIZE_MB", "50"))
+limit_request_body = (_max_upload_mb + 10) * 1024 * 1024
+
 
 def _run_migrations(server) -> None:  # noqa: ANN001
     """Apply Alembic migrations while holding an advisory lock.

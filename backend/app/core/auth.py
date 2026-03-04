@@ -35,11 +35,28 @@ def hash_password(password: str) -> str:
     ).decode("utf-8")
 
 
-def validate_password(user: User, password: str) -> bool:
+# Pre-computed dummy hash for timing-attack mitigation.
+# Used when a login attempt targets a non-existent user so the
+# response time matches a real bcrypt comparison.
+_DUMMY_HASH: str = bcrypt.hashpw(b"dummy", bcrypt.gensalt()).decode("utf-8")
+
+
+def validate_password(user: User, password: str | None) -> bool:
     """Validate password."""
+    if not user.password or not password:
+        return False
+    hashed: str = user.password
     return bcrypt.checkpw(
         password.encode("utf-8"),
-        user.password.encode("utf-8"),
+        hashed.encode("utf-8"),
+    )
+
+
+def validate_password_dummy(password: str) -> None:
+    """Run bcrypt against a dummy hash to equalize timing."""
+    bcrypt.checkpw(
+        password.encode("utf-8"),
+        _DUMMY_HASH.encode("utf-8"),
     )
 
 

@@ -33,9 +33,9 @@ const createDarkMode = () => {
 			this.apply();
 
 			if (value) {
-				document.cookie = 'theme=dark; path=/;';
+				document.cookie = 'theme=dark; path=/; max-age=2592000';
 			} else {
-				document.cookie = 'theme=light; path=/;';
+				document.cookie = 'theme=light; path=/; max-age=2592000';
 			}
 		},
 		disable() {

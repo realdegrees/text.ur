@@ -1,5 +1,6 @@
 from typing import TYPE_CHECKING
 
+from pydantic import field_validator
 from sqlmodel import Field, SQLModel
 
 from models.base import BaseModel
@@ -14,9 +15,16 @@ MAX_GROUP_NAME_LENGTH = 80
 # =========================
 
 
+def _strip_and_validate_name(v: str) -> str:
+    """Strip whitespace from group name."""
+    return v.strip()
+
+
 class GroupCreate(SQLModel):
-    name: str = Field(max_length=MAX_GROUP_NAME_LENGTH)
+    name: str = Field(min_length=1, max_length=MAX_GROUP_NAME_LENGTH)
     default_permissions: list[Permission]
+
+    _strip_name = field_validator("name", mode="before")(_strip_and_validate_name)
 
 
 class GroupRead(BaseModel):
@@ -29,8 +37,14 @@ class GroupRead(BaseModel):
 
 
 class GroupUpdate(SQLModel):
-    name: str | None = Field(default=None, max_length=MAX_GROUP_NAME_LENGTH)
+    name: str | None = Field(
+        default=None,
+        min_length=1,
+        max_length=MAX_GROUP_NAME_LENGTH,
+    )
     default_permissions: list[Permission] | None = None
+
+    _strip_name = field_validator("name", mode="before")(_strip_and_validate_name)
 
 
 class GroupTransfer(SQLModel):

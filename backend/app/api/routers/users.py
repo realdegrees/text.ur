@@ -38,6 +38,7 @@ from models.user import (
     UserRead,
     UserUpdate,
 )
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 from util.api_router import APIRouter
 from util.group_cleanup import cleanup_storage_keys, prepare_group_deletion
@@ -80,7 +81,9 @@ async def read_user(_: BasicAuthentication, user: User = Resource(User, param_al
 
 
 @router.put("/{user_id}", response_model=UserRead)
+@limiter.limit("5/minute")
 async def update_user(
+    request: Request,
     db: Database,
     user: User = Authenticate([Guard.is_account_owner()]),
     user_update: UserUpdate = Body(...),
@@ -89,7 +92,12 @@ async def update_user(
     # Apply updates to the user fields
     await db.merge(user)
     if user_update.new_password:
-        # Re-validate the old password
+        if not user_update.old_password:
+            raise AppException(
+                status_code=400,
+                error_code=AppErrorCode.VALIDATION_ERROR,
+                detail="Old password is required",
+            )
         if not validate_password(user, user_update.old_password):
             raise AppException(
                 status_code=403,
@@ -97,8 +105,24 @@ async def update_user(
                 detail="Invalid old password",
             )
         user.password = hash_password(user_update.new_password)
+        user.rotate_secret()
     user.sqlmodel_update(user_update.model_dump(exclude_unset=True, exclude={"old_password", "new_password"}))
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError as e:
+        await db.rollback()
+        error_msg = str(e.orig) if e.orig else ""
+        if "ix_user_username" in error_msg:
+            raise AppException(
+                status_code=400,
+                error_code=AppErrorCode.USERNAME_TAKEN,
+                detail="Username already taken",
+            ) from e
+        raise AppException(
+            status_code=400,
+            error_code=AppErrorCode.ALREADY_EXISTS,
+            detail="A conflict occurred while updating the user",
+        ) from e
     await db.refresh(user)
 
     return user
@@ -208,7 +232,9 @@ async def export_user_data(
 
 
 @router.delete("/{user_id}")
+@limiter.limit("3/minute")
 async def delete_user(
+    request: Request,
     db: Database,
     storage: Storage,
     _: User = Authenticate([Guard.is_account_owner()]),

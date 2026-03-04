@@ -404,8 +404,8 @@
 			</div>
 		{/if}
 
-		<!-- Annotation quote (top-level only) -->
-		{#if comment.annotation && comment.content?.length}
+		<!-- Annotation quote (top-level only, hidden for free highlights with no text) -->
+		{#if comment.annotation?.text && comment.content?.length}
 			<!-- svelte-ignore a11y_click_events_have_key_events -->
 			<!-- svelte-ignore a11y_no_static_element_interactions -->
 			<div

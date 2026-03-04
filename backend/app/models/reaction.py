@@ -2,7 +2,7 @@
 
 from typing import TYPE_CHECKING, Any
 
-from pydantic import model_validator
+from pydantic import field_validator, model_validator
 from sqlmodel import Field, SQLModel
 
 from models.enums import Emoji
@@ -99,14 +99,26 @@ class ReactionRead(SQLModel):
         return data
 
 
+def _validate_giver_points_non_negative(
+    v: int | None,
+) -> int | None:
+    """Reject negative giver_points with a descriptive message."""
+    if v is not None and v < 0:
+        msg = "Giver points cannot be negative"
+        raise ValueError(msg)
+    return v
+
+
 class GroupReactionCreate(SQLModel):
     """Create a new reaction emoji for a group."""
 
     emoji: Emoji
     points: int = 2
     admin_points: int = 4
-    giver_points: int = 2
+    giver_points: int = Field(default=2, ge=0)
     order: int = Field(default=0, ge=0)
+
+    _check_giver = field_validator("giver_points")(_validate_giver_points_non_negative)
 
 
 class GroupReactionUpdate(SQLModel):
@@ -114,8 +126,10 @@ class GroupReactionUpdate(SQLModel):
 
     points: int | None = None
     admin_points: int | None = None
-    giver_points: int | None = None
+    giver_points: int | None = Field(default=None, ge=0)
     order: int | None = Field(default=None, ge=0)
+
+    _check_giver = field_validator("giver_points")(_validate_giver_points_non_negative)
 
 
 class GroupReactionRead(SQLModel):

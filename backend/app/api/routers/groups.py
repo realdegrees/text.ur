@@ -9,7 +9,8 @@ from api.routers.memberships import (
 from api.routers.sharelinks import router as ShareLinkRouter
 from core.app_exception import AppException
 from core.logger import get_logger
-from fastapi import Body, Response
+from core.rate_limit import limiter
+from fastapi import Body, Request, Response
 from models.document import DocumentRead, DocumentReorder
 from models.enums import AppErrorCode, Permission
 from models.filter import GroupFilter
@@ -62,7 +63,9 @@ async def list_groups(
 
 
 @router.post("/", response_model=GroupRead)
+@limiter.limit("10/minute")
 async def create_group(
+    request: Request,
     db: Database,
     user: BasicAuthentication,
     group_create: GroupCreate = Body(...),
@@ -120,10 +123,34 @@ async def update_group(
     group_update: GroupUpdate = Body(...),
 ) -> Group:
     """Update a group."""
+    # Only the owner may include ADMINISTRATOR in default_permissions
+    if group_update.default_permissions is not None and Permission.ADMINISTRATOR in group_update.default_permissions:
+        result = await db.exec(
+            select(Membership).where(
+                Membership.group_id == group.id,
+                Membership.user_id == session_user.id,
+            )
+        )
+        caller_membership: Membership | None = result.first()
+        if not caller_membership or not caller_membership.is_owner:
+            raise AppException(
+                status_code=403,
+                error_code=AppErrorCode.INVALID_PERMISSIONS,
+                detail="Only the owner can include ADMINISTRATOR in default permissions",
+            )
+
     await db.merge(group)
     group.sqlmodel_update(group_update.model_dump(exclude_unset=True))
 
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise AppException(
+            status_code=409,
+            error_code=AppErrorCode.ALREADY_EXISTS,
+            detail="Group with this name already exists.",
+        ) from None
 
     # if default permissions were changed, update all existing memberships to include at least those permissions
     if group_update.default_permissions is not None:
@@ -144,7 +171,9 @@ async def update_group(
 
 
 @router.post("/{group_id}/transfer")
+@limiter.limit("5/minute")
 async def transfer_ownership(
+    request: Request,
     db: Database,
     transfer: GroupTransfer = Body(...),
     session_user: User = Authenticate([Guard.group_access(None, only_owner=True)]),
@@ -197,7 +226,9 @@ async def transfer_ownership(
 
 
 @router.delete("/{group_id}")
+@limiter.limit("5/minute")
 async def delete_group(
+    request: Request,
     db: Database,
     storage: Storage,
     _: User = Authenticate([Guard.group_access(None, only_owner=True)]),
@@ -282,5 +313,3 @@ router.include_router(ShareLinkRouter, prefix="/{group_id}")
 router.include_router(GroupMembershipRouter, prefix="/{group_id}/memberships")
 router.include_router(ScoreConfigRouter, prefix="/{group_id}")
 router.tags = tags
-
-# TODO: add sharelink management endpoints (only owner and admin can create share links, admins can not create share links with admin permissions)

@@ -7,6 +7,7 @@ from api.dependencies.database import Database
 from api.dependencies.events import Events
 from api.dependencies.resource import Resource
 from core.app_exception import AppException
+from core.rate_limit import limiter
 from fastapi import Body, Request, Response
 from models.enums import AnswerType, AppErrorCode, Permission, StringMatchMode
 from models.event import Event
@@ -31,7 +32,7 @@ from models.task import (
 )
 from sqlmodel import delete, func, select, update
 from util.api_router import APIRouter
-from util.cache import invalidate_group_scores
+from util.cache import invalidate_group_scores, invalidate_user_score
 from util.queries import Guard
 
 router = APIRouter(
@@ -472,7 +473,9 @@ async def delete_task(
     response_model=TaskResponseRead,
     status_code=200,
 )
+@limiter.limit("60/minute")
 async def submit_task_response(  # noqa: C901
+    request: Request,
     db: Database,
     session_user: User = Authenticate(guards=[Guard.document_access()]),
     response_data: TaskResponseCreate = Body(...),
@@ -579,8 +582,8 @@ async def submit_task_response(  # noqa: C901
     await db.commit()
     await db.refresh(resp)
 
-    # Invalidate score cache for this user
-    await invalidate_group_scores(document.group_id)
+    # Invalidate score cache for this user only
+    await invalidate_user_score(document.group_id, session_user.id)
 
     # Build response with optional correct answer reveal
     correct_answer = None

@@ -64,6 +64,32 @@ The PDF viewer uses [PDFSlick](https://pdfslick.dev/) (`@pdfslick/core`). Key co
 - `ConnectionLines.svelte` - visual lines connecting annotations to comments
 - `CommentSidebar.svelte` - scrollable comment panel
 
+#### Text Selection Handles
+
+When users select text to create an annotation, adjustable selection handles (teardrops) let them refine the selection range. The implementation uses a hybrid approach because no browser API can detect whether native OS selection handles are available:
+
+**Detection strategy** (`lib/util/responsive.svelte.ts` → `pointerState`):
+
+1. **Reactive pointer-type tracking** — a global `pointerdown` listener records `e.pointerType` (`'mouse'`, `'touch'`, or `'pen'`) in reactive `$state`. This updates dynamically as the user switches input methods on hybrid devices.
+2. **Platform heuristics** — user-agent detection identifies iOS and Android as platforms with reliable native selection handles. All other platforms (Windows, ChromeOS, etc.) are treated as unreliable.
+3. **Combined decision** — `pointerState.showCustomHandles` returns `true` when using mouse/pen (native handles never exist), or when using touch on a platform without reliable native handles.
+
+**Behavior by device:**
+
+| Input       | Platform                   | Custom handles | Native handles       |
+| ----------- | -------------------------- | -------------- | -------------------- |
+| Mouse / pen | Any                        | Shown          | Not present          |
+| Touch       | iOS / Android              | Hidden         | Present (reliable)   |
+| Touch       | Windows / ChromeOS / other | Shown          | May or may not exist |
+
+**Known limitation:** On Windows touch devices where the browser _does_ provide native selection handles, both native and custom handles may appear simultaneously. This is cosmetic — both remain functional. A fully custom touch selection system (bypassing native `Selection` API entirely) would eliminate this overlap but would require significantly more work. See the [Known Issues](../README.md#text-selection-handles-on-hybrid-touch-devices) section for user-facing context.
+
+**Key files:**
+
+- `lib/util/responsive.svelte.ts` — `pointerState` singleton (pointer tracking + platform detection)
+- `lib/components/pdf/TextSelectionHandler.svelte` — handle rendering, drag logic, `selectionchange` sync
+- `lib/actions/preciseHover.ts` — retains the older `hasHoverCapability()` check (hover-specific, not handle-related)
+
 ---
 
 ## 📄 Generated Files

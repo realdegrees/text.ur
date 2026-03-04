@@ -12,7 +12,9 @@ export type AppErrorCode =
   | "unknown_error"
   | "validation_error"
   | "invalid_input"
+  | "internal_error"
   | "database_unavailable"
+  | "database_timeout"
   | "invalid_token"
   | "not_authenticated"
   | "not_authorized"
@@ -26,6 +28,8 @@ export type AppErrorCode =
   | "cannot_remove_permission_reason_default_group"
   | "cannot_remove_permission_reason_sharelink"
   | "cannot_promote_self"
+  | "not_a_guest"
+  | "invalid_permissions"
   | "not_found"
   | "self_reaction"
   | "reply_reaction"
@@ -247,7 +251,6 @@ export interface Document {
   size_bytes?: number;
   visibility?: DocumentVisibility;
   view_mode?: ViewMode;
-  secret?: string;
   default_max_attempts?: number;
   order?: number;
   group_id: string;
@@ -269,7 +272,6 @@ export interface DocumentRead {
   created_at?: string;
   updated_at?: string;
   id: string;
-  storage_key: string;
   name: string;
   group_id: string;
   visibility: DocumentVisibility;
@@ -825,7 +827,6 @@ export interface UserUpdate {
   username?: string | null;
   new_password?: string | null;
   old_password?: string | null;
-  email?: string | null;
   first_name?: string | null;
   last_name?: string | null;
 }

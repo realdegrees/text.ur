@@ -8,6 +8,8 @@
 	 * - Bounding box calculation for multi-line selections
 	 * - Box merging to reduce visual clutter
 	 * - Touch and mouse support
+	 * - Free highlight mode: when no selectable text is near the click, the user
+	 *   can draw a rectangle to create a highlight without a text anchor
 	 *
 	 * Coordinate system:
 	 * - All handle/button positions are relative to viewerContainer (absolute positioning)
@@ -15,11 +17,15 @@
 	 */
 	import { documentStore } from '$lib/runes/document.svelte.js';
 	import type { Annotation, BoundingBox } from '$api/types';
-	import { BOX_MERGE_MARGIN, BOX_VERTICAL_OVERLAP_THRESHOLD } from './constants';
-	import { hasHoverCapability } from '$lib/util/responsive.svelte';
-
-	/** True on devices with a mouse/trackpad (desktop); false on touch-only devices. */
-	const isDesktop = hasHoverCapability();
+	import {
+		BOX_MERGE_MARGIN,
+		BOX_VERTICAL_OVERLAP_THRESHOLD,
+		TEXT_ANCHOR_DISTANCE_THRESHOLD,
+		FREE_HIGHLIGHT_MIN_SIZE,
+		DOUBLE_TAP_TIMEOUT,
+		DOUBLE_TAP_DISTANCE
+	} from './constants';
+	import { pointerState } from '$lib/util/responsive.svelte';
 
 	interface Props {
 		viewerContainer: HTMLDivElement | null;
@@ -38,6 +44,21 @@
 	let pendingSelection = $state<{ text: string; boxes: BoundingBox[] } | null>(null);
 	let draggingHandle = $state<'start' | 'end' | null>(null);
 	let isSelecting = $state(false);
+
+	// Free highlight mode state (for PDFs without selectable text)
+	let isFreeHighlighting = $state(false);
+	let freeHighlightStart = $state<{ x: number; y: number } | null>(null);
+	let freeHighlightCurrent = $state<{ x: number; y: number } | null>(null);
+	let freeHighlightPageNumber = $state<number | null>(null);
+	let freeHighlightDisplayRect = $state<{
+		x: number;
+		y: number;
+		width: number;
+		height: number;
+	} | null>(null);
+
+	// Double-tap tracking for touch free highlight activation
+	let lastTapInfo = $state<{ time: number; x: number; y: number } | null>(null);
 
 	// ============================================================================
 	// Bounding Box Utilities
@@ -240,11 +261,62 @@
 	};
 
 	/**
+	 * Check if there's a text node within the PDF text layer near the given
+	 * viewport coordinates. Returns true if the nearest caret position is
+	 * within TEXT_ANCHOR_DISTANCE_THRESHOLD pixels and belongs to a textLayer.
+	 */
+	const hasTextAnchorAt = (clientX: number, clientY: number): boolean => {
+		const range = getCaretPosition(clientX, clientY);
+		if (!range) return false;
+
+		const node = range.startContainer;
+		const element = node.nodeType === Node.TEXT_NODE ? node.parentElement : (node as Element);
+		if (!element) return false;
+
+		const textLayer = element.closest('.textLayer');
+		if (!textLayer) return false;
+
+		// Measure distance from click to the caret's bounding rect
+		const rangeRect = range.getBoundingClientRect();
+		const nearestX = Math.max(rangeRect.left, Math.min(clientX, rangeRect.right));
+		const nearestY = Math.max(rangeRect.top, Math.min(clientY, rangeRect.bottom));
+		if (Math.hypot(nearestX - clientX, nearestY - clientY) > TEXT_ANCHOR_DISTANCE_THRESHOLD) {
+			return false;
+		}
+
+		return true;
+	};
+
+	/**
+	 * Get the PDF page number at the given viewport coordinates.
+	 */
+	const getPageNumberAt = (clientX: number, clientY: number): number | null => {
+		const el = document.elementFromPoint(clientX, clientY);
+		if (!el) return null;
+		const pageEl = el.closest('[data-page-number]');
+		if (!pageEl) return null;
+		return parseInt(pageEl.getAttribute('data-page-number') ?? '0', 10);
+	};
+
+	/**
 	 * Clear all selection UI state
 	 */
 	const clearSelectionUI = () => {
 		selectionUI = null;
 		pendingSelection = null;
+		freeHighlightDisplayRect = null;
+	};
+
+	/**
+	 * Clear free highlight drag state and remove the touch-specific move listener
+	 * that was registered synchronously on double-tap.
+	 */
+	const clearFreeHighlight = () => {
+		isFreeHighlighting = false;
+		freeHighlightStart = null;
+		freeHighlightCurrent = null;
+		freeHighlightPageNumber = null;
+		window.removeEventListener('touchmove', onFreeHighlightMove);
 	};
 
 	/**
@@ -267,12 +339,12 @@
 		let buttonX: number;
 		let buttonY: number;
 
-		if (isDesktop) {
-			// Desktop: position to the right of the selection end
+		if (pointerState.showCustomHandles) {
+			// Custom handles visible: position to the right of the selection end
 			buttonX = lastRect.right - containerRect.left + 10;
 			buttonY = lastRect.bottom - containerRect.top + 10;
 		} else {
-			// Mobile: center horizontally over the selection, below the last line
+			// Native teardrops visible: center horizontally, below the last line
 			// with extra vertical offset to clear native teardrop handles
 			const selectionMidX = (firstRect.left + lastRect.right) / 2 - containerRect.left;
 			const containerWidth = containerRect.width;
@@ -304,12 +376,52 @@
 	};
 
 	/**
+	 * Recompute the container-relative position of a confirmed free highlight
+	 * rectangle from its normalized bounding box, and position the button.
+	 */
+	const updateFreeHighlightPositions = (): boolean => {
+		if (!viewerContainer || !pendingSelection || pendingSelection.text) return false;
+
+		const box = pendingSelection.boxes[0];
+		if (!box) return false;
+
+		const pageElement = viewerContainer.querySelector(
+			`[data-page-number="${box.page_number}"]`
+		) as HTMLElement | null;
+		if (!pageElement) return false;
+
+		const textLayer = pageElement.querySelector('.textLayer') as HTMLElement | null;
+		const refEl = textLayer || pageElement;
+		const refRect = refEl.getBoundingClientRect();
+		const containerRect = viewerContainer.getBoundingClientRect();
+
+		if (refRect.width === 0 || refRect.height === 0) return false;
+
+		const x = refRect.left - containerRect.left + box.x * refRect.width;
+		const y = refRect.top - containerRect.top + box.y * refRect.height;
+		const width = box.width * refRect.width;
+		const height = box.height * refRect.height;
+
+		freeHighlightDisplayRect = { x, y, width, height };
+
+		selectionUI = {
+			handles: {
+				start: { x, y, height: 0 },
+				end: { x: x + width, y: y + height, height: 0 }
+			},
+			buttonPosition: { x: x + width + 10, y: y + height + 10 }
+		};
+
+		return true;
+	};
+
+	/**
 	 * Update selection state from current DOM selection
 	 * Validates selection, calculates bounding boxes, and updates UI
 	 */
 	const updateSelectionState = () => {
 		isSelecting = false;
-		if (!viewerContainer || isCreating) return;
+		if (!viewerContainer || isCreating || isFreeHighlighting) return;
 
 		const selection = window.getSelection();
 		if (!selection || selection.isCollapsed) {
@@ -358,8 +470,7 @@
 			const id = await documentStore.comments.create({ annotation, visibility: 'public' });
 
 			window.getSelection()?.removeAllRanges();
-			selectionUI = null;
-			pendingSelection = null;
+			clearSelectionUI();
 
 			if (!id) return;
 			documentStore.activeTab = 'comments';
@@ -470,7 +581,62 @@
 	const onContainerMouseDown = (e: MouseEvent | TouchEvent) => {
 		// If clicking on a highlight, don't start selection mode
 		if ((e.target as HTMLElement).closest('.annotation-highlight')) return;
-		isSelecting = true;
+
+		const coords = getEventCoordinates(e);
+
+		// Check if there's selectable text near the click
+		if (hasTextAnchorAt(coords.x, coords.y)) {
+			isSelecting = true;
+			lastTapInfo = null;
+			return;
+		}
+
+		// No text anchor — check if we're on a PDF page for free highlight
+		const pageNumber = getPageNumberAt(coords.x, coords.y);
+		if (!pageNumber || !viewerContainer) {
+			isSelecting = true;
+			lastTapInfo = null;
+			return;
+		}
+
+		const isTouchEvent = window.TouchEvent && e instanceof TouchEvent;
+
+		if (isTouchEvent) {
+			// Touch: require double-tap to start free highlight (single touch scrolls)
+			const now = Date.now();
+			if (
+				lastTapInfo &&
+				now - lastTapInfo.time < DOUBLE_TAP_TIMEOUT &&
+				Math.hypot(coords.x - lastTapInfo.x, coords.y - lastTapInfo.y) < DOUBLE_TAP_DISTANCE
+			) {
+				// Double-tap detected — enter free highlight mode
+				lastTapInfo = null;
+			} else {
+				// First tap — record and let browser handle normally (scroll)
+				lastTapInfo = { time: now, x: coords.x, y: coords.y };
+				return;
+			}
+		} else {
+			// Mouse: single click-drag starts free highlight directly
+			e.preventDefault();
+		}
+
+		const containerRect = viewerContainer.getBoundingClientRect();
+		freeHighlightStart = {
+			x: coords.x - containerRect.left,
+			y: coords.y - containerRect.top
+		};
+		freeHighlightCurrent = { ...freeHighlightStart };
+		freeHighlightPageNumber = pageNumber;
+		isFreeHighlighting = true;
+		window.getSelection()?.removeAllRanges();
+		clearSelectionUI();
+
+		// For touch: register non-passive touchmove synchronously so the very
+		// first touchmove is caught before the browser commits to scrolling.
+		if (isTouchEvent) {
+			window.addEventListener('touchmove', onFreeHighlightMove, { passive: false });
+		}
 	};
 
 	/**
@@ -480,7 +646,10 @@
 	 * so right-click still works normally.
 	 */
 	const onContextMenu = (e: Event) => {
-		if (!isDesktop && (selectionUI || pendingSelection)) {
+		if (
+			pointerState.isTouchInteraction &&
+			(selectionUI || pendingSelection || isFreeHighlighting)
+		) {
 			e.preventDefault();
 		}
 	};
@@ -489,10 +658,14 @@
 	$effect(() => {
 		if (!viewerContainer) return;
 
-		// Update handle positions on scroll (without recalculating bounding boxes)
+		// Update handle/rect positions on scroll (without recalculating bounding boxes)
 		const onScroll = () => {
 			if (pendingSelection && !draggingHandle) {
-				updateHandlePositions();
+				if (pendingSelection.text) {
+					updateHandlePositions();
+				} else {
+					updateFreeHighlightPositions();
+				}
 			}
 		};
 
@@ -502,6 +675,11 @@
 		viewerContainer.addEventListener('touchend', updateSelectionState);
 		viewerContainer.addEventListener('scroll', onScroll, { passive: true });
 		viewerContainer.addEventListener('contextmenu', onContextMenu);
+		// Free highlight mousemove on the container (always registered, no-ops when
+		// isFreeHighlighting is false). Mouse doesn't have the passive/scroll issue.
+		// Touch touchmove is registered synchronously in onContainerMouseDown on
+		// double-tap detection to avoid degrading normal scroll performance.
+		viewerContainer.addEventListener('mousemove', onFreeHighlightMove);
 
 		return () => {
 			viewerContainer.removeEventListener('mousedown', onContainerMouseDown);
@@ -510,89 +688,250 @@
 			viewerContainer.removeEventListener('touchend', updateSelectionState);
 			viewerContainer.removeEventListener('scroll', onScroll);
 			viewerContainer.removeEventListener('contextmenu', onContextMenu);
+			viewerContainer.removeEventListener('mousemove', onFreeHighlightMove);
+			// Also clean up any active touch free highlight listener
+			window.removeEventListener('touchmove', onFreeHighlightMove);
 		};
 	});
 
-	// Global event listeners for selection changes and handle dragging
-	$effect(() => {
-		// Clear UI if selection moves outside viewer container
-		const handleSelectionChange = () => {
-			if (draggingHandle) return;
+	/**
+	 * Handle external selection changes: native teardrop adjustments,
+	 * keyboard selection, or selection clearing/moving outside viewer.
+	 */
+	const handleSelectionChange = () => {
+		if (draggingHandle || isFreeHighlighting) return;
 
-			const selection = window.getSelection();
-			if (!selection || selection.isCollapsed) {
-				clearSelectionUI();
-				return;
-			}
+		const selection = window.getSelection();
+		if (!selection || selection.isCollapsed) {
+			clearSelectionUI();
+			return;
+		}
 
-			if (
-				viewerContainer &&
-				selection.anchorNode &&
-				!viewerContainer.contains(selection.anchorNode)
-			) {
-				clearSelectionUI();
-			}
-		};
+		if (
+			!viewerContainer ||
+			!selection.anchorNode ||
+			!viewerContainer.contains(selection.anchorNode)
+		) {
+			clearSelectionUI();
+			return;
+		}
 
-		// Update handle positions on window resize (without recalculating bounding boxes)
-		const onResize = () => {
-			if (pendingSelection && !draggingHandle) {
+		// While actively selecting (mousedown held), skip full recalculation.
+		// The mouseup/touchend handler will trigger it when selection completes.
+		if (isSelecting) return;
+
+		// Full recalculation for external changes (native teardrops, keyboard, etc.)
+		updateSelectionState();
+	};
+
+	/**
+	 * Update handle positions on window resize
+	 */
+	const onResize = () => {
+		if (pendingSelection && !draggingHandle) {
+			if (pendingSelection.text) {
 				updateHandlePositions();
+			} else {
+				updateFreeHighlightPositions();
 			}
-		};
+		}
+	};
 
+	// Global listeners: selection changes, resize, and free highlight release (always active).
+	// Free highlight mouseup/touchend is on window so we catch releases outside the container.
+	// The handler no-ops when isFreeHighlighting is false.
+	$effect(() => {
 		document.addEventListener('selectionchange', handleSelectionChange);
 		window.addEventListener('resize', onResize, { passive: true });
-
-		// Handle-drag listeners are only needed on desktop where custom handles
-		// are rendered.  On touch devices the native OS teardrops manage this.
-		if (isDesktop) {
-			window.addEventListener('mousemove', onWindowMove);
-			window.addEventListener('touchmove', onWindowMove, { passive: false });
-			window.addEventListener('mouseup', onWindowUp);
-			window.addEventListener('touchend', onWindowUp);
-		}
+		window.addEventListener('mouseup', onFreeHighlightUp);
+		window.addEventListener('touchend', onFreeHighlightUp);
 
 		return () => {
 			document.removeEventListener('selectionchange', handleSelectionChange);
 			window.removeEventListener('resize', onResize);
-
-			if (isDesktop) {
-				window.removeEventListener('mousemove', onWindowMove);
-				window.removeEventListener('touchmove', onWindowMove);
-				window.removeEventListener('mouseup', onWindowUp);
-				window.removeEventListener('touchend', onWindowUp);
-			}
+			window.removeEventListener('mouseup', onFreeHighlightUp);
+			window.removeEventListener('touchend', onFreeHighlightUp);
 		};
 	});
+
+	// Handle-drag listeners: only active when custom handles are shown.
+	// Re-registers reactively when pointer type changes to ensure drag
+	// works correctly on hybrid devices switching between mouse and touch.
+	$effect(() => {
+		if (!pointerState.showCustomHandles) return;
+
+		window.addEventListener('mousemove', onWindowMove);
+		window.addEventListener('touchmove', onWindowMove, { passive: false });
+		window.addEventListener('mouseup', onWindowUp);
+		window.addEventListener('touchend', onWindowUp);
+
+		return () => {
+			window.removeEventListener('mousemove', onWindowMove);
+			window.removeEventListener('touchmove', onWindowMove);
+			window.removeEventListener('mouseup', onWindowUp);
+			window.removeEventListener('touchend', onWindowUp);
+		};
+	});
+
+	// ============================================================================
+	// Free Highlight Dragging
+	// ============================================================================
+
+	/**
+	 * Track pointer movement while drawing a free highlight rectangle.
+	 * Clamps coordinates to the target page boundaries.
+	 */
+	const onFreeHighlightMove = (e: MouseEvent | TouchEvent) => {
+		if (!isFreeHighlighting || !viewerContainer || !freeHighlightPageNumber) return;
+		e.preventDefault();
+
+		const coords = getEventCoordinates(e);
+		const containerRect = viewerContainer.getBoundingClientRect();
+
+		let x = coords.x - containerRect.left;
+		let y = coords.y - containerRect.top;
+
+		// Clamp to the target page boundaries
+		const pageElement = viewerContainer.querySelector(
+			`[data-page-number="${freeHighlightPageNumber}"]`
+		) as HTMLElement | null;
+		if (pageElement) {
+			const pageRect = pageElement.getBoundingClientRect();
+			const pageLeft = pageRect.left - containerRect.left;
+			const pageTop = pageRect.top - containerRect.top;
+			x = Math.max(pageLeft, Math.min(pageLeft + pageRect.width, x));
+			y = Math.max(pageTop, Math.min(pageTop + pageRect.height, y));
+		}
+
+		freeHighlightCurrent = { x, y };
+	};
+
+	/**
+	 * Finalize the free highlight rectangle on pointer release.
+	 * Converts the drawn rectangle to a normalized bounding box and
+	 * sets up the pending selection + button UI.
+	 */
+	const onFreeHighlightUp = () => {
+		if (
+			!isFreeHighlighting ||
+			!freeHighlightStart ||
+			!freeHighlightCurrent ||
+			!freeHighlightPageNumber ||
+			!viewerContainer
+		) {
+			clearFreeHighlight();
+			return;
+		}
+
+		// Compute rectangle in container-relative coordinates
+		const rectWidth = Math.abs(freeHighlightCurrent.x - freeHighlightStart.x);
+		const rectHeight = Math.abs(freeHighlightCurrent.y - freeHighlightStart.y);
+
+		// Reject tiny accidental clicks/taps
+		if (rectWidth < FREE_HIGHLIGHT_MIN_SIZE || rectHeight < FREE_HIGHLIGHT_MIN_SIZE) {
+			clearFreeHighlight();
+			return;
+		}
+
+		const left = Math.min(freeHighlightStart.x, freeHighlightCurrent.x);
+		const top = Math.min(freeHighlightStart.y, freeHighlightCurrent.y);
+
+		// Find the reference element for normalization
+		const pageElement = viewerContainer.querySelector(
+			`[data-page-number="${freeHighlightPageNumber}"]`
+		) as HTMLElement | null;
+		if (!pageElement) {
+			clearFreeHighlight();
+			return;
+		}
+
+		const textLayer = pageElement.querySelector('.textLayer') as HTMLElement | null;
+		const refEl = textLayer || pageElement;
+		const refRect = refEl.getBoundingClientRect();
+		const containerRect = viewerContainer.getBoundingClientRect();
+
+		if (refRect.width === 0 || refRect.height === 0) {
+			clearFreeHighlight();
+			return;
+		}
+
+		// Convert container-relative rect to normalized [0-1] coordinates
+		const refLeft = refRect.left - containerRect.left;
+		const refTop = refRect.top - containerRect.top;
+
+		const normX = (left - refLeft) / refRect.width;
+		const normY = (top - refTop) / refRect.height;
+		const normW = rectWidth / refRect.width;
+		const normH = rectHeight / refRect.height;
+
+		const box: BoundingBox = {
+			page_number: freeHighlightPageNumber,
+			x: Math.max(0, Math.min(1, normX)),
+			y: Math.max(0, Math.min(1, normY)),
+			width: Math.min(1 - Math.max(0, normX), normW),
+			height: Math.min(1 - Math.max(0, normY), normH)
+		};
+
+		pendingSelection = { text: '', boxes: [box] };
+		clearFreeHighlight();
+		updateFreeHighlightPositions();
+	};
 
 	// Toggle dragging class to disable pointer events on highlights during selection
 	$effect(() => {
 		if (!viewerContainer) return;
 
-		if (draggingHandle || isSelecting) {
+		if (draggingHandle || isSelecting || isFreeHighlighting) {
 			viewerContainer.classList.add('dragging-selection');
 		} else {
 			viewerContainer.classList.remove('dragging-selection');
 		}
 	});
 
-	// Update handle positions when document scale changes
+	// Update handle/rect positions when document scale changes
 	$effect(() => {
 		// Register dependency
 		void documentStore.documentScale;
 
 		if (pendingSelection && !draggingHandle) {
 			// Use setTimeout to ensure layout has updated
-			setTimeout(updateHandlePositions, 0);
+			setTimeout(() => {
+				if (pendingSelection?.text) {
+					updateHandlePositions();
+				} else {
+					updateFreeHighlightPositions();
+				}
+			}, 0);
 		}
 	});
 </script>
 
+<!-- Free highlight rectangle preview (during drag) -->
+{#if isFreeHighlighting && freeHighlightStart && freeHighlightCurrent}
+	{@const left = Math.min(freeHighlightStart.x, freeHighlightCurrent.x)}
+	{@const top = Math.min(freeHighlightStart.y, freeHighlightCurrent.y)}
+	{@const w = Math.abs(freeHighlightCurrent.x - freeHighlightStart.x)}
+	{@const h = Math.abs(freeHighlightCurrent.y - freeHighlightStart.y)}
+	<div
+		class="pointer-events-none absolute z-50 rounded-sm border-2 border-blue-500/60 bg-blue-500/15"
+		style="top: {top}px; left: {left}px; width: {w}px; height: {h}px;"
+	></div>
+{/if}
+
+<!-- Confirmed free highlight rectangle (after drag, before annotation creation) -->
+{#if freeHighlightDisplayRect}
+	<div
+		class="pointer-events-none absolute z-50 rounded-sm border-2 border-blue-500/60 bg-blue-500/15"
+		style="top: {freeHighlightDisplayRect.y}px; left: {freeHighlightDisplayRect.x}px; width: {freeHighlightDisplayRect.width}px; height: {freeHighlightDisplayRect.height}px;"
+	></div>
+{/if}
+
 {#if selectionUI}
-	<!-- Desktop only: custom selection handles with drag-to-adjust.
-	     On touch devices the native OS teardrops are used instead. -->
-	{#if isDesktop}
+	<!-- Custom selection handles with drag-to-adjust.
+	     Shown on mouse/pen input, or on touch when native handles are unreliable.
+	     Hidden on iOS/Android touch where native OS teardrops are used instead.
+	     Not shown for free highlights (no text selection to adjust). -->
+	{#if pointerState.showCustomHandles && pendingSelection?.text}
 		<div
 			class="absolute z-1000 w-0.5 cursor-pointer bg-blue-500 {draggingHandle
 				? 'pointer-events-none'

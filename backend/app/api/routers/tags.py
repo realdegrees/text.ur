@@ -3,7 +3,9 @@ from api.dependencies.database import Database
 from api.dependencies.resource import Resource
 from core import config
 from core.app_exception import AppException
-from fastapi import Body
+from core.rate_limit import limiter
+from fastapi import Body, Request
+from fastapi.responses import Response
 from models.enums import AppErrorCode, Permission
 from models.tables import Document, Tag, User
 from models.tag import TagCreate, TagRead, TagUpdate
@@ -18,7 +20,9 @@ router = APIRouter(
 
 
 @router.post("/", response_model=TagRead)
+@limiter.limit("10/minute")
 async def create_tag(
+    request: Request,
     db: Database,
     _: User = Authenticate(guards=[Guard.document_access({Permission.ADMINISTRATOR})]),
     tag_create: TagCreate = Body(...),
@@ -108,13 +112,13 @@ async def update_tag(
     return tag
 
 
-@router.delete("/{tag_id}")
+@router.delete("/{tag_id}", status_code=204)
 async def delete_tag(
     db: Database,
     _: User = Authenticate(guards=[Guard.document_access({Permission.ADMINISTRATOR})]),
     document: Document = Resource(Document, param_alias="document_id"),
     tag: Tag = Resource(Tag, param_alias="tag_id"),
-) -> dict[str, bool]:
+) -> Response:
     """Delete a tag.
 
     Requires MANAGE_TAGS permission in the document's group.
@@ -130,6 +134,4 @@ async def delete_tag(
 
     await db.delete(tag)
     await db.commit()
-    from fastapi import Response
-
     return Response(status_code=204)

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { documentStore, type CommentState } from '$lib/runes/document.svelte';
-	import { hasHoverCapability } from '$lib/util/responsive.svelte';
+	import { pointerState } from '$lib/util/responsive.svelte';
 	import { onMount } from 'svelte';
 	import {
 		LINE_CORNER_RADIUS,
@@ -142,7 +142,7 @@
 		void scrollTop;
 		void documentStore.documentScale;
 
-		const isMobile = !hasHoverCapability();
+		const isMobile = pointerState.isTouchInteraction;
 		const pdfRight = documentStore.scrollContainerRef?.getBoundingClientRect().right ?? 0;
 		const channelX = pdfRight + LINE_CHANNEL_GAP;
 

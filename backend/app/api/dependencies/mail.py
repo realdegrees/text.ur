@@ -1,3 +1,4 @@
+import asyncio
 import os
 import smtplib
 from email.mime.multipart import MIMEMultipart
@@ -7,6 +8,7 @@ from functools import lru_cache
 from typing import Annotated, Any
 
 from bs4 import BeautifulSoup
+from core.app_exception import AppException
 from core.config import (
     BACKEND_BASEURL,
     DEBUG,
@@ -21,11 +23,12 @@ from core.config import (
     SMTP_USER,
 )
 from core.logger import get_logger
-from fastapi import Depends, HTTPException
+from fastapi import Depends
 from itsdangerous import URLSafeTimedSerializer
 from jinja2 import (
     TemplateNotFound,
 )
+from models.enums import AppErrorCode
 from util.api_router import APIRouter
 
 mail_logger = get_logger("mails")
@@ -108,14 +111,14 @@ class EmailManager:
         token = serializer.dumps(email, salt=salt)
         return f"{BACKEND_BASEURL}/api{router.url_path_for(confirm_route, token=token)}"
 
-    def send_email(
+    def _send_email_sync(
         self,
         target_email: str,
         subject: str,
         template: str,
         template_vars: dict[str, Any],
     ) -> None:
-        """Send an email with templated HTML and plain text bodies."""
+        """Send an email synchronously (blocking). Use ``send_email`` instead."""
         # Render HTML email body
         try:
             html_body = JINJA_ENV.get_template(template).render(**template_vars)
@@ -124,7 +127,11 @@ class EmailManager:
                 "Email template '%s' not found. Ensure templates directory exists and contains the template.",
                 template,
             )
-            raise HTTPException(status_code=500, detail=f"Email template '{template}' not found") from e
+            raise AppException(
+                status_code=500,
+                error_code=AppErrorCode.INTERNAL_ERROR,
+                detail=f"Email template '{template}' not found",
+            ) from e
 
         # Render plain text email body
         # Try to load .txt version, fall back to stripping HTML if not found
@@ -178,10 +185,32 @@ class EmailManager:
                 subject,
                 plain_text_body,
             )
-            raise HTTPException(
+            raise AppException(
                 status_code=500,
+                error_code=AppErrorCode.MAIL_SEND_FAILED,
                 detail="Failed to send email",
             ) from e
+
+    async def send_email(
+        self,
+        target_email: str,
+        subject: str,
+        template: str,
+        template_vars: dict[str, Any],
+    ) -> None:
+        """Send an email without blocking the async event loop.
+
+        Delegates to the synchronous ``_send_email_sync`` via
+        ``asyncio.to_thread`` so that the SMTP network I/O runs
+        in a separate OS thread.
+        """
+        await asyncio.to_thread(
+            self._send_email_sync,
+            target_email,
+            subject,
+            template,
+            template_vars,
+        )
 
 
 @lru_cache(maxsize=1)

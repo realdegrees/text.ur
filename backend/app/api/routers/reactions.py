@@ -6,7 +6,8 @@ from api.dependencies.database import Database
 from api.dependencies.events import Events
 from api.dependencies.resource import Resource
 from core.app_exception import AppException
-from fastapi import Body, Header, Response
+from core.rate_limit import limiter
+from fastapi import Body, Header, Request, Response
 from models.comment import CommentRead
 from models.enums import AppErrorCode, Permission
 from models.event import Event
@@ -58,7 +59,9 @@ async def _publish_reaction_event(
 
 
 @router.post("/", response_model=ReactionRead)
+@limiter.limit("30/minute")
 async def add_reaction(
+    request: Request,
     db: Database,
     events: Events,
     user: User = Authenticate(guards=[Guard.comment_access({Permission.ADD_REACTIONS})]),
@@ -142,7 +145,9 @@ async def add_reaction(
 
 
 @router.delete("/")
+@limiter.limit("30/minute")
 async def remove_reaction(
+    request: Request,
     db: Database,
     events: Events,
     user: User = Authenticate(guards=[Guard.comment_access({Permission.ADD_REACTIONS})]),

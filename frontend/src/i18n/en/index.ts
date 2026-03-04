@@ -166,7 +166,9 @@ const en = {
 		unknown_error: 'An unknown error occurred',
 		validation_error: 'Validation error',
 		invalid_input: 'Invalid input provided',
+		internal_error: 'An internal server error occurred. Please try again later.',
 		database_unavailable: 'Database is currently unavailable',
+		database_timeout: 'The database request timed out. Please try again.',
 		invalid_token: 'Your session token is invalid or expired',
 		not_authenticated:
 			'You must be logged in to perform this action',
@@ -209,7 +211,9 @@ const en = {
 		task_already_correct: 'You have already answered this question correctly',
 		task_no_attempts_left: 'No attempts remaining for this question',
 		document_limit_exceeded: 'This group has reached the maximum number of documents',
-		already_verified: 'This account is already verified'
+		already_verified: 'This account is already verified',
+		not_a_guest: 'This user is already a permanent member',
+		invalid_permissions: 'The submitted permissions contain disallowed values'
 	},
 
 	// Sharelink join page
@@ -578,6 +582,16 @@ const en = {
 		comments: 'Comments',
 		editAnswerWarning:
 			'Changing the answer type, correct answer, or options will reset all existing member responses for this task.'
+	},
+
+	// Password requirements
+	passwordRequirements: {
+		title: 'Password must contain:',
+		minLength: 'At least 8 characters',
+		lowercase: 'A lowercase letter',
+		uppercase: 'An uppercase letter',
+		digit: 'A digit',
+		special: 'A special character'
 	},
 
 	// Password reset

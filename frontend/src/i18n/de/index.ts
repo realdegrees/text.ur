@@ -179,8 +179,10 @@ const de = {
 		unknown_error: 'Ein unbekannter Fehler ist aufgetreten',
 		validation_error: 'Validierungsfehler',
 		invalid_input: 'Ungültige Eingabe',
+		internal_error: 'Ein interner Serverfehler ist aufgetreten. Bitte versuchen Sie es später erneut.',
 		database_unavailable:
 			'Datenbank ist derzeit nicht verfügbar',
+		database_timeout: 'Die Datenbankanfrage hat das Zeitlimit überschritten. Bitte versuchen Sie es erneut.',
 		invalid_token:
 			'Ihr Sitzungstoken ist ungültig oder abgelaufen',
 		not_authenticated:
@@ -233,7 +235,9 @@ const de = {
 		task_already_correct: 'Sie haben diese Frage bereits richtig beantwortet',
 		task_no_attempts_left: 'Keine Versuche mehr für diese Frage übrig',
 		document_limit_exceeded: 'Diese Gruppe hat die maximale Anzahl an Dokumenten erreicht',
-		already_verified: 'Dieses Konto ist bereits verifiziert'
+		already_verified: 'Dieses Konto ist bereits verifiziert',
+		not_a_guest: 'Dieser Benutzer ist bereits ein permanentes Mitglied',
+		invalid_permissions: 'Die übermittelten Berechtigungen enthalten unzulässige Werte'
 	},
 
 	// Sharelink join page
@@ -627,6 +631,16 @@ const de = {
 		comments: 'Kommentare',
 		editAnswerWarning:
 			'Das Ändern des Antworttyps, der richtigen Antwort oder der Optionen setzt alle bestehenden Antworten der Mitglieder für diese Aufgabe zurück.'
+	},
+
+	// Password requirements
+	passwordRequirements: {
+		title: 'Passwort muss enthalten:',
+		minLength: 'Mindestens 8 Zeichen',
+		lowercase: 'Einen Kleinbuchstaben',
+		uppercase: 'Einen Großbuchstaben',
+		digit: 'Eine Ziffer',
+		special: 'Ein Sonderzeichen'
 	},
 
 	// Password reset

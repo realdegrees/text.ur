@@ -9,7 +9,8 @@ from api.dependencies.database import Database
 from api.dependencies.paginated.resources import PaginatedResource
 from api.dependencies.resource import Resource
 from core.app_exception import AppException
-from fastapi import Body, Response
+from core.rate_limit import get_cache_key, limiter
+from fastapi import Body, Request, Response
 from models.enums import AppErrorCode, Permission
 from models.filter import ShareLinkFilter
 from models.pagination import Paginated
@@ -50,21 +51,51 @@ async def list_share_links(
 
 
 @root_router.get("/{token}", response_model=ShareLinkReadFromToken)
+@limiter.limit("60/minute", key_func=get_cache_key)
 async def get_share_link_from_token(
-    share_link: ShareLink = Resource(ShareLink, param_alias="token", key_column=ShareLink.token),
+    request: Request,
+    share_link: ShareLink = Resource(
+        ShareLink,
+        param_alias="token",
+        key_column=ShareLink.token,
+    ),
 ) -> ShareLinkReadFromToken:
     """Get a single share link by token."""
+    if share_link.is_expired:
+        raise AppException(
+            status_code=410,
+            error_code=AppErrorCode.SHARELINK_EXPIRED,
+            detail="This share link has expired",
+        )
     return share_link
 
 
 @router.post("/", response_model=ShareLinkRead)
+@limiter.limit("5/minute")
 async def create_share_link(
+    request: Request,
     db: Database,
     group: Group = Resource(Group, param_alias="group_id"),
     user: User = Authenticate([Guard.group_access({Permission.ADMINISTRATOR})]),
     share_link_create: ShareLinkCreate = Body(...),
 ) -> ShareLinkRead:
     """Create a new share link for a group."""
+    # Only the owner may grant ADMINISTRATOR via sharelinks
+    if Permission.ADMINISTRATOR in share_link_create.permissions:
+        result = await db.exec(
+            select(Membership).where(
+                Membership.group_id == group.id,
+                Membership.user_id == user.id,
+            )
+        )
+        caller: Membership | None = result.first()
+        if not caller or not caller.is_owner:
+            raise AppException(
+                status_code=403,
+                error_code=AppErrorCode.INVALID_PERMISSIONS,
+                detail="Only the owner can create share links with ADMINISTRATOR permission",
+            )
+
     share_link = ShareLink(**share_link_create.model_dump())
     share_link.group_id = group.id
     share_link.author_id = user.id
@@ -83,6 +114,22 @@ async def update_share_link(
     group: Group = Resource(Group, param_alias="group_id"),
 ) -> ShareLinkRead:
     """Update a share link."""
+    # Only the owner may set ADMINISTRATOR on sharelinks
+    if share_link_update.permissions is not None and Permission.ADMINISTRATOR in share_link_update.permissions:
+        result = await db.exec(
+            select(Membership).where(
+                Membership.group_id == group.id,
+                Membership.user_id == user.id,
+            )
+        )
+        caller: Membership | None = result.first()
+        if not caller or not caller.is_owner:
+            raise AppException(
+                status_code=403,
+                error_code=AppErrorCode.INVALID_PERMISSIONS,
+                detail="Only the owner can set ADMINISTRATOR permission on share links",
+            )
+
     permissions_changed = share_link_update.permissions is not None and set(share_link_update.permissions) != set(share_link.permissions)
     await db.merge(share_link)
     share_link.sqlmodel_update(share_link_update.model_dump(exclude_unset=True, exclude={"rotate_token"}))
@@ -105,10 +152,11 @@ async def update_share_link(
         group_default_permissions: set[Permission] = set(group.default_permissions)
         updated_permissions: set[Permission] = group_default_permissions | new_sharelink_permissions
 
-        # Ensure each membership has at least the required permissions without removing existing ones.
+        # Union new permissions with each member's existing
+        # permissions so admin-granted extras are preserved.
         for membership in memberships:
             await db.merge(membership)
-            membership.permissions = updated_permissions
+            membership.permissions = list(set(membership.permissions) | updated_permissions)
 
     # Handle token rotation and membership deletions
     if share_link_update.rotate_token:
@@ -138,7 +186,9 @@ async def delete_share_link(
 
 
 @root_router.post("/{token}/use")
+@limiter.limit("60/minute", key_func=get_cache_key)
 async def use_sharelink_token(
+    request: Request,
     db: Database,
     token: str,
     user: User = Authenticate(),

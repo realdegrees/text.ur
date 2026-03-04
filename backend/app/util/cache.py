@@ -79,6 +79,41 @@ async def invalidate_group_scores(group_id: str) -> None:
         cache_logger.warning("Cache invalidation error for %s: %s", pattern, e)
 
 
+async def invalidate_user_score(
+    group_id: str,
+    user_id: int,
+) -> None:
+    """Delete cached scores for a single user in a group.
+
+    Removes both the group-level key (``score:{group_id}:{user_id}``)
+    and any per-document keys (``score:{group_id}:{user_id}:doc:*``).
+    Prefer this over :func:`invalidate_group_scores` when only one
+    user's score has changed (e.g. task response submission).
+    """
+    r = _get_redis()
+    base_key = f"score:{group_id}:{user_id}"
+    try:
+        # Always delete the group-level score key
+        await r.delete(base_key)
+
+        # Scan and delete any per-document score keys
+        pattern = f"{base_key}:doc:*"
+        cursor: int | str = 0
+        while True:
+            cursor, keys = await r.scan(cursor=cursor, match=pattern, count=200)
+            if keys:
+                await r.delete(*keys)
+            if int(cursor) == 0:
+                break
+    except Exception as e:
+        cache_logger.warning(
+            "Cache invalidation error for user %s in %s: %s",
+            user_id,
+            group_id,
+            e,
+        )
+
+
 def score_cache_key(
     group_id: str,
     user_id: int,

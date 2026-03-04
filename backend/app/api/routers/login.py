@@ -1,3 +1,4 @@
+import hashlib
 from datetime import UTC, datetime, timedelta
 from typing import Annotated
 
@@ -11,16 +12,16 @@ from core.auth import (
     generate_token,
     hash_password,
     validate_password,
+    validate_password_dummy,
 )
 from core.logger import get_logger
-from core.rate_limit import limiter
+from core.rate_limit import get_cache_key, limiter
 from fastapi import Body, Depends, Request, Response
 from fastapi.security import OAuth2PasswordRequestForm
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 from models.enums import AppErrorCode
 from models.tables import Membership, User
 from models.user import PasswordResetVerify
-from slowapi.util import get_remote_address
 from sqlmodel import or_, select
 from util.api_router import APIRouter
 
@@ -33,7 +34,7 @@ router = APIRouter(
 
 
 @router.post("/")
-@limiter.limit("5/minute", key_func=get_remote_address)
+@limiter.limit("30/minute", key_func=get_cache_key)
 async def login(
     request: Request,
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
@@ -41,15 +42,27 @@ async def login(
     response: Response,
 ) -> Token:
     """Return a JWT if the user is authenticated successfully."""
+    login_input = form_data.username
     query = select(User).where(
         or_(
-            User.username == form_data.username,
-            User.email == form_data.username,
+            User.username == login_input,
+            User.email == login_input.lower().strip(),
         )
     )
     result = await db.exec(query)
     user = result.first()
-    if user is None or not validate_password(user, form_data.password):
+
+    if user is None:
+        # Run a dummy bcrypt check to prevent timing-based
+        # user enumeration (equalize response time).
+        validate_password_dummy(form_data.password)
+        raise AppException(
+            status_code=401,
+            error_code=AppErrorCode.INVALID_CREDENTIALS,
+            detail="Incorrect username or password",
+        )
+
+    if not validate_password(user, form_data.password):
         raise AppException(
             status_code=401,
             error_code=AppErrorCode.INVALID_CREDENTIALS,
@@ -83,12 +96,13 @@ async def login(
         secure=cfg.COOKIE_SECURE,
         samesite=cfg.COOKIE_SAMESITE,
         max_age=int(cfg.JWT_REFRESH_EXPIRATION_DAYS * 24 * 60 * 60),
+        path="/api/login/refresh",
     )
     return token
 
 
 @router.post("/refresh")
-@limiter.limit("10/minute", key_func=get_remote_address)
+@limiter.limit("30/minute", key_func=get_cache_key)
 async def refresh(
     request: Request,
     response: Response,
@@ -98,7 +112,6 @@ async def refresh(
     """Refresh the access token given a valid refresh token."""
     token = Token(
         access_token=generate_token(user, "access"),
-        refresh_token=generate_token(user, "refresh"),
         token_type="bearer",
     )
 
@@ -127,7 +140,7 @@ async def refresh(
 
 
 @router.post("/reset")
-@limiter.limit("3/minute", key_func=get_remote_address)
+@limiter.limit("10/minute", key_func=get_cache_key)
 async def reset_password(
     request: Request,
     db: Database,
@@ -135,20 +148,23 @@ async def reset_password(
     email: str = Body(..., embed=True),
 ) -> None:
     """Send a password reset email with a presigned URL."""
+    email = email.lower().strip()
     query = select(User).where(User.email == email)
     result = await db.exec(query)
     user: User | None = result.first()
-    if not user:
+    if not user or not user.password:
         # Return silently to avoid leaking whether an email is registered
+        # (also covers guest accounts that have no password set)
         return
     # Generate token with email and password hash (for one-time use)
     serializer = URLSafeTimedSerializer(cfg.EMAIL_PRESIGN_SECRET)
-    token_data = {"email": email, "pwd": user.password[:16]}
+    pwd_hash = hashlib.sha256(user.password[:16].encode()).hexdigest()[:16]
+    token_data = {"email": email, "pwd": pwd_hash}
     token = serializer.dumps(token_data, salt="password-reset")
     reset_link = f"{cfg.FRONTEND_BASEURL}/password-reset/{token}"
     expiry_time = datetime.now(UTC) + timedelta(minutes=cfg.PASSWORD_RESET_LINK_EXPIRY_MINUTES)
     try:
-        mail.send_email(
+        await mail.send_email(
             target_email=email,
             subject="Reset Your Password - text.ur",
             template="reset_password.jinja",
@@ -161,7 +177,7 @@ async def reset_password(
             },
         )
     except Exception as e:
-        if cfg.DEBUG_ALLOW_REGISTRATION_WITHOUT_EMAIL:
+        if cfg.DEBUG and cfg.DEBUG_ALLOW_REGISTRATION_WITHOUT_EMAIL:
             login_logger.warning(
                 "Email delivery failed but"
                 " DEBUG_ALLOW_REGISTRATION_WITHOUT_EMAIL"
@@ -179,7 +195,7 @@ async def reset_password(
 
 
 @router.put("/reset/verify/{token}")
-@limiter.limit("5/minute", key_func=get_remote_address)
+@limiter.limit("20/minute", key_func=get_cache_key)
 async def reset_verify(
     request: Request,
     token: str,
@@ -196,13 +212,8 @@ async def reset_verify(
             salt="password-reset",
         )
 
-        # Handle both old tokens (string) and new tokens (dict) for backwards compatibility
-        if isinstance(token_data, str):
-            email = token_data
-            pwd_hash_check = None
-        else:
-            email = token_data["email"]
-            pwd_hash_check = token_data.get("pwd")
+        email = token_data["email"]
+        pwd_hash_check = token_data.get("pwd")
 
     except (BadSignature, SignatureExpired) as e:
         raise AppException(
@@ -222,7 +233,8 @@ async def reset_verify(
         )
 
     # Check if token has already been used (password changed since token was issued)
-    if pwd_hash_check and user.password[:16] != pwd_hash_check:
+    current_pwd_hash = hashlib.sha256(user.password[:16].encode()).hexdigest()[:16]
+    if pwd_hash_check and current_pwd_hash != pwd_hash_check:
         raise AppException(
             status_code=403,
             error_code=AppErrorCode.TOKEN_ALREADY_USED,

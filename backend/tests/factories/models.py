@@ -82,11 +82,10 @@ class DocumentFactory(BaseFactory):
         model = Document
 
     name = factory.Sequence(lambda n: f"document_{n}.pdf")
-    storage_key = factory.Sequence(lambda n: f"documents/doc_{n}.pdf")
+    storage_key = factory.LazyAttribute(lambda o: f"documents/{o.group.id}/{uuid4()}")
     size_bytes = factory.Faker("random_int", min=1000, max=1000000)
     visibility = Visibility.PRIVATE
     view_mode = ViewMode.PUBLIC
-    secret = factory.LazyFunction(uuid4)
     group = factory.SubFactory(GroupFactory)
 
 

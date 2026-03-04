@@ -19,7 +19,7 @@
 
 ---
 
-text.ur is a self-hosted platform for real-time collaborative PDF annotation, created for the [Institute of German Studies at the University of Regensburg](https://www.uni-regensburg.de/language-literature-culture/german-studies/startseite/index.html) on behalf of [Tatjana Kühnast](https://www.uni-regensburg.de/sprache-literatur-kultur/germanistik-ndl-1/mitarbeitende/tatjana-kuehnast/index.html).  
+text.ur is a self-hosted platform for real-time collaborative PDF annotation, created for the [Institute of German Studies at the University of Regensburg](https://www.uni-regensburg.de/language-literature-culture/german-studies/startseite/index.html) on behalf of [Tatjana Kühnast](https://www.uni-regensburg.de/sprache-literatur-kultur/germanistik-ndl-1/mitarbeitende/tatjana-kuehnast/index.html).
 
 Users create groups, upload PDF documents, and invite collaborators via share links or email. Group members can then highlight text passages, write threaded comments in Markdown, and tag or filter annotations - with live cursors, presence tracking, and instant updates across all connected clients. The application is designed for on-premises deployment and runs entirely on your own infrastructure.
 
@@ -103,14 +103,14 @@ Set individual comments to **public**, **restricted** (admins only), or **privat
 
 ## 🛠 Tech Stack
 
-| Layer | Technology |
-|---|---|
-| **Frontend** | SvelteKit, Svelte 5, TailwindCSS 4, PDFSlick |
-| **Backend** | FastAPI, SQLModel, Pydantic, Alembic |
-| **Database** | PostgreSQL 16 |
-| **Storage** | Local filesystem |
-| **Cache & Pub/Sub** | Redis 8 |
-| **Deployment** | Docker Compose, Gunicorn + Uvicorn |
+| Layer               | Technology                                   |
+| ------------------- | -------------------------------------------- |
+| **Frontend**        | SvelteKit, Svelte 5, TailwindCSS 4, PDFSlick |
+| **Backend**         | FastAPI, SQLModel, Pydantic, Alembic         |
+| **Database**        | PostgreSQL 16                                |
+| **Storage**         | Local filesystem                             |
+| **Cache & Pub/Sub** | Redis 8                                      |
+| **Deployment**      | Docker Compose, Gunicorn + Uvicorn           |
 
 ## 📱 Demo
 
@@ -163,26 +163,32 @@ pnpm dev
 
 The app is available at `http://localhost:5173`. Captured emails can be viewed at `http://localhost:6026` (MailHog).
 
-> [!TIP] 
+> [!TIP]
 > The repository includes **VS Code launch configurations** for debugging both the backend (debugpy) and frontend (Node + Chrome DevTools). See the [Deployment Guide](docs/deployment.md#-vs-code) for details.
 
 For production deployment, see the [Deployment Guide](docs/deployment.md).
 
 ## 📖 Documentation
 
-| | Document | Description |
-|---|---|---|
-| 🏗️ | [Architecture](docs/architecture.md) | System design, auth flow, WebSocket protocol, access control, type sync pipeline |
-| 🚢 | [Deployment](docs/deployment.md) | Dev setup, production deployment, reverse proxy, environment variables |
-| ⚙️ | [CI/CD Pipeline](docs/ci.md) | Pipeline stages, path filtering, Docker image tagging, local CI checks |
-| 🤝 | [Contributing](docs/contributing.md) | Development workflow, code style, testing, pull requests |
-| 🐍 | [Backend](backend/README.md) | Project structure, patterns, models, dependencies, testing |
-| 🟠 | [Frontend](frontend/README.md) | Project structure, Svelte 5 runes, API client, generated files, i18n |
-| 🗄️ | [Database](backend/database/README.md) | Migrations, initialization, schema |
+|     | Document                               | Description                                                                      |
+| --- | -------------------------------------- | -------------------------------------------------------------------------------- |
+| 🏗️  | [Architecture](docs/architecture.md)   | System design, auth flow, WebSocket protocol, access control, type sync pipeline |
+| 🚢  | [Deployment](docs/deployment.md)       | Dev setup, production deployment, reverse proxy, environment variables           |
+| ⚙️  | [CI/CD Pipeline](docs/ci.md)           | Pipeline stages, path filtering, Docker image tagging, local CI checks           |
+| 🤝  | [Contributing](docs/contributing.md)   | Development workflow, code style, testing, pull requests                         |
+| 🐍  | [Backend](backend/README.md)           | Project structure, patterns, models, dependencies, testing                       |
+| 🟠  | [Frontend](frontend/README.md)         | Project structure, Svelte 5 runes, API client, generated files, i18n             |
+| 🗄️  | [Database](backend/database/README.md) | Migrations, initialization, schema                                               |
 
 ## 🤝 Contributing
 
 Contributions are welcome. See the [Contributing Guide](docs/contributing.md) for development setup, code style conventions, and how to submit changes.
+
+## ⚠️ Known Issues
+
+### Text selection handles on hybrid touch devices
+
+On mobile devices (iOS/Android), the app relies on native OS selection handles (teardrops) to adjust text highlights. On desktop, custom handles are rendered instead. The app detects the active input method (`pointerType`) and switches dynamically, but on some hybrid devices — Windows touchscreen laptops, Chromebooks, or desktops with touch monitors — native touch selection handles may not appear, or both native and custom handles may be visible simultaneously. This is a cosmetic issue; selection and annotation creation remain fully functional. See the [Frontend README](frontend/README.md#text-selection-handles) for technical details.
 
 ## 📄 License
 

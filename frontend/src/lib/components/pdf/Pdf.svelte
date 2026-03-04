@@ -37,6 +37,11 @@
 	// Screen size detection
 	const screen = createScreenState();
 
+	// Tablets get the full-width "compact" layout (page-width scale, bottom
+	// comment panel) instead of the desktop sidebar layout, which would steal
+	// ~40% of a narrow tablet screen for the sidebar.
+	let compactLayout = $derived(screen.isMobile || screen.isTablet);
+
 	let pageNumber = $state(1);
 	let scrollTop = $state(0);
 	let pdfWidth = $state(0);
@@ -60,7 +65,7 @@
 		// Desktop: use contentAreaRef (excludes controls column); mobile: use pdfAreaWrapper's parent.
 		const target = contentAreaRef ?? pdfAreaWrapper?.parentElement;
 		if (!target) return;
-		const available = screen.isMobile ? target.clientWidth : target.clientWidth - 288;
+		const available = compactLayout ? target.clientWidth : target.clientWidth - 288;
 		if (available > maxAvailableWidth) {
 			maxAvailableWidth = available;
 		}
@@ -82,7 +87,9 @@
 			container,
 			store,
 			options: {
-				scaleValue: screen.isMobile ? 'page-width' : 'page-height'
+				scaleValue: compactLayout ? 'page-width' : 'page-height',
+				annotationMode: 0, // DISABLE — no links, forms, popups, or baked-in annotations
+				annotationEditorMode: -1 // DISABLE — remove built-in annotation editor entirely
 			}
 		});
 
@@ -185,7 +192,7 @@
 		const target = contentAreaRef ?? pdfAreaWrapper?.parentElement;
 		if (!target) return;
 		const resizeObserver = new ResizeObserver(() => {
-			if (screen.isMobile) {
+			if (compactLayout) {
 				maxAvailableWidth = target.clientWidth;
 			} else {
 				// contentAreaRef width already excludes the controls column (48px).
@@ -218,13 +225,13 @@
 </script>
 
 <div
-	class="pdf-viewer-container flex h-full w-full bg-background {screen.isMobile
+	class="pdf-viewer-container flex h-full w-full bg-background {compactLayout
 		? 'relative'
 		: 'flex-col'}"
 	bind:this={rootContainer}
 >
-	<!-- Responsive controls: Mobile overlay or desktop column -->
-	{#if screen.isMobile}
+	<!-- Responsive controls: Compact overlay or desktop column -->
+	{#if compactLayout}
 		<!-- Mobile: small spacer for overlay controls to not overlap content -->
 		<div class="w-12 shrink-0"></div>
 		<PdfControls
@@ -352,8 +359,8 @@
 		<ConnectionLines {scrollTop} />
 	{/if}
 
-	<!-- Mobile PDF viewer and bottom comment panel (mobile-only) -->
-	{#if screen.isMobile}
+	<!-- Compact PDF viewer and bottom comment panel (mobile + tablet) -->
+	{#if compactLayout}
 		<div class="flex w-full flex-1 flex-col overflow-y-auto">
 			<div
 				class="relative flex-1 overflow-hidden bg-text/5 transition-[width] duration-150"
@@ -362,7 +369,7 @@
 			>
 				<div
 					id="viewerContainer"
-					class="pdfSlickContainer absolute inset-0 custom-scrollbar overflow-x-hidden overflow-y-scroll {screen.isMobile
+					class="pdfSlickContainer absolute inset-0 custom-scrollbar overflow-x-hidden overflow-y-scroll {compactLayout
 						? 'pb-24'
 						: ''}"
 					bind:this={container}
@@ -402,15 +409,9 @@
 		border: var(--page-border);
 	}
 
-	/* Improve clarity on high DPI displays by preferring crisp edges for
-	   canvas renderings when scaling occurs. This reduces perceived blur
-	   when the browser performs CSS scaling or when devicePixelRatio > 1. */
-	:global(.pdf-viewer-container .pdfViewer .canvasWrapper canvas) {
-		/* Use the best-available browser rendering hints for crisp text */
-		image-rendering: -webkit-optimize-contrast;
-		image-rendering: crisp-edges;
-		image-rendering: pixelated;
-	}
+	/* Let the browser use its default bilinear/bicubic interpolation for
+	   canvas scaling. Nearest-neighbor modes (crisp-edges, pixelated) cause
+	   text to appear jagged when the high-DPI backing store is CSS-scaled. */
 
 	/* Touch-friendly defaults for the PDF text layer:
 	   - Remove the tap-highlight flash on mobile browsers
@@ -418,5 +419,12 @@
 	:global(.pdf-viewer-container .textLayer) {
 		-webkit-tap-highlight-color: transparent;
 		-webkit-touch-callout: none;
+	}
+
+	/* Defence-in-depth: hide the PDF.js annotation layer so that native PDF
+	   links, form fields, popups, and pre-existing annotations can never
+	   interfere with the application, even if a library update changes defaults. */
+	:global(.pdf-viewer-container .annotationLayer) {
+		display: none !important;
 	}
 </style>

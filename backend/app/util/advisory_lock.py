@@ -41,6 +41,7 @@ LOCK_MIGRATION: int = 100_001
 LOCK_CLEANUP_LOGS: int = 100_002
 LOCK_CLEANUP_GUESTS: int = 100_003
 LOCK_CLEANUP_UNVERIFIED: int = 100_004
+LOCK_CLEANUP_ORPHANED_FILES: int = 100_005
 
 
 # ── Direct-connect engine (bypasses PgBouncer) ─────────────

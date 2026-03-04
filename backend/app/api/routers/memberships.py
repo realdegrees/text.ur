@@ -7,7 +7,8 @@ from api.dependencies.paginated.resources import (
 )
 from api.dependencies.resource import Resource
 from core.app_exception import AppException
-from fastapi import Body, Query, Response
+from core.rate_limit import limiter
+from fastapi import Body, Query, Request, Response
 from models.enums import AppErrorCode, Permission
 from models.filter import MembershipFilter
 from models.group import (
@@ -99,7 +100,9 @@ async def get_membership(
 
 
 @groupmembership_router.post("/")
+@limiter.limit("10/minute")
 async def invite_member(
+    request: Request,
     db: Database,
     group: Group = Resource(Group, param_alias="group_id"),
     _: User = Authenticate([Guard.group_access({Permission.ADMINISTRATOR})]),
@@ -373,6 +376,13 @@ async def promote_guest_to_member(
             detail="Target user is not a member of this group",
         )
 
+    if membership.sharelink_id is None:
+        raise AppException(
+            status_code=409,
+            error_code=AppErrorCode.NOT_A_GUEST,
+            detail="User is already a permanent member",
+        )
+
     db.add(membership)
 
     membership.sharelink_id = None
@@ -381,7 +391,9 @@ async def promote_guest_to_member(
 
 
 @groupmembership_router.get("/{user_id}/score", response_model=ScoreRead)
+@limiter.limit("20/minute")
 async def get_member_score(
+    request: Request,
     db: Database,
     session_user: User = Authenticate(
         [Guard.group_access()],
@@ -400,6 +412,21 @@ async def get_member_score(
     includes a ``cached_at`` timestamp so the frontend can
     show when the score was last computed.
     """
+    # Validate document belongs to this group when filtering
+    if document_id is not None:
+        result = await db.exec(
+            select(Document.id).where(
+                Document.id == document_id,
+                Document.group_id == group.id,
+            )
+        )
+        if not result.first():
+            raise AppException(
+                status_code=404,
+                error_code=AppErrorCode.NOT_FOUND,
+                detail="Document not found in this group",
+            )
+
     cache_key = score_cache_key(group.id, member.id, document_id)
     cached = await get_cached(cache_key)
     if cached is not None:

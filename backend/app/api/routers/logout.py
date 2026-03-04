@@ -1,7 +1,8 @@
 import core.config as cfg
 from api.dependencies.authentication import BasicAuthentication
 from api.dependencies.database import Database
-from fastapi import Response
+from core.rate_limit import limiter
+from fastapi import Request, Response
 from util.api_router import APIRouter
 
 router = APIRouter(
@@ -28,11 +29,13 @@ async def logout(response: Response) -> None:
         secure=cfg.COOKIE_SECURE,
         samesite=cfg.COOKIE_SAMESITE,
         max_age=0,
+        path="/api/login/refresh",
     )
 
 
 @router.post("/all")
-async def logout_all_devices(response: Response, user: BasicAuthentication, db: Database) -> None:
+@limiter.limit("5/minute")
+async def logout_all_devices(request: Request, response: Response, user: BasicAuthentication, db: Database) -> None:
     """Log the user out from all devices by rerolling the user secret."""
     # Use the logout method  to clear cookies on the response
     await logout(response)

@@ -8,7 +8,7 @@ COPY requirements.txt .
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
     apt-get update && \
-    apt-get install -y --no-install-recommends build-essential jq curl
+    apt-get install -y --no-install-recommends build-essential jq curl libmagic1
 
 # Install Python dependencies with pip cache mount
 RUN --mount=type=cache,target=/root/.cache/pip \

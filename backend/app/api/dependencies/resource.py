@@ -5,9 +5,11 @@ from typing import cast, overload
 
 from api.dependencies.authentication import Authenticate, BasicAuthentication
 from api.dependencies.database import Database
+from core.app_exception import AppException
 from core.logger import get_logger
-from fastapi import Depends, HTTPException, Path
+from fastapi import Depends, Path
 from models.base import BaseModel
+from models.enums import AppErrorCode
 from models.tables import User
 from sqlalchemy import ColumnElement, Integer, String
 from sqlmodel import select
@@ -73,7 +75,11 @@ def Resource[ResourceModel: BaseModel](
         result = await db.exec(query)
         res = result.first()
         if res is None and raise_on_not_found:
-            raise HTTPException(status_code=404, detail=f"{resource.__name__} not found")
+            raise AppException(
+                status_code=404,
+                error_code=AppErrorCode.NOT_FOUND,
+                detail=f"{resource.__name__} not found",
+            )
         return cast(ResourceModel, res) if res else None
 
     async def dependency(

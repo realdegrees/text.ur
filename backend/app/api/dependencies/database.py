@@ -11,7 +11,8 @@ from core.config import (
     DEBUG,
 )
 from core.logger import get_logger
-from fastapi import Depends, HTTPException
+from fastapi import Depends
+from models.enums import AppErrorCode
 from sqlalchemy import event, text
 from sqlalchemy.exc import (
     DBAPIError,
@@ -127,40 +128,48 @@ async def session() -> AsyncGenerator[SQLModelAsyncSession, None]:
 
 def _handle_db_exception(e: Exception) -> None:
     """Handle database exceptions and raise appropriate HTTP exceptions"""
-    # Pass through existing HTTP exceptions and AppExceptions
-    if isinstance(e, (HTTPException, AppException)):
+    # Pass through existing AppExceptions
+    if isinstance(e, AppException):
         raise e
 
-    # Determine status code and message based on exception type
-    status_code: int = 500  # Default to internal server error
-    detail: str = "An unexpected database error occurred"
-
     # Query timeout (504 Gateway Timeout)
-    if isinstance(e, TimeoutError):
-        status_code = 504
-        detail = "Database query timed out"
-    # Check for statement_timeout in OperationalError (psycopg2 raises this for timeouts)
-    elif isinstance(e, OperationalError) and "statement timeout" in str(e).lower():
-        status_code = 504
-        detail = "Database query timed out"
+    if isinstance(e, TimeoutError) or (isinstance(e, OperationalError) and "statement timeout" in str(e).lower()):
+        db_logger.error("Database query timed out: %s", e, exc_info=True)
+        raise AppException(
+            status_code=504,
+            error_code=AppErrorCode.DATABASE_TIMEOUT,
+            detail="Database query timed out",
+        ) from e
+
     # Database availability issues (503 Service Unavailable)
-    elif isinstance(e, OperationalError):
-        status_code = 503
-        detail = "Database currently unavailable"
-    # Client errors (400 Bad Request)
-    elif isinstance(e, DBAPIError | ValueError):
-        status_code = 400
-        error_message = str(e).split("\n")[0]
-        detail = f"Database constraint violation: {error_message}"
+    if isinstance(e, OperationalError):
+        db_logger.error("Database unavailable: %s", e, exc_info=True)
+        raise AppException(
+            status_code=503,
+            error_code=AppErrorCode.DATABASE_UNAVAILABLE,
+            detail="Database currently unavailable",
+        ) from e
 
-    # Log server errors for debugging
-    if status_code >= 500:
-        if DEBUG:
-            raise e
-        else:
-            db_logger.error("Database error: %s", e, exc_info=True)
+    # Client errors (400 Bad Request) — do NOT leak raw
+    # constraint names or column details to the client.
+    if isinstance(e, DBAPIError | ValueError):
+        db_logger.warning("Database constraint violation: %s", e)
+        raise AppException(
+            status_code=400,
+            error_code=AppErrorCode.INVALID_INPUT,
+            detail="Invalid data: a database constraint was violated",
+        ) from e
 
-    raise HTTPException(status_code=status_code, detail=detail) from e
+    # Unexpected errors
+    if DEBUG:
+        raise e
+
+    db_logger.error("Database error: %s", e, exc_info=True)
+    raise AppException(
+        status_code=500,
+        error_code=AppErrorCode.INTERNAL_ERROR,
+        detail="An unexpected database error occurred",
+    ) from e
 
 
 # Actual Dependency to use in endpoints

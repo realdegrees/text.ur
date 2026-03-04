@@ -4,6 +4,7 @@
 	import { notification } from '$lib/stores/notificationStore';
 	import { LL } from '$i18n/i18n-svelte';
 	import Field from '$lib/components/advancedInput.svelte';
+	import PasswordRequirements from '$lib/components/PasswordRequirements.svelte';
 	import ConfirmButton from '$lib/components/ConfirmButton.svelte';
 	import DangerZone from '$lib/components/DangerZone.svelte';
 	import Loading from '~icons/svg-spinners/90-ring-with-bg';
@@ -239,6 +240,7 @@
 						hidden
 						required
 					/>
+					<PasswordRequirements password={upgradePassword} />
 					<Field
 						name="upgradeConfirmPassword"
 						label={$LL.userSettings.upgradeAccount.confirmPasswordLabel()}
@@ -323,6 +325,7 @@
 							bind:value={newPassword}
 							hidden
 						/>
+						<PasswordRequirements password={newPassword} />
 						<Field
 							name="confirmPassword"
 							label={$LL.userSettings.changePassword.confirmPasswordLabel()}

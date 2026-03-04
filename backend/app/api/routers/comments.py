@@ -9,7 +9,8 @@ from api.dependencies.resource import Resource
 from api.routers.reactions import router as ReactionRouter
 from core import config
 from core.app_exception import AppException
-from fastapi import Body, Header, Response
+from core.rate_limit import limiter
+from fastapi import Body, Header, Request, Response
 from models.comment import (
     CommentCreate,
     CommentRead,
@@ -21,7 +22,7 @@ from models.event import Event
 from models.filter import CommentFilter
 from models.pagination import Paginated
 from models.tables import Comment, CommentTag, Tag, User
-from sqlmodel import func, select
+from sqlmodel import select
 from util.api_router import APIRouter
 from util.queries import Guard
 from util.response import ExcludableFieldsJSONResponse
@@ -54,7 +55,9 @@ async def list_comments(
 
 
 @router.post("/", response_model=CommentRead)
+@limiter.limit("30/minute")
 async def create_comment(
+    request: Request,
     db: Database,
     events: Events,
     user: User = Authenticate([Guard.document_access({Permission.ADD_COMMENTS})]),
@@ -62,6 +65,17 @@ async def create_comment(
     x_connection_id: str | None = Header(None, alias="X-Connection-ID"),
 ) -> Comment:
     """Create a new comment."""
+    # Validate parent belongs to the same document
+    if create.parent_id is not None:
+        parent_result = await db.exec(select(Comment).where(Comment.id == create.parent_id))
+        parent = parent_result.first()
+        if not parent or parent.document_id != create.document_id:
+            raise AppException(
+                status_code=400,
+                error_code=AppErrorCode.VALIDATION_ERROR,
+                detail="Parent comment does not belong to the same document",
+            )
+
     comment = Comment(**create.model_dump())
     comment.user_id = user.id
     comment.document_id = create.document_id
@@ -134,7 +148,9 @@ async def update_comment(
 
 
 @router.delete("/{comment_id}")
+@limiter.limit("20/minute")
 async def delete_comment(
+    request: Request,
     db: Database,
     events: Events,
     comment: Comment = Resource(Comment, param_alias="comment_id"),
@@ -186,6 +202,14 @@ async def update_comment_tags(
     Replaces all existing tags with the new ordered list.
     """
     tag_ids = body.tag_ids
+
+    # Enforce max tags per comment
+    if len(tag_ids) > config.MAX_TAGS_PER_COMMENT:
+        raise AppException(
+            status_code=400,
+            error_code=AppErrorCode.VALIDATION_ERROR,
+            detail=f"A comment may have at most {config.MAX_TAGS_PER_COMMENT} tags",
+        )
 
     # Verify all tags exist and belong to the same document as the comment
     if tag_ids:
