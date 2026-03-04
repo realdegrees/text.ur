@@ -82,7 +82,9 @@
 			container,
 			store,
 			options: {
-				scaleValue: screen.isMobile ? 'page-width' : 'page-height'
+				scaleValue: screen.isMobile ? 'page-width' : 'page-height',
+				annotationMode: 0, // DISABLE — no links, forms, popups, or baked-in annotations
+				annotationEditorMode: -1 // DISABLE — remove built-in annotation editor entirely
 			}
 		});
 
@@ -418,5 +420,12 @@
 	:global(.pdf-viewer-container .textLayer) {
 		-webkit-tap-highlight-color: transparent;
 		-webkit-touch-callout: none;
+	}
+
+	/* Defence-in-depth: hide the PDF.js annotation layer so that native PDF
+	   links, form fields, popups, and pre-existing annotations can never
+	   interfere with the application, even if a library update changes defaults. */
+	:global(.pdf-viewer-container .annotationLayer) {
+		display: none !important;
 	}
 </style>
