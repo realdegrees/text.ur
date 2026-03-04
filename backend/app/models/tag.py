@@ -7,7 +7,7 @@ from models.base import BaseModel
 class TagCreate(SQLModel):
     """Model for creating a new tag."""
 
-    label: str = Field(max_length=50)
+    label: str = Field(min_length=1, max_length=50)
     description: str | None = Field(default=None, max_length=200)
     color: str = Field(max_length=7)
 
@@ -29,7 +29,7 @@ class TagCreate(SQLModel):
 class TagUpdate(SQLModel):
     """Model for updating an existing tag."""
 
-    label: str | None = Field(default=None, max_length=50)
+    label: str | None = Field(default=None, min_length=1, max_length=50)
     description: str | None = Field(default=None, max_length=200)
     color: str | None = Field(default=None, max_length=7)
 

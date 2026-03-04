@@ -163,7 +163,7 @@ async def _setup_document_comment_connection(
     websocket.state.membership = membership
 
 
-def _comment_visibility_transform(event_data: dict, websocket: WebSocket) -> dict | None:
+def _comment_visibility_transform(event_data: dict, websocket: WebSocket) -> dict | None:  # noqa: C901
     """Transform outgoing create/update/delete events for comment visibility.
 
     - For create: skip if recipient cannot see the comment
@@ -178,9 +178,14 @@ def _comment_visibility_transform(event_data: dict, websocket: WebSocket) -> dic
     doc: Document | None = getattr(websocket.state, "related_resource", None)
     membership: Membership | None = getattr(websocket.state, "membership", None)
 
-    # Always send deletes (clients must remove UI state) and skip filtering if we lack context
-    if event_type == "delete" or not recipient or not doc:
+    # Skip filtering if we lack context
+    if not recipient or not doc:
         return event_data
+
+    # For deletes, strip payload to just the ID to avoid leaking
+    # content of visibility-restricted comments.
+    if event_type == "delete":
+        return {**event_data, "payload": {"id": payload.get("id")}}
 
     comment_visibility_str = payload.get("visibility")
     comment_user = payload.get("user", {})

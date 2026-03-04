@@ -431,6 +431,7 @@
 												<td class="py-2 text-right">
 													<input
 														type="number"
+														min="0"
 														bind:value={editGiverPoints}
 														class="w-16 form-input-compact text-xs"
 													/>

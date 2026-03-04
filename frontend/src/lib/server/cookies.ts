@@ -2,15 +2,20 @@ import type { Cookies } from '@sveltejs/kit';
 
 /**
  * Forwards cookies from a backend response to the SvelteKit client.
+ *
+ * Uses `Headers.getSetCookie()` to correctly split individual
+ * Set-Cookie headers without breaking on commas inside `Expires`
+ * date values.
  */
 export const forwardCookies = (response: Response, cookies: Cookies): void => {
-	const setCookieHeader = response.headers.get('set-cookie');
-	if (!setCookieHeader) return;
+	const cookieStrings = response.headers.getSetCookie();
+	if (!cookieStrings.length) return;
 
-	const cookieStrings = setCookieHeader.split(', ');
 	for (const cookieString of cookieStrings) {
 		const [nameValue, ...attributes] = cookieString.split('; ');
-		const [name, value] = nameValue.split('=');
+		const [name, ...valueParts] = nameValue.split('=');
+		// Rejoin in case the value itself contains '='
+		const value = valueParts.join('=');
 
 		const cookieOptions: any = { path: '/' };
 		for (const attr of attributes) {

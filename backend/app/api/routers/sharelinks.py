@@ -80,6 +80,22 @@ async def create_share_link(
     share_link_create: ShareLinkCreate = Body(...),
 ) -> ShareLinkRead:
     """Create a new share link for a group."""
+    # Only the owner may grant ADMINISTRATOR via sharelinks
+    if Permission.ADMINISTRATOR in share_link_create.permissions:
+        result = await db.exec(
+            select(Membership).where(
+                Membership.group_id == group.id,
+                Membership.user_id == user.id,
+            )
+        )
+        caller: Membership | None = result.first()
+        if not caller or not caller.is_owner:
+            raise AppException(
+                status_code=403,
+                error_code=AppErrorCode.INVALID_PERMISSIONS,
+                detail="Only the owner can create share links with ADMINISTRATOR permission",
+            )
+
     share_link = ShareLink(**share_link_create.model_dump())
     share_link.group_id = group.id
     share_link.author_id = user.id
@@ -98,6 +114,22 @@ async def update_share_link(
     group: Group = Resource(Group, param_alias="group_id"),
 ) -> ShareLinkRead:
     """Update a share link."""
+    # Only the owner may set ADMINISTRATOR on sharelinks
+    if share_link_update.permissions is not None and Permission.ADMINISTRATOR in share_link_update.permissions:
+        result = await db.exec(
+            select(Membership).where(
+                Membership.group_id == group.id,
+                Membership.user_id == user.id,
+            )
+        )
+        caller: Membership | None = result.first()
+        if not caller or not caller.is_owner:
+            raise AppException(
+                status_code=403,
+                error_code=AppErrorCode.INVALID_PERMISSIONS,
+                detail="Only the owner can set ADMINISTRATOR permission on share links",
+            )
+
     permissions_changed = share_link_update.permissions is not None and set(share_link_update.permissions) != set(share_link.permissions)
     await db.merge(share_link)
     share_link.sqlmodel_update(share_link_update.model_dump(exclude_unset=True, exclude={"rotate_token"}))

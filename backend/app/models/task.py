@@ -185,7 +185,7 @@ class TaskResponseCreate(SQLModel):
     """Create/update schema for a user's task response."""
 
     selected_option_ids: list[int] | None = None
-    text: str | None = None
+    text: str | None = Field(default=None, max_length=1000)
     value: float | None = None
 
     @field_validator("text")

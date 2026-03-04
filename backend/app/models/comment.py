@@ -30,11 +30,11 @@ def sanitize_content(value: str | None) -> str | None:
 
 
 class BoundingBox(SQLModel):
-    page_number: int
-    x: float
-    y: float
-    width: float
-    height: float
+    page_number: int = Field(ge=1)
+    x: float = Field(ge=0, le=1)
+    y: float = Field(ge=0, le=1)
+    width: float = Field(ge=0, le=1)
+    height: float = Field(ge=0, le=1)
 
 
 class Annotation(SQLModel):

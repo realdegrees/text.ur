@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
 class DocumentCreate(SQLModel):
     visibility: DocumentVisibility
-    name: str = Field(max_length=MAX_DOCUMENT_NAME_LENGTH)
+    name: str = Field(min_length=1, max_length=MAX_DOCUMENT_NAME_LENGTH)
     description: str | None = Field(default=None, max_length=MAX_DOCUMENT_DESCRIPTION_LENGTH)
     group_id: str
     default_max_attempts: int = Field(default=1, ge=1)
@@ -47,7 +47,7 @@ class DocumentUpdate(SQLModel):
     visibility: DocumentVisibility | None = None
     view_mode: ViewMode | None = None
     description: str | None = Field(default=None, max_length=MAX_DOCUMENT_DESCRIPTION_LENGTH)
-    name: str | None = Field(default=None, max_length=MAX_DOCUMENT_NAME_LENGTH)
+    name: str | None = Field(default=None, min_length=1, max_length=MAX_DOCUMENT_NAME_LENGTH)
     default_max_attempts: int | None = Field(default=None, ge=1)
 
 

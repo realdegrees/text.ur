@@ -7,6 +7,7 @@ from api.dependencies.database import Database
 from api.dependencies.events import Events
 from api.dependencies.resource import Resource
 from core.app_exception import AppException
+from core.rate_limit import limiter
 from fastapi import Body, Request, Response
 from models.enums import AnswerType, AppErrorCode, Permission, StringMatchMode
 from models.event import Event
@@ -472,7 +473,9 @@ async def delete_task(
     response_model=TaskResponseRead,
     status_code=200,
 )
+@limiter.limit("60/minute")
 async def submit_task_response(  # noqa: C901
+    request: Request,
     db: Database,
     session_user: User = Authenticate(guards=[Guard.document_access()]),
     response_data: TaskResponseCreate = Body(...),

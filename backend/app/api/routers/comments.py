@@ -22,7 +22,7 @@ from models.event import Event
 from models.filter import CommentFilter
 from models.pagination import Paginated
 from models.tables import Comment, CommentTag, Tag, User
-from sqlmodel import func, select
+from sqlmodel import select
 from util.api_router import APIRouter
 from util.queries import Guard
 from util.response import ExcludableFieldsJSONResponse
@@ -65,6 +65,17 @@ async def create_comment(
     x_connection_id: str | None = Header(None, alias="X-Connection-ID"),
 ) -> Comment:
     """Create a new comment."""
+    # Validate parent belongs to the same document
+    if create.parent_id is not None:
+        parent_result = await db.exec(select(Comment).where(Comment.id == create.parent_id))
+        parent = parent_result.first()
+        if not parent or parent.document_id != create.document_id:
+            raise AppException(
+                status_code=400,
+                error_code=AppErrorCode.VALIDATION_ERROR,
+                detail="Parent comment does not belong to the same document",
+            )
+
     comment = Comment(**create.model_dump())
     comment.user_id = user.id
     comment.document_id = create.document_id
@@ -191,6 +202,14 @@ async def update_comment_tags(
     Replaces all existing tags with the new ordered list.
     """
     tag_ids = body.tag_ids
+
+    # Enforce max tags per comment
+    if len(tag_ids) > config.MAX_TAGS_PER_COMMENT:
+        raise AppException(
+            status_code=400,
+            error_code=AppErrorCode.VALIDATION_ERROR,
+            detail=f"A comment may have at most {config.MAX_TAGS_PER_COMMENT} tags",
+        )
 
     # Verify all tags exist and belong to the same document as the comment
     if tag_ids:

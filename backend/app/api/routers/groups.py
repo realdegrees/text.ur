@@ -123,6 +123,22 @@ async def update_group(
     group_update: GroupUpdate = Body(...),
 ) -> Group:
     """Update a group."""
+    # Only the owner may include ADMINISTRATOR in default_permissions
+    if group_update.default_permissions is not None and Permission.ADMINISTRATOR in group_update.default_permissions:
+        result = await db.exec(
+            select(Membership).where(
+                Membership.group_id == group.id,
+                Membership.user_id == session_user.id,
+            )
+        )
+        caller_membership: Membership | None = result.first()
+        if not caller_membership or not caller_membership.is_owner:
+            raise AppException(
+                status_code=403,
+                error_code=AppErrorCode.INVALID_PERMISSIONS,
+                detail="Only the owner can include ADMINISTRATOR in default permissions",
+            )
+
     await db.merge(group)
     group.sqlmodel_update(group_update.model_dump(exclude_unset=True))
 
@@ -297,5 +313,3 @@ router.include_router(ShareLinkRouter, prefix="/{group_id}")
 router.include_router(GroupMembershipRouter, prefix="/{group_id}/memberships")
 router.include_router(ScoreConfigRouter, prefix="/{group_id}")
 router.tags = tags
-
-# TODO: add sharelink management endpoints (only owner and admin can create share links, admins can not create share links with admin permissions)

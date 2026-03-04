@@ -152,8 +152,9 @@ async def reset_password(
     query = select(User).where(User.email == email)
     result = await db.exec(query)
     user: User | None = result.first()
-    if not user:
+    if not user or not user.password:
         # Return silently to avoid leaking whether an email is registered
+        # (also covers guest accounts that have no password set)
         return
     # Generate token with email and password hash (for one-time use)
     serializer = URLSafeTimedSerializer(cfg.EMAIL_PRESIGN_SECRET)
