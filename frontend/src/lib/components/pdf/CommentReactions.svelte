@@ -4,6 +4,7 @@
 	import { documentStore } from '$lib/runes/document.svelte.js';
 	import { sessionStore } from '$lib/runes/session.svelte.js';
 	import LL from '$i18n/i18n-svelte';
+	import { onDestroy } from 'svelte';
 	import { SvelteMap } from 'svelte/reactivity';
 	import RemoveIcon from '~icons/material-symbols/close-rounded';
 
@@ -59,10 +60,8 @@
 	};
 
 	// Cancel any pending rAF when the component is destroyed
-	$effect(() => {
-		return () => {
-			if (closeRafId !== null) cancelAnimationFrame(closeRafId);
-		};
+	onDestroy(() => {
+		if (closeRafId !== null) cancelAnimationFrame(closeRafId);
 	});
 
 	// Svelte action wrapper that creates preciseHover params for a badge.

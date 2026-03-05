@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
 	import DOMPurify from 'dompurify';
 	import MarkdownRenderer from '$lib/components/MarkdownRenderer.svelte';
 	import HelpTooltip from '$lib/components/HelpTooltip.svelte';
@@ -39,7 +38,7 @@
 	});
 
 	// Current number of characters in the editor
-	let charCount: number = $state(0);
+	let charCount = $derived(value ? value.length : 0);
 
 	const handleInput = (e: Event): void => {
 		const target = e.target as HTMLTextAreaElement;
@@ -50,8 +49,6 @@
 		});
 		value = sanitized;
 		onchange?.(sanitized);
-		// Update character count for the UI
-		charCount = sanitized.length;
 	};
 
 	const handleKeydown = (e: KeyboardEvent): void => {
@@ -59,13 +56,7 @@
 		onkeydown?.(e);
 	};
 
-	onMount(() => {
-		if (autofocus && textareaRef) {
-			textareaRef.focus();
-		}
-	});
-
-	// Re-focus when autofocus prop changes to true
+	// Focus textarea when autofocus prop is true (runs on mount + prop changes)
 	$effect(() => {
 		if (autofocus && textareaRef) {
 			textareaRef.focus();
@@ -74,9 +65,7 @@
 
 	// Auto-resize textarea based on content
 	$effect(() => {
-		// Depend on value to trigger resize when content changes
 		void value;
-		charCount = value ? value.length : 0;
 		if (textareaRef && mode === 'write') {
 			// Reset height to auto to get the correct scrollHeight
 			textareaRef.style.height = 'auto';
