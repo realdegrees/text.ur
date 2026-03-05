@@ -29,7 +29,6 @@ async def logout(response: Response) -> None:
         secure=cfg.COOKIE_SECURE,
         samesite=cfg.COOKIE_SAMESITE,
         max_age=0,
-        path="/api/login/refresh",
     )
 
 

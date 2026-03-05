@@ -96,7 +96,6 @@ async def login(
         secure=cfg.COOKIE_SECURE,
         samesite=cfg.COOKIE_SAMESITE,
         max_age=int(cfg.JWT_REFRESH_EXPIRATION_DAYS * 24 * 60 * 60),
-        path="/api/login/refresh",
     )
     return token
 
