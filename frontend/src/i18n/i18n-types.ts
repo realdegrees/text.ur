@@ -540,9 +540,17 @@ type RootTranslation = {
 		 */
 		invalid_input: string
 		/**
+		 * A​n​ ​i​n​t​e​r​n​a​l​ ​s​e​r​v​e​r​ ​e​r​r​o​r​ ​o​c​c​u​r​r​e​d​.​ ​P​l​e​a​s​e​ ​t​r​y​ ​a​g​a​i​n​ ​l​a​t​e​r​.
+		 */
+		internal_error: string
+		/**
 		 * D​a​t​a​b​a​s​e​ ​i​s​ ​c​u​r​r​e​n​t​l​y​ ​u​n​a​v​a​i​l​a​b​l​e
 		 */
 		database_unavailable: string
+		/**
+		 * T​h​e​ ​d​a​t​a​b​a​s​e​ ​r​e​q​u​e​s​t​ ​t​i​m​e​d​ ​o​u​t​.​ ​P​l​e​a​s​e​ ​t​r​y​ ​a​g​a​i​n​.
+		 */
+		database_timeout: string
 		/**
 		 * Y​o​u​r​ ​s​e​s​s​i​o​n​ ​t​o​k​e​n​ ​i​s​ ​i​n​v​a​l​i​d​ ​o​r​ ​e​x​p​i​r​e​d
 		 */
@@ -664,6 +672,14 @@ type RootTranslation = {
 		 * T​h​i​s​ ​a​c​c​o​u​n​t​ ​i​s​ ​a​l​r​e​a​d​y​ ​v​e​r​i​f​i​e​d
 		 */
 		already_verified: string
+		/**
+		 * T​h​i​s​ ​u​s​e​r​ ​i​s​ ​a​l​r​e​a​d​y​ ​a​ ​p​e​r​m​a​n​e​n​t​ ​m​e​m​b​e​r
+		 */
+		not_a_guest: string
+		/**
+		 * T​h​e​ ​s​u​b​m​i​t​t​e​d​ ​p​e​r​m​i​s​s​i​o​n​s​ ​c​o​n​t​a​i​n​ ​d​i​s​a​l​l​o​w​e​d​ ​v​a​l​u​e​s
+		 */
+		invalid_permissions: string
 	}
 	sharelink: {
 		/**
@@ -2864,9 +2880,17 @@ export type TranslationFunctions = {
 		 */
 		invalid_input: () => LocalizedString
 		/**
+		 * An internal server error occurred. Please try again later.
+		 */
+		internal_error: () => LocalizedString
+		/**
 		 * Database is currently unavailable
 		 */
 		database_unavailable: () => LocalizedString
+		/**
+		 * The database request timed out. Please try again.
+		 */
+		database_timeout: () => LocalizedString
 		/**
 		 * Your session token is invalid or expired
 		 */
@@ -2987,6 +3011,14 @@ export type TranslationFunctions = {
 		 * This account is already verified
 		 */
 		already_verified: () => LocalizedString
+		/**
+		 * This user is already a permanent member
+		 */
+		not_a_guest: () => LocalizedString
+		/**
+		 * The submitted permissions contain disallowed values
+		 */
+		invalid_permissions: () => LocalizedString
 	}
 	sharelink: {
 		/**
