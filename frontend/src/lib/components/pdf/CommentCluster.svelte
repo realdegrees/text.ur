@@ -43,18 +43,26 @@
 		return comments.find((c) => commentStates.get(c.id)?.isPinned) ?? null;
 	});
 	let hasPinnedComment = $derived(!!firstPinnedComment);
-	let selectedTabComment = $derived.by(() => {
-		return comments.find((c) => c.id === selectedTabId) ?? null;
-	});
 
-	let activeComment: CommentRead = $derived(
-		highlightHoveredComment ??
+	// WORKAROUND: Compute selected tab inline (reading selectedTabId directly)
+	// instead of through a separate $derived. Svelte 5 can lose derived-to-derived
+	// dependency tracking after the ?? chain short-circuits (e.g. when
+	// firstEditingComment is briefly non-null during annotation creation).
+	// Reading the raw $state signal ensures this derived always re-evaluates
+	// when the selected tab changes.
+	let activeComment: CommentRead = $derived.by(() => {
+		const selectedTab =
+			selectedTabId != null ? (comments.find((c) => c.id === selectedTabId) ?? null) : null;
+
+		return (
+			highlightHoveredComment ??
 			firstEditingComment ??
 			firstReplyingComment ??
-			selectedTabComment ??
+			selectedTab ??
 			firstPinnedComment ??
 			comments[0]
-	);
+		);
+	});
 
 	// Border color follows hovered tab if any, otherwise activeComment's first tag
 	let hoveredTabComment = $derived.by(() => {
@@ -75,6 +83,15 @@
 			firstReplyingComment ||
 			(pointerState.isTouchInteraction && highlightHoveredComment)
 	);
+
+	// Sync selectedTabId when an external action (e.g. highlight click) sets
+	// activeCommentId to a comment in this cluster.
+	$effect(() => {
+		const activeId = documentStore.activeCommentId;
+		if (activeId != null && activeId !== selectedTabId && comments.some((c) => c.id === activeId)) {
+			selectedTabId = activeId;
+		}
+	});
 
 	// Clear the persistent connection line when this cluster collapses.
 	// Handles all collapse scenarios: tab unpin, close button, editing/replying end, etc.
@@ -187,7 +204,7 @@
 						<button
 							class="flex cursor-pointer flex-row items-center gap-1 bg-inset px-1.5 pt-1 pb-0.5 text-xs font-medium transition-colors
 							{showCard ? 'rounded-t' : 'rounded'}
-							{showCard && activeComment === c
+							{showCard && activeComment.id === c.id
 								? 'text-text shadow-inner shadow-text/40'
 								: isVisuallyHovered
 									? 'bg-text/10 text-text ring-1'
@@ -214,7 +231,7 @@
 									}
 									selectedTabId = c.id;
 									documentStore.activeCommentId = c.id;
-								} else if (activeComment === c) {
+								} else if (activeComment.id === c.id) {
 									// Expanded, clicking the active tab: toggle its pin
 									if (state) {
 										state.isPinned = !state.isPinned;
